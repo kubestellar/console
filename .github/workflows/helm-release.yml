@@ -1,0 +1,128 @@
+name: Helm Chart Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Chart version to release (without v prefix, e.g. 0.3.9)'
+        required: true
+        default: '0.1.0'
+
+# Least-privilege: default to read-only; write scopes granted at job level
+permissions:
+  contents: read
+
+jobs:
+  release-helm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      # contents: write required to commit Chart.yaml version updates and push to gh-pages branch
+      contents: write
+      # packages: write required for Helm chart OCI registry publish
+      packages: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Set up Helm
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+
+      - name: Determine version
+        id: version
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+          TAG_NAME: ${{ github.event.release.tag_name }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            VERSION="$INPUT_VERSION"
+          else
+            # Extract version from release tag (remove 'v' prefix)
+            VERSION="${TAG_NAME#v}"
+          fi
+          # Validate semver format
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "::error::Invalid version format: $VERSION (expected semver)"
+            exit 1
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Chart version: $VERSION"
+
+      - name: Update Chart.yaml version
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          sed -i "s/^version:.*/version: $VERSION/" deploy/helm/kubestellar-console/Chart.yaml
+          # appVersion keeps "v" prefix to match Docker image tags (v0.3.9, etc.)
+          sed -i "s/^appVersion:.*/appVersion: \"v$VERSION\"/" deploy/helm/kubestellar-console/Chart.yaml
+          cat deploy/helm/kubestellar-console/Chart.yaml
+
+      - name: Package Helm chart
+        run: |
+          mkdir -p .helm-releases
+          helm package deploy/helm/kubestellar-console -d .helm-releases
+
+      - name: Publish to gh-pages
+        run: |
+          REPO_URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+
+          # Clone or create gh-pages branch
+          if git ls-remote --exit-code --heads "$REPO_URL" gh-pages >/dev/null 2>&1; then
+            git clone --branch gh-pages --single-branch "$REPO_URL" gh-pages
+          else
+            mkdir -p gh-pages
+            cd gh-pages
+            git init
+            git checkout -b gh-pages
+            git remote add origin "$REPO_URL"
+            cd ..
+          fi
+
+          cd gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Copy chart package, Artifact Hub metadata, and build index
+          cp ../.helm-releases/*.tgz .
+          cp ../deploy/helm/kubestellar-console/artifacthub-repo.yml .
+          helm repo index . --url https://kubestellar.github.io/console
+          git add .
+          git commit -s -m "Release Helm chart ${{ steps.version.outputs.version }}" || echo "No changes"
+          git push origin gh-pages --force
+
+      - name: Log in to GitHub Container Registry
+        env:
+          GH_ACTOR: ${{ github.actor }}
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u "$GH_ACTOR" --password-stdin
+
+      - name: Push chart to OCI registry
+        run: |
+          # Push to ghcr.io/kubestellar/charts so users can:
+          #   helm pull oci://ghcr.io/kubestellar/charts/kubestellar-console
+          helm push .helm-releases/*.tgz oci://ghcr.io/kubestellar/charts
+
+      - name: Summary
+        run: |
+          echo "## Helm Chart Released" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Installation (Helm repo)" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "helm repo add kubestellar-console https://kubestellar.github.io/console" >> $GITHUB_STEP_SUMMARY
+          echo "helm repo update" >> $GITHUB_STEP_SUMMARY
+          echo "helm install kc kubestellar-console/kubestellar-console" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Installation (OCI)" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "helm install kc oci://ghcr.io/kubestellar/charts/kubestellar-console" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

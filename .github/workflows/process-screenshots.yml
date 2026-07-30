@@ -1,0 +1,114 @@
+name: Process Issue Screenshots
+
+# When a screenshot comment is added to an issue (base64 data URI in a
+# collapsible block), this workflow decodes it, commits the image to
+# .github/screenshots/, and replaces the comment with a rendered image.
+#
+# Screenshots are added as separate comments (not in the issue body) to
+# avoid GitHub's 65K character body limit. Each comment contains a
+# <!-- screenshot-base64:N --> marker that this workflow looks for.
+#
+# The workflow's GITHUB_TOKEN has write access — no user PAT push access needed.
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+jobs:
+  process-screenshot:
+    permissions:
+      # contents: write required to commit decoded screenshot images to .github/screenshots/
+      contents: write
+      # issues: write required to update issue comment with rendered screenshot
+      issues: write
+    # Only run on issue comments (not PR comments) with our marker
+    # AND restrict to authorized actors (MEMBER/OWNER/COLLABORATOR)
+    if: >
+      !github.event.issue.pull_request &&
+      contains(github.event.comment.body, '<!-- screenshot-base64:') &&
+      (github.event.comment.author_association == 'MEMBER' ||
+       github.event.comment.author_association == 'OWNER' ||
+       github.event.comment.author_association == 'COLLABORATOR')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Process screenshot comment
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const issueNumber = context.issue.number;
+            const commentId = context.payload.comment.id;
+            const body = context.payload.comment.body;
+
+            // Extract the screenshot marker and data URI
+            const markerRegex = /<!-- screenshot-base64:(\d+) -->\n<details>\n<summary>Screenshot \d+ \(processing\.\.\.\)<\/summary>\n\n```\n(data:image\/[^;]+;base64,[A-Za-z0-9+/=\s]+)\n```\n\n<\/details>/;
+            const match = markerRegex.exec(body);
+
+            if (!match) {
+              console.log('No base64 screenshot found in comment');
+              return;
+            }
+
+            const index = parseInt(match[1]);
+            const dataUri = match[2].replace(/\s/g, '');
+
+            console.log(`Processing screenshot ${index} from comment ${commentId}`);
+
+            // Extract issue request ID from the issue body for folder naming
+            const issueBody = context.payload.issue.body || '';
+            const idMatch = issueBody.match(/Console Request ID:\*\* ([a-f0-9-]+)/);
+            const requestId = idMatch ? idMatch[1] : `issue-${issueNumber}`;
+
+            try {
+              // Parse data URI
+              const [header, b64Content] = dataUri.split(',');
+              const extMatch = header.match(/image\/(\w+)/);
+              const ext = extMatch ? extMatch[1].replace('jpeg', 'jpg') : 'png';
+
+              // Commit the image to the repo
+              const filePath = `.github/screenshots/${requestId}/screenshot-${index}.${ext}`;
+              console.log(`Uploading ${filePath}...`);
+
+              const { data } = await github.rest.repos.createOrUpdateFileContents({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                path: filePath,
+                message: `Add screenshot ${index} for issue #${issueNumber}`,
+                content: b64Content,
+                committer: {
+                  name: 'github-actions[bot]',
+                  email: '41898282+github-actions[bot]@users.noreply.github.com',
+                },
+              });
+
+              // Use a commit-SHA-based URL instead of the branch-based
+              // download_url so the link survives file deletion when the
+              // cleanup-screenshots workflow removes old images.
+              const commitSha = data.commit.sha;
+              const permanentUrl = `https://raw.githubusercontent.com/${context.repo.owner}/${context.repo.repo}/${commitSha}/${filePath}`;
+              console.log(`Uploaded: ${permanentUrl} (commit ${commitSha})`);
+
+              // Replace the comment with a rendered image
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: commentId,
+                body: `![Screenshot ${index}](${permanentUrl})`,
+              });
+
+              console.log(`Comment ${commentId} updated with rendered screenshot`);
+            } catch (err) {
+              console.error(`Failed to process screenshot ${index}:`, err.message);
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: commentId,
+                body: `> ⚠️ Screenshot ${index} could not be processed: ${err.message}`,
+              });
+            }

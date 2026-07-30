@@ -1,0 +1,105 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { clearStoredAuthToken, getStoredAuthToken, setStoredAuthToken } from '../authToken'
+import { STORAGE_KEY_TOKEN } from '../constants/storage'
+import { getToken } from '../cache/fetcherUtils'
+
+describe('authToken', () => {
+  beforeEach(async () => {
+    localStorage.clear()
+    sessionStorage.clear()
+    await clearStoredAuthToken()
+  })
+
+  it('reads legacy raw session tokens in test environments', async () => {
+    sessionStorage.setItem(STORAGE_KEY_TOKEN, 'legacy-session-token')
+
+    expect(await getStoredAuthToken()).toBe('legacy-session-token')
+  })
+
+  it('reads legacy raw kc_token values in test environments', async () => {
+    localStorage.setItem('kc_token', 'legacy-kc-token')
+
+    expect(await getStoredAuthToken()).toBe('legacy-kc-token')
+  })
+
+  it('still prefers secure token storage writes', async () => {
+    await setStoredAuthToken('secure-token')
+
+    expect(await getStoredAuthToken()).toBe('secure-token')
+  })
+})
+
+describe('token retrieval fallback behavior', () => {
+  beforeEach(async () => {
+    localStorage.clear()
+    sessionStorage.clear()
+    await clearStoredAuthToken()
+  })
+
+  describe('getStoredAuthToken()', () => {
+    it('returns token when secure store contains a valid token', async () => {
+      await setStoredAuthToken('secure-stored-token')
+
+      const token = await getStoredAuthToken()
+      expect(token).toBe('secure-stored-token')
+    })
+
+    it('returns null when no token is stored anywhere', async () => {
+      const token = await getStoredAuthToken()
+      expect(token).toBeNull()
+    })
+
+    it('falls back to legacy localStorage token when secure store is empty', async () => {
+      localStorage.setItem(STORAGE_KEY_TOKEN, 'legacy-token')
+
+      const token = await getStoredAuthToken()
+      expect(token).toBe('legacy-token')
+    })
+  })
+
+  describe('getToken() from fetcherUtils', () => {
+    it('returns secure token when await getStoredAuthToken() has a value', () => {
+      sessionStorage.setItem(STORAGE_KEY_TOKEN, 'secure-token-from-store')
+
+      const token = getToken()
+      expect(token).toBe('secure-token-from-store')
+    })
+
+    it('falls back to localStorage when await getStoredAuthToken() returns empty', () => {
+      // Set only the raw localStorage token, not the secure store
+      localStorage.setItem(STORAGE_KEY_TOKEN, 'fallback-token-from-storage')
+
+      const token = getToken()
+      expect(token).toBe('fallback-token-from-storage')
+    })
+
+    it('prioritizes secure store over localStorage fallback', () => {
+      // Set both a secure token and a localStorage token
+      sessionStorage.setItem(STORAGE_KEY_TOKEN, 'secure-token')
+      localStorage.setItem(STORAGE_KEY_TOKEN, 'fallback-token')
+
+      const token = getToken()
+      // Should return the secure token, not the fallback
+      expect(token).toBe('secure-token')
+    })
+
+    it('returns null when neither secure store nor localStorage has a token', () => {
+      const token = getToken()
+      expect(token).toBeNull()
+    })
+
+    it('handles localStorage access errors gracefully', () => {
+      const getItemSpy = vi.spyOn(window.localStorage, 'getItem').mockImplementation(() => {
+        throw new Error('Storage access denied')
+      })
+
+      try {
+        const token = getToken()
+        expect(token).toBeNull()
+      } finally {
+        getItemSpy.mockRestore()
+      }
+    })
+  })
+})

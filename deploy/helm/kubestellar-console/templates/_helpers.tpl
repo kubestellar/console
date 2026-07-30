@@ -1,0 +1,91 @@
+{{/*
+Expand the name of the chart.
+*/}}
+{{- define "kubestellar-console.name" -}}
+{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Create a default fully qualified app name.
+*/}}
+{{- define "kubestellar-console.fullname" -}}
+{{- if .Values.fullnameOverride }}
+{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- $name := default .Chart.Name .Values.nameOverride }}
+{{- if contains $name .Release.Name }}
+{{- .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+Create chart name and version as used by the chart label.
+*/}}
+{{- define "kubestellar-console.chart" -}}
+{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Common labels
+*/}}
+{{- define "kubestellar-console.labels" -}}
+{{- $commonLabels := .Values.commonLabels | default dict -}}
+helm.sh/chart: {{ include "kubestellar-console.chart" . }}
+{{ include "kubestellar-console.selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+owner: {{ default "kubestellar" .Values.owner | quote }}
+{{- with omit $commonLabels "owner" }}
+{{ toYaml . }}
+{{- end }}
+{{- end }}
+
+{{/*
+Selector labels
+*/}}
+{{- define "kubestellar-console.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "kubestellar-console.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+
+{{/*
+Create the name of the service account to use
+*/}}
+{{- define "kubestellar-console.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create }}
+{{- default (include "kubestellar-console.fullname" .) .Values.serviceAccount.name }}
+{{- else }}
+{{- default "default" .Values.serviceAccount.name }}
+{{- end }}
+{{- end }}
+
+{{/*
+Return a storage class only when the PVC is not RWX-backed.
+RWX claims must use the cluster default provisioner so they can bind
+on clusters like vllm-d even when a block-storage override is present.
+*/}}
+{{- define "kubestellar-console.storageClassName" -}}
+{{- $accessModes := .accessModes | default (list) -}}
+{{- if not (has "ReadWriteMany" $accessModes) -}}
+{{- .storageClass | default "" -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Create the name of the kubeconfig Secret to use.
+*/}}
+{{- define "kubestellar-console.kubeconfigSecretName" -}}
+{{- default (printf "%s-kubeconfig" (include "kubestellar-console.fullname" .)) .Values.kubeconfig.existingSecret }}
+{{- end }}
+
+{{/*
+Create the file path for the mounted kubeconfig.
+*/}}
+{{- define "kubestellar-console.kubeconfigPath" -}}
+{{- printf "%s/%s" (trimSuffix "/" .Values.kubeconfig.mountPath) .Values.kubeconfig.fileName }}
+{{- end }}

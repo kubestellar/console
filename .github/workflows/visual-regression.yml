@@ -1,0 +1,90 @@
+name: Visual Regression
+
+on:
+  pull_request:
+    paths:
+      - 'web/src/**'
+      - 'web/e2e/visual/**'
+      - '.github/workflows/visual-regression.yml'
+  workflow_dispatch:
+
+permissions: read-all
+
+concurrency:
+  group: visual-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app-visual-regression:
+    name: App Visual Regression
+    if: github.repository == 'kubestellar/console'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci
+
+      - name: Check baseline snapshots
+        id: check-baselines
+        run: |
+          if ls e2e/visual/app-visual-regression.spec.ts-snapshots/chromium/*.png 1>/dev/null 2>&1; then
+            echo "baselines_exist=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "baselines_exist=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No baseline snapshots found — will generate new baselines."
+          fi
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Start preview server
+        run: nohup npm run preview -- --port 4173 > /tmp/preview.log 2>&1 &
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Wait for preview server
+        run: timeout 30 bash -c 'until curl -sf http://localhost:4173 > /dev/null; do sleep 1; done'
+
+      - name: Run visual regression tests
+        if: steps.check-baselines.outputs.baselines_exist == 'true'
+        run: npm run test:visual
+        env:
+          CI: 'true'
+          APP_VISUAL_BASE_URL: 'http://localhost:4173'
+
+      - name: Generate baseline snapshots
+        if: steps.check-baselines.outputs.baselines_exist == 'false'
+        run: npm run test:visual:update
+        env:
+          CI: 'true'
+          APP_VISUAL_BASE_URL: 'http://localhost:4173'
+
+      - name: Upload generated baselines
+        if: steps.check-baselines.outputs.baselines_exist == 'false'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: app-visual-baselines
+          path: web/e2e/visual/app-visual-regression.spec.ts-snapshots/
+          retention-days: 30
+
+      - name: Upload visual diff artifacts
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: app-visual-diff
+          path: |
+            web/e2e/test-results/app-visual/
+            web/e2e/app-visual-report/
+          retention-days: 14

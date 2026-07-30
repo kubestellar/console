@@ -1,0 +1,179 @@
+name: Coverage Gate
+
+# PR-only: enforces line coverage threshold on modified files.
+# Blocks merge when any modified file OR total project coverage
+# falls below COVERAGE_THRESHOLD. Full suite runs in coverage-hourly.yml.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'web/src/**'
+      - 'web/vite.config.ts'
+      - 'web/package.json'
+
+permissions:
+  contents: read  # default read; writes scoped to job below
+concurrency:
+  group: coverage-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+  COVERAGE_THRESHOLD: 88
+
+jobs:
+  coverage-gate:
+    permissions:
+      pull-requests: write
+    if: github.repository == 'kubestellar/console'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: web
+        # Retry once on transient npm registry failures (see #9107)
+        run: npm ci || npm ci
+
+      - name: Run smoke tests with coverage (modified files only)
+        id: run-tests
+        working-directory: web
+        run: |
+          MODIFIED=$(git diff --name-only origin/main...HEAD -- 'web/src/**/*.ts' 'web/src/**/*.tsx' \
+            | grep -v '\.test\.' | grep -v '\.spec\.' | grep -v 'src/test/' \
+            | sed 's|^web/||' || true)
+
+          if [ -z "$MODIFIED" ]; then
+            echo "No modified source files — skipping coverage"
+            echo "status=skip" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "status=run" >> "$GITHUB_OUTPUT"
+          npx vitest run --coverage --reporter=verbose 2>&1 | tail -40
+
+      - name: Check coverage against threshold
+        id: gate
+        if: steps.run-tests.outputs.status != 'skip'
+        working-directory: web
+        env:
+          THRESHOLD: ${{ env.COVERAGE_THRESHOLD }}
+        run: |
+          SUMMARY_FILE="coverage/coverage-summary.json"
+
+          if [ ! -f "$SUMMARY_FILE" ]; then
+            if [ "${{ steps.run-tests.outputs.status }}" = "run" ]; then
+              echo "::error::vitest ran but produced no coverage-summary.json — gate fails"
+              exit 1
+            fi
+            echo "::warning::No coverage summary found — cannot enforce gate"
+            echo "status=skip" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          MODIFIED_FILES=$(git diff --name-only origin/main...HEAD -- 'web/src/**/*.ts' 'web/src/**/*.tsx' \
+            | grep -v '\.test\.' | grep -v '\.spec\.' | grep -v 'src/test/' \
+            | sed 's|^web/||')
+
+          if [ -z "$MODIFIED_FILES" ]; then
+            echo "status=pass" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          REPORT_LINES=""
+          ALL_PASS=true
+
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            LINE_PCT=$(jq -r --arg f "$file" \
+              '(.[$f] // .["./\($f)"] // null) | if . then .lines.pct else null end' \
+              "$SUMMARY_FILE")
+
+            if [ "$LINE_PCT" = "null" ] || [ -z "$LINE_PCT" ]; then
+              REPORT_LINES="${REPORT_LINES}| \`${file}\` | — | ${THRESHOLD}% | :grey_question: |\n"
+              continue
+            fi
+
+            LINE_PCT_INT=$(echo "$LINE_PCT" | cut -d. -f1)
+            if [ "$LINE_PCT_INT" -lt "$THRESHOLD" ]; then
+              REPORT_LINES="${REPORT_LINES}| \`${file}\` | ${LINE_PCT}% | ${THRESHOLD}% | :x: |\n"
+              ALL_PASS=false
+            else
+              REPORT_LINES="${REPORT_LINES}| \`${file}\` | ${LINE_PCT}% | ${THRESHOLD}% | :white_check_mark: |\n"
+            fi
+          done <<< "$MODIFIED_FILES"
+
+          TOTAL=$(jq -r '.total.lines.pct // "?"' "$SUMMARY_FILE")
+          TOTAL_INT=$(echo "$TOTAL" | grep -oE '^[0-9]+' || echo "")
+          TOTAL_FAIL=false
+          if [ -n "$TOTAL_INT" ] && [ "$TOTAL_INT" -lt "$THRESHOLD" ]; then
+            TOTAL_FAIL=true
+          fi
+
+          {
+            echo "## Coverage Gate"
+            echo "| File | Coverage | Threshold | Status |"
+            echo "|------|----------|-----------|--------|"
+            echo -e "$REPORT_LINES"
+            if [ "$ALL_PASS" = "true" ]; then
+              echo ":tada: All modified files meet the ${THRESHOLD}% line coverage threshold."
+            else
+              echo ":x: **Merge blocked — one or more modified files are below the ${THRESHOLD}% threshold.**"
+            fi
+            echo ""
+            if [ "$TOTAL_FAIL" = "true" ]; then
+              echo "> :bar_chart: **Total project coverage: ${TOTAL}%** — below the ${THRESHOLD}% floor. Merge blocked."
+            else
+              echo "> :bar_chart: Total project coverage: **${TOTAL}%**"
+            fi
+          } > /tmp/coverage-report.md
+
+          echo "total_coverage=${TOTAL}" >> "$GITHUB_OUTPUT"
+
+          if [ "$ALL_PASS" = "false" ] || [ "$TOTAL_FAIL" = "true" ]; then
+            echo "status=fail" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+          echo "status=pass" >> "$GITHUB_OUTPUT"
+
+      - name: Comment on PR
+        if: always() && steps.gate.outputs.status != 'skip' && steps.gate.outputs.status != ''
+        continue-on-error: true
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require('fs');
+            if (!fs.existsSync('/tmp/coverage-report.md')) return;
+            const body = fs.readFileSync('/tmp/coverage-report.md', 'utf8');
+            const marker = '<!-- coverage-gate-report -->';
+            const fullBody = `${marker}\n${body}`;
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                comment_id: existing.id, body: fullBody,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: context.issue.number, body: fullBody,
+              });
+            }

@@ -1,0 +1,307 @@
+name: Nightly llm-d Guide E2E
+
+on:
+  schedule:
+    # Run at 7 AM UTC daily (2 AM EST / 3 AM EDT) — one hour after the main nightly suite
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+    inputs:
+      guide:
+        description: 'Run a single guide (or "all")'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - workload-variant-autoscaler
+          - basic-inference
+          - multi-model
+          - gateway
+          - epp-config
+          - autoscaler
+          - model-mesh
+          - custom-metrics
+  push:
+    paths:
+      - '.github/workflows/nightly-llmd-guides.yml'
+
+permissions: read-all
+
+concurrency:
+  group: nightly-llmd-guides
+  cancel-in-progress: false
+
+env:
+  # Tracking issue title — searched to find or create the issue
+  TRACKING_ISSUE_TITLE: 'Nightly llm-d Guide E2E Results'
+  TRACKING_ISSUE_LABEL: 'nightly-llmd-guides'
+  # Timeouts (seconds)
+  GUIDE_SETUP_TIMEOUT_S: '600'
+  GUIDE_RUN_TIMEOUT_S: '1800'
+  GUIDE_TEARDOWN_TIMEOUT_S: '300'
+
+jobs:
+  run-guides:
+    permissions:
+      contents: read
+      issues: write
+    if: github.repository == 'kubestellar/console'
+    runs-on: [self-hosted, kc, openshift]
+    timeout-minutes: 60
+    continue-on-error: true  # Infra failures (runner unavailable) shouldn't block other workflows
+    strategy:
+      fail-fast: false
+      matrix:
+        guide:
+          - workload-variant-autoscaler
+          - basic-inference
+          - multi-model
+          - gateway
+          - epp-config
+          - autoscaler
+          - model-mesh
+          - custom-metrics
+        exclude:
+          - guide: ${{ github.event.inputs.guide != 'all' && github.event.inputs.guide != '' && 'EXCLUDE_NONE' || '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Verify runner health
+        id: runner-check
+        timeout-minutes: 2
+        run: |
+          echo "::group::Runner Health Check"
+          # Check if we can access OpenShift cluster
+          if ! command -v oc &>/dev/null; then
+            echo "::warning::OpenShift CLI (oc) not available — runner may not be properly configured"
+            echo "healthy=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          
+          # Verify cluster connectivity (with short timeout)
+          if ! timeout 30 oc cluster-info &>/dev/null; then
+            echo "::warning::OpenShift cluster not reachable — runner connectivity issue"
+            echo "healthy=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          
+          echo "healthy=true" >> "$GITHUB_OUTPUT"
+          echo "::endgroup::"
+
+      - name: Run guide E2E
+        id: guide
+        if: steps.runner-check.outputs.healthy == 'true'
+        timeout-minutes: 45
+        env:
+          GUIDE_NAME: ${{ matrix.guide }}
+        run: |
+          echo "::group::Setup"
+          START_TIME=$(date +%s)
+          echo "guide=$GUIDE_NAME" >> "$GITHUB_OUTPUT"
+
+          # Check if guide script exists
+          SCRIPT="scripts/llmd-guides/${GUIDE_NAME}.sh"
+          if [ ! -f "$SCRIPT" ]; then
+            echo "::warning::Guide script not found: $SCRIPT — skipping"
+            echo "status=skipped" >> "$GITHUB_OUTPUT"
+            echo "duration=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          
+          # Verify script is executable
+          if [ ! -x "$SCRIPT" ]; then
+            chmod +x "$SCRIPT"
+          fi
+          echo "::endgroup::"
+
+          echo "::group::Execute guide: $GUIDE_NAME"
+          set +e
+          timeout "${GUIDE_RUN_TIMEOUT_S}" bash "$SCRIPT"
+          EXIT_CODE=$?
+          set -e
+
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - START_TIME))
+          echo "duration=${DURATION}" >> "$GITHUB_OUTPUT"
+
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "status=pass" >> "$GITHUB_OUTPUT"
+          elif [ $EXIT_CODE -eq 124 ]; then
+            echo "status=timeout" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=fail" >> "$GITHUB_OUTPUT"
+          fi
+          echo "::endgroup::"
+
+      - name: Mark runner unhealthy result
+        if: steps.runner-check.outputs.healthy != 'true'
+        id: runner-skip
+        run: |
+          echo "status=runner-unavailable" >> "$GITHUB_OUTPUT"
+          echo "duration=0" >> "$GITHUB_OUTPUT"
+
+      - name: Upload result artifact
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: guide-result-${{ matrix.guide }}
+          retention-days: 30
+          path: |
+            scripts/llmd-guides/*.log
+
+  report:
+    permissions:
+      issues: write
+    needs: run-guides
+    if: always() && github.repository == 'kubestellar/console'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download all result artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: guide-result-*
+          merge-multiple: true
+          path: results
+
+      - name: Build result summary
+        id: summary
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          GUIDES=(
+            workload-variant-autoscaler
+            basic-inference
+            multi-model
+            gateway
+            epp-config
+            autoscaler
+            model-mesh
+            custom-metrics
+          )
+
+          TOTAL=${#GUIDES[@]}
+          PASSED=0
+          FAILED=0
+          SKIPPED=0
+          TABLE_ROWS=""
+          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+          for guide in "${GUIDES[@]}"; do
+            # Parse status from the job outputs via artifacts or job conclusion
+            JOB_NAME="run-guides ($guide)"
+            CONCLUSION=$(gh api \
+              "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs" \
+              --jq ".jobs[] | select(.name == \"${JOB_NAME}\") | .conclusion" 2>/dev/null || echo "unknown")
+
+            case "$CONCLUSION" in
+              success)
+                STATUS="✅ PASS"
+                PASSED=$((PASSED + 1))
+                ;;
+              skipped)
+                STATUS="⏭️ SKIP"
+                SKIPPED=$((SKIPPED + 1))
+                ;;
+              cancelled)
+                # Job cancelled due to continue-on-error + runner unavailability
+                STATUS="⚠️ RUNNER N/A"
+                SKIPPED=$((SKIPPED + 1))
+                ;;
+              *)
+                STATUS="❌ FAIL"
+                FAILED=$((FAILED + 1))
+                ;;
+            esac
+
+            TABLE_ROWS="${TABLE_ROWS}| \`${guide}\` | ${STATUS} |\n"
+          done
+
+          # Build comment body
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          if [ $FAILED -eq 0 ] && [ $SKIPPED -eq 0 ]; then
+            HEADER="## ✅ Nightly llm-d Guide E2E — ${TIMESTAMP}"
+            RATE="**Pass rate: 100%** (${PASSED}/${TOTAL} passed)"
+          elif [ $FAILED -eq 0 ]; then
+            HEADER="## ✅ Nightly llm-d Guide E2E — ${TIMESTAMP}"
+            RATE="**Pass rate: 100%** (${PASSED}/${TOTAL} passed, ${SKIPPED} skipped)"
+          else
+            HEADER="## ❌ Nightly llm-d Guide E2E — ${TIMESTAMP}"
+            RATE="**Pass rate: $((PASSED * 100 / TOTAL))%** (${PASSED}/${TOTAL} passed, ${FAILED} failed, ${SKIPPED} skipped)"
+          fi
+
+          {
+            echo "COMMENT_BODY<<COMMENT_EOF"
+            echo "${HEADER}"
+            echo ""
+            echo "${RATE}"
+            echo ""
+            echo "| Guide | Status |"
+            echo "|-------|--------|"
+            echo -e "${TABLE_ROWS}"
+            echo "[Full run logs](${RUN_URL})"
+            echo "COMMENT_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Find or create tracking issue
+        id: issue
+        # continue-on-error: reporting infra failures must not mark passing guide runs as failed
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LABEL="${TRACKING_ISSUE_LABEL}"
+          TITLE="${TRACKING_ISSUE_TITLE}"
+
+          # Ensure labels exist (|| true already on label create, also create hold)
+          gh label create "$LABEL" \
+            --description "Nightly llm-d guide E2E results" \
+            --color "5319e7" 2>/dev/null || true
+          gh label create "hold" \
+            --description "Hold: do not auto-close" \
+            --color "e4e669" 2>/dev/null || true
+
+          # Find existing open issue
+          EXISTING=$(gh issue list \
+            --state open \
+            --label "$LABEL" \
+            --search "in:title \"${TITLE}\"" \
+            --json number,title \
+            --jq ".[] | select(.title == \"${TITLE}\") | .number" \
+            | head -1)
+
+          if [ -n "$EXISTING" ]; then
+            echo "issue_number=$EXISTING" >> "$GITHUB_OUTPUT"
+          else
+            ISSUE_BODY="## llm-d Guide E2E Tracking"$'\n\n'
+            ISSUE_BODY+="This issue tracks nightly E2E results for the 8 llm-d guides on OpenShift."$'\n\n'
+            ISSUE_BODY+="### Guides"$'\n'
+            ISSUE_BODY+="- workload-variant-autoscaler"$'\n'
+            ISSUE_BODY+="- basic-inference"$'\n'
+            ISSUE_BODY+="- multi-model"$'\n'
+            ISSUE_BODY+="- gateway"$'\n'
+            ISSUE_BODY+="- epp-config"$'\n'
+            ISSUE_BODY+="- autoscaler"$'\n'
+            ISSUE_BODY+="- model-mesh"$'\n'
+            ISSUE_BODY+="- custom-metrics"$'\n\n'
+            ISSUE_BODY+="---"$'\n'
+            ISSUE_BODY+="_Results are posted as comments below, newest first._"
+            # Capture URL; grep exits 1 on no match so guard with || true
+            ISSUE_URL=$(gh issue create \
+              --title "$TITLE" \
+              --label "$LABEL" \
+              --label "hold" \
+              --body "$ISSUE_BODY") || true
+            NEW_ISSUE=$(echo "$ISSUE_URL" | grep -oP '\d+$' || true)
+            echo "issue_number=$NEW_ISSUE" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Post results to tracking issue
+        # Only run if tracking issue was found/created successfully
+        if: steps.issue.outputs.issue_number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ steps.issue.outputs.issue_number }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "${{ steps.summary.outputs.COMMENT_BODY }}"

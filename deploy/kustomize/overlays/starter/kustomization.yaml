@@ -1,0 +1,15 @@
+# Starter overlay — the curated out-of-the-box experience.
+#
+# Trims the sidebar to three core dashboards (Dashboard, Workloads, Nodes)
+# and skips the onboarding questionnaire, so a first-time user lands on a
+# simple, useful view of their cluster instead of the full catalog of
+# 60+ dashboards. Everything else stays one click away: users can add
+# dashboards and cards via the sidebar customizer and the Marketplace.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+patches:
+  - path: patch-starter-env.yaml

@@ -1,0 +1,10 @@
+{
+  "format": "kc-card-preset-v1",
+  "card_type": "crio_status",
+  "title": "CRI-O",
+  "description": "CRI-O container runtime metrics, image pulls, and pod sandbox status",
+  "category": "Runtime",
+  "project": "cri-o",
+  "cncf_status": "graduated",
+  "config": {}
+}

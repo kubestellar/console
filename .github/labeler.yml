@@ -1,0 +1,66 @@
+# Backend / Go code
+backend:
+  - cmd/**/*
+  - pkg/**/*
+  - "**/*.go"
+  - go.mod
+  - go.sum
+
+# Frontend / React code
+frontend:
+  - web/**/*
+  - "**/*.ts"
+  - "**/*.tsx"
+  - "**/*.css"
+
+# Helm chart and deployment
+deployment:
+  - deploy/**/*
+  - Dockerfile
+  - "**/*.yaml"
+  - "**/*.yml"
+
+# GitHub workflows and CI/CD
+ci-cd:
+  - .github/workflows/**/*
+  - .github/actions/**/*
+
+# Documentation
+documentation:
+  - docs/**/*
+  - README.md
+  - "**/*.md"
+
+# Configuration files
+config:
+  - .github/labeler.yml
+  - .gitignore
+  - tsconfig.json
+  - tailwind.config.js
+  - postcss.config.js
+  - vite.config.ts
+
+# Dependencies
+dependencies:
+  - package.json
+  - package-lock.json
+  - go.mod
+  - go.sum
+
+# API changes
+api:
+  - pkg/api/**/*
+
+# AI / Claude integration
+ai:
+  - pkg/claude/**/*
+  - web/src/hooks/useAIMode.ts
+  - web/src/hooks/useCardRecommendations.ts
+
+# MCP integration
+mcp:
+  - pkg/mcp/**/*
+  - web/src/hooks/useMCP.ts
+
+ok-to-test:
+  - "" # No matching paths; prevents removal

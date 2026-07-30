@@ -1,0 +1,12 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kubestellar-console-self-upgrade
+rules:
+  # Patch own Deployment image tag to trigger a rolling update
+  - apiGroups: ["apps"]
+    resources:
+      - deployments
+    resourceNames:
+      - kubestellar-console
+    verbs: ["get", "list", "patch"]

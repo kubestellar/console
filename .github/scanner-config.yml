@@ -1,0 +1,123 @@
+# Scanner Merge Guardrails Configuration
+# Prevents merge loops and cascading build breaks
+
+scanner:
+  name: kubestellar-hive
+  enabled: true
+  
+  # Rate Limiting
+  rate_limits:
+    # Maximum PRs the scanner can merge per hour
+    max_merges_per_hour: 3
+    
+    # Maximum PRs the scanner can merge in a 12-hour window
+    max_merges_per_12h: 10
+    
+    # Maximum consecutive bot merges before requiring human review
+    max_consecutive_bot_merges: 3
+    
+  # Circuit Breaker
+  circuit_breaker:
+    enabled: true
+    
+    # If main branch has failing builds, pause scanner merges
+    pause_on_main_build_failure: true
+    
+    # Cooldown period after main build failure (minutes)
+    cooldown_minutes: 30
+    
+    # Maximum number of build breaks per 12-hour period before circuit opens
+    max_build_breaks_per_12h: 5
+    
+  # Pre-Merge Validation
+  pre_merge_checks:
+    # Require all CI checks to pass (no --admin bypass)
+    require_all_checks_passing: true
+    
+    # Specific required checks that must be green
+    required_checks:
+      - build
+      - go-test
+      - lint
+      
+    # Require base branch (main) to be green before merging
+    require_green_base_branch: true
+    
+    # Require PR branch to be up-to-date with base
+    require_up_to_date_branch: true
+    
+    # Prevent merging if a previous scanner PR just broke the build
+    prevent_merge_if_recent_break: true
+    recent_break_window_minutes: 60
+    
+  # Merge Loop Prevention
+  merge_loop_prevention:
+    enabled: true
+    
+    # Detect if merging a fix PR that fixes a break caused by a previous scanner PR
+    detect_fix_loops: true
+    
+    # Require human approval if detected as a potential loop
+    require_human_approval_for_loops: true
+    
+    # Track merge→break→fix cycles
+    track_fix_cycles: true
+    max_fix_cycles_before_pause: 2
+    
+  # Monitoring & Alerts
+  monitoring:
+    # Track merge frequency and build break correlation
+    track_merge_impact: true
+    
+    # Alert on suspicious patterns (multiple consecutive breaks)
+    alert_on_merge_storm: true
+    merge_storm_threshold: 5
+    merge_storm_window_minutes: 60
+    
+    # Create diagnostic issue if merge loop detected
+    create_diagnostic_issue: true
+    diagnostic_labels:
+      - scanner
+      - build-break
+      - needs-investigation
+      
+  # Emergency Controls
+  emergency:
+    # Kill switch: completely disable scanner merges
+    kill_switch: false
+    
+    # Manual approval required for all scanner merges
+    require_manual_approval: false
+    
+    # Maintenance mode: scanner can only comment, not merge
+    maintenance_mode: false
+
+# Branch Protection Requirements (to be configured in GitHub UI)
+branch_protection_requirements:
+  branch: main
+  required_status_checks:
+    strict: true
+    contexts:
+      - build
+      - go-test
+      - lint
+  required_approving_review_count: 0
+  enforce_admins: true
+  allow_admin_bypass_for_scanner: false
+  
+# Human Escalation Triggers
+escalation:
+  # Conditions that should trigger human review
+  conditions:
+    - consecutive_build_breaks >= 3
+    - merge_loop_detected == true
+    - circuit_breaker_open == true
+    - merge_rate_exceeded == true
+    
+  # Actions to take when escalation triggered
+  actions:
+    - add_label: "scanner-needs-human"
+    - add_label: "build-stability"
+    - post_comment: true
+    - notify_maintainers: true
+    - pause_scanner_merges: true

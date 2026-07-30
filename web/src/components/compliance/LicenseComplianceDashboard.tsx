@@ -1,0 +1,318 @@
+/**
+ * License Compliance Dashboard — Issue #9648
+ *
+ * Scans container images and source dependencies for open-source licenses,
+ * flags deny-listed licenses (GPL, AGPL, SSPL, etc.) and warn-listed ones
+ * (LGPL, MPL), and provides a fleet-wide license inventory.
+ */
+import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
+import {
+  CheckCircle2, XCircle, AlertTriangle, Loader2,
+  BookOpen,
+} from 'lucide-react'
+import { authFetch } from '../../lib/api'
+import { DashboardHeader } from '../shared/DashboardHeader'
+import { RotatingTip } from '../ui/RotatingTip'
+
+/** How often to re-scan license data (ms) */
+const LICENSE_REFRESH_MS = 300_000
+
+type LicenseRisk = 'allowed' | 'warn' | 'denied'
+
+interface LicensePackage {
+  name: string
+  version: string
+  license: string
+  risk: LicenseRisk
+  workload: string
+  namespace: string
+  cluster: string
+  spdx_id: string
+}
+
+interface LicenseCategory {
+  name: string
+  count: number
+  risk: LicenseRisk
+  examples: string[]
+}
+
+interface LicenseSummary {
+  total_packages: number
+  allowed_packages: number
+  warned_packages: number
+  denied_packages: number
+  unique_licenses: number
+  workloads_scanned: number
+  evaluated_at: string
+}
+
+const RISK_STYLES: Record<LicenseRisk, string> = {
+  allowed: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+  warn: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+  denied: 'bg-red-500/20 text-red-300 border-red-500/30',
+}
+
+const RISK_ICONS: Record<LicenseRisk, typeof CheckCircle2> = {
+  allowed: CheckCircle2,
+  warn: AlertTriangle,
+  denied: XCircle,
+}
+
+export default function LicenseComplianceDashboard() {
+  const { t } = useTranslation()
+  const [packages, setPackages] = useState<LicensePackage[]>([])
+  const [categories, setCategories] = useState<LicenseCategory[]>([])
+  const [summary, setSummary] = useState<LicenseSummary | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'violations' | 'inventory' | 'categories'>('violations')
+  const [filterRisk, setFilterRisk] = useState<LicenseRisk | null>('denied')
+  const [autoRefresh, setAutoRefresh] = useState(false)
+  const mountedRef = useRef(true)
+
+  const fetchData = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [pkgRes, catRes, sumRes] = await Promise.all([
+        authFetch('/api/supply-chain/licenses/packages'),
+        authFetch('/api/supply-chain/licenses/categories'),
+        authFetch('/api/supply-chain/licenses/summary'),
+      ])
+      if (!pkgRes.ok || !catRes.ok || !sumRes.ok) throw new Error(t('compliance.licenseFailedToLoad'))
+      const packages = await pkgRes.json()
+      const categories = await catRes.json()
+      const summaryData = await sumRes.json()
+      if (!mountedRef.current) return
+      setPackages(packages)
+      setCategories(categories)
+      setSummary(summaryData)
+    } catch (e: unknown) {
+      if (!mountedRef.current) return
+      setError(e instanceof Error ? e.message : t('compliance.licenseFailedToLoad'))
+    } finally {
+      if (mountedRef.current) {
+        setLoading(false)
+      }
+    }
+  }
+
+  useEffect(() => {
+    mountedRef.current = true
+    fetchData()
+    const id = setInterval(fetchData, LICENSE_REFRESH_MS)
+    return () => {
+      mountedRef.current = false
+      clearInterval(id)
+    }
+  }, [])
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
+      <span className="ml-3 text-muted-foreground">{t('compliance.licenseScanningInventory')}</span>
+    </div>
+  )
+
+  if (error) return (
+    <div className="p-6 text-center">
+      <XCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
+      <p className="text-red-300 mb-4">{error}</p>
+      <button onClick={fetchData} className="px-4 py-2 min-h-11 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm">{t('compliance.retry')}</button>
+    </div>
+  )
+
+  const violations = packages.filter((p) => p.risk === 'denied')
+  const warnings = packages.filter((p) => p.risk === 'warn')
+
+  const displayPackages = activeTab === 'violations'
+    ? (filterRisk ? packages.filter((p) => p.risk === filterRisk) : violations)
+    : packages
+
+  return (
+    <div className="space-y-6 p-6">
+      <DashboardHeader
+        title={t('compliance.licenseTitle')}
+        subtitle={t('compliance.licenseSubtitle')}
+        isFetching={loading}
+        onRefresh={fetchData}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="license-compliance-auto-refresh"
+        rightExtra={<RotatingTip page="compliance" />}
+      />
+
+      {/* Summary Cards */}
+      {summary && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-card/50 border border-border rounded-xl p-4">
+            <div className="text-sm text-muted-foreground mb-1">{t('compliance.licenseDeniedLicenses')}</div>
+            <div className={`text-3xl font-bold ${summary.denied_packages > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+              {summary.denied_packages}
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">{t('compliance.licenseMustRemediate')}</div>
+          </div>
+          <div className="bg-card/50 border border-border rounded-xl p-4">
+            <div className="text-sm text-muted-foreground mb-1">{t('compliance.licenseWarnings')}</div>
+            <div className={`text-3xl font-bold ${summary.warned_packages > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
+              {summary.warned_packages}
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">{t('compliance.licenseRequireLegalReview')}</div>
+          </div>
+          <div className="bg-card/50 border border-border rounded-xl p-4">
+            <div className="text-sm text-muted-foreground mb-1">{t('compliance.licenseAllowed')}</div>
+            <div className="text-3xl font-bold text-emerald-400">{summary.allowed_packages}</div>
+            <div className="text-xs text-muted-foreground mt-1">{t('compliance.licenseOfTotal', { total: summary.total_packages })}</div>
+          </div>
+          <div className="bg-card/50 border border-border rounded-xl p-4">
+            <div className="text-sm text-muted-foreground mb-1">{t('compliance.licenseUniqueLicenses')}</div>
+            <div className="text-3xl font-bold text-indigo-400">{summary.unique_licenses}</div>
+            <div className="text-xs text-muted-foreground mt-1">{t('compliance.licenseWorkloadsScanned', { count: summary.workloads_scanned })}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div className="flex gap-1 bg-secondary/30 p-1 rounded-lg w-fit">
+        {(['violations', 'inventory', 'categories'] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => {
+              setActiveTab(tab)
+              if (tab === 'violations') setFilterRisk('denied')
+            }}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === tab ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
+            }`}
+          >
+            {tab === 'violations'
+              ? t('compliance.licenseViolationsTab', { count: violations.length + warnings.length })
+              : tab === 'inventory'
+              ? t('compliance.licenseFullInventoryTab')
+              : t('compliance.licenseCategoriesTab')}
+          </button>
+        ))}
+      </div>
+
+      {/* Violations / Inventory Tab */}
+      {(activeTab === 'violations' || activeTab === 'inventory') && (
+        <>
+          {activeTab === 'violations' && (
+            <div className="flex gap-2">
+              {(['denied', 'warn', 'allowed'] as const).map((risk) => {
+                const RiskIcon = RISK_ICONS[risk]
+                return (
+                  <button
+                    key={risk}
+                    onClick={() => setFilterRisk(filterRisk === risk ? null : risk)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm transition-colors ${
+                      filterRisk === risk
+                        ? RISK_STYLES[risk]
+                        : 'border-border bg-secondary/30 text-muted-foreground hover:bg-secondary/50'
+                    }`}
+                  >
+                    <RiskIcon className="w-3.5 h-3.5" />
+                    {risk.charAt(0).toUpperCase() + risk.slice(1)}
+                    {' '}({packages.filter((p) => p.risk === risk).length})
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          <div className="bg-card/50 border border-border rounded-xl overflow-hidden">
+            {displayPackages.length === 0 ? (
+              <div className="p-8 text-center">
+                <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto mb-3" />
+                <p className="text-foreground">{t('compliance.licenseNoViolations')}</p>
+              </div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-muted-foreground text-left">
+                    <th className="p-3">{t('compliance.licensePackageHeader')}</th>
+                    <th className="p-3">{t('compliance.licenseLicenseHeader')}</th>
+                    <th className="p-3">{t('compliance.licenseWorkloadHeader')}</th>
+                    <th className="p-3">{t('compliance.licenseClusterHeader')}</th>
+                    <th className="p-3">{t('compliance.licenseRiskHeader')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {displayPackages.map((pkg, i) => {
+                    const RiskIcon = RISK_ICONS[pkg.risk]
+                    return (
+                      <tr key={i} className="border-b border-border/50 hover:bg-secondary/50">
+                        <td className="p-3">
+                          <div className="text-foreground font-mono text-xs">{pkg.name}</div>
+                          <div className="text-muted-foreground text-xs">v{pkg.version}</div>
+                        </td>
+                        <td className="p-3">
+                          <div className="flex items-center gap-1.5">
+                            <BookOpen className="w-3.5 h-3.5 text-muted-foreground" />
+                            <span className="text-foreground text-xs">{pkg.license}</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground">{pkg.spdx_id}</div>
+                        </td>
+                        <td className="p-3">
+                          <div className="text-foreground">{pkg.workload}</div>
+                          <div className="text-xs text-muted-foreground">{pkg.namespace}</div>
+                        </td>
+                        <td className="p-3 text-muted-foreground">{pkg.cluster}</td>
+                        <td className="p-3">
+                          <span className={`flex items-center gap-1 w-fit px-2 py-0.5 rounded-full text-xs border ${RISK_STYLES[pkg.risk]}`}>
+                            <RiskIcon className="w-3 h-3" />
+                            {pkg.risk}
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Categories Tab */}
+      {activeTab === 'categories' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {categories.map((cat, i) => {
+            const CatIcon = RISK_ICONS[cat.risk]
+            return (
+              <div key={i} className={`rounded-xl border p-4 ${RISK_STYLES[cat.risk]}`}>
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <CatIcon className="w-5 h-5" />
+                    <div>
+                      <div className="font-medium text-foreground">{cat.name}</div>
+                      <div className="text-xs opacity-70">{t('compliance.licensePackageCount', { count: cat.count })}</div>
+                    </div>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-xs border ${RISK_STYLES[cat.risk]}`}>
+                    {cat.risk}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {cat.examples.map((ex, j) => (
+                    <span key={j} className="px-1.5 py-0.5 bg-secondary/50 rounded text-xs font-mono">
+                      {ex}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {summary && (
+        <div className="text-xs text-muted-foreground text-right">
+          {t('compliance.licenseLastScanned', { date: new Date(summary.evaluated_at).toLocaleString() })}
+        </div>
+      )}
+    </div>
+  )
+}

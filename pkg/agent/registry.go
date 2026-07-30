@@ -1,0 +1,403 @@
+package agent
+
+import (
+	"github.com/kubestellar/console/pkg/agent/providers"
+	"fmt"
+	"log/slog"
+	"os"
+	"sort"
+	"sync"
+	"time"
+
+	"github.com/kubestellar/console/pkg/ai"
+)
+
+// Registry manages available AI providers
+type Registry struct {
+	mu               sync.RWMutex
+	providers        map[string]ai.Provider
+	defaultAgent     string
+	selectedAgent    map[string]string    // sessionID -> agentName
+	selectedAgentLRU map[string]time.Time // sessionID -> last access time
+}
+
+// Global registry instance
+var (
+	globalRegistry *Registry
+	registryOnce   sync.Once
+)
+
+// GetRegistry returns the singleton registry instance
+func GetRegistry() *Registry {
+	registryOnce.Do(func() {
+		globalRegistry = &Registry{
+			providers:        make(map[string]AIProvider),
+			selectedAgent:    make(map[string]string),
+			selectedAgentLRU: make(map[string]time.Time),
+		}
+	})
+	return globalRegistry
+}
+
+// Register adds a provider to the registry
+func (r *Registry) Register(provider ai.Provider) error {
+	if r == nil {
+		return fmt.Errorf("registry is nil")
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	name := provider.Name()
+	if _, exists := r.providers[name]; exists {
+		return fmt.Errorf("provider %s already registered", name)
+	}
+
+	r.providers[name] = provider
+
+	// Set first available provider as default
+	if r.defaultAgent == "" && provider.IsAvailable() {
+		r.defaultAgent = name
+	}
+
+	return nil
+}
+
+// Get retrieves a provider by name
+func (r *Registry) Get(name string) (ai.Provider, error) {
+	if r == nil {
+		return nil, fmt.Errorf("registry is nil")
+	}
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	provider, exists := r.providers[name]
+	if !exists || provider == nil {
+		return nil, fmt.Errorf("provider %s not found", name)
+	}
+	return provider, nil
+}
+
+// GetDefault returns the default provider
+func (r *Registry) GetDefault() (ai.Provider, error) {
+	if r == nil {
+		return nil, fmt.Errorf("registry is nil")
+	}
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	if r.defaultAgent == "" {
+		return nil, fmt.Errorf("no default agent configured")
+	}
+
+	provider, exists := r.providers[r.defaultAgent]
+	if !exists || provider == nil {
+		return nil, fmt.Errorf("default agent %s not found", r.defaultAgent)
+	}
+	return provider, nil
+}
+
+// GetDefaultName returns the name of the default provider
+func (r *Registry) GetDefaultName() string {
+	if r == nil {
+		return ""
+	}
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.defaultAgent
+}
+
+// SetDefault sets the default provider
+func (r *Registry) SetDefault(name string) error {
+	if r == nil {
+		return fmt.Errorf("registry is nil")
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	provider, exists := r.providers[name]
+	if !exists {
+		return fmt.Errorf("provider %s not found", name)
+	}
+	if provider == nil {
+		return fmt.Errorf("provider %s is nil", name)
+	}
+	if !provider.IsAvailable() {
+		return fmt.Errorf("provider %s is not available", name)
+	}
+
+	r.defaultAgent = name
+	return nil
+}
+
+// GetSelectedAgent returns the selected agent for a session
+func (r *Registry) GetSelectedAgent(sessionID string) string {
+	if r == nil {
+		return ""
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if r.selectedAgent == nil {
+		r.selectedAgent = make(map[string]string)
+	}
+	if r.selectedAgentLRU == nil {
+		r.selectedAgentLRU = make(map[string]time.Time)
+	}
+
+	if agent, ok := r.selectedAgent[sessionID]; ok {
+		r.selectedAgentLRU[sessionID] = time.Now()
+		return agent
+	}
+	return r.defaultAgent
+}
+
+// SetSelectedAgent sets the selected agent for a session
+func (r *Registry) SetSelectedAgent(sessionID, agentName string) error {
+	if r == nil {
+		return fmt.Errorf("registry is nil")
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	provider, exists := r.providers[agentName]
+	if !exists {
+		return fmt.Errorf("provider %s not found", agentName)
+	}
+	if provider == nil {
+		return fmt.Errorf("provider %s is nil", agentName)
+	}
+	if !provider.IsAvailable() {
+		return fmt.Errorf("provider %s is not available", agentName)
+	}
+
+	// Batch-evict the oldest entries when map exceeds a safety cap to
+	// prevent unbounded growth from sessions that never call
+	// RemoveSelectedAgent (#7209, #10063, #10163).
+	//
+	// Instead of evicting one entry per insert (O(N) scan every time),
+	// we evict the oldest 5% in a single pass. The O(N) cost is amortized
+	// across ~evictBatchSize subsequent inserts.
+	const maxSelectedAgentEntries = 10000
+	const evictBatchDivisor = 20 // 1/20 = 5%
+	if len(r.selectedAgent) >= maxSelectedAgentEntries {
+		evictBatchSize := maxSelectedAgentEntries / evictBatchDivisor
+		if evictBatchSize < 1 {
+			evictBatchSize = 1
+		}
+
+		timestamps := make([]time.Time, 0, len(r.selectedAgentLRU))
+		for _, ts := range r.selectedAgentLRU {
+			timestamps = append(timestamps, ts)
+		}
+		sort.Slice(timestamps, func(i, j int) bool {
+			return timestamps[i].Before(timestamps[j])
+		})
+
+		cutoff := timestamps[evictBatchSize-1]
+		evicted := 0
+		for k, ts := range r.selectedAgentLRU {
+			if !ts.After(cutoff) {
+				delete(r.selectedAgent, k)
+				delete(r.selectedAgentLRU, k)
+				evicted++
+			}
+		}
+		slog.Debug("[Registry] batch-evicted stale sessions",
+			"evicted", evicted, "remaining", len(r.selectedAgent))
+	}
+
+	r.selectedAgent[sessionID] = agentName
+	r.selectedAgentLRU[sessionID] = time.Now()
+	return nil
+}
+
+// RemoveSelectedAgent cleans up the session entry from the selectedAgent map,
+// preventing unbounded growth when sessions disconnect (#7209).
+func (r *Registry) RemoveSelectedAgent(sessionID string) {
+	if r == nil || sessionID == "" {
+		return
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.selectedAgent, sessionID)
+	delete(r.selectedAgentLRU, sessionID)
+}
+
+// List returns all registered providers
+func (r *Registry) List() []ai.ProviderInfo {
+	if r == nil {
+		return nil
+	}
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	result := make([]ai.ProviderInfo, 0, len(r.providers))
+	for _, provider := range r.providers {
+		if provider == nil {
+			continue
+		}
+		result = append(result, ai.ProviderInfo{
+			Name:         provider.Name(),
+			DisplayName:  provider.DisplayName(),
+			Description:  provider.Description(),
+			Provider:     provider.Provider(),
+			Available:    provider.IsAvailable(),
+			Capabilities: int(provider.Capabilities()),
+		})
+	}
+	return result
+}
+
+// suggestOnlyAgents are agents that return command suggestions as text rather
+// than executing them. They should not be the default when better options exist.
+var suggestOnlyAgents = map[string]bool{
+	"copilot-cli": true,
+}
+
+// promoteExecutingDefault checks if the current default agent only suggests
+// commands (e.g. copilot-cli) and, if so, promotes the first available agent
+// that can actually execute commands to be the default (#3609).
+func (r *Registry) promoteExecutingDefault() {
+	if r == nil {
+		return
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if !suggestOnlyAgents[r.defaultAgent] {
+		return // current default is fine
+	}
+
+	// Look for a better agent that actually executes commands
+	for name, provider := range r.providers {
+		if provider == nil || !provider.IsAvailable() {
+			continue
+		}
+		if !suggestOnlyAgents[name] &&
+			provider.Capabilities().HasCapability(CapabilityToolExec) {
+			r.defaultAgent = name
+			return
+		}
+	}
+	// No better option found — keep copilot-cli as fallback
+}
+
+// ListAvailable returns only providers that are configured and ready
+func (r *Registry) ListAvailable() []ai.ProviderInfo {
+	if r == nil {
+		return nil
+	}
+	all := r.List()
+	available := make([]ai.ProviderInfo, 0)
+	for _, info := range all {
+		if info.Available {
+			available = append(available, info)
+		}
+	}
+	return available
+}
+
+// HasAvailableProviders returns true if at least one provider is available
+func (r *Registry) HasAvailableProviders() bool {
+	if r == nil {
+		return false
+	}
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	for _, provider := range r.providers {
+		if provider == nil {
+			continue
+		}
+		if provider.IsAvailable() {
+			return true
+		}
+	}
+	return false
+}
+
+// InitializeProviders registers all available providers
+// This should be called during server startup
+func InitializeProviders() error {
+	registry := GetRegistry()
+
+	// Register tool-capable agents FIRST so they become the default.
+	// Tool-capable agents can execute kubectl, helm, and other commands.
+	// Order matters: the first available agent becomes the default.
+	registry.Register(providers.NewClaudeCodeProvider())
+	registry.Register(providers.NewBobProvider())
+
+	// Register in-cluster Kagenti agent (preferred when in-cluster)
+	if p := providers.NewKagentiProvider(); p != nil {
+		registry.Register(p)
+	}
+
+	// Register CLI-based tool-capable agents
+	registry.Register(providers.NewCodexProvider())
+	registry.Register(providers.NewGeminiCLIProvider())
+	registry.Register(providers.NewAntigravityProvider())
+	registry.Register(providers.NewGooseProvider())
+
+	// Register copilot-cli LAST among tool-capable agents.
+	// copilot-cli suggests commands as text rather than executing them,
+	// so it should only be the default when no other agent is available (#3609).
+	registry.Register(providers.NewCopilotCLIProvider())
+
+	// Register chat-only local LLM providers AFTER the tool-capable CLI agents.
+	// Rationale: missions need to execute cluster commands, so they must route
+	// to an agent that returns CapabilityToolExec. The local-LLM HTTP runners
+	// below return CapabilityChat only, so missions still prefer the CLI
+	// agents above (order matters — promoteExecutingDefault() below keeps a
+	// tool-capable agent as default whenever one is available). Registering
+	// the HTTP runners here makes them selectable in the agent-selector
+	// dropdown for chat and analysis workflows without breaking missions.
+	//
+	// Each provider is only advertised as Available when its URL env var is
+	// set (or a sensible loopback default applies, for Ollama and LM Studio).
+	// See docs/security/SECURITY-MODEL.md §3 for the posture these runners
+	// unlock.
+	registry.Register(providers.NewOllamaProvider())
+	registry.Register(providers.NewLlamaCppProvider())
+	registry.Register(providers.NewLocalAIProvider())
+	registry.Register(providers.NewVLLMProvider())
+	registry.Register(providers.NewLMStudioProvider())
+	registry.Register(providers.NewRHAIISProvider())
+	registry.Register(providers.NewRamalamaProvider())
+
+	// Register the OpenAI-compatible gateway and frontend providers. These
+	// have existed in the codebase but were previously unregistered because
+	// they are chat-only. With the capability-aware mission routing above,
+	// registering them is safe and lets operators pick a remote
+	// OpenAI-compatible endpoint from the dropdown (Groq LPU, OpenRouter
+	// gateway, or a self-hosted Open WebUI behind their own model).
+	registry.Register(providers.NewGroqProvider())
+	registry.Register(providers.NewOpenRouterProvider())
+	registry.Register(providers.NewOpenWebUIProvider())
+
+	// NOTE: API-only vendor agents (Claude API, OpenAI direct, Gemini API) and
+	// IDE-based agents (Cursor, Windsurf, Cline, etc.) remain intentionally
+	// unregistered. They cannot execute cluster commands AND they route
+	// traffic out of the cluster to a specific vendor endpoint that the
+	// operator has no say over, which is the opposite of what the local-LLM
+	// providers above offer. Only CLI-based tool-capable agents and
+	// operator-controlled OpenAI-compatible HTTP endpoints are registered.
+
+	// Set default agent based on environment or availability
+	if defaultAgent := os.Getenv("DEFAULT_AGENT"); defaultAgent != "" {
+		if err := registry.SetDefault(defaultAgent); err != nil {
+			// Log warning but don't fail - will use first available
+			slog.Warn("[Registry] could not set default agent", "agent", defaultAgent, "error", err)
+		}
+	}
+
+	// If the default ended up as copilot-cli but a better agent is available,
+	// prefer the agent that can actually execute commands (#3609).
+	registry.promoteExecutingDefault()
+
+	// Ensure at least one provider is available
+	if !registry.HasAvailableProviders() {
+		return fmt.Errorf("no AI providers available - please configure at least one API key or install a CLI agent (claude, codex, gemini, etc.)")
+	}
+
+	return nil
+}

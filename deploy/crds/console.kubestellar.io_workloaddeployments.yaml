@@ -1,0 +1,268 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: workloaddeployments.console.kubestellar.io
+  labels:
+    app.kubernetes.io/part-of: kubestellar-console
+spec:
+  group: console.kubestellar.io
+  names:
+    kind: WorkloadDeployment
+    listKind: WorkloadDeploymentList
+    plural: workloaddeployments
+    singular: workloaddeployment
+    shortNames:
+      - wd
+      - wds
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Workload
+          type: string
+          jsonPath: .spec.workloadRef.name
+        - name: Target Group
+          type: string
+          jsonPath: .spec.targetGroupRef.name
+        - name: Strategy
+          type: string
+          jsonPath: .spec.strategy
+        - name: Phase
+          type: string
+          jsonPath: .status.phase
+        - name: Progress
+          type: string
+          jsonPath: .status.progress
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: WorkloadDeployment represents an active deployment action
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              required:
+                - workloadRef
+              properties:
+                workloadRef:
+                  type: object
+                  description: Reference to the ManagedWorkload to deploy
+                  required:
+                    - name
+                  properties:
+                    name:
+                      type: string
+                      description: Name of the ManagedWorkload
+                    namespace:
+                      type: string
+                      description: Namespace of the ManagedWorkload (defaults to same namespace)
+                targetGroupRef:
+                  type: object
+                  description: Reference to the ClusterGroup to deploy to
+                  properties:
+                    name:
+                      type: string
+                      description: Name of the ClusterGroup
+                    namespace:
+                      type: string
+                      description: Namespace of the ClusterGroup (defaults to same namespace)
+                targetClusters:
+                  type: array
+                  description: Explicit list of target clusters (alternative to targetGroupRef)
+                  items:
+                    type: string
+                strategy:
+                  type: string
+                  description: Deployment strategy
+                  enum:
+                    - RollingUpdate
+                    - Recreate
+                    - BlueGreen
+                    - Canary
+                  default: RollingUpdate
+                rolloutConfig:
+                  type: object
+                  description: Configuration for rolling deployment
+                  properties:
+                    maxUnavailable:
+                      x-kubernetes-int-or-string: true
+                      description: Maximum unavailable clusters during rollout
+                    maxSurge:
+                      x-kubernetes-int-or-string: true
+                      description: Maximum extra clusters during rollout
+                    pauseBetweenClusters:
+                      type: string
+                      description: Duration to pause between cluster deployments (e.g., "30s", "5m")
+                    healthCheckTimeout:
+                      type: string
+                      description: Timeout for health checks (e.g., "2m", "5m")
+                      default: "5m"
+                canaryConfig:
+                  type: object
+                  description: Configuration for canary deployment
+                  properties:
+                    initialWeight:
+                      type: integer
+                      description: Initial traffic weight for canary (0-100)
+                      minimum: 0
+                      maximum: 100
+                      default: 10
+                    stepWeight:
+                      type: integer
+                      description: Traffic weight increment per step
+                      minimum: 1
+                      maximum: 100
+                      default: 10
+                    stepInterval:
+                      type: string
+                      description: Duration between steps (e.g., "5m", "1h")
+                      default: "5m"
+                    maxWeight:
+                      type: integer
+                      description: Maximum weight before full promotion
+                      minimum: 1
+                      maximum: 100
+                      default: 100
+                dryRun:
+                  type: boolean
+                  description: Preview changes without applying
+                  default: false
+                autoPromote:
+                  type: boolean
+                  description: Automatically promote after successful health checks
+                  default: true
+                suspend:
+                  type: boolean
+                  description: Suspend the deployment
+                  default: false
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  description: Current phase of the deployment
+                  enum:
+                    - Pending
+                    - InProgress
+                    - Paused
+                    - Complete
+                    - Failed
+                    - Cancelled
+                progress:
+                  type: string
+                  description: Overall progress (e.g., "3/5 clusters")
+                observedGeneration:
+                  type: integer
+                  format: int64
+                  description: The generation observed by the controller
+                startedAt:
+                  type: string
+                  format: date-time
+                  description: Time when deployment started
+                completedAt:
+                  type: string
+                  format: date-time
+                  description: Time when deployment completed
+                clusterStatuses:
+                  type: array
+                  description: Status of deployment in each target cluster
+                  items:
+                    type: object
+                    properties:
+                      cluster:
+                        type: string
+                        description: Cluster name
+                      phase:
+                        type: string
+                        enum:
+                          - Pending
+                          - InProgress
+                          - Complete
+                          - Failed
+                          - Skipped
+                      progress:
+                        type: string
+                        description: Progress percentage (e.g., "67%")
+                      startedAt:
+                        type: string
+                        format: date-time
+                      completedAt:
+                        type: string
+                        format: date-time
+                      message:
+                        type: string
+                        description: Status message or error details
+                      rollbackAvailable:
+                        type: boolean
+                        description: Whether rollback is available for this cluster
+                canaryStatus:
+                  type: object
+                  description: Status of canary deployment
+                  properties:
+                    currentWeight:
+                      type: integer
+                      description: Current traffic weight
+                    currentStep:
+                      type: integer
+                      description: Current step number
+                    totalSteps:
+                      type: integer
+                      description: Total number of steps
+                    lastStepTime:
+                      type: string
+                      format: date-time
+                    metrics:
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                      description: Collected metrics for canary analysis
+                conditions:
+                  type: array
+                  description: Current conditions of the deployment
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                      reason:
+                        type: string
+                      message:
+                        type: string
+                history:
+                  type: array
+                  description: History of deployment attempts
+                  items:
+                    type: object
+                    properties:
+                      revision:
+                        type: integer
+                      startedAt:
+                        type: string
+                        format: date-time
+                      completedAt:
+                        type: string
+                        format: date-time
+                      phase:
+                        type: string
+                      message:
+                        type: string

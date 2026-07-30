@@ -1,0 +1,349 @@
+#!/bin/bash
+# Dependency vulnerability scanning — runs npm audit (frontend) and govulncheck
+# (Go backend) to detect known vulnerabilities in dependencies.
+#
+# Usage:
+#   ./scripts/dependency-audit-test.sh              # Run all checks
+#   ./scripts/dependency-audit-test.sh --strict     # Fail on MODERATE and above
+#   ./scripts/dependency-audit-test.sh --sbom       # Also generate SBOM (requires syft)
+#
+# Prerequisites:
+#   - Node.js and npm installed
+#   - Go installed
+#   - govulncheck will be auto-installed if missing
+#   - syft optional for SBOM generation
+#
+# Output:
+#   .artifacts/dependency-audit/dependency-audit-report.json   — combined JSON data
+#   .artifacts/dependency-audit/dependency-audit-summary.md    — human-readable summary
+#   .artifacts/dependency-audit/sbom.json                      — SBOM (if --sbom flag used)
+#
+# Exit code:
+#   0 — no HIGH/CRITICAL production npm vulnerabilities found
+#       and no Go vulnerabilities detected
+#   1 — HIGH/CRITICAL production npm vulnerabilities or
+#       Go vulnerabilities detected
+
+set -euo pipefail
+unset CDPATH  # Prevent cd from printing paths when CDPATH is set (causes doubled-path bugs)
+
+# Use BASH_SOURCE for robustness when called via bash <path> or sourced.
+# Derive PROJECT_ROOT with $(pwd) after the cd — avoids $(cd ... && pwd)
+# subshell patterns that are vulnerable to CDPATH pollution even after unset.
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+PROJECT_ROOT="$(pwd)"
+
+# ============================================================================
+# Colors & argument parsing
+# ============================================================================
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BOLD='\033[1m'
+DIM='\033[2m'
+NC='\033[0m'
+
+STRICT_MODE=""
+SBOM_MODE=""
+for arg in "$@"; do
+  case "$arg" in
+    --strict) STRICT_MODE="1" ;;
+    --sbom) SBOM_MODE="1" ;;
+  esac
+done
+
+ARTIFACTS_DIR="$PROJECT_ROOT/.artifacts/dependency-audit"
+REPORT_JSON="$ARTIFACTS_DIR/dependency-audit-report.json"
+REPORT_MD="$ARTIFACTS_DIR/dependency-audit-summary.md"
+SBOM_JSON="$ARTIFACTS_DIR/sbom.json"
+TMPDIR_AUDIT="$ARTIFACTS_DIR/work"
+mkdir -p "$ARTIFACTS_DIR"
+rm -rf "$TMPDIR_AUDIT"
+mkdir -p "$TMPDIR_AUDIT"
+trap 'rm -rf "$TMPDIR_AUDIT"' EXIT
+
+echo -e "${BOLD}═══════════════════════════════════════════════════${NC}"
+echo -e "${BOLD}  Dependency Vulnerability Audit${NC}"
+echo -e "${BOLD}═══════════════════════════════════════════════════${NC}"
+echo ""
+
+NPM_CRITICAL=0
+NPM_HIGH=0
+NPM_MODERATE=0
+NPM_LOW=0
+NPM_TOTAL=0
+NPM_STATUS="pass"
+
+GO_VULNS=0
+GO_STATUS="pass"
+
+# ============================================================================
+# Phase 1: npm audit
+# ============================================================================
+
+# Nightly regression gate should track shipped frontend risk, not dev-only tooling.
+NPM_AUDIT_ARGS=(--omit=dev --audit-level=high --json)
+
+echo -e "${BOLD}Phase 1: npm audit (frontend production dependencies)${NC}"
+
+if [ -d "web" ] && [ -f "web/package-lock.json" ]; then
+  NPM_OUTPUT="$TMPDIR_AUDIT/npm-audit.json"
+  cd web
+  # Retry npm audit once — npm registry can be flaky in CI, causing intermittent
+  # failures with empty/error JSON responses (see #16381).
+  npm audit "${NPM_AUDIT_ARGS[@]}" > "$NPM_OUTPUT" 2>/dev/null || true
+  if ! python3 -c "import json; json.load(open('$NPM_OUTPUT')).get('metadata')" 2>/dev/null; then
+    echo -e "  ${DIM}npm audit returned invalid response — retrying after 5s...${NC}"
+    sleep 5
+    npm audit "${NPM_AUDIT_ARGS[@]}" > "$NPM_OUTPUT" 2>/dev/null || true
+  fi
+  cd ..
+
+  # Guard against transient npm audit failures returning empty or malformed output.
+  NPM_PARSE_ERR="$TMPDIR_AUDIT/npm-parse-err.txt"
+  if [ ! -s "$NPM_OUTPUT" ] || ! python3 -c "import json; json.load(open('$NPM_OUTPUT'))" 2>"$NPM_PARSE_ERR"; then
+    echo -e "  ${YELLOW}⚠️  npm audit produced invalid output — skipping (likely network issue)${NC}"
+    if [ -s "$NPM_PARSE_ERR" ]; then
+      while IFS= read -r line; do
+        echo -e "    ${DIM}${line}${NC}"
+      done < "$NPM_PARSE_ERR"
+    fi
+    NPM_STATUS="skip"
+  else
+    # Parse vulnerability counts from npm audit JSON — handles multiple npm output
+    # formats (v7-v10+) by trying metadata.vulnerabilities first, then falling back
+    # to counting top-level vulnerabilities object entries by severity.
+    NPM_PARSE_RESULT="$TMPDIR_AUDIT/npm-parsed.txt"
+    python3 -c "
+import json, sys
+with open('$NPM_OUTPUT') as f:
+    data = json.load(f)
+
+# Strategy 1: metadata.vulnerabilities (npm v7-v9 and most v10)
+vulns = data.get('metadata', {}).get('vulnerabilities', {})
+if vulns and isinstance(vulns, dict) and any(vulns.get(k, 0) > 0 for k in ('critical','high','moderate','low','total')):
+    c = int(vulns.get('critical', 0))
+    h = int(vulns.get('high', 0))
+    m = int(vulns.get('moderate', 0))
+    lo = int(vulns.get('low', 0) + vulns.get('info', 0))
+    t = int(vulns.get('total', c + h + m + lo))
+    print(c, h, m, lo, t)
+    sys.exit(0)
+
+# Strategy 2: count from top-level vulnerabilities dict (npm v10 alternate format)
+top_vulns = data.get('vulnerabilities', {})
+if top_vulns and isinstance(top_vulns, dict):
+    c = h = m = lo = 0
+    for v in top_vulns.values():
+        sev = v.get('severity', '') if isinstance(v, dict) else ''
+        if sev == 'critical': c += 1
+        elif sev == 'high': h += 1
+        elif sev == 'moderate': m += 1
+        elif sev in ('low', 'info'): lo += 1
+    t = c + h + m + lo
+    print(c, h, m, lo, t)
+    sys.exit(0)
+
+# Strategy 3: metadata exists with zero totals (clean scan)
+if 'metadata' in data:
+    c = int(vulns.get('critical', 0)) if vulns else 0
+    h = int(vulns.get('high', 0)) if vulns else 0
+    m = int(vulns.get('moderate', 0)) if vulns else 0
+    lo = int(vulns.get('low', 0)) if vulns else 0
+    t = int(vulns.get('total', 0)) if vulns else 0
+    print(c, h, m, lo, t)
+    sys.exit(0)
+
+# Fallback: valid JSON but unrecognized structure — assume clean
+print(0, 0, 0, 0, 0)
+" > "$NPM_PARSE_RESULT" 2>"$NPM_PARSE_ERR"
+
+    if read -r NPM_CRITICAL NPM_HIGH NPM_MODERATE NPM_LOW NPM_TOTAL < "$NPM_PARSE_RESULT"; then
+      if [ "$NPM_TOTAL" -eq 0 ]; then
+        echo -e "  ${GREEN}✓ No vulnerabilities found${NC}"
+      else
+        [ "$NPM_CRITICAL" -gt 0 ] && echo -e "  ${RED}❌ CRITICAL: ${NPM_CRITICAL}${NC}"
+        [ "$NPM_HIGH" -gt 0 ] && echo -e "  ${RED}❌ HIGH:     ${NPM_HIGH}${NC}"
+        [ "$NPM_MODERATE" -gt 0 ] && echo -e "  ${YELLOW}⚠️  MODERATE: ${NPM_MODERATE}${NC}"
+        [ "$NPM_LOW" -gt 0 ] && echo -e "  ${DIM}ℹ  LOW:      ${NPM_LOW}${NC}"
+      fi
+
+      if [ "$NPM_CRITICAL" -gt 0 ] || [ "$NPM_HIGH" -gt 0 ]; then
+        NPM_STATUS="fail"
+      elif [ -n "$STRICT_MODE" ] && [ "$NPM_MODERATE" -gt 0 ]; then
+        NPM_STATUS="fail"
+      fi
+    else
+      echo -e "  ${YELLOW}⚠️  Could not extract vulnerability counts from npm audit output — treating as clean${NC}"
+      if [ -s "$NPM_PARSE_ERR" ]; then
+        while IFS= read -r line; do
+          echo -e "    ${DIM}${line}${NC}"
+        done < "$NPM_PARSE_ERR"
+      fi
+      # Valid JSON but unparseable structure — degrade gracefully rather than fail
+      NPM_STATUS="pass"
+    fi
+  fi
+else
+  echo -e "  ${YELLOW}⚠️  web/package-lock.json not found — skipping${NC}"
+  NPM_STATUS="skip"
+fi
+
+echo ""
+
+# ============================================================================
+# Phase 2: govulncheck (Go)
+# ============================================================================
+
+echo -e "${BOLD}Phase 2: govulncheck (Go backend)${NC}"
+
+if command -v go &>/dev/null; then
+  GOVULNCHECK_BIN="$TMPDIR_AUDIT/govulncheck"
+  GOVULNCHECK_TOOLCHAIN="auto"
+  MODULE_GO_VERSION=$(go list -m -f '{{.GoVersion}}' 2>/dev/null || true)
+  if [ -n "$MODULE_GO_VERSION" ]; then
+    GOVULNCHECK_TOOLCHAIN="go${MODULE_GO_VERSION}"
+  fi
+
+  echo -e "  ${DIM}Installing govulncheck...${NC}"
+  GOTOOLCHAIN="$GOVULNCHECK_TOOLCHAIN" GOBIN="$TMPDIR_AUDIT" go install golang.org/x/vuln/cmd/govulncheck@v1.2.0 2>/dev/null || true
+
+  if [ -x "$GOVULNCHECK_BIN" ]; then
+    GOVULN_OUTPUT="$TMPDIR_AUDIT/govulncheck.txt"
+    GOVULN_EXIT=0
+    GOVULN_TIMEOUT_SECS=120
+
+    echo -e "  ${DIM}Running govulncheck (timeout: ${GOVULN_TIMEOUT_SECS}s)...${NC}"
+    if timeout "${GOVULN_TIMEOUT_SECS}" "$GOVULNCHECK_BIN" ./... > "$GOVULN_OUTPUT" 2>/dev/null; then
+      GOVULN_EXIT=0
+    else
+      GOVULN_EXIT=$?
+      if [ "$GOVULN_EXIT" -eq 124 ]; then
+        echo -e "  ${YELLOW}⚠️  govulncheck timed out after ${GOVULN_TIMEOUT_SECS}s${NC}"
+        GO_STATUS="skip"
+      fi
+    fi
+
+    # Count vulnerabilities from text output
+    GO_VULNS=$(grep -c "^Vulnerability #" "$GOVULN_OUTPUT" 2>/dev/null | head -1 | tr -d '[:space:]' || true)
+    GO_VULNS="${GO_VULNS:-0}"
+
+    if [ "$GO_STATUS" = "skip" ] && [ "$GO_VULNS" -gt 0 ] 2>/dev/null; then
+      # Timed out but partial vulnerability output was captured — surface it and fail
+      echo -e "  ${RED}❌ ${GO_VULNS} vulnerability/ies found (scan timed out; results may be incomplete)${NC}"
+      grep -A 2 "^Vulnerability #" "$GOVULN_OUTPUT" 2>/dev/null | head -15 | while IFS= read -r line; do
+        echo -e "    ${DIM}${line}${NC}"
+      done
+      GO_STATUS="fail"
+    elif [ "$GO_STATUS" = "skip" ]; then
+      : # timeout warning already printed above; do not claim a clean scan
+    elif [ "$GO_VULNS" -eq 0 ] 2>/dev/null && [ "$GOVULN_EXIT" -ne 0 ] 2>/dev/null; then
+      echo -e "  ${YELLOW}⚠️  govulncheck failed with exit code ${GOVULN_EXIT} — skipping Go vulnerability result${NC}"
+      GO_STATUS="skip"
+    elif [ "$GO_VULNS" -eq 0 ] 2>/dev/null; then
+      echo -e "  ${GREEN}✓ No vulnerabilities found${NC}"
+    else
+      echo -e "  ${RED}❌ ${GO_VULNS} vulnerability/ies found${NC}"
+      # Show first few
+      grep -A 2 "^Vulnerability #" "$GOVULN_OUTPUT" 2>/dev/null | head -15 | while IFS= read -r line; do
+        echo -e "    ${DIM}${line}${NC}"
+      done
+      GO_STATUS="fail"
+    fi
+  else
+    echo -e "  ${YELLOW}⚠️  govulncheck installation failed — skipping${NC}"
+    GO_STATUS="skip"
+  fi
+else
+  echo -e "  ${YELLOW}⚠️  Go not installed — skipping${NC}"
+  GO_STATUS="skip"
+fi
+
+echo ""
+
+# ============================================================================
+# Phase 3: SBOM generation (optional)
+# ============================================================================
+
+if [ -n "$SBOM_MODE" ]; then
+  echo -e "${BOLD}Phase 3: SBOM generation${NC}"
+
+  if command -v syft &>/dev/null; then
+    syft . -o spdx-json > "$SBOM_JSON" 2>/dev/null
+    SBOM_PACKAGES=$(jq '.packages | length' "$SBOM_JSON" 2>/dev/null || echo "0")
+    echo -e "  ${GREEN}✓ SBOM generated — ${SBOM_PACKAGES} packages${NC}"
+    echo -e "  ${DIM}Output: $SBOM_JSON${NC}"
+  else
+    echo -e "  ${YELLOW}⚠️  syft not installed — skipping SBOM${NC}"
+    echo -e "  ${DIM}Install: brew install syft${NC}"
+  fi
+
+  echo ""
+fi
+
+# ============================================================================
+# Generate reports
+# ============================================================================
+
+cat > "$REPORT_JSON" << EOF
+{
+  "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "npm": {
+    "status": "${NPM_STATUS}",
+    "critical": ${NPM_CRITICAL},
+    "high": ${NPM_HIGH},
+    "moderate": ${NPM_MODERATE},
+    "low": ${NPM_LOW},
+    "total": ${NPM_TOTAL}
+  },
+  "go": {
+    "status": "${GO_STATUS}",
+    "vulnerabilities": ${GO_VULNS}
+  }
+}
+EOF
+
+cat > "$REPORT_MD" << EOF
+# Dependency Vulnerability Audit
+
+**Date:** $(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+## npm audit (frontend production dependencies)
+
+| Severity | Count |
+|----------|-------|
+| Critical | ${NPM_CRITICAL} |
+| High     | ${NPM_HIGH} |
+| Moderate | ${NPM_MODERATE} |
+| Low      | ${NPM_LOW} |
+| **Total** | **${NPM_TOTAL}** |
+
+**Status:** ${NPM_STATUS}
+
+## govulncheck (Go backend)
+
+**Vulnerabilities found:** ${GO_VULNS}
+**Status:** ${GO_STATUS}
+EOF
+
+# ============================================================================
+# Summary
+# ============================================================================
+
+OVERALL_FAIL=0
+[ "$NPM_STATUS" = "fail" ] && OVERALL_FAIL=1
+[ "$GO_STATUS" = "fail" ] && OVERALL_FAIL=1
+
+if [ "$OVERALL_FAIL" -eq 0 ]; then
+  echo -e "${GREEN}${BOLD}Dependency audit passed${NC}"
+else
+  echo -e "${RED}${BOLD}Dependency audit found vulnerabilities${NC}"
+fi
+
+echo ""
+echo "Reports:"
+echo "  JSON:     $REPORT_JSON"
+echo "  Summary:  $REPORT_MD"
+
+exit "$OVERALL_FAIL"

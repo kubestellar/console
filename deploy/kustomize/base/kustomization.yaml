@@ -1,0 +1,35 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: kubestellar-console
+
+labels:
+  - includeSelectors: false
+    includeTemplates: true
+    pairs:
+      app.kubernetes.io/name: kubestellar-console
+      app.kubernetes.io/instance: kubestellar-console
+      app.kubernetes.io/part-of: kubestellar
+      owner: kubestellar
+
+resources:
+  - namespace.yaml
+  - serviceaccount.yaml
+  - clusterrole.yaml
+  - clusterrolebinding.yaml
+  - self-upgrade-role.yaml
+  - self-upgrade-rolebinding.yaml
+  - pvc.yaml
+  - pvc-backups.yaml
+  - service.yaml
+  - deployment.yaml
+  - cronjob-db-backup.yaml
+
+# Release channel. Every nightly/weekly release pushes the moving tags
+# `latest`, `nightly`, and `weekly` plus an immutable version tag
+# (see .github/workflows/release.yml docker-manifest job), so `latest`
+# stays current without any manifest changes here. Pin an immutable
+# vX.Y.Z[-nightly.DATE] tag in your own overlay for reproducible installs.
+images:
+  - name: ghcr.io/kubestellar/console
+    newTag: latest

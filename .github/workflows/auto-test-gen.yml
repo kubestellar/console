@@ -1,0 +1,86 @@
+name: Auto Test Generator
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'web/src/components/**/*.tsx'
+      - 'web/src/components/**/*.ts'
+      - 'web/src/hooks/**/*.ts'
+      - 'web/src/hooks/**/*.tsx'
+
+permissions:
+  contents: read  # default read; writes scoped to job below
+jobs:
+  detect-untested:
+    permissions:
+      pull-requests: write
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Find new components without tests
+        id: detect
+        run: |
+          NEW_FILES=$(git diff --name-only origin/main...HEAD \
+            -- 'web/src/components/**/*.tsx' 'web/src/components/**/*.ts' \
+            'web/src/hooks/**/*.ts' 'web/src/hooks/**/*.tsx' \
+            | grep -v '__tests__' | grep -v '\.test\.' | grep -v '\.spec\.' || true)
+
+          UNTESTED=""
+          for f in $NEW_FILES; do
+            BASE=$(basename "$f" .tsx)
+            BASE=$(basename "$BASE" .ts)
+            TEST_EXISTS=$(git ls-files "web/src" | grep -E "${BASE}\.(test|spec)\." | head -1)
+            if [ -z "$TEST_EXISTS" ]; then
+              UNTESTED="$UNTESTED $f"
+            fi
+          done
+
+          UNTESTED=$(echo "$UNTESTED" | xargs)
+          echo "untested=$UNTESTED" >> "$GITHUB_OUTPUT"
+          if [ -n "$UNTESTED" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Comment on PR listing untested components
+        if: steps.detect.outputs.found == 'true'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          UNTESTED_FILES: ${{ steps.detect.outputs.untested }}
+        with:
+          script: |
+            const marker = '<!-- auto-test-generator -->';
+            const untested = (process.env.UNTESTED_FILES || '').trim().split(/\s+/).filter(Boolean);
+            const list = untested.map(f => `- \`${f}\``).join('\n');
+            const body = `${marker}\n## Auto Test Generator\n\n` +
+              `The following new files have no corresponding test file:\n\n${list}\n\n` +
+              `Please add tests or apply the \`needs-tests\` label to track this PR.`;
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body?.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }

@@ -1,0 +1,10 @@
+{
+    "format": "kc-card-preset-v1",
+    "card_type": "thanos_status",
+    "title": "Thanos",
+    "description": "Thanos global view metrics, store gateway status, and query health.",
+    "category": "Observability",
+    "project": "thanos",
+    "cncf_status": "graduated",
+    "config": {}
+}

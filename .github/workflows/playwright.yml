@@ -1,0 +1,375 @@
+name: Playwright E2E Tests
+
+on:
+  pull_request:
+    paths:
+      - 'web/**'
+      - '.github/workflows/playwright.yml'
+  push:
+    branches: [main, dev]
+    paths:
+      - 'web/**'
+      - '.github/workflows/playwright.yml'
+  workflow_dispatch:
+    inputs:
+      spec_filter:
+        description: 'Spec file to run (e.g. e2e/Sidebar.spec.ts). Leave empty for all tests.'
+        required: false
+        default: ''
+        type: string
+
+# Least-privilege: read-only by default; jobs declare write scopes individually
+permissions: read-all
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CI: true
+
+jobs:
+  # Build job - runs once and caches artifacts
+  build:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Card registry integrity check
+        run: npm run test:card-registry
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: build-output
+          path: web/dist
+          retention-days: 1
+
+  # Test job — chromium with 4 shards for parallelism
+  # Firefox runs in nightly (playwright-nightly.yml) to avoid doubling CI time
+  test:
+    name: Test (chromium, shard ${{ matrix.shard }})
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: build-output
+          path: web/dist
+
+      - name: Remove broken Microsoft apt source (workaround for NOSPLIT GPG error)
+        run: sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/microsoft-edge.list
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Start preview server
+        run: |
+          npm run preview &
+          npx wait-on http://localhost:4173 --timeout 120000
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:4173
+
+      - name: Run Playwright tests
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:4173
+          SPEC_FILTER: ${{ inputs.spec_filter }}
+        run: |
+          if [ -n "$SPEC_FILTER" ]; then
+            npx playwright test --project=chromium --timeout=75000 --retries=2 --shard=${{ matrix.shard }}/4 "$SPEC_FILTER"
+          else
+            npx playwright test --project=chromium --shard=${{ matrix.shard }}/4
+          fi
+
+      - name: Upload blob report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: blob-report-chromium-${{ matrix.shard }}
+          path: web/blob-report/
+          retention-days: 1
+
+  # Merge reports job
+  merge-reports:
+    name: Merge Test Reports
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pull-requests: write # post test-result comment on PR
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download all blob reports
+        id: download-reports
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        continue-on-error: true
+        with:
+          pattern: blob-report-*
+          path: web/all-blob-reports
+          merge-multiple: true
+
+      - name: Check for blob reports
+        id: check-reports
+        run: |
+          if [ -d "./all-blob-reports" ] && [ "$(ls -A ./all-blob-reports 2>/dev/null)" ]; then
+            echo "has_reports=true" >> "$GITHUB_OUTPUT"
+            echo "Found blob reports to merge"
+          else
+            echo "has_reports=false" >> "$GITHUB_OUTPUT"
+            echo "No blob reports found — test job likely failed, was cancelled, or produced no artifacts"
+          fi
+
+      - name: Merge reports
+        if: steps.check-reports.outputs.has_reports == 'true'
+        run: npx playwright merge-reports --reporter=html,json ./all-blob-reports
+
+      - name: Upload HTML report
+        if: steps.check-reports.outputs.has_reports == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-report
+          path: web/playwright-report/
+          retention-days: 14
+
+      - name: Generate summary
+        if: always()
+        run: |
+          echo "## Playwright Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.check-reports.outputs.has_reports }}" != "true" ]; then
+            echo "No test reports were produced. The test job may have failed, been cancelled, or been skipped." >> $GITHUB_STEP_SUMMARY
+          elif [ -f "test-results.json" ]; then
+            total=$(jq '.stats.expected + .stats.unexpected + .stats.flaky + .stats.skipped' test-results.json 2>/dev/null || echo "N/A")
+            passed=$(jq '.stats.expected' test-results.json 2>/dev/null || echo "N/A")
+            failed=$(jq '.stats.unexpected' test-results.json 2>/dev/null || echo "N/A")
+            echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Total | $total |" >> $GITHUB_STEP_SUMMARY
+            echo "| Passed | $passed |" >> $GITHUB_STEP_SUMMARY
+            echo "| Failed | $failed |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Test results summary not available" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Comment on PR with test failures
+        if: github.event_name == 'pull_request' && needs.test.result == 'failure'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            let comment = '## ❌ Playwright Tests Failed\n\n';
+
+            // Try to parse test results
+            try {
+              const resultsPath = 'web/test-results.json';
+              if (fs.existsSync(resultsPath)) {
+                const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
+                const failed = results.suites?.flatMap(s =>
+                  s.specs?.filter(spec => spec.ok === false) || []
+                ) || [];
+
+                if (failed.length > 0) {
+                  comment += '### Failed Tests\n\n';
+                  comment += '| Test | File | Error |\n';
+                  comment += '|------|------|-------|\n';
+
+                  for (const spec of failed.slice(0, 10)) {
+                    const name = spec.title || 'Unknown';
+                    const file = spec.file || 'Unknown';
+                    const error = spec.tests?.[0]?.results?.[0]?.error?.message?.slice(0, 100) || 'See report';
+                    comment += `| ${name} | ${file} | ${error} |\n`;
+                  }
+
+                  if (failed.length > 10) {
+                    comment += `\n_...and ${failed.length - 10} more failures_\n`;
+                  }
+                }
+              }
+            } catch (e) {
+              comment += `_Could not parse test results: ${e.message}_\n`;
+            }
+
+            comment += '\n### 📊 View Full Report\n\n';
+            comment += `Download the \`playwright-report\` artifact from the [workflow run](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}) for screenshots and detailed traces.\n\n`;
+            comment += '**To view the report locally:**\n';
+            comment += '```bash\n';
+            comment += '# Download and extract playwright-report.zip\n';
+            comment += 'npx playwright show-report path/to/playwright-report\n';
+            comment += '```\n';
+
+            // Post comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment
+            });
+
+  # Cross-browser tests moved to playwright-nightly.yml to avoid cancellation by push/PR runs
+
+  # Mobile tests — run core tests on mobile viewports
+  mobile-tests:
+    name: Mobile Browser Tests
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: build-output
+          path: web/dist
+
+      - name: Remove broken Microsoft apt source (workaround for NOSPLIT GPG error)
+        run: sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/microsoft-edge.list
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Start preview server
+        run: |
+          npm run preview &
+          npx wait-on http://localhost:4173 --timeout 120000
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:4173
+
+      - name: Run mobile tests
+        run: |
+          npx playwright test \
+            --project=mobile-chrome \
+            --project=mobile-safari
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:4173
+
+      - name: Upload mobile test report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mobile-test-report
+          path: web/playwright-report/
+          retention-days: 7
+
+  # Accessibility tests
+  accessibility:
+    name: Accessibility Tests
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: build-output
+          path: web/dist
+
+      - name: Remove broken Microsoft apt source (workaround for NOSPLIT GPG error)
+        run: sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/microsoft-edge.list
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Start preview server
+        run: |
+          npm run preview &
+          npx wait-on http://localhost:4173 --timeout 120000
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:4173
+
+      - name: Run accessibility tests
+        run: |
+          npx playwright test \
+            --project=chromium \
+            --grep="accessibility|a11y"
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:4173
+
+  # Visual regression testing moved to .github/workflows/visual-regression.yml
+  # The previous job here was non-functional (--update-snapshots always passed,
+  # continue-on-error swallowed failures). The new workflow uses committed
+  # baselines and blocks PRs on visual regressions.

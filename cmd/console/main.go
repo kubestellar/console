@@ -1,0 +1,134 @@
+package main
+
+import (
+	"errors"
+	"flag"
+	"fmt"
+	"log/slog"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"syscall"
+
+	"github.com/joho/godotenv"
+
+	_ "github.com/kubestellar/console/pkg/agent" // Initialize AI providers
+	"github.com/kubestellar/console/pkg/ai"
+	"github.com/kubestellar/console/pkg/api"
+	"github.com/kubestellar/console/pkg/safego"
+)
+
+func main() {
+	// Load .env file if it exists (silently ignore if not found)
+	_ = godotenv.Load()
+
+	// Set up structured logging — JSON for production, human-readable text for dev.
+	var logHandler slog.Handler
+	if os.Getenv("DEV_MODE") == "true" {
+		logHandler = slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug})
+	} else {
+		logHandler = slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})
+	}
+	slog.SetDefault(slog.New(logHandler))
+
+	// Parse flags
+	devMode := flag.Bool("dev", false, "Run in development mode")
+	port := flag.Int("port", 0, "Server port (default: 8080)")
+	dbPath := flag.String("db", "", "Database path (default: ./data/console.db)")
+	version := flag.Bool("version", false, "Print version and exit")
+	flag.Parse()
+
+	if *version {
+		fmt.Printf("console version %s\n", api.Version) //nolint:forbidigo // CLI --version flag output
+		os.Exit(0)
+	}
+
+	slog.Info("console starting", "version", api.Version)
+
+	// Load config from environment
+	cfg := api.LoadConfigFromEnv()
+
+	// Override with flags
+	if *devMode {
+		cfg.DevMode = true
+	}
+	if *port > 0 {
+		cfg.Port = *port
+	}
+	if *dbPath != "" {
+		cfg.DatabasePath = *dbPath
+	}
+
+	// Ensure data directory exists
+	if cfg.DatabasePath != "" {
+		ensureDir(cfg.DatabasePath)
+	}
+
+	// Initialize AI providers early so they're available when the server starts
+	if err := ai.InitializeProviders(); err != nil {
+		slog.Warn("AI features disabled — add API keys in Settings to enable", "error", err)
+	}
+
+	// Create and start server — starts HTTP listener immediately with a loading
+	// page, then initializes services (DB, k8s, MCP, etc.) in the background.
+	server, err := api.NewServer(cfg)
+	if err != nil {
+		slog.Error("failed to create server", "error", err)
+		os.Exit(1)
+	}
+
+	// Handle graceful shutdown
+	safego.GoWith("signal-handler", func() {
+		sigCh := make(chan os.Signal, 1)
+		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+		<-sigCh
+
+		slog.Info("Shutting down...")
+		if err := server.Shutdown(); err != nil {
+			slog.Error("shutdown error", "error", err)
+		}
+		os.Exit(0)
+	})
+
+	// Block until shutdown (HTTP listener runs in background from NewServer)
+	if err := server.Start(); err != nil {
+		slog.Error("server error", "error", err)
+		os.Exit(1)
+	}
+}
+
+const dataDirPerms = 0o700
+
+var chmodPath = os.Chmod //nolint:gochecknoglobals // overridden in tests
+
+func ensureDir(path string) {
+	if err := ensureDirPath(path); err != nil {
+		slog.Error("failed to prepare data directory", "path", path, "error", err)
+		os.Exit(1)
+	}
+}
+
+func ensureDirPath(path string) error {
+	dir := filepath.Dir(path)
+	if dir == "." || dir == "" || dir == string(filepath.Separator) {
+		return nil
+	}
+
+	_, statErr := os.Stat(dir)
+	dirExisted := statErr == nil
+	if statErr != nil && !errors.Is(statErr, os.ErrNotExist) {
+		return fmt.Errorf("stat data directory: %w", statErr)
+	}
+
+	if err := os.MkdirAll(dir, dataDirPerms); err != nil {
+		return fmt.Errorf("create data directory: %w", err)
+	}
+	if err := chmodPath(dir, dataDirPerms); err != nil {
+		if dirExisted && os.IsPermission(err) {
+			slog.Warn("could not tighten existing data directory permissions", "path", dir, "error", err)
+			return nil
+		}
+		return fmt.Errorf("secure data directory permissions: %w", err)
+	}
+	return nil
+}

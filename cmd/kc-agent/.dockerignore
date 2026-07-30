@@ -1,0 +1,15 @@
+web/
+node_modules/
+.git/
+.github/
+docs/
+deploy/
+presets/
+data/
+test-results/
+*.md
+LICENSE
+DCO
+Makefile
+crowdin.yml
+netlify.toml

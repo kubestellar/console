@@ -1,0 +1,725 @@
+package github
+
+import (
+	"context"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log/slog"
+	"net/http"
+	"net/url"
+	"regexp"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/safego"
+)
+
+const (
+	nightlyCacheIdleTTL   = 5 * time.Minute  // cache when no jobs running
+	nightlyCacheActiveTTL = 2 * time.Minute  // cache when jobs are in progress
+	imageCacheTTL         = 30 * time.Minute // image tags change less frequently
+	nightlyRunsPerPage    = 7
+
+	failureReasonGPU  = "gpu_unavailable"
+	failureReasonTest = "test_failure"
+
+	// maxErrorBodyBytes is the maximum number of bytes to read from GitHub error
+	// response bodies. Prevents unbounded memory consumption on large HTML error
+	// pages during outages (#7055).
+	maxErrorBodyBytes = 10_000           // 10 KB
+	maxLogBytes       = 200_000          // 200KB tail per job log
+	logCacheTTL       = 10 * time.Minute // immutable once run completes
+	maxLogFetchJobs   = 5                // limit concurrent job log fetches
+
+	// maxLogCacheEntries caps the in-memory log cache to prevent unbounded
+	// memory growth from many unique runId values. The public endpoint
+	// /api/public/nightly-e2e/run-logs is rate-limited but unauthenticated,
+	// so this bound is necessary for defense-in-depth (CWE-400 / #18166).
+	// With logCacheTTL=10min and a typical workflow of ~13 guides, normal
+	// usage stays well below 200 entries.
+	maxLogCacheEntries = 200
+
+	// imageRepo is the GitHub repo whose guide directories contain image references
+	imageRepo = "llm-d/llm-d"
+
+	// maxBlobResponseBytes caps the size of git blob API responses to prevent
+	// unbounded memory allocation from large blobs (CWE-400).
+	maxBlobResponseBytes = 5 * 1024 * 1024 // 5 MB
+)
+
+// imageRe matches direct image references: ghcr.io/llm-d/<name>:<tag>
+// imageRe matches direct image references: ghcr.io/llm-d/<name>:<tag>.
+// (?m) enables per-line ^/$ so FindAllStringSubmatch anchors each match to
+// a complete line, preventing partial-substring bypass across line boundaries
+// (go/regex/missing-regexp-anchor).
+var imageRe = regexp.MustCompile(`(?m)^.*ghcr\.io/llm-d/([\w][\w.-]*?):([\w][\w.+-]*).*$`)
+
+// hubRe, nameRe, tagRe are applied to individual YAML lines via MatchString /
+// FindStringSubmatch.  ^ and $ anchor each to the full line it is called on,
+// preventing partial-line false positives (go/regex/missing-regexp-anchor).
+var hubRe = regexp.MustCompile(`(?i)^.*hub:\s*ghcr\.io/llm-d\b.*$`)
+
+var nameRe = regexp.MustCompile(`(?i)^.*name:\s*([\w][\w.-]*).*$`)
+
+var tagRe = regexp.MustCompile(`(?i)^.*tag:\s*([\w][\w.+-]*).*$`)
+
+var prototypePollutionImageKeys = map[string]struct{}{
+	"__proto__":   {},
+	"constructor": {},
+	"prototype":   {},
+}
+
+func isSafeImageKey(key string) bool {
+	_, blocked := prototypePollutionImageKeys[key]
+	return !blocked
+}
+
+// NewNightlyE2EHandler creates a handler using the given GitHub token for API access.
+// It pre-warms the cache in the background so the first request returns instantly.
+// prewarmTimeout is the maximum time allowed for the background cache prewarm.
+const prewarmTimeout = 30 * time.Second
+
+func (h *NightlyE2EHandler) prewarm() {
+	// #7052 — Use a cancellable context so that on timeout, all goroutines
+	// spawned by fetchAllWithContext are cancelled instead of abandoned.
+	ctx, cancel := context.WithTimeout(context.Background(), prewarmTimeout)
+	defer cancel()
+
+	done := make(chan struct{})
+	var resp *NightlyE2EResponse
+	var fetchErr error
+
+	safego.Go(func() {
+		resp, fetchErr = h.fetchAllWithContext(ctx)
+		close(done)
+	})
+
+	select {
+	case <-done:
+		if fetchErr != nil {
+			slog.Warn("[NightlyE2E] prewarm failed", "error", fetchErr)
+			return
+		}
+	case <-ctx.Done():
+		slog.Warn("[NightlyE2E] prewarm timed out", "timeout", prewarmTimeout)
+		return
+	}
+
+	ttl := nightlyCacheIdleTTL
+	if hasInProgressRuns(resp.Guides) {
+		ttl = nightlyCacheActiveTTL
+	}
+	h.mu.Lock()
+	h.cache = resp
+	h.cacheExp = time.Now().Add(ttl)
+	h.mu.Unlock()
+}
+
+// fetchAllWithContext is the context-aware fetch used by both the handler and
+// prewarm paths (#7052).
+// When ctx is cancelled, HTTP requests made by sub-goroutines will be
+// interrupted instead of running to completion.
+func (h *NightlyE2EHandler) fetchAllWithContext(ctx context.Context) (*NightlyE2EResponse, error) {
+	type result struct {
+		idx  int
+		runs []NightlyRun
+		err  error
+	}
+
+	// Fetch workflow runs and guide images concurrently.
+	// #7052 — Check context before spawning goroutines and bail early on
+	// cancellation so prewarm timeouts don't leave goroutines running.
+	ch := make(chan result, len(nightlyWorkflows))
+	for i, wf := range nightlyWorkflows {
+		idx := i
+		workflow := wf
+		safego.GoWith("nightly-e2e-fetch-workflow", func() {
+			select {
+			case <-ctx.Done():
+				ch <- result{idx: idx, err: ctx.Err()}
+				return
+			default:
+			}
+			runs, err := h.fetchWorkflowRuns(ctx, workflow)
+			ch <- result{idx: idx, runs: runs, err: err}
+		})
+	}
+
+	// Fetch dynamic image tags (cached separately with longer TTL)
+	guideImages := h.getGuideImages(ctx)
+
+	// Collect results
+	runsByIdx := make(map[int][]NightlyRun, len(nightlyWorkflows))
+	for range nightlyWorkflows {
+		r := <-ch
+		if r.err == nil {
+			runsByIdx[r.idx] = r.runs
+		}
+	}
+
+	guides := make([]NightlyGuideStatus, len(nightlyWorkflows))
+	for i, wf := range nightlyWorkflows {
+		runs := runsByIdx[i]
+		if runs == nil {
+			runs = []NightlyRun{}
+		}
+		var latest *string
+		if len(runs) > 0 {
+			if runs[0].Conclusion != nil {
+				latest = runs[0].Conclusion
+			} else {
+				s := runs[0].Status
+				latest = &s
+			}
+		}
+
+		// Use dynamically fetched images for this guide
+		images := guideImages[wf.GuidePath]
+		if images == nil {
+			images = map[string]string{}
+		}
+
+		guides[i] = NightlyGuideStatus{
+			Guide:            wf.Guide,
+			Acronym:          wf.Acronym,
+			Platform:         wf.Platform,
+			Repo:             wf.Repo,
+			WorkflowFile:     wf.WorkflowFile,
+			Runs:             runs,
+			PassRate:         computePassRate(runs),
+			Trend:            computeTrend(runs),
+			LatestConclusion: latest,
+			Model:            wf.Model,
+			GPUType:          wf.GPUType,
+			GPUCount:         wf.GPUCount,
+			LLMDImages:       images,
+			OtherImages:      wf.OtherImages,
+		}
+	}
+
+	return &NightlyE2EResponse{
+		Guides:    guides,
+		CachedAt:  time.Now().UTC().Format(time.RFC3339),
+		FromCache: false,
+	}, nil
+}
+
+func (h *NightlyE2EHandler) fetchWorkflowRuns(ctx context.Context, wf NightlyWorkflow) ([]NightlyRun, error) {
+	url := fmt.Sprintf("%s/repos/%s/actions/workflows/%s/runs?per_page=%d",
+		handlers.ResolveGitHubAPIBase(), wf.Repo, wf.WorkflowFile, nightlyRunsPerPage)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	if h.githubToken != "" {
+		req.Header.Set("Authorization", "Bearer "+h.githubToken)
+	}
+
+	resp, err := h.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		// Workflow doesn't exist yet — return empty
+		return []NightlyRun{}, nil
+	}
+	if resp.StatusCode != http.StatusOK {
+		// #7055 — Use LimitReader to prevent unbounded memory on large error pages.
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxErrorBodyBytes))
+		if readErr != nil {
+			body = []byte("(failed to read response body)")
+		}
+		return nil, fmt.Errorf("GitHub API returned %d: %s", resp.StatusCode, string(body))
+	}
+
+	var data struct {
+		WorkflowRuns []struct {
+			ID         int64   `json:"id"`
+			Status     string  `json:"status"`
+			Conclusion *string `json:"conclusion"`
+			CreatedAt  string  `json:"created_at"`
+			UpdatedAt  string  `json:"updated_at"`
+			HTMLURL    string  `json:"html_url"`
+			RunNumber  int     `json:"run_number"`
+			Event      string  `json:"event"`
+		} `json:"workflow_runs"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return nil, err
+	}
+
+	runs := make([]NightlyRun, 0, len(data.WorkflowRuns))
+	for _, r := range data.WorkflowRuns {
+		// Skip runs that are still queued (never started executing)
+		if r.Status == "queued" {
+			continue
+		}
+		runs = append(runs, NightlyRun{
+			ID:         r.ID,
+			Status:     r.Status,
+			Conclusion: r.Conclusion,
+			CreatedAt:  r.CreatedAt,
+			UpdatedAt:  r.UpdatedAt,
+			HTMLURL:    r.HTMLURL,
+			RunNumber:  r.RunNumber,
+			Model:      wf.Model,
+			GPUType:    wf.GPUType,
+			GPUCount:   wf.GPUCount,
+			Event:      r.Event,
+		})
+	}
+
+	// Classify failures (GPU unavailable vs test failure)
+	h.classifyFailures(ctx, wf.Repo, runs)
+
+	return runs, nil
+}
+
+// maxConcurrentClassify limits concurrent detectGPUFailure calls to prevent
+// unbounded goroutine fan-out when many runs fail simultaneously (#7056).
+const maxConcurrentClassify = 5
+
+// classifyFailures fetches jobs for failed runs and sets FailureReason.
+// #7056 — Uses a semaphore to cap concurrent GitHub API calls.
+func (h *NightlyE2EHandler) classifyFailures(ctx context.Context, repo string, runs []NightlyRun) {
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, maxConcurrentClassify)
+	for i := range runs {
+		if runs[i].Conclusion == nil || *runs[i].Conclusion != "failure" {
+			continue
+		}
+		wg.Add(1)
+		sem <- struct{}{}
+		idx := i
+		safego.Go(func() {
+			defer wg.Done()
+			defer func() { <-sem }()
+			runs[idx].FailureReason = h.detectGPUFailure(ctx, repo, runs[idx].ID)
+		})
+	}
+	wg.Wait()
+}
+
+// detectGPUFailure checks if a run failed due to GPU unavailability.
+func (h *NightlyE2EHandler) detectGPUFailure(ctx context.Context, repo string, runID int64) string {
+	url := fmt.Sprintf("%s/repos/%s/actions/runs/%d/jobs?per_page=30",
+		handlers.ResolveGitHubAPIBase(), repo, runID)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return failureReasonTest
+	}
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	if h.githubToken != "" {
+		req.Header.Set("Authorization", "Bearer "+h.githubToken)
+	}
+
+	resp, err := h.httpClient.Do(req)
+	if err != nil {
+		return failureReasonTest
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return failureReasonTest
+	}
+
+	var jobData struct {
+		Jobs []struct {
+			Conclusion *string `json:"conclusion"`
+			Steps      []struct {
+				Name       string  `json:"name"`
+				Conclusion *string `json:"conclusion"`
+			} `json:"steps"`
+		} `json:"jobs"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&jobData); err != nil {
+		return failureReasonTest
+	}
+
+	for _, job := range jobData.Jobs {
+		for _, step := range job.Steps {
+			if step.Conclusion != nil && *step.Conclusion == "failure" &&
+				isGPUStep(step.Name) {
+				return failureReasonGPU
+			}
+		}
+	}
+	return failureReasonTest
+}
+
+// getGuideImages returns cached image maps or fetches fresh ones from GitHub.
+func (h *NightlyE2EHandler) getGuideImages(ctx context.Context) map[string]map[string]string {
+	h.imgMu.RLock()
+	if h.imgCache != nil && time.Now().Before(h.imgCacheExp) {
+		result := h.imgCache
+		h.imgMu.RUnlock()
+		return result
+	}
+	h.imgMu.RUnlock()
+
+	images := h.fetchAllGuideImages(ctx)
+
+	h.imgMu.Lock()
+	h.imgCache = images
+	h.imgCacheExp = time.Now().Add(imageCacheTTL)
+	h.imgMu.Unlock()
+
+	return images
+}
+
+// fetchAllGuideImages fetches image tags for all unique guide paths by scanning
+// YAML files in the llm-d/llm-d repo's guides/ directory via the Git Trees API.
+func (h *NightlyE2EHandler) fetchAllGuideImages(ctx context.Context) map[string]map[string]string {
+	result := make(map[string]map[string]string)
+
+	// Collect unique guide paths
+	seen := make(map[string]bool)
+	guidePaths := make([]string, 0, len(nightlyWorkflows))
+	for _, wf := range nightlyWorkflows {
+		if wf.GuidePath != "" && !seen[wf.GuidePath] {
+			seen[wf.GuidePath] = true
+			guidePaths = append(guidePaths, wf.GuidePath)
+		}
+	}
+
+	// Fetch the repo tree once (single API call for all file paths)
+	yamlFiles := h.fetchGuideYAMLFiles(ctx)
+
+	// For each guide, find relevant files and fetch their contents in parallel
+	type guideResult struct {
+		path   string
+		images map[string]string
+	}
+	ch := make(chan guideResult, len(guidePaths))
+
+	for _, gp := range guidePaths {
+		safego.GoWith("nightly-e2e-fetch-guide-images", func() {
+			prefix := "guides/" + gp + "/"
+			images := make(map[string]string)
+
+			// Find YAML files under this guide's directory
+			files := make([]treeEntry, 0, len(yamlFiles)/4)
+			for _, f := range yamlFiles {
+				if strings.HasPrefix(f.Path, prefix) {
+					files = append(files, f)
+				}
+			}
+
+			// Fetch each file and parse images (sequentially per guide to limit API calls)
+			for _, f := range files {
+				content := h.fetchBlob(ctx, f.SHA)
+				if content == "" {
+					continue
+				}
+				for k, v := range parseImagesFromYAML(content) {
+					images[k] = v
+				}
+			}
+
+			ch <- guideResult{path: gp, images: images}
+		})
+	}
+
+	for range guidePaths {
+		gr := <-ch
+		if len(gr.images) > 0 {
+			result[gr.path] = gr.images
+		}
+	}
+
+	return result
+}
+
+// treeEntry holds a file path and its blob SHA from the Git Trees API.
+type treeEntry struct {
+	Path string
+	SHA  string
+}
+
+// fetchGuideYAMLFiles fetches the repo tree and returns YAML files under guides/
+// that are likely to contain image references (values.yaml, decode.yaml, etc.).
+func (h *NightlyE2EHandler) fetchGuideYAMLFiles(ctx context.Context) []treeEntry {
+	url := fmt.Sprintf("%s/repos/%s/git/trees/main?recursive=1", handlers.ResolveGitHubAPIBase(), imageRepo)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil
+	}
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	if h.githubToken != "" {
+		req.Header.Set("Authorization", "Bearer "+h.githubToken)
+	}
+
+	resp, err := h.httpClient.Do(req)
+	if err != nil {
+		return nil
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil
+	}
+
+	var tree struct {
+		Tree []struct {
+			Path string `json:"path"`
+			Type string `json:"type"`
+			SHA  string `json:"sha"`
+		} `json:"tree"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&tree); err != nil {
+		return nil
+	}
+
+	results := make([]treeEntry, 0, len(tree.Tree)/4)
+	for _, entry := range tree.Tree {
+		if entry.Type != "blob" {
+			continue
+		}
+		if !strings.HasPrefix(entry.Path, "guides/") {
+			continue
+		}
+		if !strings.HasSuffix(entry.Path, ".yaml") {
+			continue
+		}
+		// Only scan files likely to contain image references
+		name := entry.Path[strings.LastIndex(entry.Path, "/")+1:]
+		if name == "values.yaml" || name == "decode.yaml" || name == "prefill.yaml" ||
+			strings.Contains(name, "inferencepool") {
+			results = append(results, treeEntry{Path: entry.Path, SHA: entry.SHA})
+		}
+	}
+
+	return results
+}
+
+// fetchBlob fetches a git blob's content by SHA and returns it decoded.
+func (h *NightlyE2EHandler) fetchBlob(ctx context.Context, sha string) string {
+	url := fmt.Sprintf("%s/repos/%s/git/blobs/%s", handlers.ResolveGitHubAPIBase(), imageRepo, sha)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return ""
+	}
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	if h.githubToken != "" {
+		req.Header.Set("Authorization", "Bearer "+h.githubToken)
+	}
+
+	resp, err := h.httpClient.Do(req)
+	if err != nil {
+		return ""
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return ""
+	}
+
+	// Cap response body to 5 MB to prevent unbounded memory allocation (CWE-400)
+	const maxBlobResponseBytes = 5 * 1024 * 1024
+	limitedBody := io.LimitReader(resp.Body, maxBlobResponseBytes)
+
+	var blob struct {
+		Content  string `json:"content"`
+		Encoding string `json:"encoding"`
+	}
+	if err := json.NewDecoder(limitedBody).Decode(&blob); err != nil {
+		return ""
+	}
+
+	if blob.Encoding == "base64" {
+		decoded, err := base64.StdEncoding.DecodeString(blob.Content)
+		if err != nil {
+			return ""
+		}
+		return string(decoded)
+	}
+
+	return blob.Content
+}
+
+// parseImagesFromYAML extracts ghcr.io/llm-d image references from YAML content.
+// Handles two patterns:
+//  1. Direct: image: ghcr.io/llm-d/<name>:<tag>
+//  2. Hub/name/tag (EPP): hub: ghcr.io/llm-d + name: <name> + tag: <tag>
+func parseImagesFromYAML(content string) map[string]string {
+	images := make(map[string]string)
+
+	// Pattern 1: direct image references
+	for _, match := range imageRe.FindAllStringSubmatch(content, -1) {
+		// Skip commented-out YAML lines
+		line := match[0]
+		if strings.HasPrefix(strings.TrimSpace(line), "#") {
+			continue
+		}
+		key := match[1]
+		if !isSafeImageKey(key) {
+			continue
+		}
+		images[key] = match[2]
+	}
+
+	// Pattern 2: hub/name/tag (EPP images)
+	// Scan lines for "hub: ghcr.io/llm-d" and look for nearby name/tag
+	lines := strings.Split(content, "\n")
+	for i, line := range lines {
+		if !hubRe.MatchString(line) {
+			continue
+		}
+		// Get indentation level of the hub line
+		hubIndent := len(line) - len(strings.TrimLeft(line, " \t"))
+
+		// Search lines AFTER the hub line (downward) for name and tag within the same block
+		// Stop when we encounter a line with less indentation (different block)
+		const searchRadius = 5
+		var name, tag string
+		end := i + searchRadius
+		if end >= len(lines) {
+			end = len(lines) - 1
+		}
+		for j := i + 1; j <= end; j++ {
+			trimmed := strings.TrimSpace(lines[j])
+			// Skip empty lines and commented-out lines
+			if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+				continue
+			}
+			// Get indentation of current line
+			currentIndent := len(lines[j]) - len(strings.TrimLeft(lines[j], " \t"))
+			// Stop if we encounter a line with less indentation (end of block)
+			if currentIndent < hubIndent {
+				break
+			}
+			if m := nameRe.FindStringSubmatch(lines[j]); m != nil && name == "" {
+				name = m[1]
+			}
+			if m := tagRe.FindStringSubmatch(lines[j]); m != nil && tag == "" {
+				tag = m[1]
+			}
+		}
+		if name != "" && tag != "" && isSafeImageKey(name) {
+			images[name] = tag
+		}
+	}
+
+	return images
+}
+
+// isGPUStep returns true if the step name indicates a GPU availability check.
+func isGPUStep(name string) bool {
+	lower := strings.ToLower(name)
+	return strings.Contains(lower, "gpu") && strings.Contains(lower, "availab")
+}
+
+// fetchJobLog fetches the plain-text log for a single GitHub Actions job,
+// truncated to the last maxLogBytes bytes (failure info is at the tail).
+func (h *NightlyE2EHandler) fetchJobLog(ctx context.Context, repo string, jobID int64) string {
+	logURL := fmt.Sprintf("%s/repos/%s/actions/jobs/%d/logs", handlers.ResolveGitHubAPIBase(), repo, jobID)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", logURL, nil)
+	if err != nil {
+		slog.Error("failed to create log request", "repo", repo, "jobID", jobID, "error", err)
+		return "[error creating request]"
+	}
+	if h.githubToken != "" {
+		req.Header.Set("Authorization", "Bearer "+h.githubToken)
+	}
+
+	// Don't follow redirects automatically — GitHub returns 302 to a signed URL
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		slog.Error("failed to fetch log", "repo", repo, "jobID", jobID, "error", err)
+		return "[error fetching log]"
+	}
+	defer resp.Body.Close()
+
+	// Follow the redirect manually
+	if resp.StatusCode == http.StatusFound {
+		location := resp.Header.Get("Location")
+		if location == "" {
+			return "[redirect with no Location header]"
+		}
+		// SECURITY: Validate the redirect target is a trusted GitHub domain
+		// before following it. GitHub Actions log redirects always point to
+		// *.actions.githubusercontent.com or pipelines.actions.githubusercontent.com.
+		// Accepting arbitrary Location values would allow SSRF if the upstream
+		// API were ever compromised (CWE-918 / #18167).
+		if err := validateGitHubLogRedirect(location); err != nil {
+			slog.Warn("fetchJobLog: redirect to untrusted host blocked",
+				"repo", repo, "jobID", jobID, "location", location, "error", err)
+			return "[redirect to untrusted host]"
+		}
+		redirectReq, err := http.NewRequestWithContext(ctx, "GET", location, nil)
+		if err != nil {
+			slog.Error("failed to create redirect request", "repo", repo, "jobID", jobID, "location", location, "error", err)
+			return "[error following redirect]"
+		}
+		redirectResp, err := h.httpClient.Do(redirectReq)
+		if err != nil {
+			slog.Error("failed to fetch redirected log", "repo", repo, "jobID", jobID, "error", err)
+			return "[error fetching redirected log]"
+		}
+		defer redirectResp.Body.Close()
+		return readTruncatedLog(redirectResp.Body)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Sprintf("[GitHub returned %d for job logs]", resp.StatusCode)
+	}
+
+	return readTruncatedLog(resp.Body)
+}
+
+// readTruncatedLog reads a log body and returns the last maxLogBytes bytes.
+func readTruncatedLog(body io.Reader) string {
+	data, err := io.ReadAll(io.LimitReader(body, int64(maxLogBytes*2)))
+	if err != nil {
+		slog.Error("failed to read log body", "error", err)
+		return "[error reading log]"
+	}
+	if len(data) > maxLogBytes {
+		// Take the tail — failure info is at the end
+		data = data[len(data)-maxLogBytes:]
+		return "...[truncated]\n" + string(data)
+	}
+	return string(data)
+}
+
+// validateGitHubLogRedirect verifies that a redirect Location URL from the
+// GitHub Actions log API points to a trusted GitHub CDN host.
+// GitHub redirects job log requests to signed blob storage URLs on
+// *.actions.githubusercontent.com (e.g. pipelines.actions.githubusercontent.com).
+// Accepting arbitrary redirect targets would allow SSRF if the upstream API
+// response were tampered with (CWE-918 / #18167).
+func validateGitHubLogRedirect(location string) error {
+	parsed, err := url.Parse(location)
+	if err != nil {
+		return fmt.Errorf("invalid redirect URL: %w", err)
+	}
+	if parsed.Scheme != "https" {
+		return fmt.Errorf("redirect scheme %q is not https", parsed.Scheme)
+	}
+	host := strings.ToLower(parsed.Hostname())
+	if host == "actions.githubusercontent.com" ||
+		strings.HasSuffix(host, ".actions.githubusercontent.com") ||
+		host == "pipelines.actions.githubusercontent.com" {
+		return nil
+	}
+	return fmt.Errorf("redirect host %q is not a trusted GitHub Actions host", host)
+}

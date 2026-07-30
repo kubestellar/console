@@ -1,0 +1,203 @@
+name: Hive Interactive
+
+on:
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+jobs:
+  post-directions:
+    if: |
+      (github.event_name == 'issues' && github.event.issue.user.type != 'Bot') ||
+      (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.type != 'Bot')
+    permissions:
+      # issues: write required to post directions comment on issues
+      issues: write
+      # pull-requests: write required to post directions comment on pull requests
+      pull-requests: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Post hive interaction directions
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const item = context.eventName === 'issues'
+              ? context.payload.issue
+              : context.payload.pull_request;
+
+            const body = [
+              `🐝 Hi @${item.user.login}! I'm \`kubestellar-hive[bot]\`, an automation bot for this repo.`,
+              '',
+              'Trusted users — org members and contributors with write access — can mention `@kubestellar-hive` in a comment to trigger repo automation.',
+              'On issues, that mention queues an automated fix attempt. On pull requests, it records extra context for existing automation.',
+              'This is not an interactive Q&A bot, so mentions should be treated as requests for automation rather than a conversation.',
+              '',
+              '_Automation may take a moment to start, and follow-up happens through workflow activity rather than chat replies._',
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: item.number,
+              body,
+            });
+
+  trust-gate:
+    if: |
+      github.event_name == 'issue_comment' &&
+      github.event.comment.user.type != 'Bot' &&
+      contains(github.event.comment.body, '@kubestellar-hive')
+    uses: ./.github/workflows/hive-trust-gate.yml
+    permissions:
+      contents: read
+      issues: write
+    with:
+      actor: ${{ github.event.comment.user.login }}
+      repository: ${{ github.repository }}
+      repository-owner: ${{ github.repository_owner }}
+      default-branch: ${{ github.event.repository.default_branch }}
+      issue-number: ${{ github.event.issue.number }}
+      comment-url: ${{ github.event.comment.html_url }}
+
+  record-mention:
+    needs: trust-gate
+    if: |
+      github.event_name == 'issue_comment' &&
+      github.event.comment.user.type != 'Bot' &&
+      contains(github.event.comment.body, '@kubestellar-hive') &&
+      needs.trust-gate.outputs.is-trusted == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency:
+      group: hive-interactive-${{ github.event.issue.number }}-${{ github.event.comment.id }}
+      cancel-in-progress: false
+    permissions:
+      issues: write
+    outputs:
+      active-run: ${{ steps.evaluate.outputs.active_run }}
+      is-pull-request: ${{ steps.evaluate.outputs.is_pull_request }}
+    steps:
+      - name: Evaluate mention
+        id: evaluate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+          COMMENT_URL: ${{ github.event.comment.html_url }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_AUTHOR: ${{ github.event.comment.user.login }}
+          IS_PULL_REQUEST: ${{ github.event.issue.pull_request != null }}
+        run: |
+          set -euo pipefail
+
+          gh api "repos/$REPO/issues/comments/$COMMENT_ID/reactions" \
+            -X POST \
+            -f content='eyes' >/dev/null
+
+          LABELS=$(gh issue view "$ISSUE_NUMBER" --repo "$REPO" --json labels --jq '.labels[].name' 2>/dev/null || true)
+
+          ACTIVE_RUN=false
+          if printf '%s\n' "$LABELS" | grep -Eq '^(ai-processing|ai-awaiting-fix|ai-pr-draft|ai-pr-ready)$'; then
+            ACTIVE_RUN=true
+          fi
+
+          CLEAN_BODY=$(python3 -c 'import os,re; text=os.environ["COMMENT_BODY"]; text=re.sub(r"@kubestellar-hive\\b", "", text, flags=re.IGNORECASE).strip(); print(text or "No additional instruction provided.")')
+
+          echo "active_run=$ACTIVE_RUN" >> "$GITHUB_OUTPUT"
+          echo "is_pull_request=$IS_PULL_REQUEST" >> "$GITHUB_OUTPUT"
+          DELIMITER="EOF_$(openssl rand -hex 8)"
+          {
+            echo "clean_body<<${DELIMITER}"
+            printf '%s\n' "$CLEAN_BODY"
+            echo "${DELIMITER}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Ensure hive labels are present
+        if: |
+          steps.evaluate.outputs.is_pull_request != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+
+          gh label create "ai-fix-requested" --repo "$REPO" --color "d4c5f9" \
+            --description "AI fix has been requested" 2>/dev/null || true
+
+          gh issue edit "$ISSUE_NUMBER" --repo "$REPO" --add-label "ai-fix-requested"
+
+      - name: Acknowledge mention
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          COMMENT_AUTHOR: ${{ github.event.comment.user.login }}
+          COMMENT_URL: ${{ github.event.comment.html_url }}
+          CLEAN_BODY: ${{ steps.evaluate.outputs.clean_body }}
+          ACTIVE_RUN: ${{ steps.evaluate.outputs.active_run }}
+          IS_PULL_REQUEST: ${{ steps.evaluate.outputs.is_pull_request }}
+        run: |
+          set -euo pipefail
+
+          QUOTED_BODY=$(printf '%s\n' "$CLEAN_BODY" | sed 's/^/> /')
+
+          if [ "$IS_PULL_REQUEST" = 'true' ]; then
+            if [ "$ACTIVE_RUN" = 'true' ]; then
+              STATUS_LINE='I recorded your comment on this PR. There is already hive automation active here, so I did not start anything new.'
+              NEXT_STEP='This bot does not do interactive Q&A in the thread; the active automation can use your comment as extra context on its next pass.'
+            else
+              STATUS_LINE='I recorded your comment on this PR as automation context.'
+              NEXT_STEP='This bot does not do interactive Q&A in the thread. On PRs, mentions add context for automation rather than starting a conversation.'
+            fi
+          elif [ "$ACTIVE_RUN" = 'true' ]; then
+            STATUS_LINE='I recorded your comment on this issue. There is already an automated hive fix attempt in progress, so I did not queue a duplicate run.'
+            NEXT_STEP='This bot does not do interactive Q&A in the thread; the existing automation can use your comment as extra context on its next pass.'
+          else
+            STATUS_LINE='I recorded your comment and queued an automated hive fix attempt for this issue.'
+            NEXT_STEP='This bot does not do interactive Q&A in the thread. The queued workflow will use the issue thread, including your comment, as additional context.'
+          fi
+
+          BODY=$(printf '## 🐝 Hive automation update\n\nThanks @%s — I recorded [your comment](%s) for hive automation.\n\n%s\n\n%s\n\n### Comment recorded\n%s\n' "$COMMENT_AUTHOR" "$COMMENT_URL" "$STATUS_LINE" "$NEXT_STEP" "$QUOTED_BODY")
+
+          gh issue comment "$ISSUE_NUMBER" --repo "$REPO" --body "$BODY"
+
+  dispatch-hive-fix:
+    needs:
+      - trust-gate
+      - record-mention
+    if: |
+      github.event_name == 'issue_comment' &&
+      github.event.comment.user.type != 'Bot' &&
+      contains(github.event.comment.body, '@kubestellar-hive') &&
+      needs.trust-gate.outputs.is-trusted == 'true' &&
+      needs.record-mention.outputs.is-pull-request != 'true' &&
+      needs.record-mention.outputs.active-run != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      # actions: write required to dispatch the implement-fix.lock.yml workflow
+      actions: write
+    steps:
+      - name: Dispatch hive fix workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+
+          gh api "repos/$REPO/actions/workflows/implement-fix.lock.yml/dispatches" \
+            -X POST \
+            -f ref="$DEFAULT_BRANCH" \
+            -f inputs[issue_number]="$ISSUE_NUMBER"

@@ -1,0 +1,205 @@
+import { useState } from 'react'
+import type { StellarActivity } from '../../types/stellar'
+
+/**
+ * StellarActivityPanel — Stellar's first-person activity log.
+ *
+ * Distinct from the events column (which is "things the cluster did") and the
+ * chat panel (which is "things you asked Stellar"). This is "things Stellar
+ * did, on its own, without being asked." Every evaluated event, every solve
+ * decision, every auto-fix outcome lands here, newest first.
+ *
+ * The operator should be able to glance at this list and answer "what has
+ * Stellar been up to?" without parsing toasts or reading the events column.
+ */
+
+interface Props {
+  activity: StellarActivity[]
+  /** Called when the operator clicks a row that carries an eventId. Wires the
+   *  log into the events panel — click a "Tried RestartDeployment" log entry
+   *  and the matching event card's modal opens with the full attempt detail. */
+  onOpenEvent?: (eventId: string, entry: StellarActivity) => void
+}
+
+const KIND_LABEL: Record<string, { label: string; icon: string; color: string }> = {
+  // Autonomous-solve narrative beats (Stellar v2):
+  critical_event:      { label: 'Critical event',   icon: '🚨', color: 'var(--s-critical)' },
+  investigating:       { label: 'Investigating',    icon: '🔍', color: 'var(--s-info)' },
+  root_cause:          { label: 'Root cause',       icon: '🧠', color: 'var(--s-info)' },
+  solving:             { label: 'Solving',          icon: '🔧', color: 'var(--s-info)' },
+  // Legacy / non-autonomous beats:
+  evaluated:           { label: 'Noticed',          icon: '👁',  color: 'var(--s-text-muted)' },
+  diagnosed:           { label: 'Diagnosed',        icon: '🧠', color: 'var(--s-info)' },
+  decided_solve:       { label: 'Decided to solve', icon: '✦',  color: 'var(--s-info)' },
+  decided_skip:        { label: 'Decided to skip',  icon: '◦',  color: 'var(--s-text-dim)' },
+  mission_triggered:   { label: 'AI mission',       icon: '✦',  color: 'var(--s-info)' },
+  auto_fixed:          { label: 'Auto-fixed',       icon: '✓',  color: 'var(--s-success)' },
+  auto_fix_failed:     { label: 'Auto-fix failed',  icon: '✕',  color: 'var(--s-critical)' },
+  solve_started:       { label: 'Solving started',  icon: '▶',  color: 'var(--s-info)' },
+  solve_resolved:      { label: 'Resolved',         icon: '✓',  color: 'var(--s-success)' },
+  solve_escalated:     { label: 'Escalated to you', icon: '⚠',  color: 'var(--s-warning)' },
+  solve_exhausted:     { label: 'Paused at budget', icon: '⏸',  color: 'var(--s-warning)' },
+  approval_superseded: { label: 'Superseded',       icon: '↻',  color: 'var(--s-success)' },
+  approval_bumped:     { label: 'Bumped approval',  icon: '↑',  color: 'var(--s-warning)' },
+}
+
+function describeKind(kind: string) {
+  return KIND_LABEL[kind] ?? { label: kind, icon: '·', color: 'var(--s-text-muted)' }
+}
+
+function formatRelative(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime()
+  const mins = Math.floor(ms / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  return `${Math.floor(hrs / 24)}d ago`
+}
+
+export function StellarActivityPanel({ activity, onOpenEvent }: Props) {
+  const [collapsed, setCollapsed] = useState(false)
+  const [filter, setFilter] = useState<'all' | 'actions'>('all')
+
+  // "Actions" filter hides the noisy "evaluated" rows (every event Stellar sees)
+  // so the operator gets only material moves: diagnoses, decisions, mission
+  // triggers, terminal outcomes. "All" is the full log.
+  const visible = filter === 'all'
+    ? activity
+    : activity.filter(a => a.kind !== 'evaluated' && a.kind !== 'diagnosed')
+
+  return (
+    <div style={{ flexShrink: 0 }}>
+      <div
+        onClick={() => setCollapsed(c => !c)}
+        className="flex items-center gap-1.5 px-3 py-2"
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
+          background: 'var(--s-surface)',
+          borderBottom: '1px solid var(--s-border)',
+          cursor: 'pointer',
+          userSelect: 'none',
+        }}
+      >
+        <span style={{
+          fontFamily: 'var(--s-mono)', fontSize: 10, fontWeight: 600,
+          letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--s-text-muted)',
+        }}>
+          Stellar log
+        </span>
+        <span
+          className="rounded-full border border-[var(--s-brand)] bg-[var(--s-brand-dim)] px-[5px] font-mono text-[10px] text-[var(--s-brand)]"
+        >
+          {activity.length}
+        </span>
+        <div style={{ flex: 1 }} />
+        <span style={{ fontSize: 10, color: 'var(--s-text-dim)' }}>{collapsed ? '▾' : '▴'}</span>
+      </div>
+
+      {!collapsed && (
+        <div className="px-2 pb-2">
+          <div className="mb-1.5 flex gap-1 pl-1">
+            <FilterChip active={filter === 'all'} onClick={() => setFilter('all')}>All</FilterChip>
+            <FilterChip active={filter === 'actions'} onClick={() => setFilter('actions')}>Actions only</FilterChip>
+          </div>
+
+          {visible.length === 0 ? (
+            <div className="px-1.5 py-2" style={{
+              fontSize: 11, color: 'var(--s-text-dim)',
+              fontStyle: 'italic', textAlign: 'center',
+            }}>
+              Stellar is watching. Nothing to report yet.
+            </div>
+          ) : (
+            <div className="flex flex-col gap-0.5">
+              {visible.slice(0, 60).map(entry => {
+                const k = describeKind(entry.kind)
+                // A row is clickable iff it carries an eventId AND a handler
+                // was wired by the parent. Other entries (e.g., stale-approval
+                // sweeps with no event) render as plain rows.
+                const clickable = !!(entry.eventId && onOpenEvent)
+                const baseStyle: React.CSSProperties = {
+                  display: 'flex', alignItems: 'baseline',
+                  borderRadius: 'var(--s-rs)',
+                  borderLeft: `2px solid ${k.color}`,
+                  background: 'var(--s-surface-2)',
+                  fontSize: 11, lineHeight: 1.4,
+                  border: 'none', textAlign: 'left', width: '100%',
+                  cursor: clickable ? 'pointer' : 'default',
+                  font: 'inherit', color: 'inherit',
+                }
+                const body = (
+                  <>
+                    <span style={{ fontFamily: 'var(--s-mono)', color: 'var(--s-text-dim)', minWidth: 52, fontSize: 10 }}>
+                      {formatRelative(entry.ts)}
+                    </span>
+                    <span style={{ color: k.color, minWidth: 14, textAlign: 'center' }}>{k.icon}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        fontSize: 10,
+                        fontWeight: 600,
+                        color: 'var(--s-text)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {entry.title}
+                      </div>
+                      {entry.detail && (
+                        <div style={{
+                          fontSize: 10, color: 'var(--s-text-muted)',
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>
+                          {entry.detail}
+                        </div>
+                      )}
+                    </div>
+                    {clickable && (
+                      <span style={{ fontSize: 10, color: 'var(--s-text-dim)', fontFamily: 'var(--s-mono)', flexShrink: 0 }}>
+                        details →
+                      </span>
+                    )}
+                  </>
+                )
+                return clickable ? (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    className="px-2 py-1 gap-2"
+                    title={`${entry.detail ?? ''}\n\nClick to open the event in the events column.`}
+                    onClick={() => entry.eventId && onOpenEvent?.(entry.eventId, entry)}
+                    style={baseStyle}
+                  >
+                    {body}
+                  </button>
+                ) : (
+                  <div key={entry.id} className="px-2 py-1 gap-2" title={entry.detail} style={baseStyle}>
+                    {body}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function FilterChip({
+  active, onClick, children,
+}: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className={active
+        ? 'rounded-full border border-[var(--s-brand)] bg-[var(--s-brand-dim)] px-2 py-px font-mono text-[10px] text-[var(--s-brand)]'
+        : 'rounded-full border border-[var(--s-border-muted)] bg-transparent px-2 py-px font-mono text-[10px] text-[var(--s-text-muted)]'
+      }
+    >
+      {children}
+    </button>
+  )
+}

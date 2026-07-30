@@ -1,0 +1,16 @@
+# OpenShift overlay — starter experience plus an edge-terminated Route.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Overlay-added resources (route.yaml) do not inherit the base's
+# namespace transformer — declare it here too or the Route lands in
+# the caller's current kubectl namespace.
+namespace: kubestellar-console
+
+resources:
+  - ../starter
+  - route.yaml
+
+patches:
+  - path: patch-scc-deployment.yaml
+  - path: patch-scc-cronjob.yaml

@@ -1,0 +1,318 @@
+package store
+
+import (
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestStellarPreferencesRoundTrip(t *testing.T) {
+	s := newTestStore(t)
+	const userID = "stellar-user-1"
+
+	defaults, err := s.GetStellarPreferences(ctx, userID)
+	require.NoError(t, err)
+	require.Equal(t, userID, defaults.UserID)
+	require.Equal(t, stellarDefaultProvider, defaults.DefaultProvider)
+	require.Equal(t, stellarExecutionHybrid, defaults.ExecutionMode)
+	require.Equal(t, stellarDefaultTimezone, defaults.Timezone)
+	require.True(t, defaults.ProactiveMode)
+	require.NotNil(t, defaults.PinnedClusters)
+
+	err = s.UpdateStellarPreferences(ctx, &StellarPreferences{
+		UserID:          userID,
+		DefaultProvider: "ollama",
+		ExecutionMode:   "local-only",
+		Timezone:        "Asia/Kolkata",
+		ProactiveMode:   false,
+		PinnedClusters:  []string{"prod-1", "staging-1"},
+	})
+	require.NoError(t, err)
+
+	got, err := s.GetStellarPreferences(ctx, userID)
+	require.NoError(t, err)
+	require.Equal(t, "ollama", got.DefaultProvider)
+	require.Equal(t, "local-only", got.ExecutionMode)
+	require.Equal(t, "Asia/Kolkata", got.Timezone)
+	require.False(t, got.ProactiveMode)
+	require.Equal(t, []string{"prod-1", "staging-1"}, got.PinnedClusters)
+}
+
+func TestStellarMissionExecutionAndMemory(t *testing.T) {
+	s := newTestStore(t)
+	const userID = "stellar-user-2"
+
+	mission := &StellarMission{
+		UserID:         userID,
+		Name:           "overnight-watch",
+		Goal:           "Summarize rollouts and failures overnight",
+		Schedule:       "0 1 * * *",
+		TriggerType:    "cron",
+		ProviderPolicy: "hybrid-fallback",
+		MemoryScope:    "mission",
+		Enabled:        true,
+		ToolBindings:   []string{"kubernetes", "prometheus"},
+	}
+	require.NoError(t, s.CreateStellarMission(ctx, mission))
+	require.NotEmpty(t, mission.ID)
+
+	execution := &StellarExecution{
+		UserID:      userID,
+		MissionID:   mission.ID,
+		TriggerType: "manual",
+		TriggerData: "{}",
+		Status:      "completed",
+		RawInput:    "check production",
+		Output:      "all good",
+	}
+	require.NoError(t, s.CreateStellarExecution(ctx, execution))
+	require.NotEmpty(t, execution.ID)
+
+	executions, err := s.ListStellarExecutions(ctx, userID, mission.ID, "", 20, 0)
+	require.NoError(t, err)
+	require.Len(t, executions, 1)
+
+	entry := &StellarMemoryEntry{
+		UserID:      userID,
+		Cluster:     "prod-a",
+		Namespace:   "default",
+		Category:    "incident",
+		Summary:     "CrashLoop recovered after restart",
+		RawContent:  "details",
+		Tags:        []string{"crashloop", "recovery"},
+		MissionID:   mission.ID,
+		ExecutionID: execution.ID,
+	}
+	require.NoError(t, s.CreateStellarMemoryEntry(ctx, entry))
+	require.NotEmpty(t, entry.ID)
+
+	entries, err := s.SearchStellarMemoryEntries(ctx, userID, "CrashLoop", 20)
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	require.Equal(t, "incident", entries[0].Category)
+}
+
+func TestStellarMemorySearchFTSSyncAndShortQueryFallback(t *testing.T) {
+	s := newTestStore(t)
+	const userID = "stellar-user-fts"
+
+	entry := &StellarMemoryEntry{
+		UserID:     userID,
+		Cluster:    "prod-a",
+		Namespace:  "default",
+		Category:   "incident",
+		Summary:    "CrashLoop recovered after restart",
+		RawContent: "details from the first incident",
+		Tags:       []string{"restart"},
+	}
+	require.NoError(t, s.CreateStellarMemoryEntry(ctx, entry))
+
+	entries, err := s.SearchStellarMemoryEntries(ctx, userID, "Crash", 20)
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	require.Equal(t, entry.ID, entries[0].ID)
+
+	shortEntries, err := s.SearchStellarMemoryEntries(ctx, userID, "d", 20)
+	require.NoError(t, err)
+	require.Len(t, shortEntries, 1)
+	require.Equal(t, entry.ID, shortEntries[0].ID)
+
+	_, err = s.db.ExecContext(ctx, `UPDATE stellar_memory_entries SET summary = ? WHERE id = ?`, "Kernel panic resolved", entry.ID)
+	require.NoError(t, err)
+
+	updatedEntries, err := s.SearchStellarMemoryEntries(ctx, userID, "Kernel", 20)
+	require.NoError(t, err)
+	require.Len(t, updatedEntries, 1)
+	require.Equal(t, entry.ID, updatedEntries[0].ID)
+
+	oldEntries, err := s.SearchStellarMemoryEntries(ctx, userID, "CrashLoop", 20)
+	require.NoError(t, err)
+	require.Empty(t, oldEntries)
+
+	require.NoError(t, s.DeleteStellarMemoryEntry(ctx, userID, entry.ID))
+
+	deletedEntries, err := s.SearchStellarMemoryEntries(ctx, userID, "Kernel", 20)
+	require.NoError(t, err)
+	require.Empty(t, deletedEntries)
+}
+
+func TestStellarActionsAndNotifications(t *testing.T) {
+	s := newTestStore(t)
+	const userID = "stellar-user-3"
+
+	when := time.Now().UTC().Add(-1 * time.Minute)
+	action := &StellarAction{
+		UserID:      userID,
+		Description: "Scale worker deployment",
+		ActionType:  "ScaleDeployment",
+		Parameters:  `{"deployment":"worker","replicas":5}`,
+		Cluster:     "prod-a",
+		Namespace:   "default",
+		ScheduledAt: &when,
+		Status:      "pending_approval",
+		CreatedBy:   userID,
+	}
+	require.NoError(t, s.CreateStellarAction(ctx, action))
+	require.NotEmpty(t, action.ID)
+
+	require.NoError(t, s.ApproveStellarAction(ctx, userID, action.ID, userID))
+	completed, err := s.CompleteDueStellarActions(ctx, time.Now().UTC())
+	require.NoError(t, err)
+	require.Len(t, completed, 1)
+	require.Equal(t, "completed", completed[0].Status)
+
+	notification := &StellarNotification{
+		UserID:    userID,
+		Type:      "MissionUpdate",
+		Severity:  "info",
+		Title:     "Action completed",
+		Body:      "Scaled worker deployment",
+		ActionID:  action.ID,
+		DedupeKey: "action-completed:" + action.ID,
+	}
+	require.NoError(t, s.CreateStellarNotification(ctx, notification))
+	require.NotEmpty(t, notification.ID)
+
+	items, err := s.ListStellarNotifications(ctx, userID, 20, false)
+	require.NoError(t, err)
+	require.Len(t, items, 1)
+	require.Equal(t, "Action completed", items[0].Title)
+
+	count, err := s.CountUnreadStellarNotifications(ctx, userID)
+	require.NoError(t, err)
+	require.Equal(t, 1, count)
+
+	require.NoError(t, s.MarkStellarNotificationRead(ctx, userID, notification.ID))
+	count, err = s.CountUnreadStellarNotifications(ctx, userID)
+	require.NoError(t, err)
+	require.Equal(t, 0, count)
+}
+
+func TestGetActiveWatchesAutoResolvesInactiveEntries(t *testing.T) {
+	s := newTestStore(t)
+	const userID = "stellar-user-watch"
+
+	inactiveAt := time.Now().UTC().Add(-(stellarWatchInactivityTimeout + time.Minute))
+	recentAt := time.Now().UTC()
+
+	_, err := s.CreateWatch(ctx, &StellarWatch{
+		UserID:       userID,
+		Cluster:      "prod-a",
+		Namespace:    "default",
+		ResourceKind: "Deployment",
+		ResourceName: "api",
+		Reason:       "recurring restarts",
+		Status:       "active",
+		LastEventAt:  &inactiveAt,
+	})
+	require.NoError(t, err)
+
+	activeID, err := s.CreateWatch(ctx, &StellarWatch{
+		UserID:       userID,
+		Cluster:      "prod-a",
+		Namespace:    "default",
+		ResourceKind: "Deployment",
+		ResourceName: "worker",
+		Reason:       "fresh event",
+		Status:       "active",
+		LastEventAt:  &recentAt,
+	})
+	require.NoError(t, err)
+
+	watches, err := s.GetActiveWatches(ctx, userID)
+	require.NoError(t, err)
+	require.Len(t, watches, 1)
+	assert.Equal(t, activeID, watches[0].ID)
+	assert.NotNil(t, watches[0].LastEventAt)
+
+	resolved, err := s.GetWatchesSince(ctx, userID, time.Now().UTC().Add(-time.Hour), "resolved")
+	require.NoError(t, err)
+	require.Len(t, resolved, 1)
+	assert.Equal(t, stellarWatchAutoResolvedLastUpdate, resolved[0].LastUpdate)
+	require.NotNil(t, resolved[0].ResolvedAt)
+}
+
+func TestListStellarAuditLogScopesEntriesToRequestingUser(t *testing.T) {
+	s := newTestStore(t)
+	now := time.Now().UTC().Truncate(time.Second)
+
+	entries := []*StellarAuditEntry{
+		{
+			ID:         "audit-alice-old",
+			Ts:         now.Add(-2 * time.Minute),
+			UserID:     "alice",
+			Action:     "view",
+			EntityType: "mission",
+			EntityID:   "mission-1",
+			Cluster:    "prod-a",
+			Detail:     `{"result":"ok"}`,
+		},
+		{
+			ID:         "audit-alice-new",
+			Ts:         now.Add(-1 * time.Minute),
+			UserID:     "alice",
+			Action:     "update",
+			EntityType: "mission",
+			EntityID:   "mission-2",
+			Cluster:    "prod-a",
+			Detail:     `{"result":"ok"}`,
+		},
+		{
+			ID:         "audit-bob",
+			Ts:         now,
+			UserID:     "bob",
+			Action:     "delete",
+			EntityType: "watch",
+			EntityID:   "watch-1",
+			Cluster:    "prod-b",
+			Detail:     `{"result":"ok"}`,
+		},
+	}
+
+	for _, entry := range entries {
+		require.NoError(t, s.CreateAuditEntry(ctx, entry))
+	}
+
+	tests := []struct {
+		name    string
+		userID  string
+		limit   int
+		wantIDs []string
+	}{
+		{
+			name:    "DefaultLimitReturnsOnlyMatchingUserEntries",
+			userID:  "alice",
+			limit:   0,
+			wantIDs: []string{"audit-alice-new", "audit-alice-old"},
+		},
+		{
+			name:    "ExplicitLimitAppliesAfterScoping",
+			userID:  "alice",
+			limit:   1,
+			wantIDs: []string{"audit-alice-new"},
+		},
+		{
+			name:    "DifferentUserGetsSeparateAuditHistory",
+			userID:  "bob",
+			limit:   10,
+			wantIDs: []string{"audit-bob"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := s.ListStellarAuditLog(ctx, tt.userID, tt.limit)
+			require.NoError(t, err)
+
+			gotIDs := make([]string, 0, len(got))
+			for _, entry := range got {
+				assert.Equal(t, tt.userID, entry.UserID)
+				gotIDs = append(gotIDs, entry.ID)
+			}
+
+			assert.Equal(t, tt.wantIDs, gotIDs)
+		})
+	}
+}

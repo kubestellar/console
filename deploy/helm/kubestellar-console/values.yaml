@@ -1,0 +1,390 @@
+replicaCount: 1
+
+# Owner label applied to chart resources to satisfy cluster policies.
+# Leave blank to default to "kubestellar" in the shared labels helper.
+owner: ""
+
+# Extra labels added to all chart resources. Avoid setting `owner` here; use `.Values.owner` instead.
+commonLabels: {}
+
+image:
+  repository: ghcr.io/kubestellar/console
+  pullPolicy: IfNotPresent
+  tag: ""  # Defaults to chart appVersion ("latest"); overridden at release time
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  # Security: set to false if using kc-agent for all K8s operations (reduces attack surface)
+  automount: true
+  annotations: {}
+  name: ""
+
+# RBAC configuration
+# When deployed in-cluster without the kc-agent, the console uses
+# its ServiceAccount for read-only cluster access + ResourceQuota CRUD.
+# Set resourceQuotasReadOnly to true to restrict ResourceQuota permissions
+# to read-only (disables GPU reservation enforcement).
+# Set namespaceCreationEnabled to true to grant the SA cluster-scoped
+# "create namespaces" — required when the GPU reservation form's
+# "New namespace..." option is used (otherwise that call 500s with
+# "namespaces is forbidden ... cannot create resource namespaces").
+rbac:
+  create: true
+  resourceQuotasReadOnly: false
+  namespaceCreationEnabled: false
+  openshiftUserAccess: false
+  rbacInspectionEnabled: true
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  # #6334: PodSecurity "restricted" enforcement (used on pok-prod and
+  # vllm-d) requires a non-empty seccompProfile at pod or container
+  # level. Setting it here covers all containers in one place.
+  seccompProfile:
+    type: RuntimeDefault
+  # #20590: fsGroup ensures the kubelet chowns the mounted PVC
+  # (/app/data) to this GID on pod startup, so the appuser (UID/GID
+  # 1001) can write to the data directory. Without this, the PVC is
+  # owned by root and the container gets "permission denied" on
+  # console.db and the kc-watcher runtime file.
+  # NOTE: on OpenShift this MUST be unset (--set
+  # podSecurityContext.fsGroup=null): the restricted-v2 SCC rejects
+  # fsGroups outside the namespace's supplemental-groups range, so no
+  # pods can be created at all. The SCC assigns an in-range fsGroup
+  # instead, which still triggers the kubelet chown. See the Deploy
+  # with Helm steps in .github/workflows/build-deploy.yml.
+  fsGroup: 1001
+
+securityContext:
+  # #6323/#6324: must be a numeric UID (not `appuser`) so the kubelet
+  # can verify non-root without reading the image manifest. Matches
+  # the Dockerfile's `addgroup -g 1001 … adduser -u 1001 … appuser`
+  # + `USER appuser`. Without an explicit numeric runAsUser,
+  # Kubernetes blocks startup on Kind/Minikube/OpenShift with:
+  #   CreateContainerConfigError: container has runAsNonRoot
+  #   and image has non-numeric user (appuser)
+  runAsUser: 1001
+  runAsGroup: 1001
+  runAsNonRoot: true
+  readOnlyRootFilesystem: true
+  # #6334: PodSecurity "restricted" also requires
+  # allowPrivilegeEscalation=false on every container; without this,
+  # the deploy job on pok-prod and vllm-d rolled back with
+  # "violates PodSecurity restricted:latest: allowPrivilegeEscalation
+  # != false".
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: console.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# OpenShift Route (alternative to Ingress)
+route:
+  enabled: false
+  host: ""
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 1Gi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+# Deployment controller deadline. Kubernetes defaults this to 600s, which can
+# undercut Helm's longer --wait/--timeout window on slower clusters and cause
+# an early "Progress deadline exceeded" rollback before Helm times out.
+deployment:
+  progressDeadlineSeconds: 900
+  # Deployment rollout strategy. Use Recreate for single-replica deployments
+  # backed by a ReadWriteOnce PVC (e.g. kc-live on block storage) to avoid
+  # the RollingUpdate deadlock where the new pod cannot mount the RWO volume
+  # while the old pod still holds it.
+  # Values: RollingUpdate | Recreate
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+
+# GitHub OAuth configuration
+github:
+  url: ""  # GitHub Enterprise URL (e.g., "https://github.ibm.com"). Leave empty for github.com
+  clientId: ""
+  clientSecret: ""
+  # Alternatively, use existing secret
+  existingSecret: ""
+  existingSecretKeys:
+    clientId: github-client-id
+    clientSecret: github-client-secret
+
+# Authentication policy. Empty allowedGitHubLogins preserves the default
+# self-hosted behavior: any GitHub account that completes OAuth can sign in.
+auth:
+  allowedGitHubLogins: ""
+  adminGitHubLogins: ""
+
+# GitHub token for all server-side API access (activity card, feedback, CI, missions, rewards)
+# Requires a PAT with repo scope for full functionality.
+# Set via FEEDBACK_GITHUB_TOKEN env var (GITHUB_TOKEN also accepted as alias).
+feedbackGithubToken:
+  token: ""
+  existingSecret: ""
+  existingSecretKey: feedback-github-token
+
+# Google Drive API key for benchmark data
+googleDrive:
+  apiKey: ""
+  existingSecret: ""
+  existingSecretKey: google-drive-api-key
+  folderId: "1r2Z2Xp1L0KonUlvQHvEzed8AO9Xj8IPm"
+
+# Claude AI configuration (optional)
+claude:
+  apiKey: ""
+  model: "claude-sonnet-4-20250514"
+  existingSecret: ""
+  existingSecretKey: claude-api-key
+
+# AI Mode configuration
+# Controls how aggressively the AI suggests card changes and analyzes data
+# low: Minimal token usage, AI only for explicit requests
+# medium: Balanced - AI for analysis/summaries on request
+# high: Full AI assistance with proactive suggestions
+ai:
+  defaultMode: "medium"  # low | medium | high
+  # Token usage limits (per user per month)
+  tokenLimits:
+    enabled: true
+    monthlyLimit: 100000  # Max tokens per user per month
+    warningThreshold: 80  # Percentage at which to show warning
+    criticalThreshold: 95 # Percentage at which to restrict AI features
+
+# JWT configuration
+# A random 64-character JWT secret is auto-generated if both jwt.secret and
+# jwt.existingSecret are left empty. To provide your own, either:
+#   1. Set jwt.secret to a string value, or
+#   2. Set jwt.existingSecret to the name of a pre-existing Kubernetes Secret
+#      (the secret MUST exist in the release namespace before install/upgrade).
+# WARNING: If jwt.existingSecret references a non-existent Secret, the pod
+# will fail to start with a CrashLoopBackOff.
+jwt:
+  secret: ""
+  existingSecret: ""
+  existingSecretKey: jwt-secret
+
+# Database configuration
+database:
+  type: sqlite
+  sqlitePath: /app/data/console.db
+
+# Persistence for SQLite
+persistence:
+  enabled: true
+  size: 1Gi
+  storageClass: ""
+  accessModes:
+    - ReadWriteMany
+
+# Database backup configuration
+backup:
+  enabled: true
+  # Cron schedule (default: every 6 hours)
+  schedule: "0 */6 * * *"
+  # Backup storage
+  directory: /backups
+  storageSize: 1Gi
+  storageClass: ""
+  # Number of backups to retain
+  retentionCount: 20
+  # Job history
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  # Auto-restore: if the main DB is empty or missing, restore from latest backup
+  autoRestore: true
+  # Resource limits for backup CronJob container
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+# kubestellar MCP binaries inside the console container image.
+# Override these only when using a custom image that installs the tools elsewhere.
+kubestellar:
+  opsPath: /usr/local/bin/kubestellar-ops
+  deployPath: /usr/local/bin/kubestellar-deploy
+
+# Sidebar dashboard filter (comma-separated dashboard IDs, empty = show all)
+# Available IDs: dashboard, clusters, deploy, ai-ml, ai-agents, ci-cd, alerts,
+#   arcade, compliance, compute, cost, data-compliance, deployments, events,
+#   gitops, gpu-reservations, helm, llm-d-benchmarks, logs, network, nodes,
+#   operators, pods, security, security-posture, services, storage, workloads
+# Example: "gpu-reservations,llm-d-benchmarks"
+enabledDashboards: ""
+
+# White-label project context
+# Controls which project-specific cards, dashboards, and backend routes are active.
+# Set to "crossplane", "istio", etc. to show only that project's features + generic K8s.
+# Default: "kubestellar" (shows all KubeStellar-specific features)
+consoleProject: ""
+
+# White-label branding configuration
+# All values default to KubeStellar branding when empty.
+# Set these to customize the console identity for your project.
+branding:
+  appName: ""           # Display name (default: "KubeStellar Console")
+  appShortName: ""      # Compact name (default: "KubeStellar")
+  tagline: ""           # Shown in navbar (default: "multi-cluster first, saving time and tokens")
+  logoUrl: ""           # Path to logo image (default: "/kubestellar-logo.svg")
+  faviconUrl: ""        # Path to favicon (default: "/favicon.ico")
+  themeColor: ""        # PWA theme color (default: "#7c3aed")
+  docsUrl: ""           # Documentation URL
+  communityUrl: ""      # Community/support URL
+  websiteUrl: ""        # Project website URL
+  issuesUrl: ""         # Bug report URL
+  repoUrl: ""           # Source code repository URL
+  hostedDomain: ""      # Domain where demo mode is forced (default: "console.kubestellar.io")
+  # Mount custom logo files from a ConfigMap
+  logoConfigMap: ""     # Name of ConfigMap containing logo SVG/PNG files
+
+# Override the auto-detected in-cluster name (e.g. "vllm-d", "pok-prod")
+clusterName: ""
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+networkPolicy:
+  enabled: false
+  # Restrict which pods/namespaces can reach the console (from: selector)
+  # Example: [{ namespaceSelector: { matchLabels: { name: ingress } } }]
+  ingressFrom: []
+  # Additional egress rules beyond DNS and HTTPS/API
+  extraEgress: []
+
+podDisruptionBudget:
+  enabled: false
+  # Use maxUnavailable (safe with single replica) instead of minAvailable
+  maxUnavailable: 1
+
+# Watchdog reverse proxy — serves a branded "Reconnecting..." page when backend is down
+watchdog:
+  enabled: true
+
+# Startup probe controls how long Kubernetes waits for the watchdog to become
+# healthy before declaring the pod failed. With failureThreshold * periodSeconds
+# seconds of headroom, this must cover image pull (if not cached) + init container
+# (db-restore) + Go app startup + watchdog initialization.
+# Default: 24 * 5s = 120s. Increase on clusters with slow storage provisioning.
+startupProbe:
+  failureThreshold: 24
+  periodSeconds: 5
+
+# Self-upgrade: allow the console to upgrade its own Deployment image tag
+# from the UI. Creates a namespaced Role granting patch access to Deployments
+# in the release namespace only.
+selfUpgrade:
+  enabled: true
+
+# Additional environment variables
+# Use this to pass extra environment variables to the console container.
+#
+# Security hardening:
+#   If you do not use Tier-2 dynamic cards, set DISABLE_DYNAMIC_CARDS=true to
+#   remove 'unsafe-eval' from the Content-Security-Policy header, tightening
+#   the browser XSS mitigation for your deployment (see issue #18326).
+#
+# Example:
+#   extraEnv:
+#     - name: DISABLE_DYNAMIC_CARDS
+#       value: "true"
+extraEnv: []
+
+# Optional kubeconfig mount for multi-cluster installs.
+#
+# By default, in-cluster installs use the pod's ServiceAccount and only see the
+# cluster the console is running in. To surface multiple local Kind/Minikube
+# clusters, mount a kubeconfig and set KUBECONFIG automatically via either:
+#   1. helm install ... --set-file kubeconfig.content=$HOME/.kube/config
+#   2. kubeconfig.existingSecret=<name> (Secret key defaults to `config`)
+#
+# The mounted kubeconfig takes precedence over in-cluster credentials, matching
+# the local `start.sh` behavior.
+kubeconfig:
+  content: ""
+  existingSecret: ""
+  existingSecretKey: config
+  mountPath: /app/.kube
+  fileName: config
+
+# Kagenti integration (optional)
+# Enable this section when the console should connect to an in-cluster Kagenti
+# controller and/or a direct Kagenti agent service.
+#
+# Controller mode (recommended):
+#   - enable: true
+#   - set controllerUrl/service values
+#
+# Direct agent mode (optional, overrides controller discovery):
+#   - set directAgentUrl to a service URL
+#   - optionally set directAgentName/directAgentNamespace for UI metadata
+#
+# Cluster scope:
+#   The in-cluster ServiceAccount (see rbac section above) grants read-only
+#   access to the LOCAL cluster only by default. Dashboard cards show data
+#   from that single cluster. To surface multiple Kind/Minikube clusters,
+#   configure kubeconfig.content / kubeconfig.existingSecret above, or use the
+#   kc-agent in local-agent mode to bridge browser kubeconfigs.
+kagenti:
+  enabled: false
+
+  # Force Kagenti as the default AI agent when enabled.
+  # This sets DEFAULT_AGENT=kagenti in the backend container.
+  forceDefaultAgent: true
+
+  # If NetworkPolicy is enabled, also add a default egress rule to the
+  # Kagenti controller port. Disable if you prefer managing egress via
+  # networkPolicy.extraEgress explicitly.
+  allowNetworkPolicyEgress: true
+
+  # Controller mode settings
+  controllerUrl: ""
+  namespace: "kagenti-system"
+  serviceName: "kagenti-backend"
+  deploymentName: "kagenti-backend"
+  llmSecretName: "kagenti-llm-secrets"
+  servicePort: "8000"
+  serviceProtocol: "http"
+
+  # Direct agent mode settings (optional)
+  directAgentUrl: ""
+  directAgentName: ""
+  directAgentNamespace: ""

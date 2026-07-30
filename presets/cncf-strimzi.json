@@ -1,0 +1,10 @@
+{
+  "format": "kc-card-preset-v1",
+  "card_type": "strimzi_status",
+  "title": "Strimzi",
+  "description": "Strimzi Kafka cluster health, topic status, and consumer group lag.",
+  "category": "Streaming & Messaging",
+  "project": "strimzi",
+  "cncf_status": "incubating",
+  "config": {}
+}

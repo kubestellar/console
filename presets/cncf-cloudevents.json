@@ -1,0 +1,10 @@
+{
+  "format": "kc-card-preset-v1",
+  "card_type": "cloudevents_status",
+  "title": "CloudEvents",
+  "description": "CloudEvents message flow, event source tracking, and delivery status.",
+  "category": "Serverless",
+  "project": "cloudevents",
+  "cncf_status": "graduated",
+  "config": {}
+}

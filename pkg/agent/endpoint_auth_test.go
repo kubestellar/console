@@ -1,0 +1,636 @@
+package agent
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"regexp"
+	"strings"
+	"testing"
+
+	"github.com/kubestellar/console/pkg/agent/protocol"
+	"k8s.io/client-go/tools/clientcmd/api"
+	"github.com/kubestellar/console/pkg/agent/kube"
+)
+
+// ── Named constants for endpoint paths ──────────────────────────────────────
+
+const (
+	// endpointHealth is the health-check endpoint (public, no auth required).
+	endpointHealth = "/health"
+
+	// endpointSettingsKeys manages AI provider API keys (sensitive).
+	endpointSettingsKeys = "/settings/keys"
+
+	// endpointSettingsKeyByProvider deletes a specific provider key (sensitive).
+	endpointSettingsKeyByProvider = "/settings/keys/claude"
+
+	// endpointSettings reads/writes persistent settings (sensitive).
+	endpointSettings = "/settings"
+
+	// endpointSettingsExport exports all settings as JSON (sensitive).
+	endpointSettingsExport = "/settings/export"
+
+	// endpointSettingsImport imports settings from JSON (sensitive).
+	endpointSettingsImport = "/settings/import"
+
+	// endpointClusters lists kubeconfig contexts (sensitive — reveals infra).
+	endpointClusters = "/clusters"
+
+	// endpointStatus verifies agent auth for local browser clients (sensitive).
+	endpointStatus = "/status"
+
+	// endpointMetrics exposes Prometheus metrics for the agent and must be authenticated.
+	endpointMetrics = "/metrics"
+
+	// endpointSecrets lists Kubernetes secrets (sensitive).
+	endpointSecrets = "/secrets"
+
+	// endpointWS is the WebSocket endpoint for agent communication (sensitive).
+	endpointWS = "/ws"
+
+	// endpointRestartBackend restarts the backend process (sensitive).
+	endpointRestartBackend = "/restart-backend"
+
+	// endpointAutoUpdateTrigger triggers a self-update (sensitive).
+	endpointAutoUpdateTrigger = "/auto-update/trigger"
+
+	// endpointKubeconfigImport imports a kubeconfig file (sensitive).
+	endpointKubeconfigImport = "/kubeconfig/import"
+
+	// endpointPods lists Kubernetes pods (sensitive — reveals workloads).
+	endpointPods = "/pods"
+
+	// endpointNodes lists Kubernetes nodes (sensitive — reveals infra).
+	endpointNodes = "/nodes"
+
+	// endpointScale scales a deployment (sensitive — mutating).
+	endpointScale = "/scale"
+
+	// endpointWorkloadsDeploy deploys a workload to target clusters (sensitive — mutating).
+	endpointWorkloadsDeploy = "/workloads/deploy"
+
+	// endpointWorkloadsDelete deletes a workload from a cluster (sensitive — destructive mutation).
+	endpointWorkloadsDelete = "/workloads/delete"
+
+	// endpointProviderCheck checks provider availability (sensitive — reveals config).
+	endpointProviderCheck = "/provider-check"
+
+	// endpointAutoUpdateStatus returns auto-update status (sensitive).
+	endpointAutoUpdateStatus = "/auto-update/status"
+
+	// endpointKagentiAgents lists kagenti agents (sensitive — reveals infra).
+	endpointKagentiAgents = "/kagenti/agents"
+
+	// endpointKagentiBuilds lists kagenti builds (sensitive — reveals infra).
+	endpointKagentiBuilds = "/kagenti/builds"
+
+	// endpointKagentiCards lists kagenti cards (sensitive — reveals infra).
+	endpointKagentiCards = "/kagenti/cards"
+
+	// endpointKagentiTools lists kagenti tools (sensitive — reveals infra).
+	endpointKagentiTools = "/kagenti/tools"
+
+	// endpointKagentiSummary returns kagenti summary (sensitive — reveals infra).
+	endpointKagentiSummary = "/kagenti/summary"
+
+	// endpointKagentCRDAgents lists kagent CRD agents (sensitive — reveals infra).
+	endpointKagentCRDAgents = "/kagent/agents"
+
+	// endpointKagentCRDTools lists kagent CRD tools (sensitive — reveals infra).
+	endpointKagentCRDTools = "/kagent/tools"
+
+	// endpointKagentCRDModels lists kagent CRD models (sensitive — reveals config).
+	endpointKagentCRDModels = "/kagent/models"
+
+	// endpointKagentCRDMemories lists kagent CRD memories (sensitive — reveals data).
+	endpointKagentCRDMemories = "/kagent/memories"
+
+	// endpointKagentCRDSummary returns kagent CRD summary (sensitive — reveals infra).
+	endpointKagentCRDSummary = "/kagent/summary"
+
+	// endpointPredictionsAI returns AI predictions (sensitive — reveals analysis).
+	endpointPredictionsAI = "/predictions/ai"
+
+	// endpointPredictionsAnalyze triggers prediction analysis (sensitive — mutating).
+	endpointPredictionsAnalyze = "/predictions/analyze"
+
+	// endpointPredictionsFeedback submits prediction feedback (sensitive — mutating).
+	endpointPredictionsFeedback = "/predictions/feedback"
+
+	// endpointPredictionsStats returns prediction statistics (sensitive).
+	endpointPredictionsStats = "/predictions/stats"
+
+	// endpointDeviceAlerts returns device alerts (sensitive — reveals telemetry).
+	endpointDeviceAlerts = "/device/alerts"
+
+	// endpointDeviceAlertsClear clears a device alert (sensitive — mutating).
+	endpointDeviceAlertsClear = "/device/alerts/clear"
+
+	// endpointHPAs lists HorizontalPodAutoscalers (sensitive — reveals infra).
+	endpointHPAs = "/hpas"
+
+	// endpointPVCs lists PersistentVolumeClaims (sensitive — reveals infra).
+	endpointPVCs = "/pvcs"
+
+	// endpointRoles lists Kubernetes Roles (sensitive — RBAC posture).
+	endpointRoles = "/roles"
+
+	// endpointRoleBindings lists Kubernetes RoleBindings (sensitive — RBAC posture).
+	endpointRoleBindings = "/rolebindings"
+
+	// endpointResourceQuotas lists ResourceQuotas (sensitive — reveals infra).
+	endpointResourceQuotas = "/resourcequotas"
+
+	// endpointLimitRanges lists LimitRanges (sensitive — reveals infra).
+	endpointLimitRanges = "/limitranges"
+
+	// endpointResolveDeps resolves workload dependencies (sensitive — walks RBAC/pods).
+	endpointResolveDeps = "/resolve-deps"
+
+	// endpointArgoCDSync triggers an ArgoCD Application sync (sensitive —
+	// mutating, editor-or-admin gated). Moved to kc-agent in #7993 Phase 3c.
+	endpointArgoCDSync = "/argocd/sync"
+
+	// testTokenValue is the shared secret used to configure auth in tests.
+	testTokenValue = "test-secret-token-42"
+
+	// testAllowedOrigin is the CORS origin accepted in test servers.
+	testAllowedOrigin = "http://localhost:3000"
+
+	// expectedUnauthorizedStatus is the HTTP status code for missing/invalid auth.
+	expectedUnauthorizedStatus = http.StatusUnauthorized
+)
+
+// ── Endpoint classification ─────────────────────────────────────────────────
+
+// publicEndpoints are expected to respond without authentication.
+// These are used for agent discovery and monitoring.
+var publicEndpoints = []string{
+	endpointHealth,
+}
+
+// sensitiveEndpoints require a valid Bearer token when agentToken is set.
+// This list covers security-critical paths (settings, secrets, mutations).
+var sensitiveEndpoints = []struct {
+	path   string
+	method string
+}{
+	{endpointSettingsKeys, "GET"},
+	{endpointSettingsKeyByProvider, "DELETE"},
+	{endpointSettings, "GET"},
+	{endpointSettingsExport, "POST"},
+	{endpointSettingsImport, "POST"},
+	{endpointClusters, "GET"},
+	{endpointStatus, "GET"},
+	{endpointMetrics, "GET"},
+	{endpointSecrets, "GET"},
+	{endpointRestartBackend, "POST"},
+	{endpointAutoUpdateTrigger, "POST"},
+	{endpointKubeconfigImport, "POST"},
+	{endpointPods, "GET"},
+	{endpointNodes, "GET"},
+	{endpointScale, "POST"},
+	{endpointWorkloadsDeploy, "POST"},
+	{endpointWorkloadsDelete, "POST"},
+	{endpointProviderCheck, "GET"},
+	{endpointAutoUpdateStatus, "GET"},
+	{endpointKagentiAgents, "GET"},
+	{endpointKagentiBuilds, "GET"},
+	{endpointKagentiCards, "GET"},
+	{endpointKagentiTools, "GET"},
+	{endpointKagentiSummary, "GET"},
+	{endpointKagentCRDAgents, "GET"},
+	{endpointKagentCRDTools, "GET"},
+	{endpointKagentCRDModels, "GET"},
+	{endpointKagentCRDMemories, "GET"},
+	{endpointKagentCRDSummary, "GET"},
+	{endpointPredictionsAI, "GET"},
+	{endpointPredictionsAnalyze, "POST"},
+	{endpointPredictionsFeedback, "POST"},
+	{endpointPredictionsStats, "GET"},
+	{endpointDeviceAlerts, "GET"},
+	{endpointDeviceAlertsClear, "POST"},
+	{endpointHPAs, "GET"},
+	{endpointPVCs, "GET"},
+	{endpointRoles, "GET"},
+	{endpointRoleBindings, "GET"},
+	{endpointResourceQuotas, "GET"},
+	{endpointLimitRanges, "GET"},
+	{endpointResolveDeps, "GET"},
+	{endpointArgoCDSync, "POST"},
+}
+
+// endpointsLackingAuth are endpoints that SHOULD require auth but currently
+// do not call validateToken. These are documented security gaps.
+// When fixed upstream, move them to sensitiveEndpoints above.
+var endpointsLackingAuth = []struct {
+	path   string
+	method string
+}{}
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+// newAuthTestServerWithToken creates a minimal Server with token auth enabled.
+func newAuthTestServerWithToken() *Server {
+	config := &api.Config{
+		Contexts: map[string]*api.Context{
+			"test-ctx": {Cluster: "test-cluster"},
+		},
+	}
+
+	return &Server{
+		kubectl:        kube.NewTestKubectlProxy(config),
+		allowedOrigins: []string{testAllowedOrigin},
+		agentToken:     testTokenValue,
+		tokenExplicit:  true, // treat test token as explicitly set so origin bypass doesn't fire
+		registry:       &Registry{providers: make(map[string]AIProvider)},
+	}
+}
+
+// newAuthTestServerNoToken creates a minimal Server without token auth (open mode).
+func newAuthTestServerNoToken() *Server {
+	config := &api.Config{
+		Contexts: map[string]*api.Context{
+			"test-ctx": {Cluster: "test-cluster"},
+		},
+	}
+
+	return &Server{
+		kubectl:        kube.NewTestKubectlProxy(config),
+		allowedOrigins: []string{testAllowedOrigin},
+		agentToken:     "", // No token — all requests pass validateToken
+		registry:       &Registry{providers: make(map[string]AIProvider)},
+	}
+}
+
+// ── Tests: Sensitive endpoints reject unauthenticated requests ──────────────
+
+func TestEndpointAuth_SensitiveEndpointsRejectWithoutToken(t *testing.T) {
+	server := newAuthTestServerWithToken()
+
+	for _, ep := range sensitiveEndpoints {
+		ep := ep // capture loop variable
+		t.Run(fmt.Sprintf("%s_%s_no_auth", ep.method, ep.path), func(t *testing.T) {
+			req := httptest.NewRequest(ep.method, ep.path, nil)
+			req.Host = "localhost"
+			req.Header.Set("Origin", testAllowedOrigin)
+			w := httptest.NewRecorder()
+
+			// Route the request to the correct handler
+			handler := resolveEndpointHandler(server, ep.path)
+			if handler == nil {
+				t.Skipf("No handler found for %s (endpoint may not be registered in tests)", ep.path)
+				return
+			}
+
+			handler(w, req)
+
+			if w.Code != expectedUnauthorizedStatus {
+				t.Errorf("%s %s: expected status %d without auth, got %d (body: %s)",
+					ep.method, ep.path, expectedUnauthorizedStatus, w.Code, w.Body.String())
+			}
+		})
+	}
+}
+
+// TestEndpointAuth_SensitiveEndpointsAcceptValidToken verifies that
+// authenticated requests are NOT rejected with 401.
+func TestEndpointAuth_SensitiveEndpointsAcceptValidToken(t *testing.T) {
+	server := newAuthTestServerWithToken()
+
+	for _, ep := range sensitiveEndpoints {
+		ep := ep
+		t.Run(fmt.Sprintf("%s_%s_with_auth", ep.method, ep.path), func(t *testing.T) {
+			req := httptest.NewRequest(ep.method, ep.path, nil)
+			req.Host = "localhost"
+			req.Header.Set("Origin", testAllowedOrigin)
+			req.Header.Set("Authorization", "Bearer "+testTokenValue)
+			w := httptest.NewRecorder()
+
+			handler := resolveEndpointHandler(server, ep.path)
+			if handler == nil {
+				t.Skipf("No handler found for %s", ep.path)
+				return
+			}
+
+			handler(w, req)
+
+			if w.Code == expectedUnauthorizedStatus {
+				t.Errorf("%s %s: got 401 even with valid Bearer token",
+					ep.method, ep.path)
+			}
+		})
+	}
+}
+
+// TestEndpointAuth_InvalidTokenRejected ensures a wrong token is treated
+// the same as no token.
+func TestEndpointAuth_InvalidTokenRejected(t *testing.T) {
+	server := newAuthTestServerWithToken()
+
+	for _, ep := range sensitiveEndpoints {
+		ep := ep
+		t.Run(fmt.Sprintf("%s_%s_bad_token", ep.method, ep.path), func(t *testing.T) {
+			req := httptest.NewRequest(ep.method, ep.path, nil)
+			req.Host = "localhost"
+			req.Header.Set("Origin", testAllowedOrigin)
+			req.Header.Set("Authorization", "Bearer wrong-token")
+			w := httptest.NewRecorder()
+
+			handler := resolveEndpointHandler(server, ep.path)
+			if handler == nil {
+				t.Skipf("No handler found for %s", ep.path)
+				return
+			}
+
+			handler(w, req)
+
+			if w.Code != expectedUnauthorizedStatus {
+				t.Errorf("%s %s: expected %d with invalid token, got %d",
+					ep.method, ep.path, expectedUnauthorizedStatus, w.Code)
+			}
+		})
+	}
+}
+
+// ── Tests: Public endpoints remain accessible ───────────────────────────────
+
+func TestEndpointAuth_PublicEndpointsAccessibleWithoutToken(t *testing.T) {
+	server := newAuthTestServerWithToken()
+
+	for _, ep := range publicEndpoints {
+		ep := ep
+		t.Run(fmt.Sprintf("GET_%s_public", ep), func(t *testing.T) {
+			req := httptest.NewRequest("GET", ep, nil)
+			req.Host = "localhost"
+			req.Header.Set("Origin", testAllowedOrigin)
+			w := httptest.NewRecorder()
+
+			handler := resolveEndpointHandler(server, ep)
+			if handler == nil {
+				t.Skipf("No handler found for %s", ep)
+				return
+			}
+
+			handler(w, req)
+
+			if w.Code == expectedUnauthorizedStatus {
+				t.Errorf("GET %s: public endpoint returned 401 — it should be accessible without auth", ep)
+			}
+		})
+	}
+}
+
+// ── Tests: Document endpoints missing auth (security gap tracking) ──────────
+
+// TestEndpointAuth_DocumentMissingAuth tracks endpoints that should require
+// auth but currently don't. When auth is added to these endpoints, this test
+// will fail — move them from endpointsLackingAuth to sensitiveEndpoints.
+func TestEndpointAuth_DocumentMissingAuth(t *testing.T) {
+	server := newAuthTestServerWithToken()
+
+	for _, ep := range endpointsLackingAuth {
+		ep := ep
+		t.Run(fmt.Sprintf("%s_%s_missing_auth", ep.method, ep.path), func(t *testing.T) {
+			req := httptest.NewRequest(ep.method, ep.path, nil)
+			req.Host = "localhost"
+			req.Header.Set("Origin", testAllowedOrigin)
+			w := httptest.NewRecorder()
+
+			handler := resolveEndpointHandler(server, ep.path)
+			if handler == nil {
+				t.Skipf("No handler found for %s", ep.path)
+				return
+			}
+
+			handler(w, req)
+
+			// This test documents that these endpoints currently allow
+			// unauthenticated access. When the bug is fixed, this will
+			// fail — that's your signal to move the endpoint to sensitiveEndpoints.
+			if w.Code == expectedUnauthorizedStatus {
+				t.Logf("GOOD NEWS: %s %s now requires auth! Move it to sensitiveEndpoints.", ep.method, ep.path)
+				t.FailNow()
+			}
+
+			t.Logf("SECURITY GAP: %s %s returned %d without auth (expected 401)", ep.method, ep.path, w.Code)
+		})
+	}
+}
+
+// ── Tests: Health endpoint does not leak sensitive data ──────────────────────
+
+// sensitiveFieldPatterns are regex patterns that should NEVER appear in
+// the /health response body. These catch accidental exposure of API keys,
+// tokens, passwords, or secrets in health check output.
+var sensitiveFieldPatterns = []*regexp.Regexp{
+	regexp.MustCompile(`(?i)"(api[_-]?key|apikey)"\s*:`),
+	regexp.MustCompile(`(?i)"(secret|password|passwd|credential)"\s*:`),
+	regexp.MustCompile(`(?i)"(access[_-]?key|private[_-]?key)"\s*:`),
+	regexp.MustCompile(`(?i)"(auth[_-]?token|bearer|jwt)"\s*:`),
+	regexp.MustCompile(`(?i)"(ssh[_-]?key|signing[_-]?key)"\s*:`),
+	// AWS-style access keys
+	regexp.MustCompile(`AKIA[0-9A-Z]{16}`),
+	// GitHub tokens
+	regexp.MustCompile(`ghp_[A-Za-z0-9]{36}`),
+	regexp.MustCompile(`gho_[A-Za-z0-9]{36}`),
+}
+
+func TestEndpointAuth_HealthDoesNotLeakSecrets(t *testing.T) {
+	server := newAuthTestServerNoToken()
+
+	req := httptest.NewRequest("GET", endpointHealth, nil)
+	req.Host = "localhost"
+	req.Header.Set("Origin", testAllowedOrigin)
+	w := httptest.NewRecorder()
+
+	server.handleHealth(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /health: expected 200, got %d", w.Code)
+	}
+
+	body := w.Body.String()
+
+	// 1. Verify we can decode it as valid JSON
+	var payload protocol.HealthPayload
+	if err := json.NewDecoder(strings.NewReader(body)).Decode(&payload); err != nil {
+		t.Fatalf("GET /health: response is not valid JSON: %v", err)
+	}
+
+	// 2. Scan the raw JSON for sensitive field patterns
+	for _, pattern := range sensitiveFieldPatterns {
+		if pattern.MatchString(body) {
+			t.Errorf("GET /health: response body matches sensitive pattern %q — possible secret leak.\nBody excerpt: %.500s",
+				pattern.String(), body)
+		}
+	}
+
+	// 3. Verify the response only contains expected top-level fields
+	var rawMap map[string]interface{}
+	if err := json.Unmarshal([]byte(body), &rawMap); err != nil {
+		t.Fatalf("GET /health: failed to unmarshal as map: %v", err)
+	}
+
+	allowedFields := map[string]bool{
+		"status":  true,
+		"version": true,
+	}
+
+	for field := range rawMap {
+		if !allowedFields[field] {
+			t.Errorf("GET /health: unexpected field %q in response — review whether it leaks sensitive info", field)
+		}
+	}
+}
+
+// TestEndpointAuth_StatusReturnsTelemetry ensures the authenticated status
+// endpoint carries the detailed telemetry removed from /health.
+func TestEndpointAuth_StatusReturnsTelemetry(t *testing.T) {
+	server := newAuthTestServerWithToken()
+	server.registry.providers["test-provider"] = &authTestFakeProvider{
+		name:        "test-provider",
+		displayName: "Test Provider",
+	}
+
+	req := httptest.NewRequest("GET", endpointStatus, nil)
+	req.Host = "localhost"
+	req.Header.Set("Origin", testAllowedOrigin)
+	req.Header.Set("Authorization", "Bearer "+testTokenValue)
+	w := httptest.NewRecorder()
+
+	server.handleStatus(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /status: expected 200, got %d", w.Code)
+	}
+
+	var payload protocol.HealthPayload
+	if err := json.Unmarshal(w.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("Failed to decode status payload: %v", err)
+	}
+
+	if payload.Clusters != 1 {
+		t.Fatalf("expected cluster count in /status, got %d", payload.Clusters)
+	}
+	if payload.GoVersion == "" || payload.OS == "" || payload.Arch == "" {
+		t.Fatalf("expected runtime metadata in /status, got %+v", payload)
+	}
+	if len(payload.AvailableProviders) != 1 {
+		t.Fatalf("expected provider summaries in /status, got %d", len(payload.AvailableProviders))
+	}
+}
+
+// ── Tests: OPTIONS preflight should not require auth ────────────────────────
+
+func TestEndpointAuth_OptionsPreflightNoAuth(t *testing.T) {
+	server := newAuthTestServerWithToken()
+
+	// CORS preflight requests (OPTIONS) should always succeed without auth
+	preflightEndpoints := []string{
+		endpointHealth,
+		endpointSettingsKeys,
+		endpointClusters,
+	}
+
+	for _, ep := range preflightEndpoints {
+		ep := ep
+		t.Run(fmt.Sprintf("OPTIONS_%s", ep), func(t *testing.T) {
+			req := httptest.NewRequest("OPTIONS", ep, nil)
+			req.Host = "localhost"
+			req.Header.Set("Origin", testAllowedOrigin)
+			w := httptest.NewRecorder()
+
+			handler := resolveEndpointHandler(server, ep)
+			if handler == nil {
+				t.Skipf("No handler found for %s", ep)
+				return
+			}
+
+			handler(w, req)
+
+			if w.Code == expectedUnauthorizedStatus {
+				t.Errorf("OPTIONS %s: preflight returned 401 — CORS preflight must not require auth", ep)
+			}
+		})
+	}
+}
+
+// ── Handler resolver ────────────────────────────────────────────────────────
+
+// resolveEndpointHandler maps an endpoint path to the server's handler method.
+// This avoids needing to start a full HTTP server for unit tests.
+func resolveEndpointHandler(s *Server, path string) func(http.ResponseWriter, *http.Request) {
+	// Handle /settings/keys/ prefix for provider-specific routes
+	if strings.HasPrefix(path, "/settings/keys/") {
+		return s.handleSettingsKeyByProvider
+	}
+
+	handlers := map[string]func(http.ResponseWriter, *http.Request){
+		endpointHealth:              s.handleHealth,
+		endpointSettingsKeys:        s.handleSettingsKeys,
+		endpointSettings:            s.handleSettingsAll,
+		endpointSettingsExport:      s.handleSettingsExport,
+		endpointSettingsImport:      s.handleSettingsImport,
+		endpointClusters:            s.handleClustersHTTP,
+		endpointStatus:              s.handleStatus,
+		endpointMetrics:             s.handleMetrics,
+		endpointSecrets:             s.handleSecretsHTTP,
+		endpointWS:                  s.handleWebSocket,
+		endpointRestartBackend:      s.handleRestartBackend,
+		endpointAutoUpdateTrigger:   s.handleAutoUpdateTrigger,
+		endpointKubeconfigImport:    s.handleKubeconfigImportHTTP,
+		endpointPods:                s.handlePodsHTTP,
+		endpointNodes:               s.handleNodesHTTP,
+		endpointScale:               s.handleScaleHTTP,
+		endpointWorkloadsDeploy:     s.handleDeployWorkloadHTTP,
+		endpointWorkloadsDelete:     s.handleDeleteWorkloadHTTP,
+		endpointProviderCheck:       s.handleProviderCheck,
+		endpointAutoUpdateStatus:    s.handleAutoUpdateStatus,
+		endpointKagentiAgents:       s.handleKagentiAgents,
+		endpointKagentiBuilds:       s.handleKagentiBuilds,
+		endpointKagentiCards:        s.handleKagentiCards,
+		endpointKagentiTools:        s.handleKagentiTools,
+		endpointKagentiSummary:      s.handleKagentiSummary,
+		endpointKagentCRDAgents:     s.handleKagentCRDAgents,
+		endpointKagentCRDTools:      s.handleKagentCRDTools,
+		endpointKagentCRDModels:     s.handleKagentCRDModels,
+		endpointKagentCRDMemories:   s.handleKagentCRDMemories,
+		endpointKagentCRDSummary:    s.handleKagentCRDSummary,
+		endpointPredictionsAI:       s.handlePredictionsAI,
+		endpointPredictionsAnalyze:  s.handlePredictionsAnalyze,
+		endpointPredictionsFeedback: s.handlePredictionsFeedback,
+		endpointPredictionsStats:    s.handlePredictionsStats,
+		endpointDeviceAlerts:        s.handleDeviceAlerts,
+		endpointDeviceAlertsClear:   s.handleDeviceAlertsClear,
+		endpointArgoCDSync:          s.handleArgoCDSync,
+	}
+
+	return handlers[path]
+}
+
+// ── Test helper: fake AI provider ───────────────────────────────────────────
+
+// authTestFakeProvider implements AIProvider for testing the health endpoint.
+type authTestFakeProvider struct {
+	name        string
+	displayName string
+}
+
+func (p *authTestFakeProvider) Name() string                     { return p.name }
+func (p *authTestFakeProvider) DisplayName() string              { return p.displayName }
+func (p *authTestFakeProvider) Description() string              { return "Test provider for auth tests" }
+func (p *authTestFakeProvider) Provider() string                 { return "test" }
+func (p *authTestFakeProvider) IsAvailable() bool                { return true }
+func (p *authTestFakeProvider) Capabilities() ProviderCapability { return CapabilityChat }
+
+func (p *authTestFakeProvider) Chat(_ context.Context, _ *ChatRequest) (*ChatResponse, error) {
+	return &ChatResponse{Content: "test", Agent: p.name}, nil
+}
+
+func (p *authTestFakeProvider) StreamChat(_ context.Context, _ *ChatRequest, _ func(chunk string)) (*ChatResponse, error) {
+	return &ChatResponse{Content: "test", Agent: p.name}, nil
+}

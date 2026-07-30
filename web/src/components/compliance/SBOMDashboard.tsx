@@ -1,0 +1,511 @@
+/**
+ * SBOM Dashboard — Software Bill of Materials Manager
+ *
+ * Package inventory, vulnerability scanning, license compliance,
+ * and dependency tree visualization.
+ */
+import { useState, useEffect, memo, useCallback, useRef } from 'react'
+import {
+  Package, CheckCircle2, Loader2, AlertTriangle,
+  XCircle, Shield, FileText, Activity
+} from 'lucide-react'
+import { authFetch } from '../../lib/api'
+import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
+import { sbomDashboardConfig } from '../../config/dashboards/sbom'
+import { DashboardHeader } from '../shared/DashboardHeader'
+import { RotatingTip } from '../ui/RotatingTip'
+import { DashboardHealthIndicator } from '../dashboard/DashboardHealthIndicator'
+
+// ── Types ───────────────────────────────────────────────────────────────
+
+interface SBOMPackage {
+  name: string
+  version: string
+  license: string
+  ecosystem: string
+  vulnerabilities: number
+  risk: 'critical' | 'high' | 'medium' | 'low' | 'none'
+}
+
+interface SBOMVulnerability {
+  id: string
+  package_name: string
+  severity: 'critical' | 'high' | 'medium' | 'low'
+  cve: string
+  fixed_version: string
+  status: 'open' | 'patched' | 'ignored'
+}
+
+interface SBOMSummary {
+  total_packages: number
+  total_vulnerabilities: number
+  critical_vulns: number
+  high_vulns: number
+  medium_vulns: number
+  low_vulns: number
+  license_compliant: number
+  license_non_compliant: number
+  license_unknown: number
+  ecosystems: Array<{ name: string; count: number }>
+  scan_status: 'completed' | 'in_progress' | 'failed'
+  last_scan: string
+}
+
+interface SBOMDocumentComponent {
+  name: string
+  version: string
+  purl?: string
+  license: string
+  vulnerabilities: number
+  severity: string
+}
+
+interface SBOMDocument {
+  id: string
+  format: string
+  components: SBOMDocumentComponent[]
+}
+
+interface SBOMBackendSummary {
+  total_components: number
+  vulnerable_components: number
+  critical_count: number
+  high_count: number
+  generated_at: string
+}
+
+const SBOM_DOCUMENTS_ENDPOINT = '/api/supply-chain/sbom/documents'
+const SBOM_SUMMARY_ENDPOINT = '/api/supply-chain/sbom/summary'
+const DEFAULT_FIXED_VERSION = 'Unknown'
+const DEFAULT_VULNERABILITY_LABEL = 'Detected vulnerability'
+
+function inferEcosystem(purl?: string): string {
+  if (!purl) return 'unknown'
+  if (purl.startsWith('pkg:npm/')) return 'npm'
+  if (purl.startsWith('pkg:pypi/')) return 'pip'
+  if (purl.startsWith('pkg:golang/')) return 'go'
+  return 'other'
+}
+
+function normalizeSeverity(severity: string, vulnerabilities: number): SBOMPackage['risk'] {
+  if (severity === 'critical' || severity === 'high' || severity === 'medium' || severity === 'low' || severity === 'none') {
+    return severity
+  }
+
+  return vulnerabilities > 0 ? 'low' : 'none'
+}
+
+function buildPackages(documents: SBOMDocument[]): SBOMPackage[] {
+  return documents.flatMap((document) =>
+    (document.components || []).map((component) => ({
+      name: component.name,
+      version: component.version,
+      license: component.license,
+      ecosystem: inferEcosystem(component.purl),
+      vulnerabilities: component.vulnerabilities,
+      risk: normalizeSeverity(component.severity, component.vulnerabilities),
+    }))
+  )
+}
+
+function buildVulnerabilities(packages: SBOMPackage[]): SBOMVulnerability[] {
+  return packages
+    .filter((pkg) => pkg.vulnerabilities > 0)
+    .map((pkg, index) => ({
+      id: `${pkg.name}-${index}`,
+      package_name: pkg.name,
+      severity: pkg.risk === 'none' ? 'low' : pkg.risk,
+      cve: DEFAULT_VULNERABILITY_LABEL,
+      fixed_version: DEFAULT_FIXED_VERSION,
+      status: 'open',
+    }))
+}
+
+function buildLicenseSummary(packages: SBOMPackage[]) {
+  return packages.reduce(
+    (counts, pkg) => {
+      const normalizedLicense = (pkg.license ?? '').trim().toLowerCase()
+      if (!normalizedLicense || normalizedLicense === 'unknown') {
+        counts.unknown += 1
+      } else if (normalizedLicense.includes('gpl') || normalizedLicense.includes('agpl') || normalizedLicense.includes('sspl')) {
+        counts.nonCompliant += 1
+      } else {
+        counts.compliant += 1
+      }
+      return counts
+    },
+    { compliant: 0, nonCompliant: 0, unknown: 0 }
+  )
+}
+
+function buildEcosystems(packages: SBOMPackage[]) {
+  const counts = packages.reduce<Record<string, number>>((acc, pkg) => {
+    acc[pkg.ecosystem] = (acc[pkg.ecosystem] ?? 0) + 1
+    return acc
+  }, {})
+
+  return Object.entries(counts).map(([name, count]) => ({ name, count }))
+}
+
+function buildSummary(summary: SBOMBackendSummary, packages: SBOMPackage[]): SBOMSummary {
+  const licenseSummary = buildLicenseSummary(packages)
+  const accountedVulnerabilities = summary.critical_count + summary.high_count
+
+  return {
+    total_packages: summary.total_components,
+    total_vulnerabilities: summary.vulnerable_components,
+    critical_vulns: summary.critical_count,
+    high_vulns: summary.high_count,
+    medium_vulns: Math.max(summary.vulnerable_components - accountedVulnerabilities, 0),
+    low_vulns: 0,
+    license_compliant: licenseSummary.compliant,
+    license_non_compliant: licenseSummary.nonCompliant,
+    license_unknown: licenseSummary.unknown,
+    ecosystems: buildEcosystems(packages),
+    scan_status: 'completed',
+    last_scan: summary.generated_at,
+  }
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────────
+
+const SEVERITY_COLORS: Record<string, string> = {
+  critical: 'text-red-400',
+  high: 'text-orange-400',
+  medium: 'text-yellow-400',
+  low: 'text-blue-400',
+  none: 'text-green-400',
+}
+
+const SEVERITY_BG: Record<string, string> = {
+  critical: 'bg-red-500/20 border-red-500/30',
+  high: 'bg-orange-500/20 border-orange-500/30',
+  medium: 'bg-yellow-500/20 border-yellow-500/30',
+  low: 'bg-blue-500/20 border-blue-500/30',
+  none: 'bg-green-500/20 border-green-500/30',
+}
+
+const STATUS_ICON: Record<string, React.ReactNode> = {
+  open: <XCircle className="w-4 h-4 text-red-400" />,
+  patched: <CheckCircle2 className="w-4 h-4 text-green-400" />,
+  ignored: <AlertTriangle className="w-4 h-4 text-gray-400" />,
+}
+
+// ── Content Component ───────────────────────────────────────────────────
+
+export const SBOMDashboardContent = memo(function SBOMDashboardContent() {
+  const [packages, setPackages] = useState<SBOMPackage[]>([])
+  const [vulnerabilities, setVulnerabilities] = useState<SBOMVulnerability[]>([])
+  const [summary, setSummary] = useState<SBOMSummary | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'packages' | 'vulnerabilities'>('packages')
+  const [autoRefresh, setAutoRefresh] = useState(false)
+  const cancelledRef = useRef(false)
+
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [documentsResponse, summaryResponse] = await Promise.all([
+        authFetch(SBOM_DOCUMENTS_ENDPOINT),
+        authFetch(SBOM_SUMMARY_ENDPOINT),
+      ])
+      if (!documentsResponse.ok || !summaryResponse.ok) throw new Error('Failed to fetch SBOM data')
+
+      const documentsData = await documentsResponse.json()
+      const documents = Array.isArray(documentsData) ? documentsData as SBOMDocument[] : []
+      const nextPackages = buildPackages(documents)
+      if (cancelledRef.current) return
+      setPackages(nextPackages)
+      setVulnerabilities(buildVulnerabilities(nextPackages))
+
+      const summaryData = await summaryResponse.json()
+      setSummary(summaryData && typeof summaryData === 'object' && !Array.isArray(summaryData)
+        ? buildSummary(summaryData as SBOMBackendSummary, nextPackages)
+        : null)
+    } catch (e: unknown) {
+      if (cancelledRef.current) return
+      setError(e instanceof Error ? e.message : 'Unknown error')
+    } finally {
+      if (!cancelledRef.current) {
+        setLoading(false)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    cancelledRef.current = false
+    fetchData()
+    return () => { cancelledRef.current = true }
+  }, [fetchData])
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
+      <span className="ml-3 text-muted-foreground">Loading SBOM data…</span>
+    </div>
+  )
+
+  if (error) return (
+    <div className="p-6 bg-red-500/10 border border-red-500/30 rounded-lg">
+      <p className="text-red-400">{error}</p>
+    </div>
+  )
+
+  const licensePieData = summary ? [
+    { label: 'Compliant', count: summary.license_compliant, color: 'hsl(var(--success))' },
+    { label: 'Non-Compliant', count: summary.license_non_compliant, color: 'hsl(var(--destructive))' },
+    { label: 'Unknown', count: summary.license_unknown, color: 'hsl(var(--muted-foreground))' },
+  ] : []
+  const licenseTotal = licensePieData.reduce((a, b) => a + b.count, 0)
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <DashboardHeader
+        title="SBOM Manager"
+        subtitle="Software bill of materials, vulnerability tracking, and license compliance"
+        isFetching={loading}
+        onRefresh={fetchData}
+        autoRefresh={autoRefresh}
+        onAutoRefreshChange={setAutoRefresh}
+        autoRefreshId="sbom-auto-refresh"
+        rightExtra={
+          <div className="flex items-center gap-2">
+            <DashboardHealthIndicator size="sm" />
+            <RotatingTip page="compliance" />
+          </div>
+        }
+      />
+
+      {/* System Health Status */}
+      {summary && (
+        <div className="bg-card/50 border border-border rounded-xl p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Activity className="w-5 h-5 text-blue-400" />
+              <div>
+                <div className="text-sm font-medium text-foreground">Supply Chain Health</div>
+                <div className="text-xs text-muted-foreground">
+                  {summary.scan_status === 'completed'
+                    ? summary.total_vulnerabilities === 0
+                      ? 'No vulnerabilities detected'
+                      : `${summary.total_vulnerabilities} vulnerabilities (${summary.critical_vulns} critical, ${summary.high_vulns} high)`
+                    : summary.scan_status === 'in_progress'
+                    ? 'Scan in progress...'
+                    : 'Scan failed'}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {summary.scan_status === 'completed' ? (
+                summary.critical_vulns === 0 && summary.high_vulns === 0 ? (
+                  <CheckCircle2 className="w-5 h-5 text-green-400" />
+                ) : summary.critical_vulns > 0 ? (
+                  <AlertTriangle className="w-5 h-5 text-red-400" />
+                ) : (
+                  <AlertTriangle className="w-5 h-5 text-yellow-400" />
+                )
+              ) : summary.scan_status === 'in_progress' ? (
+                <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
+              ) : (
+                <XCircle className="w-5 h-5 text-red-400" />
+              )}
+              <span className={`text-sm font-medium ${
+                summary.scan_status === 'completed'
+                  ? summary.critical_vulns === 0 && summary.high_vulns === 0
+                    ? 'text-green-400'
+                    : summary.critical_vulns > 0
+                    ? 'text-red-400'
+                    : 'text-yellow-400'
+                  : summary.scan_status === 'in_progress'
+                  ? 'text-blue-400'
+                  : 'text-red-400'
+              }`}>
+                {summary.scan_status === 'completed'
+                  ? summary.critical_vulns === 0 && summary.high_vulns === 0
+                    ? 'Healthy'
+                    : summary.critical_vulns > 0
+                    ? 'Critical'
+                    : 'Warning'
+                  : summary.scan_status === 'in_progress'
+                  ? 'Scanning'
+                  : 'Failed'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Summary stats */}
+      {summary && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+            <p className="text-xs text-gray-400 uppercase tracking-wider">Total Packages</p>
+            <p className="text-2xl font-bold text-foreground mt-1">{summary.total_packages}</p>
+          </div>
+          <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+            <p className="text-xs text-gray-400 uppercase tracking-wider">Vulnerabilities</p>
+            <p className="text-2xl font-bold text-red-400 mt-1">{summary.total_vulnerabilities}</p>
+          </div>
+          <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+            <p className="text-xs text-gray-400 uppercase tracking-wider">Critical</p>
+            <p className="text-2xl font-bold text-red-500 mt-1">{summary.critical_vulns}</p>
+          </div>
+          <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+            <p className="text-xs text-gray-400 uppercase tracking-wider">Scan Status</p>
+            <div className="flex items-center gap-2 mt-1">
+              {summary.scan_status === 'completed' && <CheckCircle2 className="w-5 h-5 text-green-400" />}
+              {summary.scan_status === 'in_progress' && <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />}
+              {summary.scan_status === 'failed' && <XCircle className="w-5 h-5 text-red-400" />}
+              <span className="text-lg font-semibold text-foreground capitalize">{(summary.scan_status ?? '').replace('_', ' ')}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* License compliance pie chart */}
+      {summary && licenseTotal > 0 && (
+        <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
+            <FileText className="w-4 h-4 text-blue-400" />
+            License Compliance
+          </h3>
+          <div className="flex items-center gap-6">
+            <svg width={120} height={120} viewBox="0 0 120 120" className="shrink-0">
+              {(() => {
+                let cumulative = 0
+                return licensePieData.map((d, i) => {
+                  const pct = d.count / licenseTotal
+                  const start = cumulative
+                  cumulative += pct
+                  const r = 50
+                  const circ = 2 * Math.PI * r
+                  return (
+                    <circle
+                      key={i}
+                      cx={60} cy={60} r={r}
+                      fill="none"
+                      stroke={d.color}
+                      strokeWidth={16}
+                      strokeDasharray={`${pct * circ} ${circ}`}
+                      strokeDashoffset={-start * circ}
+                      transform="rotate(-90 60 60)"
+                    />
+                  )
+                })
+              })()}
+            </svg>
+            <div className="space-y-2">
+              {licensePieData.map(d => (
+                <div key={d.label} className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: d.color }} />
+                  <span className="text-sm text-muted-foreground">{d.label}: <span className="text-foreground font-medium">{d.count}</span></span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div className="flex gap-2 border-b border-gray-700">
+        <button
+          className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'packages' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-muted-foreground hover:text-foreground'}`}
+          onClick={() => setActiveTab('packages')}
+        >
+          <Package className="w-4 h-4 inline mr-1" /> Packages ({packages.length})
+        </button>
+        <button
+          className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'vulnerabilities' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-muted-foreground hover:text-foreground'}`}
+          onClick={() => setActiveTab('vulnerabilities')}
+        >
+          <Shield className="w-4 h-4 inline mr-1" /> Vulnerabilities ({vulnerabilities.length})
+        </button>
+      </div>
+
+      {/* Packages table */}
+      {activeTab === 'packages' && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-700 text-left">
+                <th className="py-2 px-3 text-gray-400 font-medium">Package</th>
+                <th className="py-2 px-3 text-gray-400 font-medium">Version</th>
+                <th className="py-2 px-3 text-gray-400 font-medium">License</th>
+                <th className="py-2 px-3 text-gray-400 font-medium">Ecosystem</th>
+                <th className="py-2 px-3 text-gray-400 font-medium">Vulns</th>
+                <th className="py-2 px-3 text-gray-400 font-medium">Risk</th>
+              </tr>
+            </thead>
+            <tbody>
+              {packages.map((p, i) => (
+                <tr key={i} className="border-b border-gray-800 hover:bg-gray-800/30">
+                  <td className="py-2 px-3 text-foreground font-mono text-xs">{p.name}</td>
+                  <td className="py-2 px-3 text-muted-foreground">{p.version}</td>
+                  <td className="py-2 px-3 text-muted-foreground">{p.license}</td>
+                  <td className="py-2 px-3 text-muted-foreground">{p.ecosystem}</td>
+                  <td className="py-2 px-3">
+                    <span className={p.vulnerabilities > 0 ? 'text-red-400 font-medium' : 'text-green-400'}>{p.vulnerabilities}</span>
+                  </td>
+                  <td className="py-2 px-3">
+                    <span className={`px-2 py-0.5 rounded text-xs border ${SEVERITY_BG[p.risk]} ${SEVERITY_COLORS[p.risk]}`}>
+                      {p.risk}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Vulnerabilities table */}
+      {activeTab === 'vulnerabilities' && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-700 text-left">
+                <th className="py-2 px-3 text-gray-400 font-medium">CVE</th>
+                <th className="py-2 px-3 text-gray-400 font-medium">Package</th>
+                <th className="py-2 px-3 text-gray-400 font-medium">Severity</th>
+                <th className="py-2 px-3 text-gray-400 font-medium">Fixed In</th>
+                <th className="py-2 px-3 text-gray-400 font-medium">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {vulnerabilities.map((v) => (
+                <tr key={v.id} className="border-b border-gray-800 hover:bg-gray-800/30">
+                  <td className="py-2 px-3 text-blue-400 font-mono text-xs">{v.cve}</td>
+                  <td className="py-2 px-3 text-foreground">{v.package_name}</td>
+                  <td className="py-2 px-3">
+                    <span className={`px-2 py-0.5 rounded text-xs border ${SEVERITY_BG[v.severity]} ${SEVERITY_COLORS[v.severity]}`}>
+                      {v.severity}
+                    </span>
+                  </td>
+                  <td className="py-2 px-3 text-gray-600 font-mono text-xs">{v.fixed_version}</td>
+                  <td className="py-2 px-3">
+                    <span className="flex items-center gap-1">
+                      {STATUS_ICON[v.status]}
+                      <span className="text-gray-600 capitalize">{v.status}</span>
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+})
+
+// ── Page Component (rendered by App.tsx route) ──────────────────────────
+
+export default function SBOMDashboard() {
+  return (<>
+    <SBOMDashboardContent />
+    <UnifiedDashboard config={sbomDashboardConfig} />
+  </>)
+}

@@ -1,0 +1,6 @@
+mode: atomic
+github.com/kubestellar/console/pkg/api/server.go:1.1,2.2 2 1
+github.com/kubestellar/console/pkg/api/server.go:2.2,3.3 2 0
+github.com/kubestellar/console/pkg/agent/server.go:1.1,2.2 4 1
+github.com/kubestellar/console/pkg/k8s/client.go:1.1,2.2 3 0
+github.com/kubestellar/console/pkg/k8s/client.go:2.2,3.3 1 1

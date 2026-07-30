@@ -1,0 +1,178 @@
+{
+  "timestamp": "2026-06-12T08:05:45Z",
+  "fastMode": false,
+  "summary": {
+    "total": 32,
+    "passed": 13,
+    "failed": 6,
+    "skipped": 13
+  },
+  "results": [
+    {
+      "suite": "consistency-test",
+      "status": "pass",
+      "duration": 4
+    },
+    {
+      "suite": "helm-lint-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "license-compliance-test",
+      "status": "pass",
+      "duration": 3
+    },
+    {
+      "suite": "mission-security-test",
+      "status": "pass",
+      "duration": 13
+    },
+    {
+      "suite": "card-registry-integrity-test",
+      "status": "pass",
+      "duration": 1
+    },
+    {
+      "suite": "unit-test",
+      "status": "fail",
+      "duration": 1466,
+      "failure_reason": "      Tests  78 failed | 30305 passed | 4 skipped (30397)\n     Errors  9 errors\n   Start at  07:31:53\n   Duration  1465.25s (transform 67.21s, setup 336.65s, import 539.13s, tests 400.07s, environment 1915.25s)\n======================================\n"
+    },
+    {
+      "suite": "auth-lifecycle-test",
+      "status": "fail",
+      "duration": 84,
+      "failure_reason": "  ✓  Bearer prefix validation present\n2/8 auth lifecycle checks failed\nReports:\n  JSON:     /tmp/auth-lifecycle-report.json\n  Summary:  /tmp/auth-lifecycle-summary.md\n"
+    },
+    {
+      "suite": "settings-migration-test",
+      "status": "fail",
+      "duration": 0,
+      "failure_reason": "═══════════════════════════════════════════════════\n  Settings Encryption & Migration Testing\n═══════════════════════════════════════════════════\nPhase 1: Crypto unit tests\n  ❌ Crypto tests failed (0 failures)\n"
+    },
+    {
+      "suite": "update-lifecycle-test",
+      "status": "fail",
+      "duration": 0,
+      "failure_reason": "═══════════════════════════════════════════════════\n  Update Lifecycle Verification\n═══════════════════════════════════════════════════\nPhase 1: Update checker tests\n  ❌ Update checker tests failed (0 failures)\n"
+    },
+    {
+      "suite": "websocket-resilience-test",
+      "status": "fail",
+      "duration": 0,
+      "failure_reason": "  ⊘  Go WebSocket handler tests  — no matching tests found\nNo tests were executed\nReports:\n  JSON:     /tmp/websocket-resilience-report.json\n  Summary:  /tmp/websocket-resilience-summary.md\n"
+    },
+    {
+      "suite": "gosec-test",
+      "status": "pass",
+      "duration": 54
+    },
+    {
+      "suite": "dependency-audit-test",
+      "status": "pass",
+      "duration": 11
+    },
+    {
+      "suite": "secret-scan-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "ts-sast-test",
+      "status": "pass",
+      "duration": 4
+    },
+    {
+      "suite": "container-scan-test",
+      "status": "pass",
+      "duration": 16
+    },
+    {
+      "suite": "security-headers-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "api-contract-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "api-fuzz-test",
+      "status": "fail",
+      "duration": 60,
+      "failure_reason": "    ✓ PASS — no crashes\n2/3 fuzz targets found crashes\nReports:\n  JSON:     /tmp/fuzz-report.json\n  Summary:  /tmp/fuzz-summary.md\n"
+    },
+    {
+      "suite": "error-boundary-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "console-error-scan",
+      "status": "skip",
+      "duration": 0
+    },
+    {
+      "suite": "cache-test",
+      "status": "skip",
+      "duration": 0
+    },
+    {
+      "suite": "nav-test",
+      "status": "skip",
+      "duration": 0
+    },
+    {
+      "suite": "perf-test",
+      "status": "skip",
+      "duration": 0
+    },
+    {
+      "suite": "ui-compliance-test",
+      "status": "skip",
+      "duration": 0
+    },
+    {
+      "suite": "deploy-test",
+      "status": "skip",
+      "duration": 0
+    },
+    {
+      "suite": "benchmark-test",
+      "status": "skip",
+      "duration": 0
+    },
+    {
+      "suite": "ai-ml-test",
+      "status": "skip",
+      "duration": 0
+    },
+    {
+      "suite": "a11y-test",
+      "status": "skip",
+      "duration": 0
+    },
+    {
+      "suite": "error-resilience-test",
+      "status": "skip",
+      "duration": 0
+    },
+    {
+      "suite": "i18n-test",
+      "status": "skip",
+      "duration": 0
+    },
+    {
+      "suite": "interaction-test",
+      "status": "skip",
+      "duration": 0
+    },
+    {
+      "suite": "security-e2e-test",
+      "status": "skip",
+      "duration": 0
+    }
+  ]
+}

@@ -1,0 +1,157 @@
+name: Nightly UX Journey Tests
+
+# Journey-oriented Playwright tests that exercise every major user
+# interaction in demo mode and produce a UX findings report.
+#
+# Uses a static server (npx serve) since the Go backend has a systemic
+# CI issue where Chromium gets ERR_CONNECTION_REFUSED even though the
+# backend is healthy (same issue affects fullstack-e2e.yml). Demo mode
+# works via localStorage flags — no backend API needed for most tests.
+#
+# Runs nightly at 05:00 UTC and on manual dispatch.
+
+on:
+  schedule:
+    - cron: "0 5 * * *"
+  workflow_dispatch:
+
+permissions: read-all  # default read; writes scoped to job below
+
+concurrency:
+  group: nightly-ux-journeys
+  cancel-in-progress: true
+
+env:
+  CI: true
+  NODE_VERSION: "22"
+
+jobs:
+  ux-journeys:
+    permissions:
+      issues: write
+    if: github.repository == 'kubestellar/console'
+    name: UX Journey Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build frontend
+        env:
+          NODE_OPTIONS: '--max-old-space-size=6144'
+        run: npm run build
+
+      - name: Start static server
+        run: |
+          npx serve dist -l 8080 -s &
+          for i in $(seq 1 10); do
+            curl -sf http://localhost:8080 > /dev/null 2>&1 && break
+            sleep 1
+          done
+          echo "Static server ready"
+
+      - name: Run UX journey tests
+        run: npx playwright test e2e/user-flows/ --project=chromium --reporter=list,html,./e2e/helpers/ux-reporter.ts
+        env:
+          PLAYWRIGHT_BASE_URL: "http://localhost:8080"
+
+      - name: Upload UX findings report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ux-findings-report
+          path: |
+            web/test-results/ux-findings-report.md
+            web/test-results/ux/
+          retention-days: 30
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-ux-report
+          path: web/playwright-report/
+          retention-days: 14
+
+      - name: Post summary
+        if: always()
+        run: |
+          echo "### UX Journey Test Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f test-results/ux-findings-report.md ]; then
+            echo "#### Findings Report" >> "$GITHUB_STEP_SUMMARY"
+            head -20 test-results/ux-findings-report.md >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "*Full report available in artifacts*" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No UX findings report generated." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  ux-mobile:
+    permissions:
+      issues: write
+    if: github.repository == 'kubestellar/console'
+    name: UX Mobile Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build frontend
+        env:
+          NODE_OPTIONS: '--max-old-space-size=6144'
+        run: npm run build
+
+      - name: Start static server
+        run: |
+          npx serve dist -l 8080 -s &
+          for i in $(seq 1 10); do
+            curl -sf http://localhost:8080 > /dev/null 2>&1 && break
+            sleep 1
+          done
+          echo "Static server ready"
+
+      - name: Run responsive + a11y tests
+        run: npx playwright test e2e/user-flows/responsive-layouts.spec.ts e2e/user-flows/a11y-audit.spec.ts --project=chromium --reporter=list,html
+        env:
+          PLAYWRIGHT_BASE_URL: "http://localhost:8080"
+
+      - name: Upload mobile screenshots
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mobile-responsive-screenshots
+          path: web/test-results/ux/
+          retention-days: 30

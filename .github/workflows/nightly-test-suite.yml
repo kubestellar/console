@@ -1,0 +1,383 @@
+name: Nightly Test Suite
+
+on:
+  schedule:
+    # Run at 6 AM UTC daily (1 AM EST / 2 AM EDT) — after the release workflow
+    - cron: '0 6 * * *'
+  workflow_dispatch: {} # Allow manual trigger
+
+permissions: read-all
+
+concurrency:
+  group: nightly-test-suite
+  # Never cancel a nightly run — it only fires once per day and must finish
+  # so the tracking issue (#9346) gets updated. cancel-in-progress was causing
+  # stale results when a manual workflow_dispatch overlapped the scheduled run.
+  cancel-in-progress: false
+
+env:
+  RESULTS_DIR: test-results/nightly
+  NODE_VERSION: '22'
+  GO_VERSION: '1.26.5'
+
+jobs:
+  test:
+    permissions:
+      contents: write
+      issues: write
+    if: github.repository == 'kubestellar/console'
+    runs-on: ubuntu-latest
+    # Three layers prevent benchmark retry storms from blowing the budget:
+    #   1. benchmarks.config.ts: retries=0, per-test timeout=60s (was 120s)
+    #   2. run-all-tests.sh: per-suite wall-clock cap of 5m via timeout(1)
+    #   3. This workflow-level backstop below
+    # The 90m backstop was too tight: three suites regularly hit the 600s
+    # per-suite cap (~30m combined), and the remaining suites push total
+    # runtime to 85-90m. This caused the job to be cancelled on 7 of the
+    # last 10 nights (Apr 13-17, 21-22), leaving issue #9346 un-updated.
+    # 180m accommodates worst-case test durations (~135m for all suites)
+    # plus ~20m for install steps (npm ci, playwright install) and ~25m
+    # headroom for post-processing (result upload, issue update).
+    timeout-minutes: 180
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Need full history for commit back
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install npm dependencies
+        run: cd web && npm ci
+
+      - name: Install Playwright browsers
+        run: cd web && npx playwright install --with-deps chromium
+
+      - name: Set up Helm
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+
+      - name: Install test tools
+        env:
+          GOSEC_VERSION: '2.21.4'
+          GOSEC_SHA: '7f0ff09dbc2e5e55d915cbb01ceb79c2dd2d85b07ba5e42b78ccbf91c01c9b5e'
+          GITLEAKS_VERSION: '8.21.2'
+          GITLEAKS_SHA: 'b9b81a09e0873f73c5060271e46e9e638ba10f8bf1ec7a0a6e95dd90c6e2b9c5'
+          TRIVY_VERSION: '0.69.3'
+          TRIVY_SHA: '3efb9ea57badf80b2ac43aba925dd088b45b1accd2f62fb0fbc23edd3ee2ec1fb'
+        shell: bash {0}
+        run: |
+          # Non-fatal installs: test scripts handle missing tools gracefully.
+          # Using 'bash {0}' (no -e) so one failure doesn't abort the rest.
+
+          echo "::group::gosec (pre-built binary)"
+          wget "https://github.com/securego/gosec/releases/download/v${GOSEC_VERSION}/gosec_${GOSEC_VERSION}_linux_amd64.tar.gz" -O /tmp/gosec.tar.gz \
+            && echo "${GOSEC_SHA}  /tmp/gosec.tar.gz" | sha256sum --check - \
+            && tar -xzf /tmp/gosec.tar.gz -C /usr/local/bin gosec \
+            && echo "✓ gosec installed" \
+            || echo "::warning::gosec install or verification failed"
+          echo "::endgroup::"
+
+          echo "::group::gitleaks (pre-built binary)"
+          wget "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" -O /tmp/gitleaks.tar.gz \
+            && echo "${GITLEAKS_SHA}  /tmp/gitleaks.tar.gz" | sha256sum --check - \
+            && tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks \
+            && echo "✓ gitleaks installed" \
+            || echo "::warning::gitleaks install or verification failed"
+          echo "::endgroup::"
+
+          echo "::group::trivy (pre-built binary)"
+          wget "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" -O /tmp/trivy.tar.gz \
+            && echo "${TRIVY_SHA}  /tmp/trivy.tar.gz" | sha256sum --check - \
+            && tar -xzf /tmp/trivy.tar.gz -C /usr/local/bin trivy \
+            && echo "✓ trivy installed" \
+            || echo "::warning::trivy install or verification failed"
+          echo "::endgroup::"
+
+          echo "::group::semgrep (pip — hashed requirements)"
+          pip install --require-hashes -r .github/requirements-nightly.txt \
+            && echo "✓ semgrep installed" \
+            || echo "::warning::semgrep install failed"
+          echo "::endgroup::"
+
+          echo "::group::ripgrep (apt)"
+          sudo apt-get install -y ripgrep \
+            && echo "✓ ripgrep installed" \
+            || echo "::warning::ripgrep install failed"
+          echo "::endgroup::"
+
+          # govulncheck & go-licenses: omitted (go install causes exit code 8).
+          # Test scripts install on-demand with graceful fallback.
+
+          echo ""
+          echo "=== Tool verification ==="
+          for tool in gosec gitleaks trivy semgrep rg; do
+            if command -v "$tool" &>/dev/null; then
+              echo "  ✓ $tool"
+            else
+              echo "  ✗ $tool (missing — tests will handle gracefully)"
+            fi
+          done
+
+      - name: Run full test suite
+        id: tests
+        run: |
+          bash scripts/run-all-tests.sh || true
+
+          # Copy results to nightly dir with date-stamped name
+          DATE=$(date -u +%Y-%m-%d)
+          mkdir -p "$RESULTS_DIR"
+
+          # Guard: if all-tests-report.json is missing or malformed, create a
+          # minimal valid JSON stub so downstream jq/comparison steps don't crash.
+          if [ ! -f /tmp/all-tests-report.json ] || ! jq empty /tmp/all-tests-report.json 2>/dev/null; then
+            echo '{"summary":{"total":0,"passed":0,"failed":0,"skipped":0},"timestamp":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'","suites":[]}' > /tmp/all-tests-report.json
+            echo "::warning::all-tests-report.json was missing or malformed — created stub"
+          fi
+
+          cp /tmp/all-tests-report.json "${RESULTS_DIR}/${DATE}.json"
+
+          echo "result_file=${RESULTS_DIR}/${DATE}.json" >> "$GITHUB_OUTPUT"
+          echo "date=${DATE}" >> "$GITHUB_OUTPUT"
+
+          # Check if tests passed (tolerate malformed JSON from run-all-tests.sh)
+          FAILED=$(jq -r '.summary.failed' /tmp/all-tests-report.json 2>/dev/null || echo "unknown")
+          echo "failed=${FAILED}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate comparison report
+        if: always()
+        id: compare
+        run: |
+          REPORT_FILE="/tmp/nightly-comparison.md"
+          REGRESSION=0
+          bash scripts/nightly-compare.sh "${{ steps.tests.outputs.result_file }}" "$RESULTS_DIR" > "$REPORT_FILE" || REGRESSION=1
+
+          # Ensure the report file exists even if the compare script failed
+          if [ ! -s "$REPORT_FILE" ]; then
+            echo "## Nightly Comparison Report" > "$REPORT_FILE"
+            echo "" >> "$REPORT_FILE"
+            echo "_Comparison script produced no output. This usually means there are no previous results to compare against._" >> "$REPORT_FILE"
+            echo "" >> "$REPORT_FILE"
+            echo "**Date:** $(date -u +%Y-%m-%d)" >> "$REPORT_FILE"
+            echo "**Result file:** \`${{ steps.tests.outputs.result_file }}\`" >> "$REPORT_FILE"
+          fi
+
+          echo "has_regression=${REGRESSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Commit results to repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Pull latest main to avoid rejection (other workflows may have pushed).
+          # Reset any tracked-file changes first (test artifacts, node_modules lock
+          # files, etc.) that conflict with rebase — only the dated JSON matters.
+          git checkout -- . 2>/dev/null || true
+          git clean -fd 2>/dev/null || true
+          git pull --rebase origin main || git pull origin main || true
+
+          # Re-generate the result file after the clean pull
+          DATE="${{ steps.tests.outputs.date }}"
+          if [ -f /tmp/all-tests-report.json ]; then
+            mkdir -p "$RESULTS_DIR"
+            cp /tmp/all-tests-report.json "${RESULTS_DIR}/${DATE}.json"
+          fi
+
+          git add "${RESULTS_DIR}/${DATE}.json" 2>/dev/null || true
+          git commit -s -m "chore: nightly test results for ${DATE}
+
+          Passed: $(jq -r '.summary.passed' ${{ steps.tests.outputs.result_file }} 2>/dev/null || echo '?')/$( jq -r '.summary.total' ${{ steps.tests.outputs.result_file }} 2>/dev/null || echo '?')
+          Failed: $(jq -r '.summary.failed' ${{ steps.tests.outputs.result_file }} 2>/dev/null || echo '?')
+
+          [skip ci]" || echo "No changes to commit"
+          git push origin main || echo "::warning::Failed to push results — will retry next run"
+
+      - name: Find or create tracking issue
+        if: always() && (steps.tests.outputs.result_file != '' || job.status == 'cancelled')
+        id: issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LABEL="nightly-tests"
+          TITLE="Nightly Test Suite Results"
+
+          # Ensure label exists
+          gh label create "$LABEL" \
+            --description "Automated nightly test suite results" \
+            --color "0075ca" 2>/dev/null || true
+
+          # Find existing open issue
+          EXISTING=$(gh issue list \
+            --state open \
+            --label "$LABEL" \
+            --search "in:title \"${TITLE}\"" \
+            --json number,title \
+            --jq ".[] | select(.title == \"${TITLE}\") | .number" \
+          )
+
+          if [ -n "$EXISTING" ]; then
+            echo "issue_number=$EXISTING" >> "$GITHUB_OUTPUT"
+            echo "action=comment" >> "$GITHUB_OUTPUT"
+          else
+            # Create new tracking issue
+            NEW_ISSUE=$(gh issue create \
+              --title "$TITLE" \
+              --label "$LABEL" \
+              --body "$(cat <<'EOF'
+          ## Nightly Test Suite Tracking
+
+          This issue tracks nightly test suite results. Each night, the full test suite runs and posts results as a comment below.
+
+          ### How to read the results
+          - **Trend table** shows pass rates over the last 7 runs
+          - **Regressions** are highlighted when a previously-passing suite starts failing
+          - **Improvements** are highlighted when a previously-failing suite starts passing
+          - Raw JSON results are stored in `test-results/nightly/` for graphing
+
+          ### Data location
+          - JSON results: `test-results/nightly/YYYY-MM-DD.json`
+          - Comparison script: `scripts/nightly-compare.sh`
+          - Workflow: `.github/workflows/nightly-test-suite.yml`
+
+          ---
+          _Results are posted as comments below, newest first._
+          EOF
+              )" 2>&1 | grep -oP '\d+$')
+            echo "issue_number=$NEW_ISSUE" >> "$GITHUB_OUTPUT"
+            echo "action=created" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Post results to issue
+        if: always() && steps.issue.outputs.issue_number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          FALLBACK_BODY="## Nightly Test Suite — $(date -u +%Y-%m-%d)
+
+          _No comparison report was generated. The test suite or comparison script may have failed. Check the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details._"
+
+          if [ -f /tmp/nightly-comparison.md ] && [ -s /tmp/nightly-comparison.md ]; then
+            gh issue comment "${{ steps.issue.outputs.issue_number }}" \
+              --body-file /tmp/nightly-comparison.md \
+            || gh issue comment "${{ steps.issue.outputs.issue_number }}" \
+              --body "$FALLBACK_BODY" \
+            || echo "::warning::Failed to post comparison report to issue"
+          else
+            gh issue comment "${{ steps.issue.outputs.issue_number }}" \
+              --body "$FALLBACK_BODY" \
+            || echo "::warning::Failed to post fallback report to issue"
+          fi
+
+      - name: Create issues for failing suites
+        if: always() && steps.tests.outputs.failed != '0' && steps.tests.outputs.failed != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RESULT_FILE: ${{ steps.tests.outputs.result_file }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          # Ensure labels exist
+          gh label create "nightly-regression" --color "B60205" \
+            --description "Test regression found by nightly suite" 2>/dev/null || true
+          gh label create "triage/needed" --color "FBCA04" \
+            --description "Needs triage" 2>/dev/null || true
+
+          # Create an issue for each failing suite (skip if one already exists
+          # or was closed within the dedup window)
+          DEDUP_WINDOW_DAYS=2
+          DEDUP_CUTOFF=$(date -u -d "${DEDUP_WINDOW_DAYS} days ago" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null \
+            || date -u -v-${DEDUP_WINDOW_DAYS}d +%Y-%m-%dT%H:%M:%SZ)
+          FAILING_SUITES=$(jq -r '.results[] | select(.status == "fail") | .suite' "$RESULT_FILE" 2>/dev/null || true)
+          for suite in $FAILING_SUITES; do
+            ISSUE_TITLE="Nightly regression: ${suite}"
+
+            # Check for existing open issue
+            EXISTING=$(gh issue list --state open \
+              --label "nightly-regression" \
+              --search "in:title \"${ISSUE_TITLE}\"" \
+              --json number --jq '.[0].number // empty')
+
+            if [ -n "$EXISTING" ]; then
+              echo "Issue #${EXISTING} already open for ${suite} — adding comment"
+              gh issue comment "$EXISTING" --body "Still failing as of $(date -u +%Y-%m-%d). [Run](${RUN_URL})"
+              continue
+            fi
+
+            # Check for recently-closed issue (within dedup window) to avoid
+            # creating duplicate issues for the same recurring regression
+            RECENT_CLOSED=$(gh issue list --state closed \
+              --label "nightly-regression" \
+              --search "in:title \"${ISSUE_TITLE}\" closed:>${DEDUP_CUTOFF}" \
+              --json number --jq '.[0].number // empty')
+
+            if [ -n "$RECENT_CLOSED" ]; then
+              echo "Issue #${RECENT_CLOSED} closed within ${DEDUP_WINDOW_DAYS}d for ${suite} — reopening"
+              gh issue reopen "$RECENT_CLOSED" --comment "Regression recurred on $(date -u +%Y-%m-%d). [Run](${RUN_URL})"
+              continue
+            fi
+
+            # Extract last few lines from the suite log (uploaded as artifact)
+            LOG_TAIL=""
+            if [ -f "/tmp/suite-${suite}.log" ]; then
+              LOG_TAIL=$(tail -20 "/tmp/suite-${suite}.log" 2>/dev/null || true)
+            fi
+
+            gh issue create \
+              --title "$ISSUE_TITLE" \
+              --label "bug,nightly-regression,triage/needed,help wanted" \
+              --body "$(cat <<ISSUEEOF
+          ## Nightly Test Regression: \`${suite}\`
+
+          The **${suite}** test suite failed during the nightly run on $(date -u +%Y-%m-%d).
+
+          **Run:** [View workflow run](${RUN_URL})
+          **Log:** Download the \`nightly-test-logs\` artifact for full output.
+
+          ### Log tail
+          \`\`\`
+          ${LOG_TAIL}
+          \`\`\`
+
+          ### Next steps
+          1. Download the test log artifact from the [workflow run](${RUN_URL})
+          2. Reproduce locally: \`bash scripts/${suite}.sh\`
+          3. Fix the underlying issue
+          4. Close this issue once the nightly passes again
+
+          ---
+          _Auto-created by the nightly test suite. Add \`ai-fix-requested\` + \`triage/accepted\` labels to enable Copilot auto-fix._
+          ISSUEEOF
+            )"
+            echo "Created issue for ${suite}"
+          done
+
+      - name: Upload test logs as artifact
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: nightly-test-logs-${{ steps.tests.outputs.date }}
+          path: |
+            /tmp/suite-*.log
+            /tmp/all-tests-report.json
+            /tmp/all-tests-summary.md
+          retention-days: 30
+
+      - name: Fail on regression
+        if: steps.compare.outputs.has_regression == '1'
+        run: |
+          echo "::error::Regressions detected — see issue #${{ steps.issue.outputs.issue_number }}"
+          exit 1

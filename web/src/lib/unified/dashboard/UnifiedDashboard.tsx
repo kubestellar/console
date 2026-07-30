@@ -1,0 +1,656 @@
+/**
+ * UnifiedDashboard - Single component that renders any dashboard from config
+ *
+ * This component accepts a UnifiedDashboardConfig and renders a complete
+ * dashboard with stats, cards, and optional features like drag-drop and
+ * card management.
+ *
+ * Usage:
+ *   <UnifiedDashboard config={mainDashboardConfig} />
+ */
+
+import { useState, useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { Activity, RefreshCw, Plus, ExternalLink } from 'lucide-react'
+import { cn } from '@/lib/cn'
+import { Button } from '../../../components/ui/Button'
+import { AgentIcon } from '../../../components/agent/AgentIcon'
+import type {
+  UnifiedDashboardProps,
+  DashboardCardPlacement,
+  DashboardTab } from '../types'
+import { UnifiedStatsSection } from '../stats'
+import { DashboardGrid } from './DashboardGrid'
+import { DashboardHealthIndicator } from '../../../components/dashboard/DashboardHealthIndicator'
+import { AddCardModal } from '../../../components/dashboard/AddCardModal'
+import { ConfigureCardModal } from '../../../components/dashboard/ConfigureCardModal'
+import { prefetchCardChunks } from '../../../components/cards/cardRegistry'
+import { SHORT_DELAY_MS } from '../../constants/network'
+import { ConfirmDialog, useModalState } from '../../modals'
+import { useTranslation } from 'react-i18next'
+import { useToast } from '../../../components/ui/Toast'
+import { moveFocusByKey } from '../../a11y/rovingFocus'
+
+/** Card suggestion type from AddCardModal */
+interface CardSuggestion {
+  type: string
+  title: string
+  description: string
+  visualization: string
+  config: Record<string, unknown>
+}
+
+/** Card type for ConfigureCardModal */
+interface ConfigurableCard {
+  id: string
+  card_type: string
+  config: Record<string, unknown>
+  title?: string
+}
+
+/**
+ * UnifiedDashboard - Renders a complete dashboard from config
+ */
+export function UnifiedDashboard({
+  config,
+  statsData,
+  className = '' }: UnifiedDashboardProps) {
+  const { t } = useTranslation('common')
+  const { showToast } = useToast()
+  // Tab state (for dashboards with tabs) — needed by the cards initializer
+  // to route persistence differently in tab-mode dashboards.
+  const hasTabs = (config.tabs?.length ?? 0) > 0
+
+  const initialStorageState = (() => {
+    const nextState: {
+      cards: DashboardCardPlacement[]
+      tabCards: Record<string, DashboardCardPlacement[]>
+      error: string | null
+    } = {
+      cards: config.cards,
+      tabCards: {},
+      error: null,
+    }
+
+    if (config.storageKey) {
+      try {
+        const stored = localStorage.getItem(config.storageKey)
+        if (stored !== null) {
+          const parsed = JSON.parse(stored)
+          if (Array.isArray(parsed)) {
+            nextState.cards = parsed
+          }
+        }
+      } catch (error) {
+        console.error('Failed to restore unified dashboard cards', error)
+        nextState.error = t('errors.storageRestoreFailed')
+      }
+    }
+
+    for (const tab of (config.tabs || [])) {
+      let seeded: DashboardCardPlacement[] | null = null
+      if (config.storageKey) {
+        try {
+          const slot = `${config.storageKey}::tab::${tab.id}::cards`
+          const raw = localStorage.getItem(slot)
+          if (raw !== null) {
+            const parsed = JSON.parse(raw)
+            if (Array.isArray(parsed)) {
+              seeded = parsed
+            }
+          }
+        } catch (error) {
+          console.error('Failed to restore unified dashboard tab cards', error)
+          nextState.error = t('errors.storageRestoreFailed')
+        }
+      }
+      nextState.tabCards[tab.id] = seeded ?? tab.cards ?? []
+    }
+
+    return nextState
+  })()
+
+  // Card state - load from localStorage or use config defaults.
+  //
+  // #6710 — Distinguish "never persisted" (no key in storage) from
+  // "explicitly empty" ([]). A user who removed every card should see an
+  // empty dashboard after reload, not a restored default layout. We only
+  // fall back to `config.cards` when the storage slot is missing entirely.
+  const [cards, setCards] = useState<DashboardCardPlacement[]>(initialStorageState.cards)
+  const [dashboardError, setDashboardError] = useState<string | null>(initialStorageState.error)
+
+  const [activeTabId, setActiveTabId] = useState<string>(() => {
+    if (!config.tabs || config.tabs.length === 0) return ''
+    // Default to first non-disabled tab
+    const firstEnabled = config.tabs.find(t => !t.disabled)
+    return firstEnabled?.id ?? config.tabs[0].id
+  })
+
+  // #6709 — Per-tab card state. Tab-mode dashboards used to read cards from
+  // `config.tabs[activeTabId].cards` but mutated the separate flat `cards`
+  // state, so add/remove/configure appeared to do nothing. We keep a local
+  // `tabCards` map keyed by tab id, seeded from `config.tabs`, and route
+  // mutations through it when `hasTabs` is true.
+  //
+  // #6749-A (Copilot on PR #6746) — Per-tab persistence. Previously the
+  // persistence effect short-circuited entirely when `hasTabs` was true,
+  // so tab-mode add/remove/reorder/configure changes were lost on reload.
+  // We now persist each tab's cards to its own localStorage slot keyed as
+  // `${storageKey}::tab::${tabId}::cards` and seed `tabCards` from those
+  // slots on mount when they exist. Non-tab dashboards keep using the
+  // original `storageKey`.
+  const [tabCards, setTabCards] = useState<Record<string, DashboardCardPlacement[]>>(initialStorageState.tabCards)
+
+  // Prefetch card chunks for this dashboard so React.lazy() resolves instantly
+  useEffect(() => {
+    // Prefetch cards for all tabs (not just active) so tab switching is instant
+    const allCards = hasTabs
+      ? Object.values(tabCards).flat()
+      : cards
+    prefetchCardChunks(allCards.map(c => c.cardType))
+  }, [cards, hasTabs, tabCards])
+
+  // Get cards for the active tab (or all cards if no tabs)
+  const activeCards = hasTabs ? (tabCards[activeTabId] ?? []) : cards
+
+  // Loading state
+  const [isLoading, setIsLoading] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const hasInitializedFlatPersistence = useRef(false)
+  const hasInitializedTabPersistence = useRef(false)
+
+  // Modal state
+  const addCardModal = useModalState()
+  const configureCardModal = useModalState()
+  const [cardToEdit, setCardToEdit] = useState<ConfigurableCard | null>(null)
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
+  const [showRemoveCardConfirm, setShowRemoveCardConfirm] = useState(false)
+  const [cardToRemove, setCardToRemove] = useState<{ id: string; title?: string } | null>(null)
+
+  // Persist cards to localStorage when they change.
+  //
+  // #6710 — Persist on EVERY change, including when `cards` is empty. The
+  // previous `cards.length > 0` guard caused "remove all cards → reload"
+  // to restore defaults because we never wrote `[]` to storage.
+  useEffect(() => {
+    // Skip flat-cards persistence for tab-mode dashboards — tab-mode uses
+    // per-tab slots, handled by the effect below (#6749-A).
+    if (hasTabs) return
+    if (!hasInitializedFlatPersistence.current) {
+      hasInitializedFlatPersistence.current = true
+      return
+    }
+    if (config.storageKey) {
+      try {
+        localStorage.setItem(config.storageKey, JSON.stringify(cards))
+        setDashboardError(null)
+      } catch (error) {
+        console.error('Failed to persist unified dashboard cards', error)
+        setDashboardError(t('errors.storagePersistFailed'))
+      }
+    }
+  }, [cards, config.storageKey, hasTabs, t])
+
+  // #6749-A — Persist per-tab cards to their own storage slots so tab-mode
+  // mutations survive a reload. Without this, the add/remove/reorder
+  // handlers wired through `mutateActiveCards` would update in-memory
+  // `tabCards` only, and the next mount would re-seed from `config.tabs`
+  // and erase the user's customization.
+  useEffect(() => {
+    if (!hasTabs) return
+    if (!config.storageKey) return
+    if (!hasInitializedTabPersistence.current) {
+      hasInitializedTabPersistence.current = true
+      return
+    }
+    for (const [tabId, placements] of Object.entries(tabCards)) {
+      try {
+        const slot = `${config.storageKey}::tab::${tabId}::cards`
+        localStorage.setItem(slot, JSON.stringify(placements))
+        setDashboardError(null)
+      } catch (error) {
+        console.error('Failed to persist unified dashboard tab cards', error)
+        setDashboardError(t('errors.storagePersistFailed'))
+      }
+    }
+  }, [tabCards, config.storageKey, hasTabs, t])
+
+  // #6709 — Helper that mutates either the active tab's cards or the flat
+  // `cards` state, depending on dashboard mode. All card mutators go
+  // through this so tab-mode dashboards stay in sync.
+  const mutateActiveCards = (
+    updater: (prev: DashboardCardPlacement[]) => DashboardCardPlacement[]
+  ) => {
+    if (hasTabs) {
+      setTabCards((prev) => ({
+        ...prev,
+        [activeTabId]: updater(prev[activeTabId] ?? []) }))
+    } else {
+      setCards(updater)
+    }
+  }
+
+  // Handle card reorder
+  const handleReorder = (newCards: DashboardCardPlacement[]) => {
+    mutateActiveCards(() => newCards)
+  }
+
+  // Handle tab keyboard navigation — arrow keys move focus and activate tab
+  const handleTabListKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const nextEl = moveFocusByKey(event, { selector: '[role="tab"]:not([disabled])', orientation: 'horizontal' })
+    if (nextEl instanceof HTMLElement) {
+      const tabId = nextEl.dataset.tabId
+      if (tabId) setActiveTabId(tabId)
+    }
+  }
+
+  // Handle card removal - show confirmation first
+  const handleRemoveCard = (cardId: string) => {
+    const card = activeCards.find((c) => c.id === cardId)
+    setCardToRemove({ id: cardId, title: card?.title })
+    setShowRemoveCardConfirm(true)
+  }
+
+  // Handle confirmed card removal
+  const handleRemoveCardConfirmed = () => {
+    if (cardToRemove) {
+      mutateActiveCards((prev) => prev.filter((c) => c.id !== cardToRemove.id))
+    }
+    setShowRemoveCardConfirm(false)
+    setCardToRemove(null)
+  }
+
+  // Handle card configuration
+  const handleConfigureCard = (cardId: string) => {
+    const card = activeCards.find((c) => c.id === cardId)
+    if (card) {
+      setCardToEdit({
+        id: card.id,
+        card_type: card.cardType,
+        config: card.config || {},
+        title: card.title })
+      configureCardModal.open()
+    }
+  }
+
+  // Handle refresh
+  const handleRefresh = async () => {
+    setIsLoading(true)
+    // Simulate refresh - in real implementation this would trigger data refetch
+    await new Promise((resolve) => setTimeout(resolve, SHORT_DELAY_MS))
+    setLastUpdated(new Date())
+    setIsLoading(false)
+  }
+
+  // Handle add card
+  const handleAddCard = () => {
+    addCardModal.open()
+  }
+
+  // Handle adding cards from AddCardModal
+  const handleAddCards = (newCards: CardSuggestion[]) => {
+    mutateActiveCards((prev) => {
+      const additions: DashboardCardPlacement[] = newCards.map((card, index) => ({
+        id: `${card.type}-${Date.now()}-${index}`,
+        cardType: card.type,
+        title: card.title,
+        config: card.config,
+        position: {
+          x: (prev.length + index) % 12, // Simple grid placement
+          y: Math.floor((prev.length + index) / 2) * 3, // Stack rows
+          w: 6, // Default width
+          h: 3, // Default height
+        } }))
+      return [...prev, ...additions]
+    })
+    addCardModal.close()
+  }
+
+  // Handle saving card configuration
+  const handleSaveCardConfig = (cardId: string, newConfig: Record<string, unknown>, title?: string) => {
+    mutateActiveCards((prev) =>
+      prev.map((card) =>
+        card.id === cardId
+          ? {
+              ...card,
+              config: { ...card.config, ...newConfig },
+              title: title || card.title }
+          : card
+      )
+    )
+    setCardToEdit(null)
+    configureCardModal.close()
+  }
+
+  // Handle reset to defaults
+  const handleResetRequest = () => {
+    setShowResetConfirm(true)
+  }
+
+  const handleResetConfirmed = () => {
+    setCards(config.cards)
+    if (config.storageKey) {
+      try {
+        localStorage.removeItem(config.storageKey)
+        // #6758 — Also clear per-tab card slots written by the effect
+        // at line ~165. Without this, Reset would restore the flat
+        // `cards` state but leave stale tab-mode placements in
+        // localStorage, which would reseed on the next mount and
+        // silently undo the reset for tab-mode dashboards.
+        const tabSlotPrefix = `${config.storageKey}::tab::`
+        const tabSlotSuffix = '::cards'
+        const keysToRemove: string[] = []
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i)
+          if (k && k.startsWith(tabSlotPrefix) && k.endsWith(tabSlotSuffix)) {
+            keysToRemove.push(k)
+          }
+        }
+        for (const k of keysToRemove) {
+          localStorage.removeItem(k)
+        }
+        // Also clear the in-memory tabCards so the reset is visible
+        // immediately without a reload.
+        if (hasTabs) {
+          const seeded: Record<string, DashboardCardPlacement[]> = {}
+          for (const t of (config.tabs ?? [])) {
+            seeded[t.id] = t.cards ?? []
+          }
+          setTabCards(seeded)
+        }
+        setDashboardError(null)
+        showToast(t('dashboard.resetSuccess', 'Dashboard layout reset to defaults'), 'success')
+      } catch (error) {
+        console.error('Failed to reset unified dashboard layout', error)
+        setDashboardError(t('errors.storagePersistFailed'))
+      }
+    }
+    setShowResetConfirm(false)
+  }
+
+  // #9384 — Cross-tab sync: listen for storage events so that when another
+  // browser tab persists layout changes to the same localStorage keys, this
+  // tab picks them up instead of silently overwriting on its next write.
+  useEffect(() => {
+    if (!config.storageKey) return
+
+    const handleStorageEvent = (e: StorageEvent) => {
+      if (!e.key || !e.newValue) return
+
+      // Flat-cards key (non-tab dashboards)
+      if (e.key === config.storageKey && !hasTabs) {
+        try {
+          const parsed = JSON.parse(e.newValue)
+          if (Array.isArray(parsed)) {
+            setCards(parsed)
+            setDashboardError(null)
+          }
+        } catch (error) {
+          console.error('Failed to sync unified dashboard cards from storage event', error)
+          setDashboardError(t('errors.storageRestoreFailed'))
+        }
+        return
+      }
+
+      // Per-tab card slots (tab-mode dashboards)
+      const tabSlotPrefix = `${config.storageKey}::tab::`
+      const tabSlotSuffix = '::cards'
+      if (hasTabs && e.key.startsWith(tabSlotPrefix) && e.key.endsWith(tabSlotSuffix)) {
+        const tabId = e.key.slice(tabSlotPrefix.length, -tabSlotSuffix.length)
+        try {
+          const parsed = JSON.parse(e.newValue)
+          if (Array.isArray(parsed)) {
+            setTabCards((prev) => ({ ...prev, [tabId]: parsed }))
+            setDashboardError(null)
+          }
+        } catch (error) {
+          console.error('Failed to sync unified dashboard tab cards from storage event', error)
+          setDashboardError(t('errors.storageRestoreFailed'))
+        }
+      }
+    }
+
+    window.addEventListener('storage', handleStorageEvent)
+    return () => window.removeEventListener('storage', handleStorageEvent)
+  }, [config.storageKey, hasTabs, t])
+
+  // Check if customized (different from defaults)
+  //
+  // #9383 — When `hasTabs` is true the flat `cards` array is irrelevant;
+  // customization lives in `tabCards`. Compare each tab's current placements
+  // against the defaults from `config.tabs`.
+  const isCustomized = (() => {
+    if (hasTabs) {
+      return (config.tabs ?? []).some((tab) => {
+        const current = tabCards[tab.id] ?? []
+        const defaults = tab.cards ?? []
+        if (current.length !== defaults.length) return true
+        return current.some((card, i) => {
+          const defaultCard = defaults[i]
+          return (
+            card.id !== defaultCard?.id ||
+            card.cardType !== defaultCard?.cardType ||
+            card.position?.w !== defaultCard?.position?.w ||
+            card.position?.h !== defaultCard?.position?.h
+          )
+        })
+      })
+    }
+    if (cards.length !== config.cards.length) return true
+    return cards.some((card, i) => {
+      const defaultCard = config.cards[i]
+      return (
+        card.id !== defaultCard?.id ||
+        card.cardType !== defaultCard?.cardType ||
+        card.position?.w !== defaultCard?.position?.w ||
+        card.position?.h !== defaultCard?.position?.h
+      )
+    })
+  })()
+
+  // Features with defaults
+  const features = config.features || {}
+
+  return (
+    <div className={`p-4 md:p-6 ${className}`}>
+      {/* Dashboard header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-white">{config.name}</h1>
+            {config.subtitle && (
+              <div className="text-sm text-muted-foreground mt-1">{config.subtitle}</div>
+            )}
+          </div>
+          {/* Health indicator */}
+          <DashboardHealthIndicator />
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Last updated indicator */}
+          {lastUpdated && (
+            <span className="text-xs text-muted-foreground">
+              Updated {lastUpdated.toLocaleTimeString()}
+            </span>
+          )}
+
+          {/* Refresh button */}
+          {features.autoRefresh !== false && (
+            <Button
+              variant="secondary"
+              onClick={handleRefresh}
+              disabled={isLoading}
+              className="p-2"
+              title="Refresh"
+              icon={<RefreshCw
+                className={cn('w-4 h-4 text-muted-foreground', isLoading && 'animate-spin')}
+              />}
+            />
+          )}
+
+          {/* Add card button */}
+          {features.addCard !== false && (
+            <Button
+              variant="secondary"
+              onClick={handleAddCard}
+              className="p-2"
+              title="Add card"
+              icon={<Plus className="w-4 h-4 text-muted-foreground" />}
+            />
+          )}
+
+          {/* Reset button (if customized) */}
+          {isCustomized && (
+            <button
+              onClick={handleResetRequest}
+              className="px-3 py-1.5 text-xs rounded-lg bg-secondary hover:bg-secondary/80 text-muted-foreground transition-colors"
+              title="Reset to default layout"
+              aria-label="Reset to default layout"
+            >
+              Reset
+            </button>
+          )}
+        </div>
+      </div>
+
+      {dashboardError && (
+        <div
+          role="alert"
+          className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+        >
+          {dashboardError}
+        </div>
+      )}
+
+      {/* Stats section */}
+      {config.stats && (
+        <UnifiedStatsSection
+          config={config.stats}
+          data={statsData}
+          hasData={!!statsData}
+          isLoading={isLoading}
+          lastUpdated={lastUpdated}
+          className="mb-6"
+        />
+      )}
+
+      {/* Tab bar (when dashboard has tabs) */}
+      {hasTabs && config.tabs && (
+        <div role="tablist" className="flex items-center gap-1 mb-6 border-b border-border" onKeyDown={handleTabListKeyDown}>
+          {config.tabs.map((tab: DashboardTab) => (
+            <button
+              key={tab.id}
+              role="tab"
+              data-tab-id={tab.id}
+              aria-selected={activeTabId === tab.id}
+              aria-label={tab.label}
+              tabIndex={activeTabId === tab.id ? 0 : -1}
+              onClick={() => !tab.disabled && setActiveTabId(tab.id)}
+              disabled={tab.disabled}
+              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                activeTabId === tab.id
+                  ? 'border-purple-500 text-foreground'
+                  : tab.disabled
+                    ? 'border-transparent text-muted-foreground/40 cursor-not-allowed'
+                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+              }`}
+            >
+              {tab.icon && <AgentIcon provider={tab.icon} className="w-4 h-4" />}
+              {tab.label}
+              {tab.disabled && tab.installUrl && (
+                <a
+                  href={tab.installUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={e => e.stopPropagation()}
+                  className="inline-flex items-center gap-0.5 text-xs text-muted-foreground/60 hover:text-muted-foreground ml-1"
+                >
+                  Install <ExternalLink className="w-2.5 h-2.5" />
+                </a>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Cards grid */}
+      <DashboardGrid
+        cards={activeCards}
+        features={features}
+        onReorder={features.dragDrop !== false ? handleReorder : undefined}
+        onRemoveCard={handleRemoveCard}
+        onConfigureCard={handleConfigureCard}
+        isLoading={isLoading}
+      />
+
+      {/* Empty state — only show when no tabs and no cards */}
+      {cards.length === 0 && !hasTabs && (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <Activity className="w-12 h-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-medium text-foreground mb-2">
+            No cards configured
+          </h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Add cards to start building your dashboard
+          </p>
+          {features.addCard !== false && (
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={handleAddCard}
+            >
+              Add your first card
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Add Card Modal */}
+      <AddCardModal
+        isOpen={addCardModal.isOpen}
+        onClose={addCardModal.close}
+        onAddCards={handleAddCards}
+        existingCardTypes={activeCards.map((c) => c.cardType)}
+      />
+
+      {/* Configure Card Modal */}
+      <ConfigureCardModal
+        isOpen={configureCardModal.isOpen}
+        card={cardToEdit}
+        onClose={() => {
+          configureCardModal.close()
+          setCardToEdit(null)
+        }}
+        onSave={handleSaveCardConfig}
+      />
+
+      {/* Reset Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showResetConfirm}
+        onClose={() => setShowResetConfirm(false)}
+        onConfirm={handleResetConfirmed}
+        title={t('confirmDialog.resetDashboardTitle')}
+        message={t('confirmDialog.resetDashboardMessage')}
+        confirmLabel={t('actions.reset')}
+        variant="warning"
+      />
+
+      {/* Remove Card Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showRemoveCardConfirm}
+        onClose={() => {
+          setShowRemoveCardConfirm(false)
+          setCardToRemove(null)
+        }}
+        onConfirm={handleRemoveCardConfirmed}
+        title={t('confirmDialog.removeCardTitle')}
+        message={cardToRemove?.title 
+          ? t('confirmDialog.removeCardMessageWithTitle', { title: cardToRemove.title })
+          : t('confirmDialog.removeCardMessage')}
+        confirmLabel={t('actions.remove')}
+        variant="danger"
+      />
+    </div>
+  )
+}
+
+export default UnifiedDashboard

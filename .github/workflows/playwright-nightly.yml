@@ -1,0 +1,190 @@
+name: Playwright Cross-Browser (Nightly)
+
+on:
+  schedule:
+    - cron: '30 6 * * *'  # 6:30 AM UTC daily
+  workflow_dispatch: {}
+
+# Least-privilege: read-only by default; jobs declare write scopes individually
+permissions: read-all
+
+concurrency:
+  group: playwright-nightly-${{ github.run_id }}
+  cancel-in-progress: false
+
+env:
+  CI: true
+
+jobs:
+  build:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: nightly-build-output
+          path: web/dist
+          retention-days: 1
+
+  # Cross-browser tests — catches browser-specific regressions in Firefox & WebKit
+  # Related issues: #2982 (invisible at certain widths), #2999 (browser widths), #3035 (overlap)
+  cross-browser:
+    name: Cross-Browser (${{ matrix.browser }})
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [firefox, webkit]
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: nightly-build-output
+          path: web/dist
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Start preview server
+        run: |
+          npm run preview &
+          npx wait-on http://localhost:4173 --timeout 120000
+
+      - name: Run Playwright tests (${{ matrix.browser }})
+        run: |
+          npx playwright test --project=${{ matrix.browser }} --retries=3 --timeout=120000 \
+            --workers=1 \
+            e2e/smoke.spec.ts \
+            e2e/responsive-regression.spec.ts \
+            e2e/spa-routes.spec.ts \
+            e2e/Login.spec.ts \
+            e2e/Dashboard.spec.ts \
+            e2e/Sidebar.spec.ts \
+            e2e/Settings.spec.ts \
+            e2e/Clusters.spec.ts \
+            e2e/Events.spec.ts \
+            e2e/Tour.spec.ts \
+            e2e/navbar-responsive.spec.ts \
+            e2e/custom-dashboard.spec.ts \
+            e2e/nightly/rce-vector-scan.spec.ts
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:4173
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: nightly-${{ matrix.browser }}-report
+          path: web/playwright-report/
+          retention-days: 7
+
+  # Mobile viewport tests — catches responsive layout regressions
+  # TODO(#20674): Re-enable after investigating consistent timeout failures
+  # in mobile-chrome and mobile-safari. Previous timeout increase (180s)
+  # did not resolve the issue. Current failures waste CI minutes with
+  # no actionable signal.
+  mobile:
+    if: false  # Temporarily disabled
+    name: Mobile (${{ matrix.project }})
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [mobile-chrome, mobile-safari]
+        include:
+          - project: mobile-chrome
+            browser: chromium
+          - project: mobile-safari
+            browser: webkit
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: nightly-build-output
+          path: web/dist
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Start preview server
+        run: |
+          npm run preview &
+          npx wait-on http://localhost:4173 --timeout 120000
+
+      - name: Run mobile tests
+        run: |
+          # --timeout raised to 180 000 ms (3 min) because mobile emulation
+          # (Pixel 5 / iPhone 12) applies CPU throttling that slows React
+          # hydration. The previous 150 000 ms budget was consistently expiring
+          # in the sidebar-navigation smoke test (fixes #20489).
+          npx playwright test --project=${{ matrix.project }} --retries=3 --timeout=180000 \
+            --workers=1 \
+            e2e/smoke.spec.ts \
+            e2e/responsive-regression.spec.ts \
+            e2e/Login.spec.ts \
+            e2e/Dashboard.spec.ts \
+            e2e/Settings.spec.ts
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:4173
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: nightly-${{ matrix.project }}-report
+          path: web/playwright-report/
+          retention-days: 7

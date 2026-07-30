@@ -1,0 +1,287 @@
+package handlers
+
+// Tests for console_persistence_validation.go: matchString, clusterFilterNeedsNodes,
+// and evaluateClusterGroup (static-member and nil-client paths).
+// The clusterMatchesFilter/clusterMatchesFilters tests live in console_persistence_test.go.
+
+import (
+	"context"
+	"sort"
+	"testing"
+
+	"github.com/kubestellar/console/pkg/apis/v1alpha1"
+	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	k8sfake "k8s.io/client-go/kubernetes/fake"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+)
+
+// ---------- matchString ----------
+
+func TestMatchString(t *testing.T) {
+	tests := []struct {
+		name     string
+		actual   string
+		operator string
+		expected string
+		want     bool
+	}{
+		{"eq_match", "us-west-1", "eq", "us-west-1", true},
+		{"eq_no_match", "us-west-1", "eq", "eu-west-1", false},
+		{"neq_different", "us-west-1", "neq", "eu-west-1", true},
+		{"neq_same", "us-west-1", "neq", "us-west-1", false},
+		{"contains_match", "us-west-1", "contains", "west", true},
+		{"contains_no_match", "us-west-1", "contains", "east", false},
+		{"contains_empty_pattern", "us-west-1", "contains", "", true},
+		{"unknown_operator", "us-west-1", "regex", "us.*", false},
+		{"empty_actual_eq", "", "eq", "", true},
+		{"empty_actual_neq", "", "neq", "something", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := matchString(tt.actual, tt.operator, tt.expected)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+// ---------- clusterFilterNeedsNodes ----------
+
+func TestClusterFilterNeedsNodes(t *testing.T) {
+	tests := []struct {
+		name    string
+		filters []v1alpha1.ClusterFilter
+		want    bool
+	}{
+		{"empty_filters", nil, false},
+		{"no_node_fields", []v1alpha1.ClusterFilter{
+			{Field: "name", Operator: "eq", Value: "prod"},
+			{Field: "healthy", Operator: "eq", Value: "true"},
+		}, false},
+		{"gpuCount_needs_nodes", []v1alpha1.ClusterFilter{
+			{Field: "gpuCount", Operator: "gte", Value: "4"},
+		}, true},
+		{"gpuType_needs_nodes", []v1alpha1.ClusterFilter{
+			{Field: "gpuType", Operator: "eq", Value: "A100"},
+		}, true},
+		{"label_needs_nodes", []v1alpha1.ClusterFilter{
+			{Field: "label", Operator: "eq", Value: "us-west", LabelKey: "region"},
+		}, true},
+		{"mixed_with_gpu", []v1alpha1.ClusterFilter{
+			{Field: "name", Operator: "eq", Value: "prod"},
+			{Field: "gpuCount", Operator: "gt", Value: "0"},
+		}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := clusterFilterNeedsNodes(tt.filters)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+// ---------- evaluateClusterGroup (nil-k8sClient paths) ----------
+
+// newGroupWithStatics builds a minimal ClusterGroup with the given static members.
+func newGroupWithStatics(members ...string) *v1alpha1.ClusterGroup {
+	return &v1alpha1.ClusterGroup{
+		Spec: v1alpha1.ClusterGroupSpec{StaticMembers: members},
+	}
+}
+
+func newPersistenceValidationK8sClient(t *testing.T, clusterNames ...string) *k8s.MultiClusterClient {
+	t.Helper()
+	require.NotEmpty(t, clusterNames, "at least one cluster name is required")
+
+	client, err := k8s.NewMultiClusterClient("")
+	require.NoError(t, err)
+	require.NotNil(t, client)
+
+	rawConfig := &clientcmdapi.Config{
+		Clusters:       make(map[string]*clientcmdapi.Cluster, len(clusterNames)),
+		Contexts:       make(map[string]*clientcmdapi.Context, len(clusterNames)),
+		AuthInfos:      map[string]*clientcmdapi.AuthInfo{"test-user": {}},
+		CurrentContext: clusterNames[0],
+	}
+	for _, name := range clusterNames {
+		rawConfig.Clusters[name] = &clientcmdapi.Cluster{Server: "https://" + name + ".example.com"}
+		rawConfig.Contexts[name] = &clientcmdapi.Context{Cluster: name, AuthInfo: "test-user"}
+		client.InjectClient(name, k8sfake.NewSimpleClientset())
+	}
+	client.SetRawConfig(rawConfig)
+
+	return client
+}
+
+func injectNodes(client *k8s.MultiClusterClient, clusterName string, nodes ...*corev1.Node) {
+	if client == nil {
+		return
+	}
+	client.InjectClient(clusterName, k8sfake.NewSimpleClientset(nodesToRuntimeObjects(nodes)...))
+}
+
+func nodesToRuntimeObjects(nodes []*corev1.Node) []runtime.Object {
+	objects := make([]runtime.Object, 0, len(nodes))
+	for _, node := range nodes {
+		objects = append(objects, node)
+	}
+	return objects
+}
+
+func testNode(name string, labels map[string]string) *corev1.Node {
+	return &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: labels,
+		},
+	}
+}
+
+func TestEvaluateClusterGroup_EmptyGroup(t *testing.T) {
+	h := newTestHandler() // k8sClient == nil
+	result := h.evaluateClusterGroup(context.Background(), &v1alpha1.ClusterGroup{})
+	assert.Empty(t, result, "empty ClusterGroup should yield no members")
+}
+
+func TestEvaluateClusterGroup_StaticMembersOnly(t *testing.T) {
+	h := newTestHandler()
+	group := newGroupWithStatics("cluster-a", "cluster-b", "cluster-c")
+	result := h.evaluateClusterGroup(context.Background(), group)
+	sort.Strings(result)
+	assert.Equal(t, []string{"cluster-a", "cluster-b", "cluster-c"}, result)
+}
+
+func TestEvaluateClusterGroup_SingleStaticMember(t *testing.T) {
+	h := newTestHandler()
+	result := h.evaluateClusterGroup(context.Background(), newGroupWithStatics("only-cluster"))
+	assert.Equal(t, []string{"only-cluster"}, result)
+}
+
+func TestEvaluateClusterGroup_DeduplicatesStaticMembers(t *testing.T) {
+	h := newTestHandler()
+	// Same name listed twice — deduplication via map should yield one entry.
+	group := newGroupWithStatics("cluster-a", "cluster-a", "cluster-b")
+	result := h.evaluateClusterGroup(context.Background(), group)
+	sort.Strings(result)
+	assert.Equal(t, []string{"cluster-a", "cluster-b"}, result)
+}
+
+func TestEvaluateClusterGroup_DynamicFiltersSkippedWhenClientNil(t *testing.T) {
+	h := newTestHandler() // k8sClient == nil — dynamic path must be skipped
+	group := &v1alpha1.ClusterGroup{
+		Spec: v1alpha1.ClusterGroupSpec{
+			StaticMembers: []string{"static-cluster"},
+			DynamicFilters: []v1alpha1.ClusterFilter{
+				{Field: "name", Operator: "eq", Value: "dynamic-cluster"},
+			},
+		},
+	}
+	result := h.evaluateClusterGroup(context.Background(), group)
+	// dynamic filters are skipped; only static member returned
+	assert.Equal(t, []string{"static-cluster"}, result)
+}
+
+func TestEvaluateClusterGroup_NoDynamicFiltersNoClient(t *testing.T) {
+	h := newTestHandler()
+	group := &v1alpha1.ClusterGroup{
+		Spec: v1alpha1.ClusterGroupSpec{
+			StaticMembers:  []string{},
+			DynamicFilters: []v1alpha1.ClusterFilter{},
+		},
+	}
+	result := h.evaluateClusterGroup(context.Background(), group)
+	assert.Empty(t, result)
+}
+
+func TestEvaluateClusterGroup_DynamicFiltersMatchClusterAndNodeLabels(t *testing.T) {
+	client := newPersistenceValidationK8sClient(t, "prod-gpu", "prod-cpu", "dev-gpu")
+	injectNodes(client, "prod-gpu", testNode("prod-gpu-node", map[string]string{"nodepool": "gpu"}))
+	injectNodes(client, "prod-cpu", testNode("prod-cpu-node", map[string]string{"nodepool": "cpu"}))
+	injectNodes(client, "dev-gpu", testNode("dev-gpu-node", map[string]string{"nodepool": "gpu"}))
+
+	h := &ConsolePersistenceHandlers{k8sClient: client}
+	group := &v1alpha1.ClusterGroup{
+		Spec: v1alpha1.ClusterGroupSpec{
+			StaticMembers: []string{"static-cluster"},
+			DynamicFilters: []v1alpha1.ClusterFilter{
+				{Field: "name", Operator: "contains", Value: "prod"},
+				{Field: "label", Operator: "eq", LabelKey: "nodepool", Value: "gpu"},
+			},
+		},
+	}
+
+	result := h.evaluateClusterGroup(context.Background(), group)
+	sort.Strings(result)
+
+	assert.Equal(t, []string{"prod-gpu", "static-cluster"}, result)
+}
+
+// ---------- clusterGPUCount ----------
+
+func TestClusterGPUCount(t *testing.T) {
+	tests := []struct {
+		name  string
+		nodes []k8s.NodeInfo
+		want  int
+	}{
+		{"empty", []k8s.NodeInfo{}, 0},
+		{"no_gpus", []k8s.NodeInfo{{Name: "n1", GPUCount: 0}}, 0},
+		{"single_node", []k8s.NodeInfo{{Name: "n1", GPUCount: 4}}, 4},
+		{"multi_node", []k8s.NodeInfo{{Name: "n1", GPUCount: 2}, {Name: "n2", GPUCount: 8}}, 10},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, clusterGPUCount(tt.nodes))
+		})
+	}
+}
+
+// ---------- clusterGPUTypes ----------
+
+func TestClusterGPUTypes(t *testing.T) {
+	tests := []struct {
+		name  string
+		nodes []k8s.NodeInfo
+		want  []string
+	}{
+		{"empty", []k8s.NodeInfo{}, []string{}},
+		{"no_type", []k8s.NodeInfo{{Name: "n1", GPUType: ""}}, []string{}},
+		{"single_type", []k8s.NodeInfo{{Name: "n1", GPUType: "A100"}}, []string{"A100"}},
+		{"dedup", []k8s.NodeInfo{{GPUType: "A100"}, {GPUType: "A100"}, {GPUType: "H100"}}, []string{"A100", "H100"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := clusterGPUTypes(tt.nodes)
+			sort.Strings(result)
+			sort.Strings(tt.want)
+			assert.Equal(t, tt.want, result)
+		})
+	}
+}
+
+// ---------- compareStringSet ----------
+
+func TestCompareStringSet(t *testing.T) {
+	tests := []struct {
+		name     string
+		set      []string
+		operator string
+		value    string
+		want     bool
+	}{
+		{"empty_set", []string{}, "eq", "A100", false},
+		{"eq_match", []string{"A100", "H100"}, "eq", "A100", true},
+		{"eq_no_match", []string{"A100", "H100"}, "eq", "V100", false},
+		{"contains_match", []string{"NVIDIA A100"}, "contains", "A100", true},
+		{"contains_no_match", []string{"NVIDIA H100"}, "contains", "A100", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, compareStringSet(tt.set, tt.operator, tt.value))
+		})
+	}
+}

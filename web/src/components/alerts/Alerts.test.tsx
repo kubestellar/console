@@ -1,0 +1,93 @@
+import React from 'react'
+/// <reference types='@testing-library/jest-dom/vitest' />
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
+
+import '../../test/utils/setupMocks'
+
+let mockClustersLoading = false
+let mockClustersError: string | null = null
+
+vi.mock('../../lib/dashboards/DashboardPage', () => ({
+  DashboardPage: ({ title, subtitle, children, isLoading }: { title: string; subtitle?: string; children?: React.ReactNode; isLoading?: boolean }) => (
+    <div data-testid='dashboard-page' data-title={title} data-subtitle={subtitle} data-loading={isLoading ? 'true' : 'false'}>
+      <h1>{title}</h1>
+      {subtitle && <p>{subtitle}</p>}
+      {children}
+    </div>
+  ),
+}))
+
+vi.mock('../../hooks/useAlerts', () => ({
+  useAlerts: () => ({
+    stats: { firing: 0, resolved: 0, pending: 0 },
+    evaluateConditions: vi.fn(),
+  }),
+  useAlertRules: () => ({ rules: [] }),
+}))
+
+vi.mock('../../hooks/useMCP', () => ({
+  useClusters: () => ({
+    deduplicatedClusters: [], isLoading: mockClustersLoading, isRefreshing: false, refetch: vi.fn(), error: mockClustersError,
+  }),
+}))
+
+vi.mock('../../hooks/useDrillDown', () => ({
+  useDrillDownActions: () => ({
+    drillToAlert: vi.fn(),
+    drillToAllAlerts: vi.fn(),
+  }),
+}))
+
+vi.mock('../../hooks/useUniversalStats', () => ({
+  useUniversalStats: () => ({ getStatValue: () => ({ value: 0 }) }),
+  createMergedStatValueGetter: () => () => ({ value: 0 }),
+}))
+
+vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en' } }),
+}))
+
+import { Alerts } from './Alerts'
+
+describe('Alerts Component', () => {
+  const renderAlerts = () =>
+    render(
+      <MemoryRouter>
+        <Alerts />
+      </MemoryRouter>
+    )
+
+  it('renders without crashing', () => {
+    expect(() => renderAlerts()).not.toThrow()
+  })
+
+  it('renders the DashboardPage with correct title', () => {
+    renderAlerts()
+    expect(screen.getByTestId('dashboard-page')).toBeInTheDocument()
+    expect(screen.getByText('alerts.title')).toBeInTheDocument()
+  })
+
+  it('passes a subtitle to DashboardPage', () => {
+    renderAlerts()
+    const page = screen.getByTestId('dashboard-page')
+    expect(page).toHaveAttribute('data-subtitle')
+  })
+
+  it('marks dashboard loading state while cluster data is loading', () => {
+    mockClustersLoading = true
+    renderAlerts()
+    expect(screen.getByTestId('dashboard-page')).toHaveAttribute('data-loading', 'true')
+    mockClustersLoading = false
+  })
+
+  it('displays error message when cluster data fetch fails', () => {
+    mockClustersError = 'Failed to connect to cluster'
+    renderAlerts()
+    expect(screen.getByText('alerts.errorLoading')).toBeInTheDocument()
+    expect(screen.getByText('Failed to connect to cluster')).toBeInTheDocument()
+    mockClustersError = null
+  })
+})

@@ -1,0 +1,11 @@
+{
+  "timestamp": "2026-03-12T07:29:36Z",
+  "fastMode": false,
+  "summary": {
+    "total": 32,
+    "passed": 31,
+    "failed": 1,
+    "skipped": 0
+  },
+  "results": [{"suite":"consistency-test","status":"fail","duration":3,"failure_reason":"  Phase 6 (Cache Patterns)       ⚠️  1 warnings\n  Total: 1 errors, 15 warnings\nReports:\n  JSON:     web/e2e/test-results/consistency-report.json\n  Summary:  web/e2e/test-results/consistency-summary.md"},{"suite":"helm-lint-test","status":"pass","duration":0},{"suite":"license-compliance-test","status":"pass","duration":22},{"suite":"error-boundary-test","status":"pass","duration":0},{"suite":"mission-security-test","status":"pass","duration":3},{"suite":"card-registry-integrity-test","status":"pass","duration":1},{"suite":"unit-test","status":"pass","duration":691},{"suite":"auth-lifecycle-test","status":"pass","duration":75},{"suite":"settings-migration-test","status":"pass","duration":2},{"suite":"update-lifecycle-test","status":"pass","duration":62},{"suite":"websocket-resilience-test","status":"pass","duration":1},{"suite":"gosec-test","status":"pass","duration":9},{"suite":"dependency-audit-test","status":"pass","duration":6},{"suite":"secret-scan-test","status":"pass","duration":3},{"suite":"ts-sast-test","status":"pass","duration":3},{"suite":"container-scan-test","status":"pass","duration":14},{"suite":"security-headers-test","status":"pass","duration":0},{"suite":"api-contract-test","status":"pass","duration":0},{"suite":"api-fuzz-test","status":"pass","duration":118},{"suite":"console-error-scan","status":"pass","duration":179},{"suite":"nav-test","status":"pass","duration":716},{"suite":"perf-test","status":"pass","duration":975},{"suite":"ui-compliance-test","status":"pass","duration":73},{"suite":"deploy-test","status":"pass","duration":34},{"suite":"cache-test","status":"pass","duration":73},{"suite":"benchmark-test","status":"pass","duration":141},{"suite":"ai-ml-test","status":"pass","duration":529},{"suite":"a11y-test","status":"pass","duration":76},{"suite":"error-resilience-test","status":"pass","duration":50},{"suite":"i18n-test","status":"pass","duration":30},{"suite":"interaction-test","status":"pass","duration":38},{"suite":"security-e2e-test","status":"pass","duration":22}]
+}

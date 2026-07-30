@@ -1,0 +1,115 @@
+name: Startup Smoke Tests
+
+on:
+  schedule:
+    # Run at 7 AM UTC daily (after nightly-test-suite at 6 AM)
+    - cron: '0 7 * * *'
+  push:
+    branches: [main]
+    paths:
+      - 'start.sh'
+      - 'start-dev.sh'
+      - 'startup-demo.sh'
+      - 'startup-oauth.sh'
+      - 'entrypoint.sh'
+      - 'Dockerfile'
+      - 'scripts/startup-smoke-test.sh'
+      - '.github/workflows/startup-smoke.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'start.sh'
+      - 'start-dev.sh'
+      - 'startup-demo.sh'
+      - 'startup-oauth.sh'
+      - 'entrypoint.sh'
+      - 'Dockerfile'
+      - 'scripts/startup-smoke-test.sh'
+      - '.github/workflows/startup-smoke.yml'
+  workflow_dispatch: {}
+
+permissions: read-all  # default read; writes scoped to job below
+
+concurrency:
+  group: startup-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GO_VERSION: '1.26.5'
+  NODE_VERSION: '22'
+
+jobs:
+  # Test startup-demo.sh (no OAuth required, fastest to validate)
+  smoke-demo:
+    name: Smoke — startup-demo.sh
+    if: github.repository == 'kubestellar/console'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install npm dependencies
+        run: cd web && npm ci
+
+      - name: Run smoke test
+        run: bash scripts/startup-smoke-test.sh demo
+        timeout-minutes: 5
+
+  # Test startup-oauth.sh with mock credentials
+  smoke-oauth:
+    name: Smoke — startup-oauth.sh
+    if: github.repository == 'kubestellar/console'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install npm dependencies
+        run: cd web && npm ci
+
+      - name: Build frontend
+        run: cd web && npm run build
+
+      - name: Run smoke test
+        run: bash scripts/startup-smoke-test.sh oauth
+        timeout-minutes: 10
+
+  # Test Docker build + entrypoint.sh
+  smoke-docker:
+    name: Smoke — Docker/entrypoint.sh
+    if: github.repository == 'kubestellar/console'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
+
+      - name: Run smoke test
+        run: bash scripts/startup-smoke-test.sh docker
+        timeout-minutes: 12

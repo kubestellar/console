@@ -1,0 +1,87 @@
+name: New Contributor PR Gate
+
+on:
+  pull_request_target:
+    types: [opened]
+
+permissions: read-all  # default read; writes scoped to job below
+
+jobs:
+  check-contributor:
+    permissions:
+      pull-requests: write
+      issues: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Note: intentionally runs for fork PRs — that is the primary use-case for this gate.
+    # Bot and established-contributor checks inside the script handle the safe-path early exits.
+    steps:
+      - name: Check contributor history
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          MIN_ACCOUNT_AGE_DAYS=30
+
+          # Skip bots and known automation (before validation — bot logins contain [])
+          if [[ "$AUTHOR" == *"[bot]"* ]] || [[ "$AUTHOR" == "dependabot"* ]]; then
+            echo "Bot account — skipping gate."
+            exit 0
+          fi
+
+          # Validate author login against GitHub username constraints
+          if [[ ! "$AUTHOR" =~ ^[a-zA-Z0-9-]+$ ]]; then
+            echo "Invalid author login format" >&2
+            exit 1
+          fi
+
+          # Check if author has any prior merged PRs or issues to this repo
+          MERGED_PRS=$(gh api "repos/${REPO}/pulls" \
+            --method GET \
+            -f state=closed \
+            -f per_page=100 \
+            --jq '[.[] | select(.user.login == env.AUTHOR and .merged_at != null)] | length' 2>/dev/null || echo "0")
+
+          PRIOR_ISSUES=$(gh api "repos/${REPO}/issues" \
+            --method GET \
+            -f state=all \
+            -f creator="$AUTHOR" \
+            -f per_page=10 \
+            --jq '[.[] | select(.pull_request == null)] | length' 2>/dev/null || echo "0")
+
+          if [ "$MERGED_PRS" != "0" ] || [ "$PRIOR_ISSUES" != "0" ]; then
+            echo "Author has ${MERGED_PRS} merged PRs and ${PRIOR_ISSUES} issues — existing contributor."
+            exit 0
+          fi
+
+          # Check account age
+          CREATED_AT=$(gh api "users/${AUTHOR}" --jq '.created_at' 2>/dev/null || echo "")
+          if [ -z "$CREATED_AT" ]; then
+            echo "Could not fetch account age — allowing PR."
+            exit 0
+          fi
+
+          CREATED_EPOCH=$(date -d "$CREATED_AT" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%SZ" "$CREATED_AT" +%s 2>/dev/null || echo "0")
+          NOW_EPOCH=$(date +%s)
+          AGE_DAYS=$(( (NOW_EPOCH - CREATED_EPOCH) / 86400 ))
+
+          if [ "$AGE_DAYS" -ge "$MIN_ACCOUNT_AGE_DAYS" ]; then
+            echo "Account is ${AGE_DAYS} days old (>= ${MIN_ACCOUNT_AGE_DAYS}) — allowing PR."
+            exit 0
+          fi
+
+          echo "New account (${AGE_DAYS} days) with no prior contributions — closing PR."
+
+          PR_COMMENT=$(printf '%s\n\n%s\n\n%s\n%s\n%s\n%s\n\n%s' \
+            "👋 Welcome! This repo requires new contributors to open an issue first before submitting a PR. This helps us coordinate work and avoid duplicate effort." \
+            "**Your account** is less than ${MIN_ACCOUNT_AGE_DAYS} days old and has no prior contributions to this repo." \
+            "**Next steps:**" \
+            "1. Open an issue describing what you'd like to work on" \
+            "2. Wait for a maintainer to approve and assign it to you" \
+            "3. Then submit your PR referencing that issue" \
+            "This is an automated check — if you believe this was a mistake, comment on this PR and a maintainer will review.")
+          gh pr close "$PR_NUMBER" \
+            --repo "${REPO}" \
+            --comment "$PR_COMMENT"

@@ -1,0 +1,48 @@
+updates:
+- commit-message:
+    prefix: chore(deps)
+  directory: /
+  labels:
+  - dependencies
+  - go
+  open-pull-requests-limit: 10
+  package-ecosystem: gomod
+  reviewers:
+  - clubanderson
+  schedule:
+    day: monday
+    interval: weekly
+- commit-message:
+    prefix: chore(deps)
+  directory: /web
+  labels:
+  - dependencies
+  - javascript
+  open-pull-requests-limit: 10
+  package-ecosystem: npm
+  reviewers:
+  - clubanderson
+  schedule:
+    day: monday
+    interval: weekly
+- commit-message:
+    prefix: chore(deps)
+  directory: /
+  groups:
+    codeql-action:
+      patterns:
+      - github/codeql-action/*
+  ignore:
+  - dependency-name: "github/gh-aw-actions/**"
+  - dependency-name: "github/gh-aw-actions" # Managed by gh aw compile. Version-locked to the gh-aw compiler; do not bump.
+  labels:
+  - dependencies
+  - github-actions
+  open-pull-requests-limit: 5
+  package-ecosystem: github-actions
+  reviewers:
+  - clubanderson
+  schedule:
+    day: monday
+    interval: weekly
+version: 2

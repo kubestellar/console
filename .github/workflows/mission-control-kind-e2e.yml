@@ -1,0 +1,272 @@
+name: Mission Control Kind E2E
+
+# Nightly integration test that exercises the full AI → Mission Control →
+# Kubernetes deployment pipeline using real Kind clusters. This is the primary
+# CI guard for the Mission Control feature — the centerpiece of the LFX project.
+#
+# What it tests (mission-control-kind-e2e.spec.ts):
+#   1. Kind cluster provisioning via kc-agent + kind CLI
+#   2. Observability stack deploy (cert-manager, Prometheus, Grafana)
+#   3. Security stack deploy (OPA Gatekeeper, Kyverno)
+#   4. GitOps pipeline deploy (ArgoCD)
+#   5. Multi-project stress across 2 clusters
+#   6. Full cluster teardown
+#
+# Prerequisites on the runner: Docker (ubuntu-latest has it), kind, kubectl,
+# Go build environment, Node.js + Playwright.
+
+on:
+  schedule:
+    # 5 AM UTC daily — before the 6 AM nightly-test-suite so infra is quiet
+    - cron: '0 5 * * *'
+  workflow_dispatch: {}
+
+permissions: read-all
+
+concurrency:
+  group: mission-control-kind-e2e
+  # Never cancel a nightly run — it manages real Kind clusters and must
+  # reach the Cleanup group (test 8) to delete them. Cancellation mid-run
+  # leaves orphaned clusters consuming runner resources.
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '22'
+  GO_VERSION_FILE: go.mod
+  KIND_VERSION: 'v0.29.0'
+  KUBECTL_VERSION: 'v1.31.4'
+  BACKEND_PORT: '8080'
+  AGENT_PORT: '8585'
+  HEALTH_TIMEOUT_S: '60'
+  # Dev-only placeholder — must be >= 32 chars for the server to accept it.
+  # Real deployments must set JWT_SECRET via a proper secret.
+  DEV_JWT_SECRET: 'ci-mc-kind-e2e-jwt-secret-placeholder-not-a-real-key-abcd'
+  # Shared secret for kc-agent auth in CI — the test passes this as a Bearer token.
+  KC_AGENT_TOKEN: 'ci-mc-kind-e2e-agent-token-placeholder-not-a-real-key-abcdef'
+
+jobs:
+  kind-e2e:
+    name: Mission Control Kind E2E
+    # Guard: only run on the upstream repo so forks don't burn their minutes
+    # on a 60-minute job that requires Docker and real Kind cluster creation.
+    if: github.repository == 'kubestellar/console'
+    runs-on: ubuntu-latest
+    # Two kind clusters × ~2 min each = ~4 min provisioning.
+    # Three deploy groups × ~5 min Playwright each = ~15 min UI.
+    # CNCF stack pod readiness polls (3 min per group) = ~9 min.
+    # Build + install steps = ~10 min. Total expected: ~40 min; 60 min backstop.
+    timeout-minutes: 60
+
+    steps:
+      # ------------------------------------------------------------------
+      # Source
+      # ------------------------------------------------------------------
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # ------------------------------------------------------------------
+      # Language runtimes
+      # ------------------------------------------------------------------
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: ${{ env.GO_VERSION_FILE }}
+          cache: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      # ------------------------------------------------------------------
+      # Frontend — built so the Go binary can serve it (not DEV_MODE)
+      # ------------------------------------------------------------------
+
+      - name: Install npm dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: web
+        env:
+          NODE_OPTIONS: '--max-old-space-size=6144'
+        run: npm run build
+
+      # ------------------------------------------------------------------
+      # Go binaries
+      # ------------------------------------------------------------------
+
+      - name: Build console binary
+        run: go build -o /tmp/console ./cmd/console
+
+      - name: Build kc-agent binary
+        run: go build -o /tmp/kc-agent ./cmd/kc-agent
+
+      # ------------------------------------------------------------------
+      # Kind + kubectl — the tools the spec uses directly via execSync
+      # ------------------------------------------------------------------
+
+      - name: Install kind CLI
+        # SHA256 pinned to kind v0.29.0 linux/amd64 binary (fixes #20490)
+        run: |
+          KIND_SHA256="c72eda46430f065fb45c5f70e7c957cc9209402ef309294821978677c8fb3284"
+          curl -sSL "https://github.com/kubernetes-sigs/kind/releases/download/${{ env.KIND_VERSION }}/kind-linux-amd64" \
+            -o /tmp/kind
+          echo "${KIND_SHA256}  /tmp/kind" | sha256sum --check
+          sudo install /tmp/kind /usr/local/bin/kind
+          kind version
+
+      - name: Install kubectl
+        # SHA256 pinned to kubectl v1.31.4 linux/amd64 binary (fixes #20490)
+        run: |
+          KUBECTL_SHA256="298e19e9c6c17199011404278f0ff8168a7eca4217edad9097af577023a5620f"
+          curl -sSL "https://dl.k8s.io/release/${{ env.KUBECTL_VERSION }}/bin/linux/amd64/kubectl" \
+            -o /tmp/kubectl
+          echo "${KUBECTL_SHA256}  /tmp/kubectl" | sha256sum --check
+          sudo install /tmp/kubectl /usr/local/bin/kubectl
+          kubectl version --client
+
+      # ------------------------------------------------------------------
+      # Start services
+      #
+      # Console backend: NOT DEV_MODE. DEV_MODE=true causes the root route
+      # to 307-redirect to the Vite dev server (localhost:5174) which is not
+      # running in CI, so Playwright page.goto('/') gets ERR_CONNECTION_REFUSED
+      # (same issue documented in fullstack-e2e.yml). Instead we use placeholder
+      # OAuth credentials to prevent the server from auto-activating dev mode,
+      # and the binary serves ./web/dist/index.html directly.
+      #
+      # kc-agent: runs on port 8585 and auto-discovers kind clusters via
+      # `kind get clusters`. The spec polls /local-clusters to verify the agent
+      # sees the clusters after they are created with the kind CLI.
+      # ------------------------------------------------------------------
+
+      - name: Start console backend
+        env:
+          JWT_SECRET: ${{ env.DEV_JWT_SECRET }}
+          PORT: ${{ env.BACKEND_PORT }}
+          GITHUB_CLIENT_ID: ci-mc-kind-e2e-placeholder
+          GITHUB_CLIENT_SECRET: ci-mc-kind-e2e-placeholder
+        run: |
+          /tmp/console > /tmp/console.log 2>&1 &
+          echo $! > /tmp/console.pid
+          echo "Console PID: $(cat /tmp/console.pid)"
+
+      - name: Start kc-agent
+        env:
+          KC_AGENT_TOKEN: ${{ env.KC_AGENT_TOKEN }}
+        run: |
+          /tmp/kc-agent > /tmp/kc-agent.log 2>&1 &
+          echo $! > /tmp/kc-agent.pid
+          echo "kc-agent PID: $(cat /tmp/kc-agent.pid)"
+
+      - name: Wait for console backend
+        run: |
+          for i in $(seq 1 ${{ env.HEALTH_TIMEOUT_S }}); do
+            if curl -sf "http://localhost:${{ env.BACKEND_PORT }}/healthz" > /dev/null 2>&1; then
+              echo "Console backend healthy after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::Console backend did not become healthy in ${{ env.HEALTH_TIMEOUT_S }}s"
+          echo "=== console.log ==="
+          cat /tmp/console.log || true
+          exit 1
+
+      - name: Wait for kc-agent
+        run: |
+          for i in $(seq 1 30); do
+            HTTP_CODE=$(curl -o /dev/null -s -w '%{http_code}' \
+              "http://localhost:${{ env.AGENT_PORT }}/local-clusters" 2>/dev/null || echo "0")
+            if [ "$HTTP_CODE" != "0" ] && [ "$HTTP_CODE" != "000" ]; then
+              echo "kc-agent responding (HTTP $HTTP_CODE) after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::warning::kc-agent /local-clusters did not respond after 30s"
+          echo "=== kc-agent.log ==="
+          cat /tmp/kc-agent.log || true
+
+      # ------------------------------------------------------------------
+      # Playwright
+      # ------------------------------------------------------------------
+
+      - name: Install Playwright browsers
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Mission Control Kind E2E
+        working-directory: web
+        env:
+          # MC_KIND_E2E=true overrides the CI=true skip guard in the spec.
+          # KC_AGENT=true tells the spec that kc-agent is running (AGENT_MODE).
+          # Without both, SKIP_KIND_TESTS stays true and all tests are skipped.
+          MC_KIND_E2E: 'true'
+          KC_AGENT: 'true'
+          KC_AGENT_TOKEN: ${{ env.KC_AGENT_TOKEN }}
+          PLAYWRIGHT_BASE_URL: http://localhost:${{ env.BACKEND_PORT }}
+        run: |
+          npx playwright test e2e/mission-control-kind-e2e.spec.ts \
+            --project=chromium \
+            --reporter=html \
+            --retries=1
+
+      # ------------------------------------------------------------------
+      # Artifacts — always upload so failures are diagnosable
+      # ------------------------------------------------------------------
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mc-kind-e2e-results-${{ github.run_id }}
+          path: |
+            web/playwright-report/
+            web/test-results/kind-e2e-*.png
+          retention-days: 14
+
+      # ------------------------------------------------------------------
+      # Diagnostics on failure
+      # ------------------------------------------------------------------
+
+      - name: Dump service logs on failure
+        if: failure()
+        run: |
+          echo "=== console.log ==="
+          cat /tmp/console.log || true
+          echo ""
+          echo "=== kc-agent.log ==="
+          cat /tmp/kc-agent.log || true
+          echo ""
+          echo "=== kind clusters ==="
+          kind get clusters 2>/dev/null || true
+          echo ""
+          echo "=== kubectl contexts ==="
+          kubectl config get-contexts 2>/dev/null || true
+
+      # ------------------------------------------------------------------
+      # Cleanup — always runs; mirrors the spec's own teardown (test 8)
+      # but acts as a safety net if the spec is skipped or crashes early
+      # ------------------------------------------------------------------
+
+      - name: Stop services
+        if: always()
+        run: |
+          [ -f /tmp/console.pid ] && kill "$(cat /tmp/console.pid)" 2>/dev/null || true
+          [ -f /tmp/kc-agent.pid ] && kill "$(cat /tmp/kc-agent.pid)" 2>/dev/null || true
+
+      - name: Delete any remaining kind clusters
+        if: always()
+        run: |
+          for name in mc-e2e-obs mc-e2e-sec; do
+            if kind get clusters 2>/dev/null | grep -q "^${name}$"; then
+              echo "Deleting leftover kind cluster: ${name}"
+              kind delete cluster --name "${name}" || true
+            fi
+          done

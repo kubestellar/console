@@ -1,0 +1,10 @@
+{
+  "format": "kc-card-preset-v1",
+  "card_type": "fluentd_status",
+  "title": "Fluentd",
+  "description": "Log pipeline status, buffer utilization, and output plugin health.",
+  "category": "Observability",
+  "project": "fluentd",
+  "cncf_status": "graduated",
+  "config": {}
+}

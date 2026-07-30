@@ -1,0 +1,1092 @@
+name: Build and Deploy KC
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/**'
+      - '!.github/workflows/build-deploy.yml'
+      - 'LICENSE'
+      - 'OWNERS'
+      - '.gitignore'
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/**'
+      - '!.github/workflows/build-deploy.yml'
+      - 'LICENSE'
+      - 'OWNERS'
+      - '.gitignore'
+  workflow_dispatch:
+    inputs:
+      deploy_target:
+        description: 'Deployment target cluster'
+        required: false
+        default: 'vllm-d'
+        type: choice
+        options:
+          - all
+          - vllm-d
+          - pok-prod
+          - none
+
+# Cancel superseded PR validation runs, but never cancel a main deploy mid-flight.
+# Cluster deploys themselves are serialized by per-job concurrency below.
+
+# Least-privilege: read-only by default; jobs declare write scopes individually
+permissions: read-all  # default read; writes scoped to job below
+
+concurrency:
+  group: build-deploy-kc-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  # Helm release name used across both clusters
+  HELM_RELEASE_NAME: kc
+
+jobs:
+  # Build each platform on its NATIVE runner in parallel. Previously this
+  # workflow built linux/amd64 + linux/arm64 in a single ubuntu-latest job
+  # using QEMU emulation for arm64, which made every PR pay ~35 minutes for
+  # the emulated arm64 leg (total ~40 min wall-clock). With native runners
+  # the two legs run side-by-side in ~3-5 min each, so PR builds drop to
+  # roughly 5-7 min wall-clock total.
+  #
+  # Each matrix leg pushes its single-arch image to GHCR by digest only
+  # (no human-readable tag). The `merge` job then assembles the multi-arch
+  # manifest list under the real tags. PR builds skip both the push and
+  # the merge — they just verify each platform compiles on its real CPU.
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-24.04
+            arch: amd64
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Ensure Docker daemon is running
+        run: |
+          sudo systemctl start docker 2>/dev/null || true
+          for attempt in 1 2 3 4 5; do
+            if docker info > /dev/null 2>&1; then
+              echo "Docker daemon ready."
+              exit 0
+            fi
+            echo "Docker not ready (attempt ${attempt}/5), retrying in 3s..."
+            sleep 3
+          done
+          docker info
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
+        with:
+          platforms: ${{ matrix.platform }}
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@abd2ef45e78c5afb21d64d4ca52ee8550d9572c7 # v4.5.1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            APP_VERSION=main-${{ github.sha }}
+            COMMIT_HASH=${{ github.sha }}
+          # push-by-digest writes the image to GHCR with no tag — only the
+          # digest is referenceable until `merge` assembles the manifest.
+          # On PRs we drop the push entirely so the build still verifies
+          # but does not consume registry storage.
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
+          # Per-architecture cache scope so amd64 and arm64 don't evict
+          # each other's layers from a shared scope (which would cause
+          # cold rebuilds on every PR).
+          cache-from: type=gha,scope=build-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=build-${{ matrix.arch }}
+
+      - name: Export digest
+        if: github.event_name != 'pull_request'
+        run: |
+          mkdir -p "${{ runner.temp }}/digests"
+          digest="${{ steps.build.outputs.digest }}"
+          touch "${{ runner.temp }}/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: digests-${{ matrix.arch }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  # Combine the per-architecture digests into a multi-arch manifest list
+  # under all the real tags (sha, branch, latest). Skipped on PRs because
+  # nothing was pushed in the build matrix above.
+  merge:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: build
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@abd2ef45e78c5afb21d64d4ca52ee8550d9572c7 # v4.5.1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=,format=long
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Create manifest list and push
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:%s ' *)
+
+      - name: Inspect image
+        run: |
+          for i in 1 2 3; do
+            docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} && exit 0
+            echo "Attempt $i failed, retrying in 10s..."
+            sleep 10
+          done
+          echo "Image inspect failed after 3 attempts (GHCR propagation delay)"
+          exit 1
+
+  deploy-vllm-d:
+    needs: merge
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: [self-hosted, kc, openshift]
+    # 20m was too tight: deploy_helm retries up to MAX_ATTEMPTS=2 times, each
+    # bounded by `--timeout 10m` (=20m), plus recover_release (rollback
+    # --timeout 2m / uninstall --timeout 5m) and retry sleeps in between.
+    # That worst case exceeds 20m, causing the job to be cancelled by the
+    # runner before the retry loop can finish. Match deploy-pok-prod's 45m
+    # budget, which uses the same retry pattern.
+    timeout-minutes: 45
+    environment: vllm-d
+    concurrency:
+      group: deploy-vllm-d
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@829323503d1be3d00ca8346e5391ca0b07a9ab0d # v5.1.0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+
+      - name: Configure kubeconfig from SA token
+        run: |
+          export KUBECONFIG="${{ runner.temp }}/kubeconfig"
+          SA_TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+          CA_CERT=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          kubectl config set-cluster in-cluster \
+            --server=https://kubernetes.default.svc \
+            --certificate-authority="$CA_CERT" \
+            --embed-certs=true
+          kubectl config set-credentials sa-user --token="$SA_TOKEN"
+          kubectl config set-context deploy --cluster=in-cluster --user=sa-user
+          kubectl config use-context deploy
+          echo "KUBECONFIG=$KUBECONFIG" >> "$GITHUB_ENV"
+
+      - name: Verify RBAC permissions
+        run: |
+          echo "Checking deploy runner SA permissions..."
+          if ! kubectl auth can-i create namespaces 2>/dev/null; then
+            echo "::error::Runner SA lacks RBAC permissions to create namespaces."
+            echo "::error::Apply RBAC: kubectl apply -f deploy/arc/deploy-runner-rbac.yaml"
+            echo "::error::Then update RunnerDeployment: kubectl apply -f deploy/arc/kubestellar-console-runner.yaml"
+            exit 1
+          fi
+          if ! kubectl auth can-i create secrets -n kc 2>/dev/null; then
+            echo "::error::Runner SA lacks RBAC permissions to create secrets in kc namespace."
+            echo "::error::Apply RBAC: kubectl apply -f deploy/arc/deploy-runner-rbac.yaml"
+            exit 1
+          fi
+          echo "RBAC permissions verified."
+          kubectl get secrets -n kc --no-headers 2>/dev/null | head -3 || echo "Namespace kc does not exist yet (will be created)"
+
+      - name: Create namespace if not exists
+        run: |
+          kubectl create namespace kc --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Create or update secrets
+        run: |
+          kubectl create secret generic kc-secrets \
+            --namespace kc \
+            --from-literal=github-client-id=${{ secrets.KSC_OAUTH_CLIENT_ID }} \
+            --from-literal=github-client-secret=${{ secrets.KSC_OAUTH_CLIENT_SECRET }} \
+            --from-literal=jwt-secret=${{ secrets.KSC_JWT_SECRET }} \
+            --from-literal=github-token=${{ secrets.KSC_GITHUB_TOKEN }} \
+            --from-literal=google-drive-api-key=${{ secrets.KSC_GOOGLE_DRIVE_API_KEY }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Clean up stuck persistent volumes
+        run: |
+          RELEASE_SELECTOR="app.kubernetes.io/instance=${{ env.HELM_RELEASE_NAME }}"
+          STUCK_PV_AGE_THRESHOLD_SECONDS=86400
+          ORPHANED_PVCS_FOUND=0
+
+          echo "Cleaning up PVs stuck in deletion for more than 24 hours..."
+          PVCS_JSON=$(kubectl get pvc -n kc -l "$RELEASE_SELECTOR" -o json 2>/dev/null || echo '{"items":[]}')
+
+          # First pass: detect orphaned PVCs (those referencing missing PVs)
+          while IFS=$'\t' read -r pvc_name volume_name pvc_phase pvc_deletion; do
+            if [ -z "$volume_name" ]; then
+              continue
+            fi
+
+            if ! kubectl get pv "$volume_name" &>/dev/null; then
+              echo "::warning::Found orphaned PVC '$pvc_name' referencing missing PV '$volume_name'"
+              ORPHANED_PVCS_FOUND=1
+            fi
+          done < <(jq -r '.items[] | [.metadata.name, (.spec.volumeName // ""), (.status.phase // "Unknown"), (.metadata.deletionTimestamp // "")] | @tsv' <<<"$PVCS_JSON")
+
+          # If orphaned PVCs were found, delete deployment and cronjob first to release them
+          if [ "$ORPHANED_PVCS_FOUND" -eq 1 ]; then
+            echo "::warning::Orphaned PVCs detected. Deleting deployment and cronjob to release them..."
+            kubectl delete deployment -n kc -l "$RELEASE_SELECTOR" --wait=false 2>/dev/null || true
+            kubectl delete cronjob -n kc -l "$RELEASE_SELECTOR" --wait=false 2>/dev/null || true
+            echo "Waiting for pods to terminate..."
+            kubectl wait --for=delete pod -n kc -l "$RELEASE_SELECTOR" --timeout=60s 2>/dev/null || true
+          fi
+
+          # Second pass: delete orphaned PVCs
+          while IFS=$'\t' read -r pvc_name volume_name pvc_phase pvc_deletion; do
+            if [ -z "$volume_name" ]; then
+              continue
+            fi
+
+            # Handle PVCs in Lost phase (PV no longer exists) — delete the orphaned PVC so Helm can reprovision
+            if ! kubectl get pv "$volume_name" &>/dev/null; then
+              echo "::warning::PVC '$pvc_name' references missing PV '$volume_name' (phase=$pvc_phase). Deleting orphaned PVC..."
+              kubectl delete pvc "$pvc_name" -n kc --wait=false 2>/dev/null || true
+              kubectl patch pvc "$pvc_name" -n kc -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+              kubectl wait --for=delete pvc/"$pvc_name" -n kc --timeout=60s 2>/dev/null || true
+              continue
+            fi
+
+            PV_JSON=$(kubectl get pv "$volume_name" -o json 2>/dev/null || echo '{}')
+            pv_deletion=$(jq -r '.metadata.deletionTimestamp // empty' <<<"$PV_JSON")
+
+            if [ -n "$pv_deletion" ]; then
+              deletion_age=$(($(date +%s) - $(date -d "$pv_deletion" +%s 2>/dev/null || echo 0)))
+              if [ "$deletion_age" -gt "$STUCK_PV_AGE_THRESHOLD_SECONDS" ]; then
+                echo "::warning::PV '$volume_name' stuck in deletion since $pv_deletion (${deletion_age}s ago). Removing finalizers..."
+                kubectl patch pv "$volume_name" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+                echo "Waiting for PV to complete deletion..."
+                kubectl wait --for=delete pv/"$volume_name" --timeout=30s 2>/dev/null || true
+              fi
+            fi
+          done < <(jq -r '.items[] | [.metadata.name, (.spec.volumeName // ""), (.status.phase // "Unknown"), (.metadata.deletionTimestamp // "")] | @tsv' <<<"$PVCS_JSON")
+
+      - name: Validate persistent volumes before deploy
+        run: |
+          RELEASE_SELECTOR="app.kubernetes.io/instance=${{ env.HELM_RELEASE_NAME }}"
+          BLOCKING_STORAGE_ISSUES=0
+          PVC_WAIT_TIMEOUT=60s
+          PVCS_JSON=$(kubectl get pvc -n kc -l "$RELEASE_SELECTOR" -o json 2>/dev/null || echo '{"items":[]}')
+
+          if [ "$(jq '.items | length' <<<"$PVCS_JSON")" -eq 0 ]; then
+            echo "No existing release PVCs found; continuing with deploy"
+            exit 0
+          fi
+
+          echo "::group::Release PVC status"
+          jq -r '.items[] | "\(.metadata.name)\tphase=\(.status.phase // "Unknown")\tvolume=\(.spec.volumeName // "-")\tdeleting=\(.metadata.deletionTimestamp // "false")"' <<<"$PVCS_JSON"
+          echo "::endgroup::"
+
+          while IFS=$'\t' read -r pvc_name volume_name pvc_deletion; do
+            if [ -n "$pvc_deletion" ]; then
+              echo "PVC '$pvc_name' is terminating (since $pvc_deletion). Waiting up to $PVC_WAIT_TIMEOUT for deletion to complete..."
+              if kubectl wait --for=delete pvc/"$pvc_name" -n kc --timeout="$PVC_WAIT_TIMEOUT" 2>/dev/null; then
+                echo "PVC '$pvc_name' successfully deleted."
+                continue
+              fi
+              echo "::warning::PVC '$pvc_name' still terminating after $PVC_WAIT_TIMEOUT — removing finalizers..."
+              kubectl patch pvc "$pvc_name" -n kc -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+              if kubectl wait --for=delete pvc/"$pvc_name" -n kc --timeout=30s 2>/dev/null; then
+                echo "PVC '$pvc_name' deleted after finalizer removal."
+                continue
+              fi
+              echo "::error::PersistentVolumeClaim '$pvc_name' could not be deleted despite finalizer removal. Manual intervention required."
+              BLOCKING_STORAGE_ISSUES=1
+              continue
+            fi
+
+            if [ -z "$volume_name" ]; then
+              continue
+            fi
+
+            if ! PV_JSON=$(kubectl get pv "$volume_name" -o json 2>/dev/null); then
+              echo "::warning::PVC '$pvc_name' references missing PV '$volume_name'. Attempting cleanup..."
+              kubectl delete pvc "$pvc_name" -n kc --wait=false 2>/dev/null || true
+              kubectl patch pvc "$pvc_name" -n kc -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+              if kubectl wait --for=delete pvc/"$pvc_name" -n kc --timeout="$PVC_WAIT_TIMEOUT" 2>/dev/null; then
+                echo "PVC '$pvc_name' successfully cleaned up."
+                continue
+              fi
+              echo "::error::PersistentVolumeClaim '$pvc_name' references missing PersistentVolume '$volume_name' and could not be deleted. Manual intervention required."
+              BLOCKING_STORAGE_ISSUES=1
+              continue
+            fi
+
+            pv_phase=$(jq -r '.status.phase // "Unknown"' <<<"$PV_JSON")
+            pv_deletion=$(jq -r '.metadata.deletionTimestamp // empty' <<<"$PV_JSON")
+            echo "PVC '$pvc_name' -> PV '$volume_name' phase=$pv_phase${pv_deletion:+ deleting=$pv_deletion}"
+
+            if [ -n "$pv_deletion" ]; then
+              echo "PV '$volume_name' is being deleted. Waiting up to $PVC_WAIT_TIMEOUT..."
+              if kubectl wait --for=delete pv/"$volume_name" --timeout="$PVC_WAIT_TIMEOUT" 2>/dev/null; then
+                echo "PV '$volume_name' deleted. Cleaning up orphaned PVC '$pvc_name'..."
+                kubectl delete pvc "$pvc_name" -n kc --wait=false 2>/dev/null || true
+                kubectl patch pvc "$pvc_name" -n kc -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+                kubectl wait --for=delete pvc/"$pvc_name" -n kc --timeout=30s 2>/dev/null || true
+                continue
+              fi
+              echo "::warning::PV '$volume_name' still deleting. Removing PV finalizers..."
+              kubectl patch pv "$volume_name" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+              kubectl wait --for=delete pv/"$volume_name" --timeout=30s 2>/dev/null || true
+              if ! kubectl get pv "$volume_name" &>/dev/null; then
+                echo "PV '$volume_name' cleared. Cleaning up orphaned PVC '$pvc_name'..."
+                kubectl delete pvc "$pvc_name" -n kc --wait=false 2>/dev/null || true
+                kubectl patch pvc "$pvc_name" -n kc -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+                kubectl wait --for=delete pvc/"$pvc_name" -n kc --timeout=30s 2>/dev/null || true
+                continue
+              fi
+              echo "::error::PersistentVolume '$volume_name' for PVC '$pvc_name' could not be deleted. Manual intervention required."
+              BLOCKING_STORAGE_ISSUES=1
+            fi
+
+            if [ "$pv_phase" = "Released" ] || [ "$pv_phase" = "Failed" ]; then
+              echo "::error::PersistentVolume '$volume_name' for PVC '$pvc_name' is in phase '$pv_phase'. Recreate the PVC or provision a healthy replacement volume before rerunning deploy-vllm-d."
+              BLOCKING_STORAGE_ISSUES=1
+            fi
+          done < <(jq -r '.items[] | [.metadata.name, (.spec.volumeName // ""), (.metadata.deletionTimestamp // "")] | @tsv' <<<"$PVCS_JSON")
+
+          if [ "$BLOCKING_STORAGE_ISSUES" -ne 0 ]; then
+            echo "::error::Blocking persistent volume cleanup is required before Helm can recover or upgrade this release."
+            exit 1
+          fi
+
+      - name: Pre-deploy cluster health check
+        run: |
+          echo "::group::Current pod status in kc"
+          kubectl get pods -n kc -o wide || true
+          echo "::endgroup::"
+          echo "::group::Recent warning events"
+          kubectl get events -n kc --sort-by='.lastTimestamp' --field-selector type=Warning | tail -10 || true
+          echo "::endgroup::"
+
+      - name: Clean up stuck pods
+        run: |
+          echo "Cleaning up pods stuck in Terminating or ContainerCreating for more than 10 minutes..."
+          for pod in $(kubectl get pods -n kc -o json 2>/dev/null | jq -r '
+            .items[]
+            | select(.metadata.deletionTimestamp != null)
+            | select((now - (.metadata.deletionTimestamp | fromdateiso8601)) > 600)
+            | .metadata.name
+          '); do
+            echo "Force-deleting terminating pod: $pod"
+            kubectl delete pod "$pod" -n kc --grace-period=0 --force 2>/dev/null || true
+          done
+          for pod in $(kubectl get pods -n kc -o json 2>/dev/null | jq -r '
+            .items[]
+            | select(.status.phase == "Pending")
+            | select((now - (.metadata.creationTimestamp | fromdateiso8601)) > 600)
+            | select(any(.status.containerStatuses[]?; .state.waiting?.reason == "ContainerCreating"))
+            | .metadata.name
+          '); do
+            echo "Deleting pending pod stuck in ContainerCreating: $pod"
+            kubectl delete pod "$pod" -n kc --grace-period=0 --force 2>/dev/null || true
+          done
+          echo "Cleanup complete"
+
+      - name: Wait for volume detachment
+        run: |
+          RELEASE_SELECTOR="app.kubernetes.io/instance=${{ env.HELM_RELEASE_NAME }}"
+          MAX_WAIT=120
+          WAITED=0
+
+          RUNNING_PODS=$(kubectl get pods -n kc -l "$RELEASE_SELECTOR" -o name 2>/dev/null | wc -l)
+          if [ "$RUNNING_PODS" -eq 0 ]; then
+            echo "No running pods — checking VolumeAttachments..."
+            PVC_PVS=$(kubectl get pvc -n kc -l "$RELEASE_SELECTOR" -o json 2>/dev/null \
+              | jq -r '.items[].spec.volumeName // empty' 2>/dev/null)
+
+            for pv in $PVC_PVS; do
+              while [ "$WAITED" -lt "$MAX_WAIT" ]; do
+                ATTACHED=$(kubectl get volumeattachments -o json 2>/dev/null \
+                  | jq -r --arg pv "$pv" '.items[] | select(.spec.source.persistentVolumeName == $pv) | .metadata.name' 2>/dev/null)
+                if [ -z "$ATTACHED" ]; then
+                  echo "PV '$pv' is fully detached."
+                  break
+                fi
+                echo "PV '$pv' still attached (attachment: $ATTACHED). Waiting..."
+                sleep 10
+                WAITED=$((WAITED + 10))
+              done
+            done
+          fi
+          echo "Volume detachment check complete (waited ${WAITED}s)"
+
+      - name: Recover stuck Helm release
+        run: |
+          RELEASE_STATUS=$(helm status ${{ env.HELM_RELEASE_NAME }} -n kc -o json 2>/dev/null | jq -r '.info.status // empty' || true)
+          if [[ "$RELEASE_STATUS" == "pending-"* || "$RELEASE_STATUS" == "failed" ]]; then
+            echo "::warning::Helm release in '$RELEASE_STATUS' — rolling back to recover"
+            if ! helm rollback ${{ env.HELM_RELEASE_NAME }} -n kc --wait --timeout 2m; then
+              echo "::warning::Helm rollback failed (no good prior revision?) — uninstalling to allow fresh deployment"
+              if ! helm uninstall ${{ env.HELM_RELEASE_NAME }} -n kc --wait --timeout 5m; then
+                echo "::error::Helm uninstall also failed — release may need manual intervention"
+                exit 1
+              fi
+              echo "Helm release uninstalled; next step will perform a fresh install"
+            fi
+          fi
+
+      - name: Migrate RWO PVCs to ReadWriteMany
+        run: |
+          # If the Helm chart now requires ReadWriteMany but existing PVCs are
+          # ReadWriteOnce, Kubernetes rejects the patch as immutable. Detect
+          # and delete those PVCs so Helm can recreate them with the correct
+          # accessMode. Warns clearly because PVC data is lost on deletion.
+          RELEASE_SELECTOR="app.kubernetes.io/instance=${{ env.HELM_RELEASE_NAME }}"
+          NAMESPACE=kc
+
+          RWO_PVCS=$(kubectl get pvc -n "$NAMESPACE" -l "$RELEASE_SELECTOR" -o json 2>/dev/null | \
+            jq -r '.items[] | select(.spec.accessModes | index("ReadWriteMany") == null) | .metadata.name' || true)
+
+          if [ -z "$RWO_PVCS" ]; then
+            echo "No ReadWriteOnce PVCs to migrate."
+            exit 0
+          fi
+
+          echo "::warning::Found ReadWriteOnce PVC(s) incompatible with chart ReadWriteMany: $(echo $RWO_PVCS | tr '\n' ' ')"
+          echo "Scaling down deployment to release volume holders before PVC deletion..."
+          kubectl scale deployment kc-kubestellar-console -n "$NAMESPACE" --replicas=0 2>/dev/null || true
+          kubectl wait pod -n "$NAMESPACE" -l "app.kubernetes.io/instance=${{ env.HELM_RELEASE_NAME }}" \
+            --for=delete --timeout=120s 2>/dev/null || true
+
+          for pvc in $RWO_PVCS; do
+            echo "::warning::Deleting RWO PVC '$pvc' — Helm will recreate it as ReadWriteMany (PVC data is lost)"
+            kubectl delete pvc "$pvc" -n "$NAMESPACE" --wait=false 2>/dev/null || true
+            kubectl patch pvc "$pvc" -n "$NAMESPACE" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+            if ! kubectl wait --for=delete pvc/"$pvc" -n "$NAMESPACE" --timeout=60s 2>/dev/null; then
+              echo "::error::PVC '$pvc' still exists after 60s — cannot proceed with Helm upgrade"
+              exit 1
+            fi
+          done
+          echo "RWO→RWX PVC migration preparation complete."
+
+      # #6344 / #6353: OpenShift SCC allocates a namespace-specific UID
+      # range and rejects pods whose runAsUser falls outside that range.
+      # The chart default (runAsUser=1001) is correct for Kind/Minikube
+      # but breaks OpenShift with a silent "Replicas: 0/1" timeout. The
+      # --set overrides below unset runAsUser/runAsGroup so the SCC
+      # admission controller can inject its own values. IMPORTANT:
+      # runAsNonRoot stays `true` (chart default) so PodSecurity
+      # "restricted" still accepts the pod — only the UID/GID numbers
+      # need to be null.
+      #
+      # The same applies to podSecurityContext.fsGroup, added by #20590:
+      # the chart default (fsGroup=1001, needed on vanilla k8s so the
+      # kubelet chowns the PVC for appuser) falls outside the namespace's
+      # SCC supplemental-groups range, so restricted-v2 rejects every new
+      # pod with "fsGroup: Invalid value: []int64{1001}: 1001 is not an
+      # allowed group" and the ReplicaSet can never create pods (Helm
+      # rolls back with Deployment stuck at "Updated: 0/1"). Unsetting it
+      # lets the SCC assign an in-range fsGroup, which still triggers the
+      # kubelet chown of the mounted PVC.
+      - name: Deploy with Helm
+        run: |
+          recover_release() {
+            RELEASE_STATUS=$(helm status ${{ env.HELM_RELEASE_NAME }} -n kc -o json 2>/dev/null | jq -r '.info.status // empty' || true)
+            if [[ "$RELEASE_STATUS" == "pending-"* || "$RELEASE_STATUS" == "failed" ]]; then
+              echo "Helm release in '$RELEASE_STATUS' — rolling back to recover"
+              if ! helm rollback ${{ env.HELM_RELEASE_NAME }} -n kc --wait --timeout 2m; then
+                echo "::warning::Helm rollback failed — uninstalling to allow fresh deploy"
+                helm uninstall ${{ env.HELM_RELEASE_NAME }} -n kc --wait --timeout 5m 2>/dev/null || true
+              fi
+            fi
+          }
+
+          cleanup_stuck_pods() {
+            for pod in $(kubectl get pods -n kc -o json 2>/dev/null | jq -r '
+              .items[]
+              | select(.metadata.deletionTimestamp != null)
+              | select((now - (.metadata.deletionTimestamp | fromdateiso8601)) > 600)
+              | .metadata.name
+            '); do
+              echo "Force-deleting terminating pod: $pod"
+              kubectl delete pod "$pod" -n kc --grace-period=0 --force 2>/dev/null || true
+            done
+            kubectl delete pods -n kc --field-selector=status.phase=Failed --force --grace-period=0 2>/dev/null || true
+          }
+
+          deploy_helm() {
+            helm upgrade --install ${{ env.HELM_RELEASE_NAME }} ./deploy/helm/kubestellar-console \
+              --namespace kc \
+              --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+              --set image.tag=${{ github.sha }} \
+              --set github.url=https://github.ibm.com \
+              --set github.existingSecret=kc-secrets \
+              --set jwt.existingSecret=kc-secrets \
+              --set githubToken.existingSecret=kc-secrets \
+              --set googleDrive.existingSecret=kc-secrets \
+              --set route.enabled=true \
+              --set route.host=kc.apps.fmaas-vllm-d.fmaas.res.ibm.com \
+              --set clusterName=vllm-d \
+              --set-string enabledDashboards="dashboard\,clusters\,gpu-reservations\,llm-d-benchmarks\,ai-ml\,arcade" \
+              --set persistence.storageClass=ibmc-vpc-block-10iops-tier \
+              --set backup.storageClass=ibmc-vpc-block-10iops-tier \
+              --set rbac.namespaceCreationEnabled=true \
+              --set securityContext.runAsUser=null \
+              --set securityContext.runAsGroup=null \
+              --set podSecurityContext.fsGroup=null \
+              --set podLabels.team=kubestellar \
+              --atomic \
+              --cleanup-on-fail \
+              --timeout 10m
+          }
+
+          MAX_ATTEMPTS=2
+          for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+            echo "Deploy attempt $attempt of $MAX_ATTEMPTS..."
+            if deploy_helm; then
+              echo "Deploy succeeded on attempt $attempt"
+              exit 0
+            fi
+
+            if [ "$attempt" -lt "$MAX_ATTEMPTS" ]; then
+              echo "::warning::Deploy attempt $attempt failed, recovering and retrying..."
+              sleep 30
+              recover_release
+              cleanup_stuck_pods
+              sleep 10
+            fi
+          done
+
+          echo "::error::Deploy failed after $MAX_ATTEMPTS attempts"
+          exit 1
+
+      - name: Collect diagnostics on deploy failure
+        if: failure()
+        run: |
+          echo "::group::Pods in kc namespace"
+          kubectl get pods -n kc -o wide || true
+          echo "::endgroup::"
+          echo "::group::Deployment describe"
+          kubectl describe deployment/kc-kubestellar-console -n kc || true
+          echo "::endgroup::"
+          echo "::group::Recent pod logs"
+          for pod in $(kubectl get pods -n kc -o name 2>/dev/null | head -5); do
+            echo "--- ${pod} ---"
+            kubectl logs -n kc "${pod#pod/}" --tail=100 || true
+          done
+          echo "::endgroup::"
+
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment/kc-kubestellar-console -n kc --timeout=3m
+          echo "Deployment successful!"
+          echo "Access KC at: https://kc.apps.fmaas-vllm-d.fmaas.res.ibm.com"
+
+  deploy-pok-prod:
+    needs: merge
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: [self-hosted, kc-pok]
+    timeout-minutes: 45
+    environment: pok-prod
+    concurrency:
+      group: deploy-pok-prod
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@829323503d1be3d00ca8346e5391ca0b07a9ab0d # v5.1.0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+
+      - name: Configure kubeconfig from SA token
+        run: |
+          export KUBECONFIG="${{ runner.temp }}/kubeconfig"
+          SA_TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+          CA_CERT=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          kubectl config set-cluster in-cluster \
+            --server=https://kubernetes.default.svc \
+            --certificate-authority="$CA_CERT" \
+            --embed-certs=true
+          kubectl config set-credentials sa-user --token="$SA_TOKEN"
+          kubectl config set-context deploy --cluster=in-cluster --user=sa-user
+          kubectl config use-context deploy
+          echo "KUBECONFIG=$KUBECONFIG" >> "$GITHUB_ENV"
+          echo "Verifying cluster access..."
+          kubectl get secrets -n kubestellar-console --no-headers | head -3
+
+      - name: Create namespace if not exists
+        run: |
+          kubectl create namespace kubestellar-console --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Create or update secrets
+        run: |
+          kubectl create secret generic kc-kubestellar-console \
+            --namespace kubestellar-console \
+            --from-literal=github-client-id=${{ secrets.KSC_OAUTH_CLIENT_ID }} \
+            --from-literal=github-client-secret=${{ secrets.KSC_OAUTH_CLIENT_SECRET }} \
+            --from-literal=jwt-secret=${{ secrets.KSC_JWT_SECRET }} \
+            --from-literal=github-token=${{ secrets.KSC_GITHUB_TOKEN }} \
+            --from-literal=google-drive-api-key=${{ secrets.KSC_GOOGLE_DRIVE_API_KEY }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Clean up stuck persistent volumes
+        run: |
+          RELEASE_SELECTOR="app.kubernetes.io/instance=${{ env.HELM_RELEASE_NAME }},app.kubernetes.io/name=kubestellar-console"
+          STUCK_PV_AGE_THRESHOLD_SECONDS=86400
+          ORPHANED_PVCS_FOUND=0
+          
+          echo "Cleaning up PVs stuck in deletion for more than 24 hours..."
+          PVCS_JSON=$(kubectl get pvc -n kubestellar-console -l "$RELEASE_SELECTOR" -o json 2>/dev/null || echo '{"items":[]}')
+          
+          # First pass: detect orphaned PVCs (those referencing missing PVs)
+          while IFS=$'\t' read -r pvc_name volume_name pvc_phase pvc_deletion; do
+            if [ -z "$volume_name" ]; then
+              continue
+            fi
+            
+            if ! kubectl get pv "$volume_name" &>/dev/null; then
+              echo "::warning::Found orphaned PVC '$pvc_name' referencing missing PV '$volume_name'"
+              ORPHANED_PVCS_FOUND=1
+            fi
+          done < <(jq -r '.items[] | [.metadata.name, (.spec.volumeName // ""), (.status.phase // "Unknown"), (.metadata.deletionTimestamp // "")] | @tsv' <<<"$PVCS_JSON")
+          
+          # If orphaned PVCs were found, delete deployment and cronjob first to release them
+          if [ "$ORPHANED_PVCS_FOUND" -eq 1 ]; then
+            echo "::warning::Orphaned PVCs detected. Deleting deployment and cronjob to release them..."
+            kubectl delete deployment -n kubestellar-console -l "$RELEASE_SELECTOR" --wait=false 2>/dev/null || true
+            kubectl delete cronjob -n kubestellar-console -l "$RELEASE_SELECTOR" --wait=false 2>/dev/null || true
+            echo "Waiting for pods to terminate..."
+            kubectl wait --for=delete pod -n kubestellar-console -l "$RELEASE_SELECTOR" --timeout=60s 2>/dev/null || true
+          fi
+          
+          # Second pass: delete orphaned PVCs
+          while IFS=$'\t' read -r pvc_name volume_name pvc_phase pvc_deletion; do
+            if [ -z "$volume_name" ]; then
+              continue
+            fi
+            
+            # Handle PVCs in Lost phase (PV no longer exists) — delete the orphaned PVC so Helm can reprovision
+            if ! kubectl get pv "$volume_name" &>/dev/null; then
+              echo "::warning::PVC '$pvc_name' references missing PV '$volume_name' (phase=$pvc_phase). Deleting orphaned PVC..."
+              kubectl delete pvc "$pvc_name" -n kubestellar-console --wait=false 2>/dev/null || true
+              kubectl patch pvc "$pvc_name" -n kubestellar-console -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+              kubectl wait --for=delete pvc/"$pvc_name" -n kubestellar-console --timeout=60s 2>/dev/null || true
+              continue
+            fi
+
+            PV_JSON=$(kubectl get pv "$volume_name" -o json 2>/dev/null || echo '{}')
+            pv_deletion=$(jq -r '.metadata.deletionTimestamp // empty' <<<"$PV_JSON")
+            
+            if [ -n "$pv_deletion" ]; then
+              deletion_age=$(($(date +%s) - $(date -d "$pv_deletion" +%s 2>/dev/null || echo 0)))
+              if [ "$deletion_age" -gt "$STUCK_PV_AGE_THRESHOLD_SECONDS" ]; then
+                echo "::warning::PV '$volume_name' stuck in deletion since $pv_deletion (${deletion_age}s ago). Removing finalizers..."
+                kubectl patch pv "$volume_name" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+                echo "Waiting for PV to complete deletion..."
+                kubectl wait --for=delete pv/"$volume_name" --timeout=30s 2>/dev/null || true
+              fi
+            fi
+          done < <(jq -r '.items[] | [.metadata.name, (.spec.volumeName // ""), (.status.phase // "Unknown"), (.metadata.deletionTimestamp // "")] | @tsv' <<<"$PVCS_JSON")
+
+      - name: Validate persistent volumes before deploy
+        run: |
+          RELEASE_SELECTOR="app.kubernetes.io/instance=${{ env.HELM_RELEASE_NAME }},app.kubernetes.io/name=kubestellar-console"
+          BLOCKING_STORAGE_ISSUES=0
+          PVC_WAIT_TIMEOUT=60s
+          PVCS_JSON=$(kubectl get pvc -n kubestellar-console -l "$RELEASE_SELECTOR" -o json 2>/dev/null || echo '{"items":[]}')
+
+          if [ "$(jq '.items | length' <<<"$PVCS_JSON")" -eq 0 ]; then
+            echo "No existing release PVCs found; continuing with deploy"
+            exit 0
+          fi
+
+          echo "::group::Release PVC status"
+          jq -r '.items[] | "\(.metadata.name)\tphase=\(.status.phase // "Unknown")\tvolume=\(.spec.volumeName // "-")\tdeleting=\(.metadata.deletionTimestamp // "false")"' <<<"$PVCS_JSON"
+          echo "::endgroup::"
+
+          while IFS=$'\t' read -r pvc_name volume_name pvc_deletion; do
+            # PVC is already being deleted — wait for it to finish instead of failing immediately
+            if [ -n "$pvc_deletion" ]; then
+              echo "PVC '$pvc_name' is terminating (since $pvc_deletion). Waiting up to $PVC_WAIT_TIMEOUT for deletion to complete..."
+              if kubectl wait --for=delete pvc/"$pvc_name" -n kubestellar-console --timeout="$PVC_WAIT_TIMEOUT" 2>/dev/null; then
+                echo "PVC '$pvc_name' successfully deleted."
+                continue
+              fi
+              echo "::warning::PVC '$pvc_name' still terminating after $PVC_WAIT_TIMEOUT — removing finalizers..."
+              kubectl patch pvc "$pvc_name" -n kubestellar-console -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+              if kubectl wait --for=delete pvc/"$pvc_name" -n kubestellar-console --timeout=30s 2>/dev/null; then
+                echo "PVC '$pvc_name' deleted after finalizer removal."
+                continue
+              fi
+              echo "::error::PersistentVolumeClaim '$pvc_name' could not be deleted despite finalizer removal. Manual intervention required."
+              BLOCKING_STORAGE_ISSUES=1
+              continue
+            fi
+
+            if [ -z "$volume_name" ]; then
+              continue
+            fi
+
+            # Check if PV exists
+            if ! PV_JSON=$(kubectl get pv "$volume_name" -o json 2>/dev/null); then
+              # PV is missing — attempt idempotent cleanup
+              echo "::warning::PVC '$pvc_name' references missing PV '$volume_name'. Attempting cleanup..."
+              kubectl delete pvc "$pvc_name" -n kubestellar-console --wait=false 2>/dev/null || true
+              kubectl patch pvc "$pvc_name" -n kubestellar-console -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+              if kubectl wait --for=delete pvc/"$pvc_name" -n kubestellar-console --timeout="$PVC_WAIT_TIMEOUT" 2>/dev/null; then
+                echo "PVC '$pvc_name' successfully cleaned up."
+                continue
+              fi
+              echo "::error::PersistentVolumeClaim '$pvc_name' references missing PersistentVolume '$volume_name' and could not be deleted. Manual intervention required."
+              BLOCKING_STORAGE_ISSUES=1
+              continue
+            fi
+
+            pv_phase=$(jq -r '.status.phase // "Unknown"' <<<"$PV_JSON")
+            pv_deletion=$(jq -r '.metadata.deletionTimestamp // empty' <<<"$PV_JSON")
+            echo "PVC '$pvc_name' -> PV '$volume_name' phase=$pv_phase${pv_deletion:+ deleting=$pv_deletion}"
+
+            if [ -n "$pv_deletion" ]; then
+              echo "PV '$volume_name' is being deleted. Waiting up to $PVC_WAIT_TIMEOUT..."
+              if kubectl wait --for=delete pv/"$volume_name" --timeout="$PVC_WAIT_TIMEOUT" 2>/dev/null; then
+                echo "PV '$volume_name' deleted. Cleaning up orphaned PVC '$pvc_name'..."
+                kubectl delete pvc "$pvc_name" -n kubestellar-console --wait=false 2>/dev/null || true
+                kubectl patch pvc "$pvc_name" -n kubestellar-console -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+                kubectl wait --for=delete pvc/"$pvc_name" -n kubestellar-console --timeout=30s 2>/dev/null || true
+                continue
+              fi
+              echo "::warning::PV '$volume_name' still deleting. Removing PV finalizers..."
+              kubectl patch pv "$volume_name" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+              kubectl wait --for=delete pv/"$volume_name" --timeout=30s 2>/dev/null || true
+              # Re-check if PV is now gone
+              if ! kubectl get pv "$volume_name" &>/dev/null; then
+                echo "PV '$volume_name' cleared. Cleaning up orphaned PVC '$pvc_name'..."
+                kubectl delete pvc "$pvc_name" -n kubestellar-console --wait=false 2>/dev/null || true
+                kubectl patch pvc "$pvc_name" -n kubestellar-console -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+                kubectl wait --for=delete pvc/"$pvc_name" -n kubestellar-console --timeout=30s 2>/dev/null || true
+                continue
+              fi
+              echo "::error::PersistentVolume '$volume_name' for PVC '$pvc_name' could not be deleted. Manual intervention required."
+              BLOCKING_STORAGE_ISSUES=1
+            fi
+
+            if [ "$pv_phase" = "Released" ] || [ "$pv_phase" = "Failed" ]; then
+              echo "::error::PersistentVolume '$volume_name' for PVC '$pvc_name' is in phase '$pv_phase'. Recreate the PVC or provision a healthy replacement volume before rerunning deploy-pok-prod."
+              BLOCKING_STORAGE_ISSUES=1
+            fi
+          done < <(jq -r '.items[] | [.metadata.name, (.spec.volumeName // ""), (.metadata.deletionTimestamp // "")] | @tsv' <<<"$PVCS_JSON")
+
+          if [ "$BLOCKING_STORAGE_ISSUES" -ne 0 ]; then
+            echo "::error::Blocking persistent volume cleanup is required before Helm can recover or upgrade this release."
+            exit 1
+          fi
+
+      - name: Pre-deploy cluster health check
+        run: |
+          echo "::group::Current pod status in kubestellar-console"
+          kubectl get pods -n kubestellar-console -o wide || true
+          echo "::endgroup::"
+          echo "::group::Recent warning events"
+          kubectl get events -n kubestellar-console --sort-by='.lastTimestamp' --field-selector type=Warning | tail -10 || true
+          echo "::endgroup::"
+
+      - name: Clean up stuck pods
+        run: |
+          echo "Cleaning up pods stuck in Terminating or ContainerCreating for more than 10 minutes..."
+          for pod in $(kubectl get pods -n kubestellar-console -o json 2>/dev/null | jq -r '
+            .items[]
+            | select(.metadata.deletionTimestamp != null)
+            | select((now - (.metadata.deletionTimestamp | fromdateiso8601)) > 600)
+            | .metadata.name
+          '); do
+            echo "Force-deleting terminating pod: $pod"
+            kubectl delete pod "$pod" -n kubestellar-console --grace-period=0 --force 2>/dev/null || true
+          done
+          for pod in $(kubectl get pods -n kubestellar-console -o json 2>/dev/null | jq -r '
+            .items[]
+            | select(.status.phase == "Pending")
+            | select((now - (.metadata.creationTimestamp | fromdateiso8601)) > 600)
+            | select(any(.status.containerStatuses[]?; .state.waiting?.reason == "ContainerCreating"))
+            | .metadata.name
+          '); do
+            echo "Deleting pending pod stuck in ContainerCreating: $pod"
+            kubectl delete pod "$pod" -n kubestellar-console --grace-period=0 --force 2>/dev/null || true
+          done
+          echo "Cleanup complete"
+
+      - name: Wait for volume detachment
+        run: |
+          RELEASE_SELECTOR="app.kubernetes.io/instance=${{ env.HELM_RELEASE_NAME }},app.kubernetes.io/name=kubestellar-console"
+          MAX_WAIT=120
+          WAITED=0
+
+          # Ensure no pods are currently using the PVCs before deploying
+          RUNNING_PODS=$(kubectl get pods -n kubestellar-console -l "$RELEASE_SELECTOR" -o name 2>/dev/null | wc -l)
+          if [ "$RUNNING_PODS" -eq 0 ]; then
+            echo "No running pods — checking VolumeAttachments..."
+            PVC_PVS=$(kubectl get pvc -n kubestellar-console -l "$RELEASE_SELECTOR" -o json 2>/dev/null \
+              | jq -r '.items[].spec.volumeName // empty' 2>/dev/null)
+
+            for pv in $PVC_PVS; do
+              while [ "$WAITED" -lt "$MAX_WAIT" ]; do
+                ATTACHED=$(kubectl get volumeattachments -o json 2>/dev/null \
+                  | jq -r --arg pv "$pv" '.items[] | select(.spec.source.persistentVolumeName == $pv) | .metadata.name' 2>/dev/null)
+                if [ -z "$ATTACHED" ]; then
+                  echo "PV '$pv' is fully detached."
+                  break
+                fi
+                echo "PV '$pv' still attached (attachment: $ATTACHED). Waiting..."
+                sleep 10
+                WAITED=$((WAITED + 10))
+              done
+            done
+          fi
+          echo "Volume detachment check complete (waited ${WAITED}s)"
+
+      - name: Recover stuck Helm release
+        run: |
+          RELEASE_STATUS=$(helm status ${{ env.HELM_RELEASE_NAME }} -n kubestellar-console -o json 2>/dev/null | jq -r '.info.status // empty' || true)
+          if [[ "$RELEASE_STATUS" == "pending-"* || "$RELEASE_STATUS" == "failed" ]]; then
+            echo "::warning::Helm release in '$RELEASE_STATUS' — rolling back to recover"
+            if ! helm rollback ${{ env.HELM_RELEASE_NAME }} -n kubestellar-console --wait --timeout 2m; then
+              echo "::warning::Helm rollback failed (no good prior revision?) — uninstalling to allow fresh deployment"
+              if ! helm uninstall ${{ env.HELM_RELEASE_NAME }} -n kubestellar-console --wait --timeout 5m; then
+                echo "::error::Helm uninstall also failed — release may need manual intervention"
+                exit 1
+              fi
+              echo "Helm release uninstalled; next step will perform a fresh install"
+            fi
+          fi
+
+      - name: Migrate RWO PVCs to ReadWriteMany
+        run: |
+          # If the Helm chart now requires ReadWriteMany but existing PVCs are
+          # ReadWriteOnce, the rolling update deadlocks (Multi-Attach error).
+          # Detect and delete RWO PVCs so Helm can recreate them with RWX.
+          # Warns clearly because PVC data is lost on deletion.
+          RELEASE_SELECTOR="app.kubernetes.io/instance=${{ env.HELM_RELEASE_NAME }},app.kubernetes.io/name=kubestellar-console"
+          NAMESPACE=kubestellar-console
+
+          RWO_PVCS=$(kubectl get pvc -n "$NAMESPACE" -l "$RELEASE_SELECTOR" -o json 2>/dev/null | \
+            jq -r '.items[] | select(.spec.accessModes | index("ReadWriteMany") == null) | .metadata.name' || true)
+
+          if [ -z "$RWO_PVCS" ]; then
+            echo "No ReadWriteOnce PVCs to migrate."
+            exit 0
+          fi
+
+          echo "::warning::Found ReadWriteOnce PVC(s) incompatible with chart ReadWriteMany: $(echo $RWO_PVCS | tr '\n' ' ')"
+          echo "Scaling down deployment to release volume holders before PVC deletion..."
+          kubectl scale deployment kc-kubestellar-console -n "$NAMESPACE" --replicas=0 2>/dev/null || true
+          kubectl wait pod -n "$NAMESPACE" -l "app.kubernetes.io/instance=${{ env.HELM_RELEASE_NAME }}" \
+            --for=delete --timeout=120s 2>/dev/null || true
+
+          for pvc in $RWO_PVCS; do
+            echo "::warning::Deleting RWO PVC '$pvc' — Helm will recreate it as ReadWriteMany (PVC data is lost)"
+            kubectl delete pvc "$pvc" -n "$NAMESPACE" --wait=false 2>/dev/null || true
+            kubectl patch pvc "$pvc" -n "$NAMESPACE" -p '{"metadata":{"finalizers":null}}' --type=merge 2>/dev/null || true
+            if ! kubectl wait --for=delete pvc/"$pvc" -n "$NAMESPACE" --timeout=60s 2>/dev/null; then
+              echo "::error::PVC '$pvc' still exists after 60s — cannot proceed with Helm upgrade"
+              exit 1
+            fi
+          done
+          echo "RWO→RWX PVC migration preparation complete."
+
+      # #6344 / #6353: OpenShift SCC — see comment on the vllm-d Deploy
+      # with Helm step above. Same fix: unset runAsUser/runAsGroup so the
+      # SCC admission controller can assign a namespace-appropriate UID.
+      # runAsNonRoot stays true so PodSecurity "restricted" still accepts
+      # the pod. podSecurityContext.fsGroup (chart default 1001, added by
+      # #20590 for vanilla k8s) must be unset for the same reason:
+      # restricted-v2 rejects out-of-range fsGroups, blocking ReplicaSet
+      # pod creation ("Updated: 0/1" rollbacks); the SCC-assigned fsGroup
+      # still triggers the kubelet chown of the PVC.
+      - name: Deploy with Helm
+        run: |
+          cleanup_stuck_pods() {
+            for pod in $(kubectl get pods -n kubestellar-console -o json 2>/dev/null | jq -r '
+              .items[]
+              | select(.metadata.deletionTimestamp != null)
+              | select((now - (.metadata.deletionTimestamp | fromdateiso8601)) > 600)
+              | .metadata.name
+            '); do
+              echo "Force-deleting terminating pod: $pod"
+              kubectl delete pod "$pod" -n kubestellar-console --grace-period=0 --force 2>/dev/null || true
+            done
+            for pod in $(kubectl get pods -n kubestellar-console -o json 2>/dev/null | jq -r '
+              .items[]
+              | select(.status.phase == "Pending")
+              | select((now - (.metadata.creationTimestamp | fromdateiso8601)) > 600)
+              | select(any(.status.containerStatuses[]?; .state.waiting?.reason == "ContainerCreating"))
+              | .metadata.name
+            '); do
+              echo "Deleting pending pod stuck in ContainerCreating: $pod"
+              kubectl delete pod "$pod" -n kubestellar-console --grace-period=0 --force 2>/dev/null || true
+            done
+          }
+
+          recover_release() {
+            RELEASE_STATUS=$(helm status ${{ env.HELM_RELEASE_NAME }} -n kubestellar-console -o json 2>/dev/null | jq -r '.info.status // empty' || true)
+            if [[ "$RELEASE_STATUS" == "pending-"* || "$RELEASE_STATUS" == "failed" ]]; then
+              echo "Helm release in '$RELEASE_STATUS' — rolling back to recover"
+              if ! helm rollback ${{ env.HELM_RELEASE_NAME }} -n kubestellar-console --wait --timeout 2m; then
+                echo "::error::Helm rollback failed — release may need manual intervention"
+                return 1
+              fi
+            fi
+          }
+
+          deploy_helm() {
+            helm upgrade --install ${{ env.HELM_RELEASE_NAME }} ./deploy/helm/kubestellar-console \
+              --namespace kubestellar-console \
+              --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+              --set image.tag=${{ github.sha }} \
+              --set github.url=https://github.ibm.com \
+              --set github.existingSecret=kc-kubestellar-console \
+              --set jwt.existingSecret=kc-kubestellar-console \
+              --set githubToken.existingSecret=kc-kubestellar-console \
+              --set googleDrive.existingSecret=kc-kubestellar-console \
+              --set route.enabled=true \
+              --set route.host=kc-kubestellar-console-kubestellar-console.apps.pokprod001.ete14.res.ibm.com \
+              --set clusterName=pok-prod-001 \
+              --set-string enabledDashboards="dashboard\,clusters\,gpu-reservations\,llm-d-benchmarks\,ai-ml\,arcade" \
+              --set rbac.namespaceCreationEnabled=true \
+              --set securityContext.runAsUser=null \
+              --set securityContext.runAsGroup=null \
+              --set podSecurityContext.fsGroup=null \
+              --set podLabels.team=kubestellar \
+              --atomic \
+              --cleanup-on-fail \
+              --timeout 10m
+          }
+
+          MAX_ATTEMPTS=2
+          for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+            echo "Deploy attempt $attempt of $MAX_ATTEMPTS..."
+            if deploy_helm; then
+              echo "Deploy succeeded on attempt $attempt"
+              exit 0
+            fi
+
+            if [ "$attempt" -lt "$MAX_ATTEMPTS" ]; then
+              echo "::warning::Deploy attempt $attempt failed, recovering and retrying..."
+              sleep 30
+              recover_release
+              cleanup_stuck_pods
+              kubectl delete pods -n kubestellar-console --field-selector=status.phase=Failed --force --grace-period=0 2>/dev/null || true
+              sleep 10
+            fi
+          done
+
+          echo "::error::Deploy failed after $MAX_ATTEMPTS attempts"
+          exit 1
+
+      - name: Collect diagnostics on deploy failure
+        if: failure()
+        run: |
+          RELEASE_SELECTOR="app.kubernetes.io/instance=${{ env.HELM_RELEASE_NAME }},app.kubernetes.io/name=kubestellar-console"
+          echo "::group::Pods in kubestellar-console namespace"
+          kubectl get pods -n kubestellar-console -o wide || true
+          echo "::endgroup::"
+          echo "::group::Release PVC status"
+          kubectl get pvc -n kubestellar-console -l "$RELEASE_SELECTOR" -o wide || true
+          echo "::endgroup::"
+          echo "::group::Release PV status"
+          for volume in $(kubectl get pvc -n kubestellar-console -l "$RELEASE_SELECTOR" -o json 2>/dev/null | jq -r '.items[] | .spec.volumeName // empty'); do
+            kubectl get pv "$volume" -o wide || true
+            kubectl describe pv "$volume" || true
+          done
+          echo "::endgroup::"
+          echo "::group::Deployment describe"
+          kubectl describe deployment/kc-kubestellar-console -n kubestellar-console || true
+          echo "::endgroup::"
+          echo "::group::Recent warning events"
+          kubectl get events -n kubestellar-console --sort-by='.lastTimestamp' --field-selector type=Warning | tail -20 || true
+          echo "::endgroup::"
+          echo "::group::Recent pod logs"
+          for pod in $(kubectl get pods -n kubestellar-console -o name 2>/dev/null | head -5); do
+            echo "--- ${pod} ---"
+            kubectl describe -n kubestellar-console "${pod}" || true
+            kubectl logs -n kubestellar-console "${pod#pod/}" --tail=100 || true
+          done
+          echo "::endgroup::"
+
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment/kc-kubestellar-console -n kubestellar-console --timeout=3m
+          echo "Deployment successful!"
+          echo "Access KC at: https://kc-kubestellar-console-kubestellar-console.apps.pokprod001.ete14.res.ibm.com"

@@ -1,0 +1,111 @@
+import { describe, it, expect } from 'vitest'
+import { resolveWidgetEndpoint, generateWidgetCommand } from '../codeGenerator.utils'
+
+describe('codeGenerator.utils', () => {
+  describe('resolveWidgetEndpoint', () => {
+    it('uses apiEndpoint when provided', () => {
+      const result = resolveWidgetEndpoint('https://my.api', '/api/alerts')
+      expect(result).toBe('https://my.api/api/alerts')
+    })
+
+    it('falls back to UBERSICHT_FALLBACK_URL when apiEndpoint is empty', () => {
+      const result = resolveWidgetEndpoint('', '/api/alerts')
+      expect(result).toBe('http://localhost:8081/api/alerts')
+    })
+
+    it('uses public endpoint for nightly-e2e path', () => {
+      const result = resolveWidgetEndpoint('https://my.api', '/api/nightly-e2e/runs')
+      expect(result).toBe('https://my.api/api/public/nightly-e2e/runs')
+    })
+
+    it('uses normal path for other API routes', () => {
+      const result = resolveWidgetEndpoint('https://my.api', '/api/metrics')
+      expect(result).toBe('https://my.api/api/metrics')
+    })
+  })
+
+  describe('generateWidgetCommand — shell escape safety (CWE-78)', () => {
+    it('returns a non-empty shell command', () => {
+      const cmd = generateWidgetCommand('http://localhost:8081', 'http://localhost:8081/api/test')
+      expect(cmd.length).toBeGreaterThan(0)
+    })
+
+    it('includes the curl URL in the output', () => {
+      const cmd = generateWidgetCommand('http://host', 'http://host/api/data')
+      expect(cmd).toContain('http://host/api/data')
+    })
+
+    it('escapes single quotes in the curl URL to prevent shell injection', () => {
+      const malicious = "http://host/api/data?x=';rm -rf /;'"
+      const cmd = generateWidgetCommand('http://host', malicious)
+      // The escaped pattern (close-quote + backslash-quote + reopen-quote) must appear.
+      expect(cmd).toContain("'\\''")
+      // The raw unescaped malicious URL must not appear verbatim in the command.
+      expect(cmd).not.toContain(malicious)
+    })
+
+    it('escapes single quotes in the base URL for token fetch', () => {
+      const malicious = "http://host'inject"
+      const cmd = generateWidgetCommand(malicious, 'http://host/api/data')
+      expect(cmd).toContain("'\\''")
+    })
+
+    it('contains Authorization header usage', () => {
+      const cmd = generateWidgetCommand('http://host', 'http://host/api/x')
+      expect(cmd).toContain('Authorization: Bearer')
+    })
+
+    it('includes token cache fallback logic', () => {
+      const cmd = generateWidgetCommand('http://host', 'http://host/api/x')
+      expect(cmd).toContain('/tmp/.kc-widget-token')
+    })
+
+    it('includes retry on auth failure', () => {
+      const cmd = generateWidgetCommand('http://host', 'http://host/api/x')
+      expect(cmd).toContain('Missing authorization')
+    })
+
+    it('prevents command injection via backticks in URL', () => {
+      const urlWithBackticks = "http://host/api?q=`id`"
+      const cmd = generateWidgetCommand('http://localhost', urlWithBackticks)
+      // Inside single quotes, backticks are literal
+      expect(cmd).toContain("'http://host/api?q=`id`'")
+    })
+
+    it('prevents command injection via $() substitution in URL', () => {
+      const urlWithSubst = "http://host/api?q=$(whoami)"
+      const cmd = generateWidgetCommand('http://localhost', urlWithSubst)
+      expect(cmd).toContain("'http://host/api?q=$(whoami)'")
+    })
+
+    it('handles multiple single quotes in URL', () => {
+      const urlWithMultipleQuotes = "http://host/api?a='1'&b='2'"
+      const cmd = generateWidgetCommand('http://localhost', urlWithMultipleQuotes)
+      expect(cmd).toContain("'\\''1'\\''")
+      expect(cmd).toContain("'\\''2'\\''")
+    })
+
+    it('handles consecutive single quotes in URL', () => {
+      const urlWithConsecutiveQuotes = "http://host/api?q=''"
+      const cmd = generateWidgetCommand('http://localhost', urlWithConsecutiveQuotes)
+      expect(cmd).toContain("'\\'''\\''")
+    })
+
+    it('preserves shell metacharacters as literals when quoted', () => {
+      const urlWithMetachars = "http://host/api?q=test&other=val;rm -rf"
+      const cmd = generateWidgetCommand('http://localhost', urlWithMetachars)
+      expect(cmd).toContain("'http://host/api?q=test&other=val;rm -rf'")
+    })
+
+    it('handles empty URL gracefully', () => {
+      const cmd = generateWidgetCommand('http://localhost', '')
+      expect(cmd.length).toBeGreaterThan(0)
+    })
+
+    it('handles URL with special query parameters', () => {
+      const urlWithSpecialParams = "http://host/api?filter={id:1}&sort=asc"
+      const cmd = generateWidgetCommand('http://localhost', urlWithSpecialParams)
+      expect(cmd).toContain("'http://host/api?filter={id:1}&sort=asc'")
+    })
+  })
+})

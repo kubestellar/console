@@ -1,0 +1,173 @@
+{
+  "timestamp": "2026-05-27T08:55:27Z",
+  "fastMode": false,
+  "summary": {
+    "total": 32,
+    "passed": 31,
+    "failed": 1,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "suite": "consistency-test",
+      "status": "pass",
+      "duration": 3
+    },
+    {
+      "suite": "helm-lint-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "license-compliance-test",
+      "status": "pass",
+      "duration": 3
+    },
+    {
+      "suite": "mission-security-test",
+      "status": "pass",
+      "duration": 13
+    },
+    {
+      "suite": "card-registry-integrity-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "unit-test",
+      "status": "pass",
+      "duration": 2394
+    },
+    {
+      "suite": "auth-lifecycle-test",
+      "status": "pass",
+      "duration": 27
+    },
+    {
+      "suite": "settings-migration-test",
+      "status": "pass",
+      "duration": 3
+    },
+    {
+      "suite": "update-lifecycle-test",
+      "status": "pass",
+      "duration": 61
+    },
+    {
+      "suite": "websocket-resilience-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "gosec-test",
+      "status": "pass",
+      "duration": 52
+    },
+    {
+      "suite": "dependency-audit-test",
+      "status": "pass",
+      "duration": 13
+    },
+    {
+      "suite": "secret-scan-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "ts-sast-test",
+      "status": "pass",
+      "duration": 3
+    },
+    {
+      "suite": "container-scan-test",
+      "status": "pass",
+      "duration": 16
+    },
+    {
+      "suite": "security-headers-test",
+      "status": "pass",
+      "duration": 1
+    },
+    {
+      "suite": "api-contract-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "api-fuzz-test",
+      "status": "pass",
+      "duration": 152
+    },
+    {
+      "suite": "error-boundary-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "console-error-scan",
+      "status": "pass",
+      "duration": 117
+    },
+    {
+      "suite": "nav-test",
+      "status": "pass",
+      "duration": 584
+    },
+    {
+      "suite": "perf-test",
+      "status": "pass",
+      "duration": 966
+    },
+    {
+      "suite": "ui-compliance-test",
+      "status": "pass",
+      "duration": 106
+    },
+    {
+      "suite": "deploy-test",
+      "status": "pass",
+      "duration": 81
+    },
+    {
+      "suite": "cache-test",
+      "status": "fail",
+      "duration": 509,
+      "failure_reason": "    Usage:\n        npx playwright show-trace e2e/test-results/compliance/card-cache-compliance-card-a1949-nce-—-storage-and-retrieval-chromium-retry1/trace.zip\n    ────────────────────────────────────────────────────────────────────────────────────────────────\n  1 failed\n    [chromium] › e2e/compliance/"
+    },
+    {
+      "suite": "benchmark-test",
+      "status": "pass",
+      "duration": 33
+    },
+    {
+      "suite": "ai-ml-test",
+      "status": "pass",
+      "duration": 3
+    },
+    {
+      "suite": "a11y-test",
+      "status": "pass",
+      "duration": 83
+    },
+    {
+      "suite": "error-resilience-test",
+      "status": "pass",
+      "duration": 32
+    },
+    {
+      "suite": "i18n-test",
+      "status": "pass",
+      "duration": 54
+    },
+    {
+      "suite": "interaction-test",
+      "status": "pass",
+      "duration": 39
+    },
+    {
+      "suite": "security-e2e-test",
+      "status": "pass",
+      "duration": 30
+    }
+  ]
+}

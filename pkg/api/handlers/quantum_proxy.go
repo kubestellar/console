@@ -1,0 +1,305 @@
+package handlers
+
+import (
+	"io"
+	"log/slog"
+	"net/http"
+	"net/url"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/gofiber/fiber/v2"
+
+	"github.com/kubestellar/console/pkg/api/middleware"
+	"github.com/kubestellar/console/pkg/sanitize"
+)
+
+const (
+	quantumProxyTimeout     = 30 * time.Second
+	maxQuantumBodyBytes     = 1 << 20  // 1 MB request body limit
+	maxQuantumResponseBytes = 10 << 20 // 10 MB
+	quantumBearerScheme     = "Bearer "
+)
+
+// quantumClient uses a shared HTTP client with timeout to prevent hanging requests
+var quantumClient = &http.Client{
+	Timeout: quantumProxyTimeout,
+}
+
+// Safe headers to forward from the client to the quantum service
+// (excludes sensitive headers like Cookie, Authorization, etc.)
+var safeHeadersToForward = map[string]bool{
+	"Accept":           true,
+	"Accept-Encoding":  true,
+	"Accept-Language":  true,
+	"User-Agent":       true,
+	"Content-Type":     true,
+	"X-Requested-With": true,
+}
+
+type QuantumProxyHandler struct {
+	quantumServiceURL string
+	jwtSecret         string
+}
+
+func NewQuantumProxyHandler(jwtSecret string) *QuantumProxyHandler {
+	// Get service URL from env, default to localhost port-forward
+	// The port-forward bridges kubectl to localhost:5000 in dev environments
+	url := os.Getenv("QUANTUM_SERVICE_URL")
+	if url == "" {
+		url = "http://localhost:5000"
+	}
+	return &QuantumProxyHandler{
+		quantumServiceURL: url,
+		jwtSecret:         jwtSecret,
+	}
+}
+
+// allowedQuantumPaths lists valid API path prefixes for the quantum proxy.
+var allowedQuantumPaths = []string{
+	"auth",
+	"circuit",
+	"execute",
+	"health",
+	"job",
+	"loop",
+	"qasm",
+	"qubits",
+	"result",
+	"status",
+}
+
+// isAllowedQuantumPath validates that the endpoint matches an allowed prefix and contains no path traversal attempts.
+func isAllowedQuantumPath(endpoint string) bool {
+	// SECURITY: Reject path traversal attempts
+	if strings.Contains(endpoint, "..") {
+		return false
+	}
+
+	for _, prefix := range allowedQuantumPaths {
+		if endpoint == prefix || strings.HasPrefix(endpoint, prefix+"/") {
+			return true
+		}
+	}
+	return false
+}
+
+// ProxyRequest handles GET requests to quantum endpoints
+func (h *QuantumProxyHandler) ProxyRequest(c *fiber.Ctx) error {
+	endpoint := c.Params("*")
+
+	// SECURITY: Validate against allowed paths (includes path traversal check)
+	if !isAllowedQuantumPath(endpoint) {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid quantum API path")
+	}
+
+	// Prepend /api/ to the endpoint path to match quantum backend API structure
+	targetURL := h.quantumServiceURL + "/api/" + endpoint
+
+	// Forward query parameters
+	if queryStr := c.Request().URI().QueryArgs().String(); queryStr != "" {
+		targetURL += "?" + queryStr
+	}
+
+	slog.Debug("[QuantumProxy] Forwarding request", "from", sanitize.LogString(c.Path()), "to", sanitize.LogString(targetURL))
+
+	// Create HTTP client request
+	req, err := http.NewRequestWithContext(c.Context(), http.MethodGet, targetURL, nil)
+	if err != nil {
+		slog.Error("[QuantumProxy] Failed to create request", "target", sanitize.LogString(targetURL), "error", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create request")
+	}
+
+	// Forward only safe headers (exclude sensitive headers like Cookie, Authorization)
+	c.Request().Header.VisitAll(func(key, value []byte) {
+		keyStr := string(key)
+		if safeHeadersToForward[keyStr] {
+			req.Header.Add(keyStr, string(value))
+		}
+	})
+
+	// Execute request with shared client (has timeout)
+	resp, err := quantumClient.Do(req)
+	if err != nil {
+		slog.Error("[QuantumProxy] Quantum service unavailable", "target", sanitize.LogString(targetURL), "error", err)
+		return fiber.NewError(fiber.StatusServiceUnavailable, "Quantum service unavailable")
+	}
+	defer resp.Body.Close()
+
+	// Read response body (bounded to prevent memory exhaustion)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxQuantumResponseBytes))
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to read response")
+	}
+
+	slog.Debug("[QuantumProxy] Response received", "status", resp.StatusCode, "content_type", resp.Header.Get("Content-Type"), "body_size", len(body))
+
+	// Force safe content type to prevent reflected XSS if upstream returns
+	// text/html (CWE-79, #17004). The Netlify version already does this.
+	c.Status(resp.StatusCode)
+	c.Set("Content-Type", "application/json")
+	c.Set("X-Content-Type-Options", "nosniff")
+
+	return c.Send(body)
+}
+
+// allowedHistogramSorts lists valid sort values for the histogram endpoint.
+var allowedHistogramSorts = map[string]bool{
+	"count":   true,
+	"pattern": true,
+}
+
+// ProxyResultHistogram handles GET requests to /api/result/histogram
+func (h *QuantumProxyHandler) ProxyResultHistogram(c *fiber.Ctx) error {
+	sort := c.Query("sort", "count")
+	if !allowedHistogramSorts[sort] {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid sort parameter")
+	}
+	targetURL := h.quantumServiceURL + "/api/result/histogram?sort=" + url.QueryEscape(sort)
+
+	slog.Debug("[QuantumProxy] Forwarding histogram request", "from", sanitize.LogString(c.Path()), "to", sanitize.LogString(targetURL))
+
+	req, err := http.NewRequestWithContext(c.Context(), http.MethodGet, targetURL, nil)
+	if err != nil {
+		slog.Error("[QuantumProxy] Failed to create request", "target", sanitize.LogString(targetURL), "error", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create request")
+	}
+
+	// Forward only safe headers (exclude sensitive headers like Cookie, Authorization)
+	c.Request().Header.VisitAll(func(key, value []byte) {
+		keyStr := string(key)
+		if safeHeadersToForward[keyStr] {
+			req.Header.Add(keyStr, string(value))
+		}
+	})
+
+	// Execute request with shared client (has timeout)
+	resp, err := quantumClient.Do(req)
+	if err != nil {
+		slog.Error("[QuantumProxy] Quantum service unavailable", "target", sanitize.LogString(targetURL), "error", err)
+		return fiber.NewError(fiber.StatusServiceUnavailable, "Quantum service unavailable")
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxQuantumResponseBytes))
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to read response")
+	}
+
+	slog.Debug("[QuantumProxy] Histogram response received", "status", resp.StatusCode, "content_type", resp.Header.Get("Content-Type"), "body_size", len(body))
+
+	c.Status(resp.StatusCode)
+	// Force safe Content-Type to prevent XSS via upstream-controlled headers (CWE-79).
+	c.Set("Content-Type", "application/json; charset=utf-8")
+
+	return c.Send(body)
+}
+
+func (h *QuantumProxyHandler) requireBearerToken(c *fiber.Ctx) error {
+	// Token resolution: Authorization header -> HttpOnly kc_auth cookie.
+	// Mirrors the standard jwtAuth middleware so OAuth-mode users (who hold
+	// only an HttpOnly cookie, not a localStorage token) can call mutation
+	// endpoints. PR #14935 introduced header-only auth which broke OAuth flow.
+	//
+	// If the header token fails validation (e.g., a stale localStorage JWT
+	// left over after the cookie session was refreshed), fall back to the
+	// cookie before returning 401 so OAuth users aren't blocked by stale
+	// client state.
+	headerToken := ""
+	trimmedHeader := strings.TrimSpace(c.Get("Authorization"))
+	if len(trimmedHeader) > len(quantumBearerScheme) && strings.EqualFold(trimmedHeader[:len(quantumBearerScheme)], quantumBearerScheme) {
+		headerToken = strings.TrimSpace(trimmedHeader[len(quantumBearerScheme):])
+	}
+	cookieToken := c.Cookies("kc_auth")
+
+	if headerToken == "" && cookieToken == "" {
+		return fiber.NewError(fiber.StatusUnauthorized, "Missing authorization")
+	}
+
+	// Try the header token first when present.
+	if headerToken != "" {
+		if claims, err := middleware.ValidateJWT(headerToken, h.jwtSecret); err == nil {
+			c.Locals("userID", claims.UserID)
+			c.Locals("githubLogin", claims.GitHubLogin)
+			return nil
+		}
+		// Header token invalid; fall through to cookie attempt below.
+	}
+
+	if cookieToken != "" {
+		if claims, err := middleware.ValidateJWT(cookieToken, h.jwtSecret); err == nil {
+			c.Locals("userID", claims.UserID)
+			c.Locals("githubLogin", claims.GitHubLogin)
+			return nil
+		}
+	}
+
+	return fiber.NewError(fiber.StatusUnauthorized, "Invalid token")
+}
+
+// ProxyPostRequest handles POST requests to quantum endpoints
+func (h *QuantumProxyHandler) ProxyPostRequest(c *fiber.Ctx) error {
+	endpoint := c.Params("*")
+
+	// SECURITY: Validate against allowed paths (includes path traversal check)
+	if !isAllowedQuantumPath(endpoint) {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid quantum API path")
+	}
+
+	if err := h.requireBearerToken(c); err != nil {
+		return err
+	}
+
+	if len(c.Body()) > maxQuantumBodyBytes {
+		return fiber.NewError(fiber.StatusRequestEntityTooLarge, "Request body too large")
+	}
+
+	// Prepend /api/ to the endpoint path to match quantum backend API structure
+	targetURL := h.quantumServiceURL + "/api/" + endpoint
+
+	// Forward query parameters
+	if queryStr := c.Request().URI().QueryArgs().String(); queryStr != "" {
+		targetURL += "?" + queryStr
+	}
+
+	slog.Debug("[QuantumProxy] Forwarding POST request", "from", sanitize.LogString(c.Path()), "to", sanitize.LogString(targetURL))
+
+	// Create HTTP client request
+	req, err := http.NewRequestWithContext(c.Context(), http.MethodPost, targetURL, strings.NewReader(string(c.Body())))
+	if err != nil {
+		slog.Error("[QuantumProxy] Failed to create request", "target", sanitize.LogString(targetURL), "error", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create request")
+	}
+
+	// Forward only safe headers (exclude sensitive headers like Cookie, Authorization)
+	c.Request().Header.VisitAll(func(key, value []byte) {
+		keyStr := string(key)
+		if safeHeadersToForward[keyStr] {
+			req.Header.Add(keyStr, string(value))
+		}
+	})
+
+	// Execute request with shared client (has timeout)
+	resp, err := quantumClient.Do(req)
+	if err != nil {
+		slog.Error("[QuantumProxy] Quantum service unavailable", "target", sanitize.LogString(targetURL), "error", err)
+		return fiber.NewError(fiber.StatusServiceUnavailable, "Quantum service unavailable")
+	}
+	defer resp.Body.Close()
+
+	// Read response body (bounded to prevent memory exhaustion)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxQuantumResponseBytes))
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to read response")
+	}
+
+	slog.Debug("[QuantumProxy] Response received", "status", resp.StatusCode, "content_type", resp.Header.Get("Content-Type"), "body_size", len(body))
+
+	// Force safe content type (CWE-79, #17004)
+	c.Status(resp.StatusCode)
+	c.Set("Content-Type", "application/json")
+	c.Set("X-Content-Type-Options", "nosniff")
+
+	return c.Send(body)
+}

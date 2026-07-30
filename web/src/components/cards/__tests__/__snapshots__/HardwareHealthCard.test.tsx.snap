@@ -1,0 +1,752 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`HardwareHealthCard > matches snapshot for populated hardware health card 1`] = `
+<div
+  class="h-full flex flex-col"
+>
+  <div
+    class="mb-3 flex items-center justify-end"
+  >
+    <span>
+      common:common.demo
+    </span>
+  </div>
+  <div
+    class="grid grid-cols-2 @md:grid-cols-3 gap-1.5 @md:gap-2 mb-4"
+  >
+    <div
+      class="p-2 rounded-lg border bg-red-500/10 border-red-500/20"
+    >
+      <div
+        class="text-xl font-bold text-foreground"
+      >
+        1
+      </div>
+      <div
+        class="text-2xs text-status-error"
+      >
+        Critical
+      </div>
+    </div>
+    <div
+      class="p-2 rounded-lg border bg-green-500/10 border-green-500/20"
+    >
+      <div
+        class="text-xl font-bold text-foreground"
+      >
+        0
+      </div>
+      <div
+        class="text-2xs text-status-success"
+      >
+        Warning
+      </div>
+    </div>
+    <button
+      aria-label="cards:hardwareHealth.viewNodesInventoryAria"
+      class="p-2 rounded-lg border bg-muted/20 border-muted/30 hover:bg-muted/40 transition-colors cursor-pointer text-left"
+    >
+      <div
+        class="text-xl font-bold text-foreground"
+      >
+        1
+      </div>
+      <div
+        class="text-2xs text-muted-foreground"
+      >
+        Nodes Tracked
+      </div>
+    </button>
+  </div>
+  <div
+    class="flex flex-wrap gap-2 mb-3"
+  >
+    <div
+      aria-orientation="horizontal"
+      class="flex flex-1 min-w-0 bg-muted/30 rounded-lg p-0.5"
+      role="tablist"
+    >
+      <button
+        aria-label="cards:hardwareHealth.switchToInventoryAria"
+        aria-selected="false"
+        class="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors text-muted-foreground hover:text-foreground"
+        data-tab-id="inventory"
+        id="inventory-tab"
+        role="tab"
+        tabindex="-1"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-list w-3.5 h-3.5"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M3 5h.01"
+          />
+          <path
+            d="M3 12h.01"
+          />
+          <path
+            d="M3 19h.01"
+          />
+          <path
+            d="M8 5h13"
+          />
+          <path
+            d="M8 12h13"
+          />
+          <path
+            d="M8 19h13"
+          />
+        </svg>
+        Inventory
+        <span
+          class="ml-1 px-1.5 py-0.5 text-2xs font-semibold rounded-full bg-muted text-muted-foreground"
+        >
+          1
+        </span>
+      </button>
+      <button
+        aria-label="cards:hardwareHealth.switchToAlertsAria"
+        aria-selected="true"
+        class="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors bg-background text-foreground shadow-xs"
+        data-tab-id="alerts"
+        id="alerts-tab"
+        role="tab"
+        tabindex="0"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-circle-alert w-3.5 h-3.5"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+          />
+          <line
+            x1="12"
+            x2="12"
+            y1="8"
+            y2="12"
+          />
+          <line
+            x1="12"
+            x2="12.01"
+            y1="16"
+            y2="16"
+          />
+        </svg>
+        Alerts
+        <span
+          class="ml-1 px-1.5 py-0.5 text-2xs font-semibold rounded-full bg-red-500/20 text-status-error"
+        >
+          1
+        </span>
+      </button>
+    </div>
+    <div
+      class="flex items-center gap-1"
+    >
+      <div
+        class="relative"
+      >
+        <button
+          aria-expanded="false"
+          aria-haspopup="menu"
+          aria-label="cards:hardwareHealth.snoozeAllVisible"
+          class="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md transition-colors"
+          title="cards:hardwareHealth.snoozeAllVisible"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-ellipsis-vertical w-4 h-4"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="1"
+            />
+            <circle
+              cx="12"
+              cy="5"
+              r="1"
+            />
+            <circle
+              cx="12"
+              cy="19"
+              r="1"
+            />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+  <div
+    data-testid="card-controls-row"
+  />
+  <div>
+    <div
+      class="relative"
+    >
+      <input
+        aria-label="hardware-search"
+        class="w-full rounded-lg border bg-secondary text-foreground transition-colors placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed border-border focus:ring-ring px-3 py-1.5 text-sm"
+        placeholder="Search devices..."
+        value=""
+      />
+    </div>
+  </div>
+  <div
+    aria-labelledby="alerts-tab"
+    class="flex-1 flex flex-col min-h-0"
+    id="alerts-panel"
+    role="tabpanel"
+    tabindex="0"
+  >
+    <div
+      class="flex-1 space-y-1.5 overflow-y-auto mb-2"
+    >
+      <div
+        class="p-2 rounded text-xs transition-colors group bg-red-500/10 hover:bg-red-500/20"
+      >
+        <div
+          class="flex items-start justify-between gap-1"
+        >
+          <div
+            aria-label="cards:hardwareHealth.viewAlertAria"
+            class="min-w-0 flex items-start gap-2 flex-1 cursor-pointer focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400 rounded"
+            role="button"
+            tabindex="0"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-cpu w-4 h-4 shrink-0 mt-0.5 text-red-400"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 20v2"
+              />
+              <path
+                d="M12 2v2"
+              />
+              <path
+                d="M17 20v2"
+              />
+              <path
+                d="M17 2v2"
+              />
+              <path
+                d="M2 12h2"
+              />
+              <path
+                d="M2 17h2"
+              />
+              <path
+                d="M2 7h2"
+              />
+              <path
+                d="M20 12h2"
+              />
+              <path
+                d="M20 17h2"
+              />
+              <path
+                d="M20 7h2"
+              />
+              <path
+                d="M7 20v2"
+              />
+              <path
+                d="M7 2v2"
+              />
+              <rect
+                height="16"
+                rx="2"
+                width="16"
+                x="4"
+                y="4"
+              />
+              <rect
+                height="8"
+                rx="1"
+                width="8"
+                x="8"
+                y="8"
+              />
+            </svg>
+            <div
+              class="min-w-0 flex-1"
+            >
+              <div
+                class="flex items-center gap-1.5 flex-wrap"
+              >
+                <span
+                  class="font-medium text-foreground break-all"
+                >
+                  gpu-worker-1
+                </span>
+                <span
+                  class="shrink-0 px-1 py-0.5 text-[9px] font-medium rounded bg-red-500/20 text-red-400"
+                >
+                  GPU
+                </span>
+                <span>
+                  cluster-1
+                </span>
+              </div>
+              <div
+                class="truncate mt-0.5 text-red-400"
+              >
+                4
+                 → 
+                2
+                 (
+                2
+                 disappeared)
+              </div>
+            </div>
+          </div>
+          <div
+            class="flex items-center gap-1 shrink-0 ml-2"
+          >
+            <button
+              type="button"
+            >
+              AI
+            </button>
+            <div
+              class="relative"
+            >
+              <button
+                aria-label="cards:hardwareHealth.snoozeAlertAria"
+                class="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                title="Snooze alert"
+              >
+                <svg
+                  aria-hidden="true"
+                  class="lucide lucide-bell-off w-3 h-3"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M10.268 21a2 2 0 0 0 3.464 0"
+                  />
+                  <path
+                    d="M17 17H4a1 1 0 0 1-.74-1.673C4.59 13.956 6 12.499 6 8a6 6 0 0 1 .258-1.742"
+                  />
+                  <path
+                    d="m2 2 20 20"
+                  />
+                  <path
+                    d="M8.668 3.01A6 6 0 0 1 18 8c0 2.687.77 4.653 1.707 6.05"
+                  />
+                </svg>
+              </button>
+            </div>
+            <button
+              aria-label="cards:hardwareHealth.clearAlertAria"
+              class="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+              title="Clear alert (after power cycle)"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-circle-x w-3 h-3"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                />
+                <path
+                  d="m15 9-6 6"
+                />
+                <path
+                  d="m9 9 6 6"
+                />
+              </svg>
+            </button>
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-chevron-right w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m9 18 6-6-6-6"
+              />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      data-testid="pagination-footer"
+    >
+      items:
+      1
+    </div>
+  </div>
+  <div
+    aria-labelledby="inventory-tab"
+    class="flex-1 flex-col min-h-0 hidden"
+    hidden=""
+    id="inventory-panel"
+    role="tabpanel"
+    tabindex="0"
+  >
+    <div
+      class="flex-1 space-y-1.5 overflow-y-auto mb-2"
+    >
+      <div
+        aria-label="cards:hardwareHealth.viewNodeAria"
+        class="p-2 rounded text-xs transition-colors group bg-muted/20 hover:bg-muted/40 cursor-pointer focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400"
+        role="button"
+        tabindex="0"
+      >
+        <div
+          class="flex items-start justify-between gap-1"
+        >
+          <div
+            class="min-w-0 flex items-start gap-2 flex-1"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-server w-4 h-4 shrink-0 text-blue-400 mt-0.5"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <rect
+                height="8"
+                rx="2"
+                ry="2"
+                width="20"
+                x="2"
+                y="2"
+              />
+              <rect
+                height="8"
+                rx="2"
+                ry="2"
+                width="20"
+                x="2"
+                y="14"
+              />
+              <line
+                x1="6"
+                x2="6.01"
+                y1="6"
+                y2="6"
+              />
+              <line
+                x1="6"
+                x2="6.01"
+                y1="18"
+                y2="18"
+              />
+            </svg>
+            <div
+              class="min-w-0 flex-1"
+            >
+              <div
+                class="flex items-center gap-1.5 flex-wrap"
+              >
+                <span
+                  class="font-medium text-foreground break-all"
+                >
+                  gpu-worker-1
+                </span>
+                <span>
+                  cluster-1
+                </span>
+              </div>
+              <div
+                class="flex flex-wrap gap-2 mt-1"
+              >
+                <span
+                  class="flex items-center gap-1 text-2xs text-muted-foreground"
+                >
+                  <svg
+                    aria-hidden="true"
+                    class="lucide lucide-cpu w-3 h-3 text-green-400"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M12 20v2"
+                    />
+                    <path
+                      d="M12 2v2"
+                    />
+                    <path
+                      d="M17 20v2"
+                    />
+                    <path
+                      d="M17 2v2"
+                    />
+                    <path
+                      d="M2 12h2"
+                    />
+                    <path
+                      d="M2 17h2"
+                    />
+                    <path
+                      d="M2 7h2"
+                    />
+                    <path
+                      d="M20 12h2"
+                    />
+                    <path
+                      d="M20 17h2"
+                    />
+                    <path
+                      d="M20 7h2"
+                    />
+                    <path
+                      d="M7 20v2"
+                    />
+                    <path
+                      d="M7 2v2"
+                    />
+                    <rect
+                      height="16"
+                      rx="2"
+                      width="16"
+                      x="4"
+                      y="4"
+                    />
+                    <rect
+                      height="8"
+                      rx="1"
+                      width="8"
+                      x="8"
+                      y="8"
+                    />
+                  </svg>
+                  4
+                   GPU
+                </span>
+                <span
+                  class="flex items-center gap-1 text-2xs text-muted-foreground"
+                >
+                  <svg
+                    aria-hidden="true"
+                    class="lucide lucide-wifi w-3 h-3 text-blue-400"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M12 20h.01"
+                    />
+                    <path
+                      d="M2 8.82a15 15 0 0 1 20 0"
+                    />
+                    <path
+                      d="M5 12.859a10 10 0 0 1 14 0"
+                    />
+                    <path
+                      d="M8.5 16.429a5 5 0 0 1 7 0"
+                    />
+                  </svg>
+                  2
+                   NIC
+                </span>
+                <span
+                  class="flex items-center gap-1 text-2xs text-muted-foreground"
+                >
+                  <svg
+                    aria-hidden="true"
+                    class="lucide lucide-hard-drive w-3 h-3 text-purple-400"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M10 16h.01"
+                    />
+                    <path
+                      d="M2.212 11.577a2 2 0 0 0-.212.896V18a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5.527a2 2 0 0 0-.212-.896L18.55 5.11A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"
+                    />
+                    <path
+                      d="M21.946 12.013H2.054"
+                    />
+                    <path
+                      d="M6 16h.01"
+                    />
+                  </svg>
+                  1
+                   NVMe
+                </span>
+                <span
+                  class="flex items-center gap-1 text-2xs text-muted-foreground"
+                >
+                  <svg
+                    aria-hidden="true"
+                    class="lucide lucide-wifi w-3 h-3 text-orange-400"
+                    fill="none"
+                    height="24"
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                    width="24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M12 20h.01"
+                    />
+                    <path
+                      d="M2 8.82a15 15 0 0 1 20 0"
+                    />
+                    <path
+                      d="M5 12.859a10 10 0 0 1 14 0"
+                    />
+                    <path
+                      d="M8.5 16.429a5 5 0 0 1 7 0"
+                    />
+                  </svg>
+                  1
+                   IB
+                </span>
+                <span>
+                  SR-IOV
+                </span>
+                <span>
+                  RDMA
+                </span>
+                <span>
+                  Mellanox
+                </span>
+                <span>
+                  MOFED
+                </span>
+                <span>
+                  GPU Driver
+                </span>
+              </div>
+            </div>
+          </div>
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-chevron-right w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 shrink-0"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="m9 18 6-6-6-6"
+            />
+          </svg>
+        </div>
+      </div>
+    </div>
+    <div
+      data-testid="pagination-footer"
+    >
+      items:
+      1
+    </div>
+  </div>
+  <div
+    class="mt-2 flex items-center justify-center"
+  >
+    <div
+      data-testid="refresh-indicator"
+    >
+      refreshing:
+      false
+    </div>
+  </div>
+</div>
+`;

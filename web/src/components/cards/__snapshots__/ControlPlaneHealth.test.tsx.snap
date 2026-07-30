@@ -1,0 +1,135 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ControlPlaneHealth > matches snapshot 1`] = `
+<div>
+  <div
+    class="space-y-2 p-1"
+  >
+    <div
+      class="flex flex-wrap items-center justify-between gap-y-2 px-2 py-1.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+    >
+      <div
+        class="flex items-center gap-2"
+      >
+        <div
+          class="w-2 h-2 rounded-full bg-green-500"
+        />
+        <span
+          class="text-sm font-medium"
+        >
+          API Server
+        </span>
+      </div>
+      <div
+        class="flex items-center gap-3 text-xs text-muted-foreground"
+      >
+        <span>
+          1
+          /
+          1
+        </span>
+      </div>
+    </div>
+    <div
+      class="flex flex-wrap items-center justify-between gap-y-2 px-2 py-1.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+    >
+      <div
+        class="flex items-center gap-2"
+      >
+        <div
+          class="w-2 h-2 rounded-full bg-muted-foreground/30"
+        />
+        <span
+          class="text-sm font-medium"
+        >
+          Scheduler
+        </span>
+      </div>
+      <div
+        class="flex items-center gap-3 text-xs text-muted-foreground"
+      >
+        <span>
+          0
+          /
+          0
+        </span>
+      </div>
+    </div>
+    <div
+      class="flex flex-wrap items-center justify-between gap-y-2 px-2 py-1.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+    >
+      <div
+        class="flex items-center gap-2"
+      >
+        <div
+          class="w-2 h-2 rounded-full bg-muted-foreground/30"
+        />
+        <span
+          class="text-sm font-medium"
+        >
+          Controller Mgr
+        </span>
+      </div>
+      <div
+        class="flex items-center gap-3 text-xs text-muted-foreground"
+      >
+        <span>
+          0
+          /
+          0
+        </span>
+      </div>
+    </div>
+    <div
+      class="flex flex-wrap items-center justify-between gap-y-2 px-2 py-1.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+    >
+      <div
+        class="flex items-center gap-2"
+      >
+        <div
+          class="w-2 h-2 rounded-full bg-muted-foreground/30"
+        />
+        <span
+          class="text-sm font-medium"
+        >
+          etcd
+        </span>
+      </div>
+      <div
+        class="flex items-center gap-3 text-xs text-muted-foreground"
+      >
+        <span>
+          0
+          /
+          0
+        </span>
+      </div>
+    </div>
+    <div
+      class="flex flex-wrap items-center justify-between gap-y-2 px-2 py-1.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+    >
+      <div
+        class="flex items-center gap-2"
+      >
+        <div
+          class="w-2 h-2 rounded-full bg-muted-foreground/30"
+        />
+        <span
+          class="text-sm font-medium"
+        >
+          CoreDNS
+        </span>
+      </div>
+      <div
+        class="flex items-center gap-3 text-xs text-muted-foreground"
+      >
+        <span>
+          0
+          /
+          0
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+`;

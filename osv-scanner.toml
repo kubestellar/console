@@ -1,0 +1,15 @@
+# OSV-Scanner ignore configuration
+# See: https://google.github.io/osv-scanner/ignore-vulnerabilities/
+
+[[IgnoredVulns]]
+id = "GHSA-gcfq-8gqf-4876"
+reason = """
+CVE-2026-45045: GoFiber v2 X-Real-IP spoofing via BalancerForward.
+This project does not use the BalancerForward proxy helper from
+github.com/gofiber/fiber/v2. A codebase-wide search confirms the
+vulnerable function is never called. The vulnerability is present in
+the dependency package but is not exploitable in this application.
+
+Long-term fix: migrate to github.com/gofiber/fiber/v3 >= 3.3.0 which
+contains the patch. Tracked in issue #20108.
+"""

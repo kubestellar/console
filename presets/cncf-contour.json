@@ -1,0 +1,10 @@
+{
+  "format": "kc-card-preset-v1",
+  "card_type": "contour_status",
+  "title": "Contour",
+  "description": "Contour ingress proxy status, HTTPProxy resources.",
+  "category": "Networking",
+  "project": "contour",
+  "cncf_status": "incubating",
+  "config": {}
+}

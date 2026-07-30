@@ -1,0 +1,120 @@
+# Dependencies
+node_modules/
+web/node_modules/
+
+# Build outputs
+web/dist/
+web/tsconfig.tsbuildinfo
+/console
+/console-server
+bin/
+*.exe
+*.out
+*.test
+coverage.out
+
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+.jwt-secret
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.out
+*.log
+npm-debug.log*
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Playwright
+web/playwright-report/
+web/test-results/
+web/blob-report/
+web/playwright/.cache/
+web/playwright/.auth/
+web/auth.json
+
+# Temp directories
+a2a-rebase/
+a2a-temp/
+kubeflex-rebase/
+kubestellar-rebase/
+data/
+
+# SQLite database
+*.db
+*.sqlite
+
+# Go
+vendor/
+
+# Coordination file (local only)
+.claude-coord.md
+/kc-agent
+
+# Claude Code local files
+.bob/
+/bin/*
+*.bak
+web/.netlify/
+web/e2e/test-results/
+web/e2e/user-flows/test-results/
+
+# Storybook
+web/storybook-static/
+web/node_modules
+punkpeye-awesome-mcp-servers/
+
+# Local worktrees and fix branches (never commit these)
+fix-*/
+work-fix-*/
+worktrees/
+.worktrees/
+fix-11638-worktree/
+.docs-*/
+docs-1800
+docs-1803-rebase
+docs-2131
+docs-2155
+docs-worktree
+worktree-*/
+worktree-fix-*/
+issue-*-worktree
+console-kb-*
+console-marketplace-*
+marketplace-fix*
+homebrew-tap-*
+*-worktree/
+*-worktree
+worktree-*/
+docs-*/
+console-kb-*/
+console-marketplace-*/
+homebrew-tap-*/
+marketplace-fix*
+kubestellar-mcp
+
+# Agent-generated operational artifacts (write outside worktree, not to repo)
+cron_scan_log.md
+release-failure-diagnosis.md
+release-failure-summary.txt
+pr.md
+reviewer_log.md
+
+# Build and cache artifacts
+.npm-cache/
+web/coverage/

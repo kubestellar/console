@@ -1,0 +1,176 @@
+{
+  "timestamp": "2026-06-11T08:52:27Z",
+  "fastMode": false,
+  "summary": {
+    "total": 32,
+    "passed": 28,
+    "failed": 4,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "suite": "consistency-test",
+      "status": "pass",
+      "duration": 3
+    },
+    {
+      "suite": "helm-lint-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "license-compliance-test",
+      "status": "pass",
+      "duration": 3
+    },
+    {
+      "suite": "mission-security-test",
+      "status": "pass",
+      "duration": 13
+    },
+    {
+      "suite": "card-registry-integrity-test",
+      "status": "fail",
+      "duration": 0,
+      "failure_reason": "  code: 'ENOENT',\n  syscall: 'open',\n  path: '/home/runner/work/console/console/web/src/components/cards/cardRegistry.imports.ts'\n}\nNode.js v22.22.3\n"
+    },
+    {
+      "suite": "unit-test",
+      "status": "fail",
+      "duration": 1575,
+      "failure_reason": "      Tests  1 failed | 30381 passed | 4 skipped (30398)\n     Errors  9 errors\n   Start at  07:33:48\n   Duration  1572.64s (transform 71.22s, setup 356.31s, import 575.16s, tests 420.40s, environment 2037.08s)\n======================================\n"
+    },
+    {
+      "suite": "auth-lifecycle-test",
+      "status": "fail",
+      "duration": 24,
+      "failure_reason": "  ✓  Bearer prefix validation present\n1/8 auth lifecycle checks failed\nReports:\n  JSON:     /tmp/auth-lifecycle-report.json\n  Summary:  /tmp/auth-lifecycle-summary.md\n"
+    },
+    {
+      "suite": "settings-migration-test",
+      "status": "fail",
+      "duration": 1,
+      "failure_reason": "═══════════════════════════════════════════════════\nPhase 1: Crypto unit tests\n  ✓  Crypto unit tests passed (8 tests)\nPhase 2: Settings handler tests (export/import)\n  ❌ Settings handler tests failed (0 failures)\n"
+    },
+    {
+      "suite": "update-lifecycle-test",
+      "status": "pass",
+      "duration": 64
+    },
+    {
+      "suite": "websocket-resilience-test",
+      "status": "pass",
+      "duration": 1
+    },
+    {
+      "suite": "gosec-test",
+      "status": "pass",
+      "duration": 56
+    },
+    {
+      "suite": "dependency-audit-test",
+      "status": "pass",
+      "duration": 12
+    },
+    {
+      "suite": "secret-scan-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "ts-sast-test",
+      "status": "pass",
+      "duration": 4
+    },
+    {
+      "suite": "container-scan-test",
+      "status": "pass",
+      "duration": 16
+    },
+    {
+      "suite": "security-headers-test",
+      "status": "pass",
+      "duration": 1
+    },
+    {
+      "suite": "api-contract-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "api-fuzz-test",
+      "status": "pass",
+      "duration": 155
+    },
+    {
+      "suite": "error-boundary-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "console-error-scan",
+      "status": "pass",
+      "duration": 118
+    },
+    {
+      "suite": "cache-test",
+      "status": "pass",
+      "duration": 306
+    },
+    {
+      "suite": "nav-test",
+      "status": "pass",
+      "duration": 601
+    },
+    {
+      "suite": "perf-test",
+      "status": "pass",
+      "duration": 1004
+    },
+    {
+      "suite": "ui-compliance-test",
+      "status": "pass",
+      "duration": 109
+    },
+    {
+      "suite": "deploy-test",
+      "status": "pass",
+      "duration": 84
+    },
+    {
+      "suite": "benchmark-test",
+      "status": "pass",
+      "duration": 2
+    },
+    {
+      "suite": "ai-ml-test",
+      "status": "pass",
+      "duration": 4
+    },
+    {
+      "suite": "a11y-test",
+      "status": "pass",
+      "duration": 86
+    },
+    {
+      "suite": "error-resilience-test",
+      "status": "pass",
+      "duration": 32
+    },
+    {
+      "suite": "i18n-test",
+      "status": "pass",
+      "duration": 56
+    },
+    {
+      "suite": "interaction-test",
+      "status": "pass",
+      "duration": 40
+    },
+    {
+      "suite": "security-e2e-test",
+      "status": "pass",
+      "duration": 31
+    }
+  ]
+}

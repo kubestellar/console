@@ -1,0 +1,57 @@
+# Minimum allowed Go coverage by package directory.
+# Format: <package-path> <minimum-percent>
+#
+# Packages are grouped by tier:
+#   Tier 1 — core backend logic (higher thresholds)
+#   Tier 2 — infrastructure and integrations (baseline thresholds)
+#   Tier 3 — newly tracked (start at 0, ratchet up as tests land)
+
+# --- Tier 1: Core backend ---
+pkg/agent 48.0
+pkg/api 60.5
+pkg/k8s 68.5
+
+# --- Tier 2: Critical integrations ---
+pkg/notifications 78.5
+pkg/kagentiprovider 83.5
+pkg/sanitize 100.0
+pkg/store 75.1
+
+# --- Tier 3: Supporting packages ---
+pkg/kagent 86.2
+pkg/mcp 67.2
+pkg/models 100.0
+pkg/stellar 100.0
+pkg/watcher 72.8
+pkg/settings 77.1
+pkg/rewards 100.0
+pkg/safego 100.0
+pkg/fileutil 54.2
+
+# --- Tier 3: Previously untracked (have tests, need ratchet baseline) ---
+pkg/ai 100.0
+pkg/gpu 86.2
+pkg/kb 100.0
+pkg/kb/rag 93.6
+pkg/ssrf 95.7
+pkg/services/stellar 95.3
+pkg/services/team 83.9
+pkg/services/user 83.3
+
+# --- Compliance engines (start at 0, ratchet up as evaluation tests land) ---
+pkg/compliance/fedramp 100.0
+pkg/compliance/hipaa 100.0
+pkg/compliance/nist80053 100.0
+pkg/compliance/slsa 100.0
+pkg/compliance/sbom 100.0
+pkg/compliance/signing 100.0
+pkg/compliance/licenses 100.0
+pkg/compliance/stig 100.0
+pkg/compliance/baa 100.0
+pkg/compliance/airgap 100.0
+pkg/compliance/sod 88.5
+pkg/compliance/gxp 98.0
+pkg/compliance/changecontrol 95.3
+pkg/compliance/residency 85.5
+pkg/compliance/frameworks 100.0
+pkg/compliance/reports 100.0

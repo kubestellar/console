@@ -1,0 +1,110 @@
+import { useTranslation } from 'react-i18next'
+import { ShieldAlert, Check, X } from 'lucide-react'
+import { NotificationConfig } from '../../../types/alerts'
+import type { TestResultState } from './NotificationSettingsSection'
+import { cn } from '../../../lib/cn'
+
+interface OpsGenieNotificationSettingsProps {
+  config: NotificationConfig
+  updateConfig: (updates: Partial<NotificationConfig>) => void
+  testResult: TestResultState | null
+  setTestResult: (result: TestResultState | null) => void
+  testNotification: (type: 'slack' | 'email' | 'webhook' | 'pagerduty' | 'opsgenie', config: Record<string, unknown>) => Promise<unknown>
+  isLoading: boolean
+}
+
+/**
+ * OpsGenie notification channel configuration.
+ * Manages API key and test notification flow.
+ */
+export function OpsGenieNotificationSettings({
+  config,
+  updateConfig,
+  testResult,
+  setTestResult,
+  testNotification,
+  isLoading,
+}: OpsGenieNotificationSettingsProps) {
+  const { t } = useTranslation()
+  const hasStoredApiKey = config.opsgenieApiKeyConfigured === true && !config.opsgenieApiKey
+
+  const handleTestOpsGenie = async () => {
+    if (!config.opsgenieApiKey) {
+      setTestResult({ type: 'opsgenie', success: false, message: t('settings.notifications.opsgenie.apiKeyRequired') })
+      return
+    }
+
+    setTestResult(null)
+    try {
+      await testNotification('opsgenie', {
+        opsgenieApiKey: config.opsgenieApiKey,
+      })
+      setTestResult({ type: 'opsgenie', success: true, message: t('settings.notifications.opsgenie.testSuccess') })
+    } catch (error: unknown) {
+      setTestResult({
+        type: 'opsgenie',
+        success: false,
+        message: error instanceof Error ? error.message : t('settings.notifications.opsgenie.testFailed'),
+      })
+    }
+  }
+
+  return (
+    <div className="space-y-4 mb-6">
+      <div className="flex items-center gap-2 pb-2 border-b border-border">
+        <ShieldAlert className="w-4 h-4 text-foreground" />
+        <h3 className="text-sm font-medium text-foreground">{t('settings.notifications.opsgenie.title', 'OpsGenie')}</h3>
+      </div>
+
+      <div>
+        <label htmlFor="opsgenie-api-key" className="block text-sm font-medium text-foreground mb-1">
+          {t('settings.notifications.opsgenie.apiKey', 'API Key')}
+        </label>
+        <input
+          id="opsgenie-api-key"
+          type="password"
+          value={config.opsgenieApiKey || ''}
+          onChange={e => updateConfig({
+            opsgenieApiKey: e.target.value,
+            opsgenieApiKeyConfigured: e.target.value.trim().length > 0,
+          })}
+          placeholder="e.g. xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+          className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-primary"
+        />
+        {hasStoredApiKey && (
+          <p className="mt-1 text-xs text-status-success">
+            {t('settings.notifications.secretConfigured')}
+          </p>
+        )}
+        <p className="text-xs text-muted-foreground mt-1">
+          {t('settings.notifications.opsgenie.apiKeyHint', 'Find this under Settings > API key management in OpsGenie')}
+        </p>
+      </div>
+
+      <button
+        onClick={handleTestOpsGenie}
+        disabled={isLoading}
+        className="px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+      >
+        {isLoading ? t('settings.notifications.opsgenie.testing') : t('settings.notifications.opsgenie.testNotification', 'Test OpsGenie')}
+      </button>
+
+      {testResult && testResult.type === 'opsgenie' && (
+        <div
+          className={`flex items-start gap-2 p-3 rounded-lg border ${
+            testResult.success ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'
+          }`}
+        >
+          {testResult.success ? (
+            <Check className="w-4 h-4 text-status-success shrink-0 mt-0.5" />
+          ) : (
+            <X className="w-4 h-4 text-status-error shrink-0 mt-0.5" />
+          )}
+          <p className={cn('text-sm', testResult.success ? 'text-status-success' : 'text-status-error')}>
+            {testResult.message}
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}

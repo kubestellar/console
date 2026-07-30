@@ -1,0 +1,302 @@
+import type { CompileResult, DynamicComponentResult } from './types'
+import { createElement, type ComponentType } from 'react'
+import type { CardComponentProps } from '../../components/cards/cardRegistry'
+import { getDynamicScope } from './scope'
+
+/**
+ * Browser globals that must be shadowed inside the dynamic card sandbox.
+ * Each is bound to `undefined` so card code cannot reach the real objects.
+ */
+const BLOCKED_GLOBALS = [
+  'window', 'document', 'globalThis', 'self', 'top', 'parent', 'frames',
+  'fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource',
+  'eval', 'Function', 'AsyncFunction', 'GeneratorFunction',
+  'importScripts',
+  'localStorage', 'sessionStorage', 'indexedDB', 'caches',
+  'navigator', 'location', 'history',
+  // Timer APIs: listed for fail-closed safety. Safe wrappers in getDynamicScope()
+  // override these via the `if (!(name in scope))` guard in the merge loop below.
+  // If the wrappers are ever removed from scope, these fall back to blocking.
+  'setTimeout', 'setInterval', 'clearTimeout', 'clearInterval',
+  'requestAnimationFrame',
+  'postMessage', 'crypto',
+  // #16505: Block Reflect/Proxy to prevent sandbox escape via prototype walking
+  'Reflect', 'Proxy',
+  // #16898: Block encoding APIs that can construct blocked identifiers at runtime
+  'atob', 'btoa', 'TextDecoder', 'TextEncoder',
+  // #19864: Block additional async primitives
+  'queueMicrotask', 'structuredClone', 'MessageChannel', 'AbortController',
+] as const
+
+/**
+ * Identifiers we can't safely inject as Function-body `var` declarations in
+ * strict mode (e.g. `var eval = …` is a SyntaxError). These fall back to
+ * being blocked via Function parameter shadowing, which is allowed because
+ * `new Function(...)` parses its parameter list in sloppy mode.
+ *
+ * `arguments` is neither a valid parameter name nor a valid `var` name in
+ * strict mode, but the enclosing `new Function` provides its own `arguments`
+ * object that refers to the outer call (scopeValues), shadowing any global.
+ */
+const STRICT_RESERVED_BLOCKED = new Set<string>(['arguments'])
+
+const FORBIDDEN_SANDBOX_PATTERNS: Array<{ re: RegExp; label: string }> = [
+  { re: /\b__proto__\b/, label: '__proto__' },
+  { re: /\b__lookupGetter__\b/, label: '__lookupGetter__' },
+  { re: /\b__defineGetter__\b/, label: '__defineGetter__' },
+  { re: /\b__defineSetter__\b/, label: '__defineSetter__' },
+  { re: /\.constructor\b/, label: '.constructor' },
+  { re: /\[\s*(['"`])constructor\1\s*\]/, label: "['constructor']" },
+  { re: /\bAsyncFunction\b/, label: 'AsyncFunction' },
+  { re: /\bGeneratorFunction\b/, label: 'GeneratorFunction' },
+  { re: /\bgetPrototypeOf\b/, label: 'getPrototypeOf' },
+  { re: /\bsetPrototypeOf\b/, label: 'setPrototypeOf' },
+  { re: /\bReflect\b/, label: 'Reflect' },
+  { re: /\[\s*[^'"`\]]*(?:con|struct|ctor)/, label: 'computed constructor access' },
+  { re: /\bprototype\b/, label: 'prototype' },
+  { re: /\bfromCharCode\b/, label: 'fromCharCode' },
+  { re: /\bfromCodePoint\b/, label: 'fromCodePoint' },
+  { re: /\bcharCodeAt\b/, label: 'charCodeAt' },
+  { re: /\bcodePointAt\b/, label: 'codePointAt' },
+  { re: /\bString\.raw\b/, label: 'String.raw' },
+  { re: /\bgetOwnPropertyDescriptor\b/, label: 'getOwnPropertyDescriptor' },
+  { re: /\bimport\s*\(/, label: 'dynamic import()' },
+  // #20712: Block wrapper-internal variable names that are in scope when card code runs.
+  // __globalThis and __scope are defined in the moduleSource wrapper before ${compiledCode}
+  // is injected; without these patterns a card could reference them to bypass BLOCKED_GLOBALS.
+  { re: /\b__globalThis\b/, label: '__globalThis (sandbox wrapper variable)' },
+  { re: /\b__scope\b/, label: '__scope (sandbox wrapper variable)' },
+  // Block low-level Object reflection APIs that enumerate all own properties/symbols.
+  // Object.keys/values/entries are deliberately NOT blocked here as they are commonly
+  // needed in legitimate card code (iterating props, config objects, API responses).
+  { re: /\bObject\.getOwnPropertyNames\b/, label: 'Object.getOwnPropertyNames' },
+  { re: /\bObject\.getOwnPropertySymbols\b/, label: 'Object.getOwnPropertySymbols' },
+]
+
+/**
+ * Deep-freeze an object graph so dynamic card code cannot mutate shared
+ * runtime state via injected scope values (e.g. cardHooks.someCard = evilImpl).
+ * Uses a WeakSet to guard against circular references.
+ * #19864: Now also freezes prototypes to prevent prototype pollution.
+ */
+function deepFreeze<T>(obj: T, seen = new WeakSet<object>()): T {
+  if (obj === null || typeof obj !== 'object') return obj
+  if (seen.has(obj as object)) return obj
+  seen.add(obj as object)
+  // Freeze first so any subsequent property lookups can't trigger a getter
+  // that mutates the object after we've walked it.
+  Object.freeze(obj)
+
+  // #19864: Freeze the prototype chain to prevent prototype pollution
+  const proto = Object.getPrototypeOf(obj)
+  if (proto !== null && proto !== Object.prototype && !Object.isFrozen(proto)) {
+    deepFreeze(proto, seen)
+  }
+
+  for (const key of Object.getOwnPropertyNames(obj)) {
+    let value: unknown
+    try {
+      value = (obj as Record<string, unknown>)[key]
+    } catch {
+      // Some built-ins (e.g. certain DOM proxies) throw on property access;
+      // we skip those since there's nothing to freeze.
+      continue
+    }
+    if (value !== null && typeof value === 'object' && !Object.isFrozen(value)) {
+      deepFreeze(value, seen)
+    }
+  }
+  return obj
+}
+
+/** Maximum time to wait for dynamic card compilation before failing fast. */
+export const CARD_COMPILE_TIMEOUT_MS = 5000
+
+/**
+ * Compile TSX source code to JavaScript using Sucrase.
+ * Sucrase is loaded dynamically to avoid bloating the main bundle.
+ */
+async function runCompileCardCode(tsx: string): Promise<CompileResult> {
+  try {
+    // Dynamic import to keep Sucrase out of the main bundle
+    const { transform } = await import('sucrase')
+    const result = transform(tsx, {
+      transforms: ['typescript', 'jsx', 'imports'],
+      jsxRuntime: 'classic',
+      jsxPragma: 'React.createElement',
+      jsxFragmentPragma: 'React.Fragment',
+      production: true,
+    })
+    return { code: result.code, error: null }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    return { code: null, error: `Compilation error: ${message}` }
+  }
+}
+
+export async function compileCardCode(tsx: string, timeoutMs = CARD_COMPILE_TIMEOUT_MS): Promise<CompileResult> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
+  const timeoutResult = new Promise<CompileResult>((resolve) => {
+    timeoutId = setTimeout(() => {
+      resolve({
+        code: null,
+        error: `Compilation error: timed out after ${timeoutMs}ms. Please try again.`,
+      })
+    }, timeoutMs)
+  })
+
+  try {
+    return await Promise.race([runCompileCardCode(tsx), timeoutResult])
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
+
+/**
+ * Injectable module execution function.
+ * Default: creates a blob URL ES module (CSP-safe, works in production).
+ * Override via _setCardImportFn() in tests to use Function-based eval.
+ *
+ * Receives the raw module source string. The module stores its exported
+ * component in globalThis[scopeId + '__result'] as a side effect.
+ */
+type CardImportFn = (moduleSource: string) => Promise<unknown>
+
+const _defaultCardImportFn: CardImportFn = async (source: string): Promise<unknown> => {
+  const blob = new Blob([source], { type: 'text/javascript' })
+  const url = URL.createObjectURL(blob)
+  try {
+    return await import(/* webpackIgnore: true */ url)
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
+
+let _cardImportFn: CardImportFn = _defaultCardImportFn
+
+/** @internal For testing only — inject a custom module execution function */
+export function _setCardImportFn(fn: CardImportFn): void {
+  _cardImportFn = fn
+}
+
+/** @internal For testing only — restore the default blob URL import */
+export function _resetCardImportFn(): void {
+  _cardImportFn = _defaultCardImportFn
+}
+
+/**
+ * Create a React component from compiled JavaScript code.
+ * #19864 Security fix: Replaced new Function() with blob URL ES module import.
+ * This approach works with strict CSP (no unsafe-eval) by creating a temporary
+ * ES module blob and using dynamic import(), which is allowed under CSP.
+ *
+ * The code runs in a hardened sandbox:
+ * 1. Whitelisted scope — only approved libraries are injected via module exports
+ * 2. Dangerous globals blocked via static analysis (not runtime shadowing)
+ * 3. All injected scope values are deep-frozen so dynamic card code
+ *    cannot mutate shared runtime state (cardHooks, icon registry, etc.)
+ * 4. Prototypes of injected objects are frozen to prevent pollution
+ */
+export async function createCardComponent(compiledCode: string): Promise<DynamicComponentResult> {
+  try {
+    const scope = getDynamicScope()
+
+    // Extract the timer cleanup function before freezing
+    const timerCleanup = scope.__timerCleanup as (() => void) | undefined
+    delete scope.__timerCleanup
+
+    // Deep-freeze each scope value so dynamic code cannot mutate shared
+    // runtime state (e.g. cardHooks.foo = evilImpl) via the injected refs.
+    for (const key of Object.getOwnPropertyNames(scope)) {
+      const v = scope[key]
+      if (v !== null && typeof v === 'object') {
+        deepFreeze(v)
+      }
+    }
+    Object.freeze(scope)
+
+    // #6676 + #19864: Static analysis — reject forbidden patterns
+    for (const { re, label } of FORBIDDEN_SANDBOX_PATTERNS) {
+      if (re.test(compiledCode)) {
+        return {
+          component: null,
+          error: `Runtime error: sandbox blocked forbidden pattern: ${label}`,
+        }
+      }
+    }
+
+    // Merge whitelisted scope with blocked globals
+    const blockedEntries: Record<string, undefined> = {}
+    for (const name of BLOCKED_GLOBALS) {
+      if (STRICT_RESERVED_BLOCKED.has(name)) continue
+      if (!(name in scope)) {
+        blockedEntries[name] = undefined
+      }
+    }
+
+    const fullScope = { ...blockedEntries, ...scope }
+    const scopeKeys = Object.keys(fullScope)
+
+    // Store scope in a temporary global for the module to access
+    const scopeId = `__CARD_SCOPE_${Date.now()}_${Math.random().toString(36).slice(2)}`
+    ;(globalThis as Record<string, unknown>)[scopeId] = fullScope
+
+    // Create a module source that:
+    // 1. Retrieves the frozen scope from globalThis
+    // 2. Executes the compiled card code inside an inner strict-mode IIFE
+    //    where scope variables (including sandbox-blocked names like
+    //    `globalThis`) are const-destructured to shadow the real globals.
+    //    Keeping the destructuring inside the IIFE prevents the outer
+    //    wrapper's `typeof globalThis` check from tripping TDZ when
+    //    scopeKeys includes `globalThis` (BLOCKED_GLOBALS bypass safety).
+    // 3. Stores the resulting component in globalThis for the caller to read.
+    //
+    // Note: no ES module `export` syntax — the module communicates its result
+    // back via a globalThis side-effect. This lets the same source string work
+    // with both blob URL import() (production) and new Function() eval (tests).
+    const moduleSource = `
+      var __globalThis = (typeof globalThis !== 'undefined' ? globalThis : (typeof global !== 'undefined' ? global : this));
+      var __scope = __globalThis['${scopeId}'];
+      if (__scope) delete __globalThis['${scopeId}'];
+      __globalThis['${scopeId}__result'] = (function () {
+        "use strict";
+        var { ${scopeKeys.join(', ')} } = __scope || {};
+
+        var exports = {};
+        var module = { exports: exports };
+
+        ${compiledCode}
+
+        return module.exports.default || module.exports;
+      })();
+    `
+
+    try {
+      // Execute the module source (via blob URL in production, or injected fn in tests)
+      await _cardImportFn(moduleSource)
+
+      const component = (globalThis as Record<string, unknown>)[`${scopeId}__result`] as ComponentType<CardComponentProps>
+      delete (globalThis as Record<string, unknown>)[`${scopeId}__result`]
+
+      if (typeof component !== 'function') {
+        return {
+          component: null,
+          error: 'Card module must export a default React component function.',
+        }
+      }
+
+      // Wrap the compiled component to guarantee config is always an object
+      const SafeComponent: ComponentType<CardComponentProps> = (props) =>
+        createElement(component, { ...props, config: props.config ?? {} })
+
+      return { component: SafeComponent, error: null, cleanup: timerCleanup }
+    } finally {
+      // Belt-and-suspenders cleanup (module source deletes scopeId; result deleted above)
+      delete (globalThis as Record<string, unknown>)[scopeId]
+      delete (globalThis as Record<string, unknown>)[`${scopeId}__result`]
+    }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    return { component: null, error: `Runtime error: ${message}` }
+  }
+}

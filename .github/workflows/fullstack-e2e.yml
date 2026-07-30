@@ -1,0 +1,143 @@
+name: Full-Stack E2E Smoke
+
+# Full-stack smoke test — kubestellar/console#6362
+#
+# Closes the "frontend-only" Playwright blind spot: the main Playwright
+# workflow runs against `npm run dev` (Vite only), so Go<->frontend
+# regressions (handler wiring, API shape drift, build tag issues) don't
+# surface until runtime. This workflow builds the Go binary and runs a
+# tiny smoke test against it.
+#
+# Deferred follow-ups (see #6362): kc-agent mocking, OAuth flow coverage,
+# WebSocket stream coverage. This is the 20% fix that catches the 80%.
+
+on:
+  pull_request:
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - 'web/src/**'
+      - 'web/e2e/fullstack-smoke.spec.ts'
+      - '.github/workflows/fullstack-e2e.yml'
+
+permissions: read-all  # default read; writes scoped to job below
+
+env:
+  # Dev-only placeholder — must be >= 32 chars for the server to accept it
+  # in non-production mode. Real deployments MUST set JWT_SECRET via env.
+  DEV_JWT_SECRET: 'ci-fullstack-smoke-test-jwt-secret-placeholder-not-a-real-key'
+  # Backend port — must match pkg/api/server.go default (8080).
+  BACKEND_PORT: '8080'
+  # Max time we'll wait for /healthz to respond OK (seconds).
+  HEALTH_TIMEOUT_S: '60'
+
+jobs:
+  fullstack-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install frontend deps
+        working-directory: web
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: web
+        env:
+          NODE_OPTIONS: '--max-old-space-size=6144'
+        run: npm run build
+
+      - name: Build Go backend
+        run: go build -o /tmp/console-binary ./cmd/console
+
+      - name: Start Go backend in background
+        env:
+          JWT_SECRET: ${{ env.DEV_JWT_SECRET }}
+          PORT: ${{ env.BACKEND_PORT }}
+          # Provide non-empty placeholder OAuth credentials so the server does NOT
+          # auto-activate dev mode (pkg/api/server.go: auto-activates when both are
+          # absent, introduced in #10925). In dev mode the root route 307-redirects
+          # to the Vite dev server (localhost:5174) which is not running in CI,
+          # causing ERR_CONNECTION_REFUSED on page.goto('/') (#10970).
+          # These values are intentionally fake — the smoke test never exercises OAuth.
+          GITHUB_CLIENT_ID: ci-fullstack-smoke-placeholder
+          GITHUB_CLIENT_SECRET: ci-fullstack-smoke-placeholder
+        run: |
+          # Intentionally NOT setting DEV_MODE=true — the whole point of
+          # fullstack-smoke is to exercise the production serving path where
+          # the Go binary serves ./web/dist/index.html directly (see
+          # pkg/api/server.go). With DEV_MODE=true (or auto-activated dev mode)
+          # the root route 307-redirects to FrontendURL (Vite), which isn't
+          # running in CI, so Playwright page.goto on '/' gets ERR_CONNECTION_REFUSED.
+          /tmp/console-binary > /tmp/console.log 2>&1 &
+          echo $! > /tmp/console.pid
+          echo "Backend PID: $(cat /tmp/console.pid)"
+
+      - name: Wait for /healthz
+        run: |
+          for i in $(seq 1 ${HEALTH_TIMEOUT_S}); do
+            if curl -sf "http://localhost:${BACKEND_PORT}/healthz" > /dev/null; then
+              echo "Backend up after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Backend did not become healthy in ${HEALTH_TIMEOUT_S}s"
+          echo "--- console.log ---"
+          cat /tmp/console.log || true
+          exit 1
+
+      - name: Install Playwright browsers
+        working-directory: web
+        timeout-minutes: 10
+        run: |
+          # Retry up to 3 times with 10-minute timeout per attempt
+          for attempt in 1 2 3; do
+            echo "Attempt $attempt to install Playwright browsers..."
+            if timeout 600 npx playwright install --with-deps chromium; then
+              echo "Successfully installed Playwright browsers on attempt $attempt"
+              exit 0
+            fi
+            if [ $attempt -lt 3 ]; then
+              echo "Attempt $attempt failed, retrying in 5 seconds..."
+              sleep 5
+            fi
+          done
+          echo "Failed to install Playwright browsers after 3 attempts"
+          exit 1
+
+      - name: Run full-stack smoke spec
+        working-directory: web
+        env:
+          FULLSTACK_SMOKE: '1'
+          PLAYWRIGHT_BASE_URL: http://localhost:${{ env.BACKEND_PORT }}
+        run: npx playwright test e2e/fullstack-smoke.spec.ts --project=chromium
+
+      - name: Dump backend log on failure
+        if: failure()
+        run: |
+          echo "--- console.log ---"
+          cat /tmp/console.log || true
+
+      - name: Stop backend
+        if: always()
+        run: |
+          if [ -f /tmp/console.pid ]; then
+            kill "$(cat /tmp/console.pid)" || true
+          fi

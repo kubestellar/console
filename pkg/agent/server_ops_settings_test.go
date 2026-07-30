@@ -1,0 +1,183 @@
+package agent
+
+import (
+	"bytes"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"testing"
+
+	"github.com/kubestellar/console/pkg/settings"
+)
+
+func TestServer_HandleSettingsAll(t *testing.T) {
+	// Setup temporary settings and key files
+	tmpSettings, err := os.CreateTemp("", "settings-*.json")
+	if err != nil {
+		t.Fatalf("Failed to create temp settings file: %v", err)
+	}
+	defer tmpSettings.Close()
+	defer os.Remove(tmpSettings.Name())
+
+	tmpKey, err := os.CreateTemp("", ".keyfile")
+	if err != nil {
+		t.Fatalf("Failed to create temp key file: %v", err)
+	}
+	defer tmpKey.Close()
+	defer os.Remove(tmpKey.Name())
+
+	sm := settings.GetSettingsManager()
+	sm.SetSettingsPath(tmpSettings.Name())
+	sm.SetKeyPath(tmpKey.Name())
+
+	s := &Server{
+		allowedOrigins: []string{"*"},
+	}
+
+	all := settings.DefaultAllSettings()
+	all.FeedbackGitHubToken = "ghp_hidden"
+	if err := sm.SaveAll(all); err != nil {
+		t.Fatalf("Failed to seed settings: %v", err)
+	}
+
+	// 1. Test GET (default settings)
+	req := httptest.NewRequest("GET", "/settings", nil)
+	req.Host = "localhost"
+	w := httptest.NewRecorder()
+	s.handleSettingsAll(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected 200, got %d", w.Code)
+	}
+
+	var getResp settings.AllSettings
+	if err := json.NewDecoder(w.Body).Decode(&getResp); err != nil {
+		t.Fatalf("Failed to decode GET response: %v", err)
+	}
+	if !getResp.HasFeedbackToken {
+		t.Error("Expected hasFeedbackToken to be true")
+	}
+	if getResp.FeedbackGitHubToken != "" {
+		t.Error("Expected feedbackGithubToken to be redacted from GET response")
+	}
+
+	// 2. Test PUT (update settings)
+	newSettings := settings.DefaultAllSettings()
+	newSettings.Theme = "dark"
+	body, _ := json.Marshal(newSettings)
+	req = httptest.NewRequest("PUT", "/settings", bytes.NewReader(body))
+	req.Host = "localhost"
+	w = httptest.NewRecorder()
+	s.handleSettingsAll(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected 200, got %d", w.Code)
+	}
+
+	var resp map[string]interface{}
+	json.NewDecoder(w.Body).Decode(&resp)
+	if resp["success"] != true {
+		t.Error("Expected success: true")
+	}
+
+	stored, err := sm.GetAll()
+	if err != nil {
+		t.Fatalf("Failed to reload settings: %v", err)
+	}
+	if stored.FeedbackGitHubToken != "ghp_hidden" {
+		t.Errorf("Expected feedback token to be preserved, got %q", stored.FeedbackGitHubToken)
+	}
+}
+
+func TestServer_HandleGetKeysStatus(t *testing.T) {
+	// Use isolateConfigManager to avoid reading/mutating the real ~/.kc/config.yaml.
+	cm := isolateConfigManager(t)
+
+	tmpConfig, err := os.CreateTemp("", "config-*.yaml")
+	if err != nil {
+		t.Fatalf("Failed to create temp config file: %v", err)
+	}
+	defer tmpConfig.Close()
+	defer os.Remove(tmpConfig.Name())
+
+	cm.SetConfigPath(tmpConfig.Name())
+
+	s := &Server{
+		allowedOrigins:    []string{"*"},
+		SkipKeyValidation: true, // Don't hit real APIs
+	}
+
+	req := httptest.NewRequest("GET", "/settings/keys", nil)
+	req.Host = "localhost"
+	w := httptest.NewRecorder()
+	s.handleGetKeysStatus(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected 200, got %d", w.Code)
+	}
+
+	var resp KeysStatusResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	if resp.ConfigPath != tmpConfig.Name() {
+		t.Errorf("Expected config path %s, got %s", tmpConfig.Name(), resp.ConfigPath)
+	}
+
+	// Local LLM runners (Ollama, LM Studio) should NOT be marked configured
+	// when only the compiled-in default URL is present (#15246).
+	for _, key := range resp.Keys {
+		if key.Provider == ProviderKeyOllama || key.Provider == ProviderKeyLMStudio {
+			if key.Configured {
+				t.Errorf("Provider %s should not be configured with only the compiled-in default URL", key.Provider)
+			}
+		}
+	}
+}
+
+func TestServer_HandleGetKeysStatus_LocalLLMExplicitURL(t *testing.T) {
+	cm := isolateConfigManager(t)
+
+	tmpConfig, err := os.CreateTemp("", "config-*.yaml")
+	if err != nil {
+		t.Fatalf("Failed to create temp config file: %v", err)
+	}
+	defer tmpConfig.Close()
+	defer os.Remove(tmpConfig.Name())
+	cm.SetConfigPath(tmpConfig.Name())
+
+	// Simulate an operator explicitly setting OLLAMA_URL
+	t.Setenv("OLLAMA_URL", "http://my-ollama-server:11434")
+
+	s := &Server{
+		allowedOrigins:    []string{"*"},
+		SkipKeyValidation: true,
+	}
+
+	req := httptest.NewRequest("GET", "/settings/keys", nil)
+	req.Host = "localhost"
+	w := httptest.NewRecorder()
+	s.handleGetKeysStatus(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected 200, got %d", w.Code)
+	}
+
+	var resp KeysStatusResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	// Ollama should now be configured because the URL was explicitly set
+	for _, key := range resp.Keys {
+		if key.Provider == ProviderKeyOllama {
+			if !key.Configured {
+				t.Errorf("Provider %s should be configured when OLLAMA_URL is explicitly set", key.Provider)
+			}
+			return
+		}
+	}
+	t.Error("Ollama provider not found in response")
+}

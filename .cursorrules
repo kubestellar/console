@@ -1,0 +1,56 @@
+# KubeStellar Console — Cursor Rules
+
+Read CLAUDE.md, AGENTS.md, and .github/copilot-instructions.md before making changes.
+
+## Critical Patterns
+
+### Card Development
+- Every `useCached*` hook MUST destructure `isDemoData` and `isRefreshing`
+- Pass both to `useCardLoadingState()` for Demo badge + refresh animation
+- Array safety: `(data || [])` before `.map()`, `.filter()`, `.join()`
+- Use `DeduplicatedClusters()` when iterating clusters
+
+### Styling
+- NEVER use raw hex colors — use semantic Tailwind classes (`text-foreground`, `bg-primary`)
+- Use `cn()` utility for className merging
+- Status colors: `text-green-400`, `text-yellow-400`, `text-red-400`, `text-cyan-400`
+
+### i18n
+- User-facing strings MUST use `t()` from `useTranslation()` — no raw strings
+
+### State Management
+- No Redux/Zustand — pure React Context + hooks
+- Server data: `useCache` / `useCached*` hooks
+- Preferences: `localStorage`
+
+### API Endpoints
+- Go handlers in `pkg/api/` use Fiber v2
+- Netlify Functions in `web/netlify/functions/*.mts` for production parity
+- Demo mode: every endpoint checks `isDemoMode(c)` first
+
+### Testing (MANDATORY)
+- UI changes: Playwright visual tests in `web/e2e/visual/`
+- Generate baselines: `npm run test:visual:update`
+- Commit test + snapshots with code changes
+
+### No Magic Numbers
+Every numeric literal MUST be a named constant.
+
+### Secrets
+NEVER hardcode API keys — use env vars only.
+
+## Pre-Commit
+
+**DO NOT run build or lint locally** — CI validates on PR. Commit, push, open PR with `Fixes #NNN`.
+
+## Commit Format
+
+```
+<emoji> <message under 72 chars>
+
+Signed-off-by: Name <email>
+```
+
+Emoji: ✨ feature | 🐛 bug | 📖 docs | 🌱 other
+
+DCO required: `git commit -s`

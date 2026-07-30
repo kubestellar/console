@@ -1,0 +1,256 @@
+import React from 'react'
+/** @vitest-environment jsdom */
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { act, render, screen, fireEvent } from '@testing-library/react'
+import { MissionControlDialog } from '../MissionControlDialog'
+import { useMissionControl } from '../useMissionControl'
+import { decodePlan } from '../missionPlanCodec'
+
+// Mock useMissionControl
+vi.mock('../useMissionControl', () => ({
+  useMissionControl: vi.fn(),
+  consumePersistQuotaBanner: vi.fn(() => null),
+}))
+
+// Mock useMissions
+vi.mock('../../../hooks/useMissions', () => ({
+  useMissions: vi.fn(() => ({
+    startMission: vi.fn(() => 'mission-id'),
+    openSidebar: vi.fn(),
+  })),
+}))
+
+// Mock missionPlanCodec
+vi.mock('../missionPlanCodec', () => ({
+  decodePlan: vi.fn(),
+  planToState: vi.fn(p => p),
+}))
+
+// Mock other dependencies
+vi.mock('../../../lib/modals/useModalNavigation', () => ({
+  useModalFocusTrap: vi.fn(),
+  useModalNavigation: vi.fn(),
+  useModalState: vi.fn(() => ({ isOpen: false, open: vi.fn(), close: vi.fn(), toggle: vi.fn(), setIsOpen: vi.fn() })),
+}))
+
+vi.mock('../../../lib/auth', () => ({
+  useAuth: vi.fn(() => ({
+    token: 'mock-token',
+    user: { github_login: 'test-user' },
+  })),
+}))
+
+vi.mock('../../ui/Toast', () => ({
+  useToast: vi.fn(() => ({ showToast: vi.fn() })),
+}))
+
+vi.mock('framer-motion', () => ({
+  motion: {
+    div: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => <div {...props as React.HTMLAttributes<HTMLDivElement>}>{children}</div>,
+  },
+  AnimatePresence: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+}))
+
+// Mock sub-panels to avoid deep rendering issues in integration test
+vi.mock('../FixerDefinitionPanel', () => ({
+  FixerDefinitionPanel: () => <div data-testid="phase-define">Define Panel</div>,
+}))
+vi.mock('../ClusterAssignmentPanel', () => ({
+  ClusterAssignmentPanel: () => <div data-testid="phase-assign">Assign Panel</div>,
+}))
+vi.mock('../LaunchSequence', () => ({
+  LaunchSequence: () => <div data-testid="phase-launching">Launch Sequence</div>,
+}))
+
+describe('MissionControlDialog', () => {
+  const mockMC = {
+    state: {
+      phase: 'define',
+      title: 'Test Mission',
+      projects: [],
+      assignments: [],
+      targetClusters: [],
+      aiStreaming: false,
+      phases: [],
+      launchProgress: [],
+    },
+    setPhase: vi.fn(),
+    setTitle: vi.fn(),
+    setDryRun: vi.fn(),
+    reset: vi.fn(),
+    addProject: vi.fn(),
+    staleClusterNames: [],
+    acknowledgeStaleClusters: vi.fn(),
+    hydrateFromPlan: vi.fn(),
+    loadHistoricalSession: vi.fn(() => false),
+    installedProjects: new Set<string>(),
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(useMissionControl).mockReturnValue(mockMC as unknown as ReturnType<typeof useMissionControl>)
+  })
+
+  it('renders nothing when closed', () => {
+    const { container } = render(
+      <MissionControlDialog open={false} onClose={vi.fn()} />
+    )
+    expect(container.firstChild).toBeNull()
+  })
+
+  it('renders Phase 1 by default when opened', () => {
+    render(<MissionControlDialog open={true} onClose={vi.fn()} />)
+    expect(screen.getByTestId('mission-control-dialog')).toBeInTheDocument()
+    expect(screen.getByTestId('phase-define')).toBeInTheDocument()
+  })
+
+  it('preserves seeded state on first sidebar CTA open and resets after the token increments', () => {
+    const { rerender } = render(
+      <MissionControlDialog open={true} onClose={vi.fn()} freshSessionToken={1} />
+    )
+
+    expect(mockMC.reset).not.toHaveBeenCalled()
+
+    rerender(<MissionControlDialog open={false} onClose={vi.fn()} freshSessionToken={1} />)
+    rerender(<MissionControlDialog open={true} onClose={vi.fn()} freshSessionToken={2} />)
+
+    expect(mockMC.reset).toHaveBeenCalledTimes(1)
+  })
+
+  it('resets historical review mode on close without resetting again on the first fresh reopen', () => {
+    const onClose = vi.fn()
+    const mcWithHistory = {
+      ...mockMC,
+      loadHistoricalSession: vi.fn(() => true),
+    }
+    vi.mocked(useMissionControl).mockReturnValue(mcWithHistory as unknown as ReturnType<typeof useMissionControl>)
+
+    const { rerender } = render(
+      <MissionControlDialog open={true} onClose={onClose} historicalMissionId="mission-1" />
+    )
+
+    expect(mcWithHistory.loadHistoricalSession).toHaveBeenCalledWith('mission-1')
+    expect(screen.getByText('REVIEW')).toBeInTheDocument()
+    expect(mcWithHistory.reset).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByTestId('mission-control-cancel'))
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(mcWithHistory.reset).toHaveBeenCalledTimes(1)
+
+    rerender(<MissionControlDialog open={false} onClose={onClose} freshSessionToken={1} />)
+    rerender(<MissionControlDialog open={true} onClose={onClose} freshSessionToken={1} />)
+
+    expect(mcWithHistory.reset).toHaveBeenCalledTimes(1)
+  })
+
+  it('opens cleanly after rendering closed first', () => {
+    const { rerender } = render(<MissionControlDialog open={false} onClose={vi.fn()} />)
+
+    expect(() => {
+      rerender(<MissionControlDialog open={true} onClose={vi.fn()} />)
+    }).not.toThrow()
+
+    expect(screen.getByTestId('mission-control-dialog')).toBeInTheDocument()
+  })
+
+  it('calls setPhase when clicking Next', () => {
+    // Provide a project so canAdvance is true
+    const mcWithProjects = {
+      ...mockMC,
+      state: { ...mockMC.state, projects: [{ name: 'falco' }] }
+    }
+    vi.mocked(useMissionControl).mockReturnValue(mcWithProjects as unknown as ReturnType<typeof useMissionControl>)
+
+    render(<MissionControlDialog open={true} onClose={vi.fn()} />)
+
+    const nextBtn = screen.getByText('Next')
+    fireEvent.click(nextBtn)
+    expect(mcWithProjects.setPhase).toHaveBeenCalledWith('assign')
+  })
+
+  it('navigates via stepper', () => {
+    render(<MissionControlDialog open={true} onClose={vi.fn()} />)
+    
+    const step2 = screen.getByTestId('mission-control-phase-2')
+    // Should be disabled because we haven't reached it yet (highestReached = 0)
+    expect(step2).toHaveProperty('disabled', true)
+  })
+
+  it('pre-populates project when initialKubaraChart is provided', () => {
+    render(
+      <MissionControlDialog 
+        open={true} 
+        onClose={vi.fn()} 
+        initialKubaraChart="falco-operator" 
+      />
+    )
+    
+    expect(mockMC.addProject).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'falco-operator',
+      userAdded: true
+    }))
+  })
+
+  it('shows stale cluster warning when mc returns stale names', () => {
+    const mcWithStale = {
+      ...mockMC,
+      staleClusterNames: ['old-cluster']
+    }
+    vi.mocked(useMissionControl).mockReturnValue(mcWithStale as unknown as ReturnType<typeof useMissionControl>)
+
+    render(<MissionControlDialog open={true} onClose={vi.fn()} />)
+    
+    // Check if acknowledge was called
+    expect(mcWithStale.acknowledgeStaleClusters).toHaveBeenCalled()
+  })
+
+  it('hydrates state from reviewPlanEncoded', () => {
+    const mockPlan = { title: 'Shared Plan', projects: [] }
+    vi.mocked(decodePlan).mockReturnValue(mockPlan as unknown as ReturnType<typeof decodePlan>)
+
+    render(
+      <MissionControlDialog 
+        open={true} 
+        onClose={vi.fn()} 
+        reviewPlanEncoded="base64data" 
+      />
+    )
+
+    expect(mockMC.reset).not.toHaveBeenCalled()
+    expect(decodePlan).toHaveBeenCalledWith('base64data')
+    expect(mockMC.hydrateFromPlan).toHaveBeenCalledWith(mockPlan)
+    expect(screen.getByText('REVIEW')).toBeInTheDocument()
+  })
+
+  it('prevents duplicate launch submission on rapid double click', () => {
+    const mcBlueprint = {
+      ...mockMC,
+      state: {
+        ...mockMC.state,
+        phase: 'blueprint',
+        projects: [{ name: 'falco' }],
+        assignments: [{ clusterName: 'cluster-1', projectNames: ['falco'] }],
+      },
+      setPhase: vi.fn(),
+      setDryRun: vi.fn(),
+    }
+    vi.mocked(useMissionControl).mockReturnValue(mcBlueprint as unknown as ReturnType<typeof useMissionControl>)
+
+    render(<MissionControlDialog open={true} onClose={vi.fn()} />)
+
+    const deployBtn = screen.getByTestId('mission-control-launch')
+
+    act(() => {
+      fireEvent.click(deployBtn)
+      fireEvent.click(deployBtn)
+    })
+
+    expect(mcBlueprint.setDryRun).toHaveBeenCalledTimes(1)
+    expect(mcBlueprint.setDryRun).toHaveBeenCalledWith(false)
+    expect(mcBlueprint.setPhase).toHaveBeenCalledTimes(1)
+    expect(mcBlueprint.setPhase).toHaveBeenCalledWith('launching')
+    expect(deployBtn).toBeDisabled()
+    expect(screen.getAllByText('Starting…')).toHaveLength(2)
+  })
+})

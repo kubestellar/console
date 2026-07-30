@@ -1,0 +1,297 @@
+import { useState } from 'react'
+import { Database } from 'lucide-react'
+import { Skeleton } from '../ui/Skeleton'
+import { ClusterBadge } from '../ui/ClusterBadge'
+import { useCardLoadingState } from './CardDataContext'
+import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
+import { crdStatusIcons, crdStatusColors } from '../../lib/cards/statusMappers'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions, CardBody, CardBodyLoaded, CardBodyEmpty } from '../../lib/cards/CardComponents'
+import { useTranslation } from 'react-i18next'
+import { useCRDs } from '../../hooks/useCRDs'
+import type { CRDData } from '../../hooks/useCRDs'
+
+interface CRDHealthProps {
+  config?: {
+    cluster?: string
+  }
+}
+
+type SortByOption = 'status' | 'name' | 'group' | 'instances'
+type SortTranslationKey = 'common:common.status' | 'common:common.name' | 'cards:crdHealth.group' | 'cards:crdHealth.instances'
+
+const SORT_OPTIONS_KEYS: ReadonlyArray<{ value: SortByOption; labelKey: SortTranslationKey }> = [
+  { value: 'status' as const, labelKey: 'common:common.status' },
+  { value: 'name' as const, labelKey: 'common:common.name' },
+  { value: 'group' as const, labelKey: 'cards:crdHealth.group' },
+  { value: 'instances' as const, labelKey: 'cards:crdHealth.instances' },
+]
+
+const statusOrder: Record<string, number> = { NotEstablished: 0, Terminating: 1, Established: 2 }
+
+export function CRDHealth({ config: _config }: CRDHealthProps) {
+  const { t } = useTranslation(['cards', 'common'])
+  const SORT_OPTIONS = SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
+  const { crds: allCRDs, isLoading, isRefreshing, isDemoFallback } = useCRDs()
+
+  const [filterGroup, setFilterGroup] = useState<string>('')
+
+  // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = allCRDs.length > 0
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
+    isLoading: isLoading && !hasData,
+    isRefreshing,
+    hasAnyData: hasData,
+    isDemoData: isDemoFallback })
+
+  // Apply group filter before passing to useCardData
+  const groupFilteredCRDs = (() => {
+    if (!filterGroup) return allCRDs
+    return allCRDs.filter(c => c.group === filterGroup)
+  })()
+
+  // Use shared card data hook for filtering, sorting, and pagination
+  const {
+    items: crds,
+    totalItems,
+    currentPage,
+    totalPages,
+    itemsPerPage,
+    goToPage,
+    needsPagination,
+    setItemsPerPage,
+    filters: {
+      search: localSearch,
+      setSearch: setLocalSearch,
+      localClusterFilter,
+      toggleClusterFilter,
+      clearClusterFilter,
+      availableClusters,
+      showClusterFilter,
+      setShowClusterFilter,
+      clusterFilterRef },
+    sorting: {
+      sortBy,
+      setSortBy,
+      sortDirection,
+      setSortDirection },
+    containerRef,
+    containerStyle } = useCardData<CRDData, SortByOption>(groupFilteredCRDs, {
+    filter: {
+      searchFields: ['name', 'group', 'cluster'] as (keyof CRDData)[],
+      clusterField: 'cluster' as keyof CRDData,
+      storageKey: 'crd-health' },
+    sort: {
+      defaultField: 'status',
+      defaultDirection: 'asc',
+      comparators: {
+        status: (a, b) => statusOrder[a.status] - statusOrder[b.status],
+        name: commonComparators.string('name'),
+        group: commonComparators.string('group'),
+        instances: (a, b) => a.instances - b.instances } },
+    defaultLimit: 5 })
+
+  // Get unique groups (from all CRDs before useCardData filtering)
+  const groups = (() => {
+    const groupSet = new Set(allCRDs.map(c => c.group))
+    return Array.from(groupSet).sort()
+  })()
+
+  const getStatusIcon = (status: CRDData['status']) => crdStatusIcons[status]
+  const getStatusColor = (status: CRDData['status']) => crdStatusColors[status]
+
+  // Compute stats from the filtered set (pre-pagination) by approximating
+  // the same filters useCardData applies: cluster filter + search
+  const statsSource = (() => {
+    let result = groupFilteredCRDs
+
+    // Apply local cluster filter
+    if (localClusterFilter.length > 0) {
+      result = result.filter(c => localClusterFilter.includes(c.cluster))
+    }
+
+    // Apply local search
+    if (localSearch.trim()) {
+      const query = localSearch.toLowerCase()
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(query) ||
+        c.group.toLowerCase().includes(query) ||
+        c.cluster.toLowerCase().includes(query)
+      )
+    }
+
+    return result
+  })()
+
+  const healthyCount = statsSource.filter(c => c.status === 'Established').length
+  const unhealthyCount = statsSource.filter(c => c.status !== 'Established').length
+  const totalInstances = statsSource.reduce((sum, c) => sum + c.instances, 0)
+
+  if (showSkeleton) {
+    return (
+      <CardBody>
+        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
+          <Skeleton variant="text" width={110} height={20} />
+          <Skeleton variant="rounded" width={120} height={32} />
+        </div>
+        <div className="space-y-2">
+          <Skeleton variant="rounded" height={40} />
+          <Skeleton variant="rounded" height={40} />
+          <Skeleton variant="rounded" height={40} />
+        </div>
+      </CardBody>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <CardBodyEmpty>
+        <p className="text-sm">{t('crdHealth.noCRDs')}</p>
+        <p className="text-xs mt-1">{t('crdHealth.noCRDsHint')}</p>
+      </CardBodyEmpty>
+    )
+  }
+
+  return (
+    <CardBodyLoaded>
+      {/* Controls - single row */}
+      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2 mb-4">
+        <div className="flex items-center gap-2" />
+        <CardControlsRow
+          clusterIndicator={{
+            selectedCount: localClusterFilter.length,
+            totalCount: availableClusters.length }}
+          clusterFilter={{
+            availableClusters,
+            selectedClusters: localClusterFilter,
+            onToggle: toggleClusterFilter,
+            onClear: clearClusterFilter,
+            isOpen: showClusterFilter,
+            setIsOpen: setShowClusterFilter,
+            containerRef: clusterFilterRef,
+            minClusters: 1 }}
+          cardControls={{
+            limit: itemsPerPage,
+            onLimitChange: setItemsPerPage,
+            sortBy,
+            sortOptions: SORT_OPTIONS,
+            onSortChange: (v) => setSortBy(v as SortByOption),
+            sortDirection,
+            onSortDirectionChange: setSortDirection }}
+        />
+      </div>
+
+      {/* Local Search */}
+      <CardSearchInput
+        value={localSearch}
+        onChange={setLocalSearch}
+        placeholder={t('crdHealth.searchCRDs')}
+        className="mb-4"
+      />
+
+      {availableClusters.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
+          {t('common:common.noClustersAvailable')}
+        </div>
+      ) : (
+        <>
+          {/* Scope badge and filter */}
+          <div className="flex items-center gap-2 mb-4">
+            {localClusterFilter.length === 1 ? (
+              <ClusterBadge cluster={localClusterFilter[0]} />
+            ) : localClusterFilter.length > 1 ? (
+              <span className="text-xs px-2 py-1 rounded bg-secondary text-muted-foreground">{t('common:common.nClusters', { count: localClusterFilter.length })}</span>
+            ) : (
+              <span className="text-xs px-2 py-1 rounded bg-secondary text-muted-foreground">{t('common:common.allClusters')}</span>
+            )}
+            <select
+              value={filterGroup}
+              onChange={(e) => setFilterGroup(e.target.value)}
+              className="ml-auto px-2 py-1 rounded bg-secondary border border-border text-xs text-foreground"
+            >
+              <option value="">{t('crdHealth.allGroups')}</option>
+              {groups.map(g => (
+                <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Summary */}
+          <div className="grid grid-cols-2 @md:grid-cols-4 gap-2 mb-4">
+            <div className="p-2 rounded-lg bg-cyan-500/10 text-center">
+              <span className="text-lg font-bold text-cyan-400">{statsSource.length}</span>
+              <p className="text-xs text-muted-foreground">{t('crdHealth.crds')}</p>
+            </div>
+            <div className="p-2 rounded-lg bg-green-500/10 text-center">
+              <span className="text-lg font-bold text-green-400">{healthyCount}</span>
+              <p className="text-xs text-muted-foreground">{t('common:common.healthy')}</p>
+            </div>
+            <div className="p-2 rounded-lg bg-red-500/10 text-center">
+              <span className="text-lg font-bold text-red-400">{unhealthyCount}</span>
+              <p className="text-xs text-muted-foreground">{t('crdHealth.issues')}</p>
+            </div>
+            <div className="p-2 rounded-lg bg-blue-500/10 text-center">
+              <span className="text-lg font-bold text-blue-400">{totalInstances}</span>
+              <p className="text-xs text-muted-foreground">{t('crdHealth.instances')}</p>
+            </div>
+          </div>
+
+          {/* CRDs list */}
+          <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto" style={containerStyle}>
+            {crds.map((crd) => {
+              const StatusIcon = getStatusIcon(crd.status)
+              const color = getStatusColor(crd.status)
+
+              return (
+                <div
+                  key={`${crd.cluster}-${crd.group}-${crd.name}`}
+                  className="p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-y-2">
+                    <div className="flex items-center gap-2">
+                      <StatusIcon className={`w-4 h-4 text-${color}-400`} />
+                      <ClusterBadge cluster={crd.cluster} size="sm" />
+                      <span className="text-sm text-foreground">{crd.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Database className="w-3 h-3 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">{crd.instances}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1 ml-6 text-xs text-muted-foreground">
+                    <span className="truncate">{crd.group}</span>
+                    <span className="text-border">|</span>
+                    <span>{crd.version}</span>
+                    <span className="text-border">|</span>
+                    <span>{crd.scope}</span>
+                  </div>
+                  {crd.status !== 'Established' && (
+                    <CardAIActions
+                      resource={{ kind: 'CustomResourceDefinition', name: crd.name, cluster: crd.cluster, status: crd.status }}
+                      issues={[{ name: `CRD ${crd.status}`, message: `CRD "${crd.name}" (${crd.group}) is ${crd.status} on cluster ${crd.cluster}` }]}
+                      className="mt-1 ml-6"
+                    />
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Pagination */}
+          <CardPaginationFooter
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : 10}
+            onPageChange={goToPage}
+            needsPagination={needsPagination && itemsPerPage !== 'unlimited'}
+          />
+
+          {/* Footer */}
+          <div className="mt-4 pt-3 border-t border-border/50 text-xs text-muted-foreground">
+            {localClusterFilter.length === 1 ? t('crdHealth.footerSingle', { count: groups.length, cluster: localClusterFilter[0] }) : t('crdHealth.footerMulti', { count: groups.length, clusters: availableClusters.length })}
+          </div>
+        </>
+      )}
+    </CardBodyLoaded>
+  )
+}

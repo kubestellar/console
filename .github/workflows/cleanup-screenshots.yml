@@ -1,0 +1,170 @@
+name: Cleanup Old Screenshots
+
+# Deletes screenshot images from .github/screenshots/ that are older than
+# RETENTION_DAYS (default 7). Before deleting, each branch-based raw URL in
+# issue comments is rewritten to a commit-SHA-based URL so the image remains
+# visible in the issue even after the file is removed from the default branch.
+#
+# New screenshots already use SHA-based URLs (see process-screenshots.yml),
+# so comment rewriting is only needed for screenshots created before that
+# change was deployed.
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup-screenshots:
+    permissions:
+      # contents: write required to delete old screenshot files and commit URL rewrites
+      contents: write
+      # issues: write required to update issue comment URLs during cleanup
+      issues: write
+    if: github.repository == 'kubestellar/console'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history needed to look up commit SHAs for each screenshot
+          fetch-depth: 0
+
+      - name: Find and remove old screenshots
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const { execFileSync } = require('child_process');
+
+            const RETENTION_DAYS = 7;
+            const SCREENSHOT_DIR = '.github/screenshots';
+
+            // ── helpers ──────────────────────────────────────────────
+            // Use execFileSync (no shell) to avoid injection from
+            // untrusted path components (request IDs come from issue bodies).
+            function git(...args) {
+              return execFileSync('git', args, { encoding: 'utf8' }).trim();
+            }
+
+            function findFiles(...args) {
+              return execFileSync('find', args, { encoding: 'utf8' }).trim();
+            }
+
+            function daysBetween(a, b) {
+              const MS_PER_DAY = 86_400_000;
+              return Math.floor(Math.abs(a - b) / MS_PER_DAY);
+            }
+
+            // ── collect screenshot files ─────────────────────────────
+            let files;
+            try {
+              files = findFiles(SCREENSHOT_DIR, '-type', 'f', '-name', 'screenshot-*')
+                .split('\n')
+                .filter(Boolean);
+            } catch {
+              console.log('No screenshots directory — nothing to clean up');
+              return;
+            }
+
+            if (files.length === 0) {
+              console.log('No screenshot files found');
+              return;
+            }
+
+            // ── identify files older than retention period ────────────
+            const now = new Date();
+            const expired = [];
+
+            for (const file of files) {
+              // --diff-filter=A finds the commit that *added* the file,
+              // not the most recent commit that touched it (which could be
+              // a merge or sibling deletion). This gives the true age and
+              // the correct SHA for permanent URL construction.
+              const logLine = git('log', '--diff-filter=A', '-1', '--format=%H %aI', '--', file);
+              if (!logLine) continue;
+
+              const [commitSha, commitDate] = logLine.split(' ');
+              if (daysBetween(now, new Date(commitDate)) >= RETENTION_DAYS) {
+                expired.push({ file, commitSha });
+              }
+            }
+
+            if (expired.length === 0) {
+              console.log('No screenshots older than ' + RETENTION_DAYS + ' days');
+              return;
+            }
+
+            console.log(`Found ${expired.length} screenshot(s) to clean up`);
+
+            // ── rewrite branch-based URLs to SHA-based URLs ──────────
+            // Only needed for screenshots that pre-date the SHA-URL change
+            // in process-screenshots.yml. Newer screenshots already have
+            // permanent commit-SHA URLs.
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const RAW_PREFIX = `https://raw.githubusercontent.com/${owner}/${repo}`;
+
+            for (const { file, commitSha } of expired) {
+              // Extract issue number from the commit that added this file
+              const commitMsg = git('log', '-1', '--format=%s', commitSha);
+              const issueMatch = commitMsg.match(/#(\d+)/);
+              if (!issueMatch) {
+                console.log(`  ${file}: no issue number in commit message, skipping URL rewrite`);
+                continue;
+              }
+
+              const issueNumber = parseInt(issueMatch[1]);
+              const branchUrl = `${RAW_PREFIX}/main/${file}`;
+              const permanentUrl = `${RAW_PREFIX}/${commitSha}/${file}`;
+
+              try {
+                // Paginate to cover issues with more than 100 comments
+                const comments = await github.paginate(
+                  github.rest.issues.listComments,
+                  { owner, repo, issue_number: issueNumber, per_page: 100 },
+                );
+
+                for (const comment of comments) {
+                  if (comment.body && comment.body.includes(branchUrl)) {
+                    await github.rest.issues.updateComment({
+                      owner,
+                      repo,
+                      comment_id: comment.id,
+                      body: comment.body.replaceAll(branchUrl, permanentUrl),
+                    });
+                    console.log(`  Rewrote URL in comment ${comment.id} on issue #${issueNumber}`);
+                  }
+                }
+              } catch (err) {
+                // Non-fatal — the file will still be deleted; the worst case
+                // is a broken image link for a very old issue.
+                console.warn(`  Could not rewrite URLs for issue #${issueNumber}: ${err.message}`);
+              }
+            }
+
+            // ── delete expired files ─────────────────────────────────
+            for (const { file } of expired) {
+              git('rm', file);
+              console.log(`  Removed ${file}`);
+            }
+
+            // Remove empty request-ID directories
+            try {
+              findFiles(SCREENSHOT_DIR, '-mindepth', '1', '-type', 'd', '-empty', '-delete');
+            } catch { /* no empty dirs is fine */ }
+
+            // ── commit and push ──────────────────────────────────────
+            git('config', 'user.name', 'github-actions[bot]');
+            git('config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com');
+            git('commit', '-m', `Clean up ${expired.length} screenshot(s) older than ${RETENTION_DAYS} days`);
+            // Rebase before pushing in case another workflow (e.g.
+            // process-screenshots) committed to main during our run.
+            git('pull', '--rebase', 'origin', 'main');
+            git('push');
+
+            console.log(`Cleaned up ${expired.length} screenshot(s)`);

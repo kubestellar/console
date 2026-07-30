@@ -1,0 +1,10 @@
+{
+  "format": "kc-card-preset-v1",
+  "card_type": "cubefs_status",
+  "title": "CubeFS",
+  "description": "CubeFS distributed file system health, volume status.",
+  "category": "Storage",
+  "project": "cubefs",
+  "cncf_status": "graduated",
+  "config": {}
+}

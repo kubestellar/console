@@ -1,0 +1,322 @@
+name: Post-Merge Playwright Verification
+
+# Runs targeted Playwright E2E tests against console.kubestellar.io after
+# each merge to main that touches web/ files. Tests are selected based on
+# issue labels and changed file paths — no AI test generation needed.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'pkg/**'
+
+permissions: read-all  # default read; writes scoped to job below
+
+concurrency:
+  group: post-merge-verify
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+  PRODUCTION_URL: 'https://console.kubestellar.io'
+  # Maximum time (seconds) to wait for Netlify deploy
+  DEPLOY_WAIT_MAX_SECONDS: 300
+  # Interval between deploy checks (seconds)
+  DEPLOY_POLL_INTERVAL: 30
+
+jobs:
+  # ── Job 1: Wait for Netlify to deploy the merged code ──────────────
+  wait-for-deploy:
+    permissions:
+      issues: write
+      pull-requests: write
+    name: Wait for Netlify deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      deployed: ${{ steps.poll.outputs.deployed }}
+    steps:
+      - name: Poll production for current commit
+        id: poll
+        run: |
+          COMMIT_SHA="${{ github.sha }}"
+          SHORT_SHA="${COMMIT_SHA:0:8}"
+          echo "Waiting for $SHORT_SHA to deploy to ${{ env.PRODUCTION_URL }}..."
+
+          ELAPSED=0
+          while [ $ELAPSED -lt ${{ env.DEPLOY_WAIT_MAX_SECONDS }} ]; do
+            # Check if the build-id meta tag matches the current commit
+            BUILD_ID=$(curl -sf "${{ env.PRODUCTION_URL }}" 2>/dev/null | grep -o 'app-build-id" content="[^"]*"' | head -1 | sed 's/.*content="//;s/".*//')
+            if [ -n "$BUILD_ID" ]; then
+              # Match first 8 chars — the meta tag may contain the full SHA or a short version
+              DEPLOYED_SHORT="${BUILD_ID:0:8}"
+              if [ "$DEPLOYED_SHORT" = "$SHORT_SHA" ]; then
+                echo "✓ Deployed: $BUILD_ID matches $SHORT_SHA"
+                echo "deployed=true" >> $GITHUB_OUTPUT
+                exit 0
+              fi
+              echo "  Current: $DEPLOYED_SHORT, waiting for: $SHORT_SHA ($ELAPSED/${DEPLOY_WAIT_MAX_SECONDS}s)"
+            else
+              echo "  No build-id meta tag found ($ELAPSED/${DEPLOY_WAIT_MAX_SECONDS}s)"
+            fi
+            sleep ${{ env.DEPLOY_POLL_INTERVAL }}
+            ELAPSED=$((ELAPSED + ${{ env.DEPLOY_POLL_INTERVAL }}))
+          done
+
+          echo "⚠ Timed out waiting for deploy. Running tests against current production anyway."
+          echo "deployed=timeout" >> $GITHUB_OUTPUT
+
+  # ── Job 2: Extract PR context and select tests ─────────────────────
+  extract-context:
+    permissions:
+      issues: write
+      pull-requests: write
+    name: Select tests from PR context
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      spec_files: ${{ steps.select.outputs.spec_files }}
+      pr_number: ${{ steps.find-pr.outputs.pr_number }}
+      issue_number: ${{ steps.find-pr.outputs.issue_number }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Find merged PR
+        id: find-pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Find the PR that produced this merge commit
+          PR_NUMBER=$(gh pr list --state merged --search "${{ github.sha }}" --json number --jq '.[0].number // empty' 2>/dev/null || echo "")
+          if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "null" ]; then
+            # Fallback: search by commit message
+            PR_NUMBER=$(git log -1 --format='%s' | grep -oE '#[0-9]+' | head -1 | tr -d '#' || echo "")
+          fi
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+
+          if [ -n "$PR_NUMBER" ]; then
+            # Extract "Fixes #NNN" from PR body
+            ISSUE=$(gh pr view "$PR_NUMBER" --json body --jq '.body' 2>/dev/null | grep -oiE '(fixes|closes|resolves)\s+#[0-9]+' | head -1 | grep -oE '[0-9]+' || echo "")
+            echo "issue_number=$ISSUE" >> $GITHUB_OUTPUT
+            echo "PR: #$PR_NUMBER, Issue: #$ISSUE"
+          else
+            echo "issue_number=" >> $GITHUB_OUTPUT
+            echo "No PR found for commit ${{ github.sha }}"
+          fi
+
+      - name: Select spec files
+        id: select
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SPEC_MAP="web/e2e/spec-map.json"
+          SPECS=""
+
+          # Always-run specs
+          ALWAYS=$(jq -r '.always_run[]' "$SPEC_MAP")
+          SPECS="$ALWAYS"
+
+          # From issue labels
+          ISSUE="${{ steps.find-pr.outputs.issue_number }}"
+          if [ -n "$ISSUE" ]; then
+            LABELS=$(gh api "repos/${{ github.repository }}/issues/$ISSUE" --jq '.labels[].name' 2>/dev/null || echo "")
+            for LABEL in $LABELS; do
+              MATCHED=$(jq -r --arg l "$LABEL" '.label_map[$l] // [] | .[]' "$SPEC_MAP" 2>/dev/null)
+              if [ -n "$MATCHED" ]; then
+                SPECS=$(printf '%s\n%s' "$SPECS" "$MATCHED")
+              fi
+            done
+          fi
+
+          # From changed file paths
+          PR="${{ steps.find-pr.outputs.pr_number }}"
+          if [ -n "$PR" ] && [ "$PR" != "null" ]; then
+            CHANGED_FILES=$(gh pr view "$PR" --json files --jq '.files[].path' 2>/dev/null || echo "")
+            for PREFIX in $(jq -r '.path_map | keys[]' "$SPEC_MAP"); do
+              if echo "$CHANGED_FILES" | grep -q "^$PREFIX"; then
+                MATCHED=$(jq -r --arg p "$PREFIX" '.path_map[$p][]' "$SPEC_MAP")
+                SPECS=$(printf '%s\n%s' "$SPECS" "$MATCHED")
+              fi
+            done
+          fi
+
+          # Trim whitespace, deduplicate, format as space-separated list
+          SPEC_LIST=$(printf '%s\n' "$SPECS" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sort -u | grep -v '^$' | tr '\n' ' ')
+          echo "Selected specs: $SPEC_LIST"
+          echo "spec_files=$SPEC_LIST" >> $GITHUB_OUTPUT
+
+  # ── Job 3: Run Playwright tests ────────────────────────────────────
+  run-tests:
+    permissions:
+      issues: write
+      pull-requests: write
+    name: Run Playwright E2E
+    needs: [wait-for-deploy, extract-context]
+    if: needs.extract-context.outputs.spec_files != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      result: ${{ steps.test.outputs.result }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        working-directory: web
+        run: npx playwright install chromium --with-deps
+
+      - name: Run targeted tests
+        id: test
+        working-directory: web
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ env.PRODUCTION_URL }}
+        run: |
+          SPECS="${{ needs.extract-context.outputs.spec_files }}"
+          echo "Running: $SPECS"
+
+          # Build spec file paths
+          SPEC_ARGS=""
+          for SPEC in $SPECS; do
+            SPEC_ARGS="$SPEC_ARGS e2e/$SPEC"
+          done
+
+          # Run with JSON + HTML reporters, Chromium only
+          # Capture exit code without masking it
+          EXIT_CODE=0
+          npx playwright test $SPEC_ARGS \
+            --project=chromium \
+            --reporter=json,html \
+            --output=test-results \
+            2>&1 | tee playwright-output.txt || EXIT_CODE=$?
+
+          if [ "$EXIT_CODE" -eq 0 ]; then
+            echo "result=passed" >> $GITHUB_OUTPUT
+          else
+            echo "result=failed" >> $GITHUB_OUTPUT
+          fi
+
+          # Propagate the real exit code so the job status reflects test outcome
+          exit $EXIT_CODE
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-post-merge-report
+          path: web/playwright-report/
+          retention-days: 30
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-post-merge-results
+          path: web/test-results/
+          retention-days: 7
+
+  # ── Job 4: Report results ──────────────────────────────────────────
+  report:
+    permissions:
+      issues: write
+      pull-requests: write
+    name: Report verification results
+    needs: [extract-context, run-tests]
+    if: always() && needs.extract-context.outputs.pr_number != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Post result on PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR="${{ needs.extract-context.outputs.pr_number }}"
+          ISSUE="${{ needs.extract-context.outputs.issue_number }}"
+          SPECS="${{ needs.extract-context.outputs.spec_files }}"
+          RESULT="${{ needs.run-tests.outputs.result }}"
+          JOB_RESULT="${{ needs.run-tests.result }}"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          if [ "$RESULT" = "passed" ] && [ "$JOB_RESULT" = "success" ]; then
+            ICON="✅"
+            STATUS="passed"
+          elif [ "$JOB_RESULT" = "skipped" ]; then
+            ICON="⏭️"
+            STATUS="skipped (no matching specs)"
+          elif [ "$JOB_RESULT" = "cancelled" ]; then
+            ICON="⏹️"
+            STATUS="cancelled"
+          else
+            ICON="❌"
+            STATUS="failed"
+          fi
+
+          BODY="## $ICON Post-Merge Verification: $STATUS
+
+          **Commit:** \`${{ github.sha }}\`
+          **Specs run:** \`$SPECS\`
+          **Report:** [$RUN_URL]($RUN_URL)
+          "
+
+          # Comment on PR
+          gh pr comment "$PR" --repo "${{ github.repository }}" --body "$BODY" || true
+
+          # On failure: comment on (but do NOT reopen) the original issue,
+          # then create a regression issue + assign Copilot for follow-up.
+          # Playwright is non-blocking on this repo (per the merge gate),
+          # so reopening would create noise that drowns out real fixes.
+          if [ "$STATUS" = "failed" ]; then
+            # Comment on the original issue without reopening it
+            if [ -n "$ISSUE" ]; then
+              echo "Commenting on original issue #$ISSUE (no reopen)..."
+              gh issue comment "$ISSUE" --repo "${{ github.repository }}" \
+                --body "⚠️ Post-merge Playwright verification **failed** after PR #$PR merged. The fix shipped, but Playwright flagged an issue — see [test report]($RUN_URL). A regression issue will be filed for follow-up." \
+                || true
+            fi
+
+            # Create a new regression issue
+            TITLE="🐛 Regression detected after merging PR #$PR"
+            ISSUE_BODY="$(cat <<REGRESSION_EOF
+          ## Post-merge Playwright verification failed
+
+          **Merged PR:** #$PR
+          **Original issue:** ${ISSUE:+#$ISSUE}${ISSUE:-none}
+          **Commit:** ${{ github.sha }}
+          **Failed specs:** \`$SPECS\`
+          **CI run:** $RUN_URL
+
+          The following Playwright E2E tests failed after this PR was merged to main.
+          This may indicate the fix didn't fully resolve the issue, or introduced a regression.
+
+          ### Next steps
+          1. Review the [Playwright HTML report]($RUN_URL) (download artifacts)
+          2. Reproduce locally: \`PLAYWRIGHT_BASE_URL=https://console.kubestellar.io npx playwright test $SPECS --project=chromium\`
+          3. Fix and create a follow-up PR
+          REGRESSION_EOF
+          )"
+            NEW_ISSUE=$(gh issue create \
+              --repo "${{ github.repository }}" \
+              --title "$TITLE" \
+              --body "$ISSUE_BODY" \
+              --label "kind/bug,priority/critical,regression-detected,ai-fix-requested,triage/accepted" \
+              2>&1 | grep -o '[0-9]*$' || echo "")
+
+            # Assign Copilot to auto-fix the regression
+            if [ -n "$NEW_ISSUE" ]; then
+              echo "Created regression issue #$NEW_ISSUE, assigning Copilot..."
+              gh issue edit "$NEW_ISSUE" --repo "${{ github.repository }}" \
+                --add-assignee "copilot-swe-agent[bot]" || true
+            fi
+          fi

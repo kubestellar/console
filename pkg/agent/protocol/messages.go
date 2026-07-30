@@ -1,0 +1,257 @@
+package protocol
+
+// MessageType represents the type of message
+type MessageType string
+
+const (
+	// Request types
+	TypeHealth        MessageType = "health"
+	TypeClusters      MessageType = "clusters"
+	TypeKubectl       MessageType = "kubectl"
+	TypeClaude        MessageType = "claude"        // Legacy - routes to selected agent
+	TypeChat          MessageType = "chat"          // Generic chat with selected agent
+	TypeListAgents    MessageType = "list_agents"   // List available AI agents
+	TypeSelectAgent   MessageType = "select_agent"   // Select an AI agent
+	TypeCancelChat    MessageType = "cancel_chat"    // Cancel in-progress chat
+	TypeRenameContext MessageType = "rename_context"
+
+	// Response types
+	TypeResult        MessageType = "result"
+	TypeError         MessageType = "error"
+	TypeStream        MessageType = "stream"
+	TypeStreamChunk   MessageType = "stream_chunk"   // Streaming response chunk
+	TypeStreamEnd     MessageType = "stream_end"     // End of streaming response
+	TypeProgress      MessageType = "progress"       // Tool activity/progress events
+	TypeAgentSelected MessageType = "agent_selected" // Agent selection confirmed
+	TypeAgentsList    MessageType = "agents_list"    // List of available agents
+
+	// Mixed-mode chat types
+	TypeMixedModeThinking  MessageType = "mixed_mode_thinking"  // Thinking agent phase indicator
+	TypeMixedModeExecuting MessageType = "mixed_mode_executing" // Execution agent phase indicator
+
+	// Integrity & Sync types
+	TypeStateDigest MessageType = "state_digest" // Server-side state integrity digest (#12000)
+)
+
+// Message is the base message structure for WebSocket communication
+type Message struct {
+	ID      string          `json:"id"`
+	Type    MessageType     `json:"type"`
+	Payload interface{}     `json:"payload,omitempty"`
+}
+
+// HealthPayload is the response for health checks
+type HealthPayload struct {
+	Status             string            `json:"status"`
+	Version            string            `json:"version"`
+	CommitSHA          string            `json:"commitSHA,omitempty"`
+	BuildTime          string            `json:"buildTime,omitempty"`
+	GoVersion          string            `json:"goVersion,omitempty"`
+	OS                 string            `json:"os"`
+	Arch               string            `json:"arch"`
+	Clusters           int               `json:"clusters"`
+	HasClaude          bool              `json:"hasClaude"`
+	Claude             *ClaudeInfo       `json:"claude,omitempty"`
+	InstallMethod      string            `json:"install_method,omitempty"`
+	AvailableProviders []ProviderSummary `json:"availableProviders,omitempty"`
+}
+
+// ProviderSummary is a lightweight view of a detected AI provider for telemetry
+type ProviderSummary struct {
+	Name         string `json:"name"`
+	DisplayName  string `json:"displayName"`
+	Capabilities int    `json:"capabilities"` // bitmask: 1=chat, 2=toolExec
+}
+
+// ClaudeInfo contains information about the local Claude Code installation
+type ClaudeInfo struct {
+	Installed  bool       `json:"installed"`
+	Path       string     `json:"path,omitempty"`
+	Version    string     `json:"version,omitempty"`
+	TokenUsage TokenUsage `json:"tokenUsage"`
+}
+
+// TokenUsage contains token consumption statistics
+type TokenUsage struct {
+	Session   TokenCount `json:"session"`
+	Today     TokenCount `json:"today"`
+	ThisMonth TokenCount `json:"thisMonth"`
+}
+
+// TokenCount represents input/output token counts
+type TokenCount struct {
+	Input  int64 `json:"input"`
+	Output int64 `json:"output"`
+}
+
+// ClustersPayload is the response for cluster listing
+type ClustersPayload struct {
+	Clusters []ClusterInfo `json:"clusters"`
+	Current  string        `json:"current"`
+}
+
+// ClusterInfo represents a kubeconfig context
+type ClusterInfo struct {
+	Name       string `json:"name"`
+	Context    string `json:"context"`
+	Server     string `json:"server"`
+	User       string `json:"user,omitempty"`
+	Namespace  string `json:"namespace,omitempty"`
+	AuthMethod string `json:"authMethod,omitempty"` // exec, token, certificate, auth-provider, unknown
+	IsCurrent  bool   `json:"isCurrent"`
+}
+
+// KubectlRequest is the payload for kubectl commands
+type KubectlRequest struct {
+	Context   string   `json:"context,omitempty"`
+	Namespace string   `json:"namespace,omitempty"`
+	Args      []string `json:"args"`
+	Confirmed bool     `json:"confirmed,omitempty"` // must be true for destructive commands
+	// SessionID ties this kubectl request to a mission session so the server
+	// can enforce dry-run mode: if the session was started with dryRun=true,
+	// mutating commands are rejected at the server level. (#6442)
+	SessionID string `json:"sessionId,omitempty"`
+}
+
+// KubectlResponse is the response from kubectl commands
+type KubectlResponse struct {
+	Output               string `json:"output"`
+	ExitCode             int    `json:"exitCode"`
+	Error                string `json:"error,omitempty"`
+	RequiresConfirmation bool   `json:"requiresConfirmation,omitempty"` // true when user must confirm
+	Command              string `json:"command,omitempty"`              // the command requiring confirmation
+}
+
+// ClaudeRequest is the payload for Claude Code requests
+type ClaudeRequest struct {
+	Prompt    string `json:"prompt"`
+	SessionID string `json:"sessionId,omitempty"`
+}
+
+// ClaudeResponse is the response from Claude Code
+type ClaudeResponse struct {
+	Content   string `json:"content"`
+	SessionID string `json:"sessionId"`
+	Done      bool   `json:"done"`
+}
+
+// ErrorPayload represents an error response
+type ErrorPayload struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
+// RenameContextRequest is the payload for renaming a kubeconfig context
+type RenameContextRequest struct {
+	OldName string `json:"oldName"`
+	NewName string `json:"newName"`
+}
+
+// RenameContextResponse is the response from renaming a context
+type RenameContextResponse struct {
+	Success bool   `json:"success"`
+	OldName string `json:"oldName"`
+	NewName string `json:"newName"`
+}
+
+// AgentInfo contains information about an AI agent
+type AgentInfo struct {
+	Name         string `json:"name"`
+	DisplayName  string `json:"displayName"`
+	Description  string `json:"description"`
+	Provider     string `json:"provider"`
+	Available    bool   `json:"available"`
+	Capabilities int    `json:"capabilities"` // bitmask: 1=chat, 2=toolExec
+}
+
+// AgentsListPayload is the response for listing available agents
+type AgentsListPayload struct {
+	Agents       []AgentInfo `json:"agents"`
+	DefaultAgent string      `json:"defaultAgent"`
+	Selected     string      `json:"selected"`
+}
+
+// SelectAgentRequest is the payload for selecting an AI agent
+type SelectAgentRequest struct {
+	Agent           string `json:"agent"`
+	SessionID       string `json:"sessionId,omitempty"`
+	PreserveHistory bool   `json:"preserveHistory,omitempty"`
+}
+
+// AgentSelectedPayload is the response after selecting an agent
+type AgentSelectedPayload struct {
+	Agent    string `json:"agent"`
+	Previous string `json:"previous,omitempty"`
+}
+
+// ChatMessage represents a message in conversation history
+type ChatMessage struct {
+	Role    string `json:"role"`    // "user" or "assistant"
+	Content string `json:"content"`
+}
+
+// ChatRequest is the payload for chat messages (multi-agent)
+type ChatRequest struct {
+	Agent     string        `json:"agent,omitempty"`   // Optional - uses selected agent if empty
+	Prompt    string        `json:"prompt"`
+	SessionID string        `json:"sessionId,omitempty"`
+	History   []ChatMessage `json:"history,omitempty"` // Previous messages for context
+	// ClusterContext is the kubeconfig context name of the cluster the user is
+	// currently viewing. When set, tool-capable agents scope kubectl commands
+	// to this context via --context, preventing multi-cluster context drift
+	// where the AI operates on a different cluster than the user expects. (#9485)
+	ClusterContext string `json:"clusterContext,omitempty"`
+	// DryRun is a server-enforced flag. When true, the kubectl proxy rejects
+	// mutating commands (apply, create, delete, etc.) for this session,
+	// preventing the AI agent from making real changes even if it ignores the
+	// prompt-level dry-run instructions. Read-only commands (get, describe,
+	// logs, etc.) remain allowed. (#6442)
+	DryRun bool `json:"dryRun,omitempty"`
+}
+
+// ChatStreamPayload is a streaming response chunk from chat
+type ChatStreamPayload struct {
+	Content       string           `json:"content"`
+	Agent         string           `json:"agent"`
+	SessionID     string           `json:"sessionId"`
+	Done          bool             `json:"done"`
+	IsError       bool             `json:"isError,omitempty"`
+	Usage         *ChatTokenUsage  `json:"usage,omitempty"`
+	ToolsExecuted bool             `json:"toolsExecuted,omitempty"` // Whether any tools were actually called
+}
+
+// ChatTokenUsage tracks token usage for a chat response
+type ChatTokenUsage struct {
+	InputTokens  int `json:"inputTokens"`
+	OutputTokens int `json:"outputTokens"`
+	TotalTokens  int `json:"totalTokens"`
+}
+
+// ProgressPayload represents tool activity or progress events during streaming
+type ProgressPayload struct {
+	Step   string         `json:"step"`             // Human-readable step description
+	Tool   string         `json:"tool,omitempty"`   // Tool being used
+	Input  map[string]any `json:"input,omitempty"`  // Tool input (truncated)
+	Output string         `json:"output,omitempty"` // Tool output (truncated)
+}
+
+// ProviderCheckResponse is returned by the /provider/check endpoint.
+// It tells the frontend whether a provider is ready and what is missing.
+type ProviderCheckResponse struct {
+	Provider      string   `json:"provider"`
+	Ready         bool     `json:"ready"`
+	State         string   `json:"state"`                   // "starting", "handshake", "connected", "failed"
+	Message       string   `json:"message"`
+	Prerequisites []string `json:"prerequisites,omitempty"` // What the user needs to install/configure
+	Version       string   `json:"version,omitempty"`
+	CliPath       string   `json:"cliPath,omitempty"`
+	HasHandshake  bool     `json:"hasHandshake"`            // Whether the provider supports explicit readiness checks
+}
+
+// StateDigestPayload represents a snapshot of resource versions for integrity checking.
+// Clients compare these versions with their local cache to detect missed updates (sync drift).
+type StateDigestPayload struct {
+	Sequence  int64             `json:"seq"`      // Monotonic counter
+	Timestamp int64             `json:"ts"`       // Server Unix time
+	Versions  map[string]string `json:"versions"` // ResourceType -> MaxResourceVersion
+}

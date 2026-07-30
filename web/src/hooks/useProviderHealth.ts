@@ -1,0 +1,338 @@
+import { useEffect, useMemo, useRef } from 'react'
+import { useCache } from '../lib/cache'
+import { useClusters } from './mcp/clusters'
+import { detectCloudProvider, getProviderLabel } from '../components/ui/CloudProviderIcon'
+import type { CloudProvider } from '../components/ui/CloudProviderIcon'
+import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
+import { agentFetch } from './mcp/shared'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { isInClusterMode } from './useBackendHealth'
+import { fetchKagentiProviderStatus } from '../lib/kagentiProviderBackend'
+
+/** Health status of a single provider */
+export interface ProviderHealthInfo {
+  id: string
+  name: string
+  category: 'ai' | 'cloud'
+  status: 'operational' | 'degraded' | 'down' | 'unknown'
+  configured: boolean
+  statusUrl?: string
+  detail?: string
+}
+
+/** Status page URLs for known providers — extensible */
+const STATUS_PAGES: Record<string, string> = {
+  // AI providers
+  anthropic: 'https://status.claude.com',
+  openai: 'https://status.openai.com',
+  google: 'https://aistudio.google.com/status',
+  'github-copilot': 'https://www.githubstatus.com',
+  mistral: 'https://status.mistral.ai',
+  // Cloud providers
+  eks: 'https://health.aws.amazon.com/health/status',
+  gke: 'https://status.cloud.google.com',
+  aks: 'https://status.azure.com/en-us/status',
+  openshift: 'https://status.redhat.com',
+  oci: 'https://ocistatus.oraclecloud.com',
+  alibaba: 'https://status.alibabacloud.com',
+  digitalocean: 'https://status.digitalocean.com',
+  rancher: 'https://status.rancher.com' }
+
+/** Display name mapping for AI providers */
+const AI_PROVIDER_NAMES: Record<string, string> = {
+  anthropic: 'Anthropic (Claude)',
+  claude: 'Anthropic (Claude)',
+  openai: 'OpenAI',
+  google: 'Google (Gemini)',
+  gemini: 'Google (Gemini)',
+  bob: 'Bob (Built-in)',
+  'anthropic-local': 'Claude Code (Local)',
+  'github-copilot': 'GitHub Copilot',
+  'github-cli': 'GitHub Copilot CLI',
+  'copilot-cli': 'GitHub Copilot CLI',
+  github: 'GitHub Copilot',
+  copilot: 'GitHub Copilot',
+  antigravity: 'Antigravity',
+  'google-ag': 'Antigravity',
+  ollama: 'Ollama (Local)',
+  'lm-studio': 'LM Studio (Local)',
+  lmstudio: 'LM Studio (Local)',
+  mistral: 'Mistral AI',
+  cohere: 'Cohere',
+  deepseek: 'DeepSeek',
+  groq: 'Groq',
+  together: 'Together AI',
+  fireworks: 'Fireworks AI',
+  perplexity: 'Perplexity',
+  openrouter: 'OpenRouter',
+  'open-webui': 'Open WebUI' }
+
+/** Normalize AI provider ID for dedup and status lookup */
+function normalizeAIProvider(provider: string): string {
+  const normalizedProvider = provider.trim().toLowerCase()
+
+  if (normalizedProvider === 'claude') return 'anthropic'
+  if (normalizedProvider === 'gemini') return 'google'
+  if (normalizedProvider === 'github' || normalizedProvider === 'github-cli' || normalizedProvider === 'github-copilot' || normalizedProvider === 'copilot' || normalizedProvider === 'copilot-cli') return 'github-copilot'
+  if (normalizedProvider === 'google-ag') return 'antigravity'
+  if (normalizedProvider === 'lmstudio') return 'lm-studio'
+  return normalizedProvider
+}
+
+interface KeyStatus {
+  provider: string
+  displayName: string
+  configured: boolean
+  source?: 'env' | 'config'
+  valid?: boolean
+  error?: string
+}
+
+interface RegisteredProvider {
+  name: string
+  displayName: string
+  provider: string
+  available: boolean
+}
+
+interface KeysStatusResponse {
+  keys: KeyStatus[]
+  configPath: string
+  registeredProviders?: RegisteredProvider[]
+}
+
+function createAIProviderHealth(
+  provider: string,
+  options: {
+    displayName?: string
+    status: ProviderHealthInfo['status']
+    detail?: string
+  },
+): ProviderHealthInfo {
+  const providerId = provider.trim().toLowerCase()
+  const normalizedProvider = normalizeAIProvider(provider)
+
+  return {
+    id: normalizedProvider,
+    name: AI_PROVIDER_NAMES[providerId] || AI_PROVIDER_NAMES[normalizedProvider] || options.displayName || provider,
+    category: 'ai',
+    status: options.status,
+    configured: true,
+    statusUrl: STATUS_PAGES[normalizedProvider],
+    detail: options.detail,
+  }
+}
+
+async function fetchLocalAIProviders(): Promise<ProviderHealthInfo[]> {
+  const result: ProviderHealthInfo[] = []
+
+  try {
+    const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/settings/keys`, {
+      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
+    if (response.ok) {
+      const data: KeysStatusResponse = await response.json()
+      const seen = new Set<string>()
+
+      for (const key of (data.keys || [])) {
+        // Skip unconfigured providers — they shouldn't appear in the health card.
+        // Local LLM runners (Ollama, LM Studio, etc.) are always registered in
+        // the backend but should only show up here if explicitly configured via
+        // API key or base URL env var/config (#12377).
+        if (!key.configured) {
+          continue
+        }
+
+        const normalized = normalizeAIProvider(key.provider)
+        if (seen.has(normalized)) continue
+        seen.add(normalized)
+
+        let status: ProviderHealthInfo['status'] = 'unknown'
+        let detail: string | undefined
+
+        if (key.valid === true) {
+          status = 'operational'
+          detail = 'API key configured and valid'
+        } else if (key.valid === false) {
+          status = 'down'
+          detail = key.error || 'API key invalid'
+        } else {
+          status = 'operational'
+          detail = 'API key configured'
+        }
+
+        result.push(createAIProviderHealth(key.provider, {
+          displayName: key.displayName,
+          status,
+          detail,
+        }))
+      }
+
+      for (const provider of (data.registeredProviders || [])) {
+        if (!provider.available) {
+          continue
+        }
+
+        const providerId = provider.provider || provider.name
+        const normalized = normalizeAIProvider(providerId)
+        if (seen.has(normalized)) continue
+        seen.add(normalized)
+
+        result.push(createAIProviderHealth(providerId, {
+          displayName: provider.displayName,
+          status: 'operational',
+          detail: 'Provider available',
+        }))
+      }
+    }
+  } catch {
+    // Agent unreachable — no AI providers to show
+  }
+
+  return result
+}
+
+async function fetchInClusterAIProviders(): Promise<ProviderHealthInfo[]> {
+  const result: ProviderHealthInfo[] = []
+
+  try {
+    const status = await fetchKagentiProviderStatus({ signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
+    const configuredProviders = new Set<string>()
+
+    for (const provider of (status.configured_providers || [])) {
+      configuredProviders.add(normalizeAIProvider(provider))
+    }
+
+    if (status.llm_provider && status.api_key_configured) {
+      configuredProviders.add(normalizeAIProvider(status.llm_provider))
+    }
+
+    const providerStatus: ProviderHealthInfo['status'] = status.available ? 'operational' : 'down'
+    const detail = status.available ? 'API key configured' : status.reason || 'Provider backend unavailable'
+
+    for (const provider of (configuredProviders || [])) {
+      result.push(createAIProviderHealth(provider, {
+        status: providerStatus,
+        detail,
+      }))
+    }
+  } catch {
+    // Kagenti status unavailable — no AI providers to show
+  }
+
+  return result
+}
+
+/** Demo data — shows a realistic set of providers all operational */
+const DEMO_PROVIDERS: ProviderHealthInfo[] = [
+  { id: 'anthropic', name: 'Anthropic (Claude)', category: 'ai', status: 'operational', configured: true, statusUrl: STATUS_PAGES.anthropic, detail: 'API key configured' },
+  { id: 'openai', name: 'OpenAI', category: 'ai', status: 'operational', configured: true, statusUrl: STATUS_PAGES.openai, detail: 'API key configured' },
+  { id: 'google', name: 'Google (Gemini)', category: 'ai', status: 'operational', configured: true, statusUrl: STATUS_PAGES.google, detail: 'API key configured' },
+  { id: 'eks', name: 'AWS EKS', category: 'cloud', status: 'operational', configured: true, statusUrl: STATUS_PAGES.eks, detail: '3 clusters' },
+  { id: 'gke', name: 'Google GKE', category: 'cloud', status: 'operational', configured: true, statusUrl: STATUS_PAGES.gke, detail: '2 clusters' },
+  { id: 'aks', name: 'Azure AKS', category: 'cloud', status: 'operational', configured: true, statusUrl: STATUS_PAGES.aks, detail: '1 cluster' },
+  { id: 'openshift', name: 'OpenShift', category: 'cloud', status: 'operational', configured: true, statusUrl: STATUS_PAGES.openshift, detail: '1 cluster' },
+  { id: 'oci', name: 'Oracle OKE', category: 'cloud', status: 'operational', configured: true, statusUrl: STATUS_PAGES.oci, detail: '1 cluster' },
+]
+
+const PROVIDER_HEALTH_REFRESH_INTERVAL_MS = 60_000
+
+function getClusterDependencyKey(clusters: Array<{ name: string; server?: string; namespaces?: string[]; user?: string }>): string {
+  return [...(clusters || [])]
+    .map(cluster => [
+      cluster.name,
+      cluster.server || '',
+      cluster.user || '',
+      [...(cluster.namespaces || [])].sort().join('|'),
+    ].join('::'))
+    .sort()
+    .join(',')
+}
+
+/** Fetch AI + Cloud providers and their health status */
+async function fetchProviders(clusterSnapshot: Array<{ name: string; server?: string; namespaces?: string[]; user?: string }>): Promise<ProviderHealthInfo[]> {
+  const result: ProviderHealthInfo[] = isInClusterMode()
+    ? await fetchInClusterAIProviders()
+    : await fetchLocalAIProviders()
+
+  if (clusterSnapshot.length > 0) {
+    const providerCounts = new Map<CloudProvider, number>()
+    for (const cluster of (clusterSnapshot || [])) {
+      const provider = detectCloudProvider(
+        cluster.name,
+        cluster.server,
+        cluster.namespaces,
+        cluster.user,
+      )
+      // Skip generic/local providers — only show real cloud platforms
+      if (provider === 'kubernetes' || provider === 'kind' || provider === 'minikube' || provider === 'k3s') {
+        continue
+      }
+      providerCounts.set(provider, (providerCounts.get(provider) || 0) + 1)
+    }
+
+    for (const [provider, count] of providerCounts) {
+      result.push({
+        id: provider,
+        name: getProviderLabel(provider),
+        category: 'cloud',
+        status: 'operational',
+        configured: true,
+        statusUrl: STATUS_PAGES[provider],
+        detail: `${count} cluster${count !== 1 ? 's' : ''} detected` })
+    }
+  }
+
+  return result
+}
+
+/**
+ * Hook that discovers AI + Cloud providers and reports their health.
+ * Uses useCache for persistent caching, SWR, and demo fallback.
+ */
+export function useProviderHealth() {
+  const { deduplicatedClusters: clusters } = useClusters()
+  const clusterDependencyKey = useMemo(() => getClusterDependencyKey(clusters), [clusters])
+
+  // Always use a stable cache key — refetch when the cluster set changes
+  const clustersRef = useRef(clusters)
+  clustersRef.current = clusters
+
+  const cacheResult = useCache<ProviderHealthInfo[]>({
+    key: 'provider-health',
+    category: 'default',
+    initialData: [],
+    demoData: DEMO_PROVIDERS,
+    demoWhenEmpty: !isInClusterMode(),
+    fetcher: () => fetchProviders(clustersRef.current),
+    refreshInterval: PROVIDER_HEALTH_REFRESH_INTERVAL_MS })
+
+  // Re-fetch when the cluster identity changes (cloud provider list depends on clusters)
+  const prevClusterDependencyKeyRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (prevClusterDependencyKeyRef.current === null) {
+      prevClusterDependencyKeyRef.current = clusterDependencyKey
+      return
+    }
+    if (clusterDependencyKey !== prevClusterDependencyKeyRef.current) {
+      prevClusterDependencyKeyRef.current = clusterDependencyKey
+      void cacheResult.refetch()
+    }
+  }, [cacheResult.refetch, clusterDependencyKey])
+
+  const aiProviders = (cacheResult.data || []).filter(p => p.category === 'ai')
+  const cloudProviders = (cacheResult.data || []).filter(p => p.category === 'cloud')
+
+  // Don't signal demo fallback while still loading — card should show skeleton, not demo data
+  const effectiveIsDemoFallback = cacheResult.isDemoFallback && !cacheResult.isLoading
+
+  return {
+    providers: cacheResult.data,
+    aiProviders,
+    cloudProviders,
+    isLoading: cacheResult.isLoading,
+    isRefreshing: cacheResult.isRefreshing,
+    isDemoFallback: effectiveIsDemoFallback,
+    isFailed: cacheResult.isFailed,
+    consecutiveFailures: cacheResult.consecutiveFailures,
+    refetch: cacheResult.refetch }
+}

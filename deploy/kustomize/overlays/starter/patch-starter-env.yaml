@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubestellar-console
+spec:
+  template:
+    spec:
+      containers:
+        - name: kubestellar-console
+          env:
+            # Sidebar shows only these dashboards, in this order.
+            # Valid IDs: web/src/hooks/useSidebarConfig.ts
+            # (DEFAULT_PRIMARY_NAV + DISCOVERABLE_DASHBOARDS).
+            - name: ENABLED_DASHBOARDS
+              value: dashboard,workloads,nodes
+            # Land straight on the dashboard — no questionnaire.
+            - name: SKIP_ONBOARDING
+              value: "true"

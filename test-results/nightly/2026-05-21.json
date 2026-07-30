@@ -1,0 +1,175 @@
+{
+  "timestamp": "2026-05-21T08:38:37Z",
+  "fastMode": false,
+  "summary": {
+    "total": 32,
+    "passed": 29,
+    "failed": 3,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "suite": "consistency-test",
+      "status": "fail",
+      "duration": 3,
+      "failure_reason": "  Phase 6 (Cache Patterns)       ⚠️  5 warnings\n  Total: 1 errors, 16 warnings\nReports:\n  JSON:     web/e2e/test-results/consistency-report.json\n  Summary:  web/e2e/test-results/consistency-summary.md\n"
+    },
+    {
+      "suite": "helm-lint-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "license-compliance-test",
+      "status": "pass",
+      "duration": 3
+    },
+    {
+      "suite": "mission-security-test",
+      "status": "pass",
+      "duration": 13
+    },
+    {
+      "suite": "card-registry-integrity-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "unit-test",
+      "status": "pass",
+      "duration": 1957
+    },
+    {
+      "suite": "auth-lifecycle-test",
+      "status": "fail",
+      "duration": 94,
+      "failure_reason": "  ✓  Bearer prefix validation present\n1/8 auth lifecycle checks failed\nReports:\n  JSON:     /tmp/auth-lifecycle-report.json\n  Summary:  /tmp/auth-lifecycle-summary.md\n"
+    },
+    {
+      "suite": "settings-migration-test",
+      "status": "pass",
+      "duration": 3
+    },
+    {
+      "suite": "update-lifecycle-test",
+      "status": "pass",
+      "duration": 61
+    },
+    {
+      "suite": "websocket-resilience-test",
+      "status": "pass",
+      "duration": 1
+    },
+    {
+      "suite": "gosec-test",
+      "status": "pass",
+      "duration": 50
+    },
+    {
+      "suite": "dependency-audit-test",
+      "status": "pass",
+      "duration": 12
+    },
+    {
+      "suite": "secret-scan-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "ts-sast-test",
+      "status": "pass",
+      "duration": 4
+    },
+    {
+      "suite": "container-scan-test",
+      "status": "pass",
+      "duration": 14
+    },
+    {
+      "suite": "security-headers-test",
+      "status": "pass",
+      "duration": 1
+    },
+    {
+      "suite": "api-contract-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "api-fuzz-test",
+      "status": "pass",
+      "duration": 152
+    },
+    {
+      "suite": "error-boundary-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "console-error-scan",
+      "status": "pass",
+      "duration": 114
+    },
+    {
+      "suite": "nav-test",
+      "status": "pass",
+      "duration": 601
+    },
+    {
+      "suite": "perf-test",
+      "status": "pass",
+      "duration": 1015
+    },
+    {
+      "suite": "ui-compliance-test",
+      "status": "pass",
+      "duration": 110
+    },
+    {
+      "suite": "deploy-test",
+      "status": "pass",
+      "duration": 83
+    },
+    {
+      "suite": "cache-test",
+      "status": "fail",
+      "duration": 385,
+      "failure_reason": "    Usage:\n        npx playwright show-trace e2e/test-results/compliance/card-cache-compliance-card-a1949-nce-—-storage-and-retrieval-chromium-retry1/trace.zip\n    ────────────────────────────────────────────────────────────────────────────────────────────────\n  1 failed\n    [chromium] › e2e/compliance/"
+    },
+    {
+      "suite": "benchmark-test",
+      "status": "pass",
+      "duration": 3
+    },
+    {
+      "suite": "ai-ml-test",
+      "status": "pass",
+      "duration": 3
+    },
+    {
+      "suite": "a11y-test",
+      "status": "pass",
+      "duration": 84
+    },
+    {
+      "suite": "error-resilience-test",
+      "status": "pass",
+      "duration": 31
+    },
+    {
+      "suite": "i18n-test",
+      "status": "pass",
+      "duration": 65
+    },
+    {
+      "suite": "interaction-test",
+      "status": "pass",
+      "duration": 41
+    },
+    {
+      "suite": "security-e2e-test",
+      "status": "pass",
+      "duration": 36
+    }
+  ]
+}

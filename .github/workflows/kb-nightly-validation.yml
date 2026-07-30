@@ -1,0 +1,148 @@
+name: KB Nightly Validation
+on:
+  schedule:
+    - cron: '0 4 * * *'  # 4 AM UTC daily
+  workflow_dispatch:
+
+permissions: read-all  # default read; writes scoped to job below
+
+jobs:
+  validate-kb:
+    permissions:
+      issues: write
+    if: github.repository == 'kubestellar/console'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '20'
+
+      - name: Install pinned AJV tools for schema validation
+        run: npm ci --ignore-scripts --prefix .github/kb-scripts
+
+      - name: Test mission schema validation path
+        run: |
+          chmod +x scripts/validate-missions-schema-test.sh
+          ./scripts/validate-missions-schema-test.sh
+
+      - name: Validate mission structure
+        run: |
+          chmod +x scripts/validate-missions.sh
+          ./scripts/validate-missions.sh \
+            --schema web/src/lib/missions/mission.schema.json \
+            2>&1 | tee validation-results.txt
+
+      - name: Run KB gap tracker
+        env:
+          # Use a cross-repo token when available; the default workflow token only
+          # has repository-scoped access and may not be able to read console-kb.
+          GH_TOKEN: ${{ secrets.KB_REPO_TOKEN != '' && secrets.KB_REPO_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          chmod +x scripts/kb-query-gap-tracker.sh
+          ./scripts/kb-query-gap-tracker.sh kb-gap-report.md 2>&1 | tee gap-results.txt
+
+      - name: Check for regressions
+        run: |
+          FAILED=0
+          BASELINE_FILE=".github/kb-nightly-validation-baseline.json"
+
+          if [[ ! -f "$BASELINE_FILE" ]]; then
+            echo "::error::Missing KB nightly validation baseline: $BASELINE_FILE"
+            exit 1
+          fi
+
+          MIN_PASS_RATE=$(jq -r '.minPassRate // 90' "$BASELINE_FILE")
+          MAX_VALIDATION_CRITICAL_ISSUES=$(jq -r '.maxValidationCriticalIssues // 0' "$BASELINE_FILE")
+          MAX_CRITICAL_GAPS=$(jq -r '.maxCriticalGaps // 0' "$BASELINE_FILE")
+          MAX_PREFLIGHT_UNCOVERED=$(jq -r '.maxPreflightUncovered // 0' "$BASELINE_FILE")
+
+          RATE=$(grep -oP 'PASS_RATE=\K\d+' validation-results.txt | head -1 || true)
+          VALIDATION_CRITICAL_ISSUES=$(grep -oP 'Critical issues:\s+\K\d+' validation-results.txt | head -1 || true)
+          GAPS=$(grep -oP 'CRITICAL_GAPS=\K\d+' gap-results.txt | head -1 || true)
+          PREFLIGHT_UNCOVERED=$(grep -oP 'PREFLIGHT_UNCOVERED=\K(\d+|skip)' gap-results.txt | head -1 || true)
+
+          echo "KB nightly baseline: pass-rate >= ${MIN_PASS_RATE}%, validation critical issues <= ${MAX_VALIDATION_CRITICAL_ISSUES}, critical gaps <= ${MAX_CRITICAL_GAPS}, preflight uncovered <= ${MAX_PREFLIGHT_UNCOVERED}"
+          echo "Current metrics: pass-rate=${RATE:-unknown}%, validation critical issues=${VALIDATION_CRITICAL_ISSUES:-unknown}, critical gaps=${GAPS:-unknown}, preflight uncovered=${PREFLIGHT_UNCOVERED:-unknown}"
+
+          if [[ -n "$RATE" && "$RATE" -lt "$MIN_PASS_RATE" ]]; then
+            echo "::error::Mission validation pass rate dropped below ${MIN_PASS_RATE}% (currently ${RATE}%)"
+            FAILED=1
+          fi
+
+          if [[ -n "$VALIDATION_CRITICAL_ISSUES" && "$VALIDATION_CRITICAL_ISSUES" -gt "$MAX_VALIDATION_CRITICAL_ISSUES" ]]; then
+            echo "::error::Mission validation critical issues increased above baseline (${VALIDATION_CRITICAL_ISSUES} > ${MAX_VALIDATION_CRITICAL_ISSUES})"
+            FAILED=1
+          fi
+
+          if [[ -n "$GAPS" && "$GAPS" -gt "$MAX_CRITICAL_GAPS" ]]; then
+            echo "::error::Critical KB gaps increased above baseline (${GAPS} > ${MAX_CRITICAL_GAPS}) — see kb-gap-report.md"
+            FAILED=1
+          fi
+
+          if [[ -n "$PREFLIGHT_UNCOVERED" && "$PREFLIGHT_UNCOVERED" != "skip" && "$PREFLIGHT_UNCOVERED" -gt "$MAX_PREFLIGHT_UNCOVERED" ]]; then
+            echo "::error::Preflight KB coverage regressed (${PREFLIGHT_UNCOVERED} uncovered > baseline ${MAX_PREFLIGHT_UNCOVERED})"
+            FAILED=1
+          fi
+
+          exit $FAILED
+
+      - name: Post summary
+        if: always()
+        run: |
+          echo "## KB Nightly Validation" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f validation-results.txt ]; then
+            echo "### Mission Validation" >> "$GITHUB_STEP_SUMMARY"
+            cat validation-results.txt >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -f kb-gap-report.md ]; then
+            echo "### KB Gap Report" >> "$GITHUB_STEP_SUMMARY"
+            cat kb-gap-report.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: File issue on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TITLE="KB Validation: critical gaps detected $(date -u +%Y-%m-%d)"
+
+          EXISTING=$(gh issue list \
+            --state open \
+            --label "kb-gap" \
+            --search "in:title \"KB Validation: critical gaps\"" \
+            --json number --jq '.[0].number // empty')
+
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" \
+              --body "Still failing as of $(date -u +%Y-%m-%d). [Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          else
+            gh label create "kb-gap" --color "B60205" \
+              --description "KB coverage gap detected by nightly validation" 2>/dev/null || true
+            if [ -f kb-gap-report.md ]; then
+              gh issue create \
+                --title "$TITLE" \
+                --label "kb-gap,triage/needed,help wanted" \
+                --body-file kb-gap-report.md
+            else
+              gh issue create \
+                --title "$TITLE" \
+                --label "kb-gap,triage/needed,help wanted" \
+                --body "KB Nightly Validation failed. No gap report was generated. See workflow run for details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            fi
+          fi
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: kb-validation-reports
+          path: |
+            validation-results.txt
+            gap-results.txt
+            kb-gap-report.md

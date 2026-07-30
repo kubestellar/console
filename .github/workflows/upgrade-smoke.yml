@@ -1,0 +1,330 @@
+# In-place upgrade smoke test
+#
+# Verifies the console's self-upgrade mechanism end-to-end:
+#   1. Build HEAD image, tag as :ci-baseline and :ci-head
+#   2. Create a Kind cluster, install :ci-baseline via Helm
+#   3. Get dev-mode auth cookie, confirm canPatch=true
+#   4. POST /api/self-upgrade/trigger with imageTag=ci-head
+#   5. Poll the Deployment spec until the image tag rolls to :ci-head
+#   6. Verify the upgraded pod is healthy (/health returns 200)
+#
+# This is the gold-standard canary for the self-upgrade mechanism.
+# If this workflow fails on main, every deployed console instance's
+# upgrade path is potentially broken.
+#
+# Does NOT duplicate:
+#   - auth-login-smoke.yml (OAuth contract, hourly)
+#   - fullstack-e2e.yml (Playwright on PR)
+#   - startup-smoke.yml (Docker entrypoint, daily)
+
+name: In-Place Upgrade Smoke
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/upgrade-smoke.yml
+      - pkg/api/handlers/self_upgrade.go
+      - pkg/api/server.go
+      - deploy/helm/kubestellar-console/**
+      - Dockerfile
+      - cmd/console/**
+      - web/src/hooks/useSelfUpgrade.ts
+      - web/src/hooks/useVersionCheck.tsx
+      - web/src/components/settings/UpdateSettings.tsx
+  schedule:
+    # Every 6 hours, minute 17 to avoid :00 congestion
+    - cron: '17 */6 * * *'
+  workflow_dispatch: {}
+
+permissions: read-all  # default read; writes scoped to job below
+
+concurrency:
+  group: upgrade-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  RELEASE_NAME: console
+  NAMESPACE: upgrade-smoke
+  TARGET_TAG: ci-head
+  BASELINE_TAG: ci-baseline
+  IMAGE_REPO: ghcr.io/kubestellar/console
+  # Timeouts (seconds) — named constants, no magic numbers
+  HEALTH_POLL_INTERVAL_S: 5
+  HEALTH_TIMEOUT_S: 120
+  UPGRADE_TIMEOUT_S: 300
+  PORT_FORWARD_SETTLE_S: 10
+  HELM_INSTALL_TIMEOUT: 5m
+  ROLLOUT_TIMEOUT: 5m
+
+jobs:
+  smoke:
+    if: github.repository == 'kubestellar/console'
+    name: In-Place Upgrade Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@abd2ef45e78c5afb21d64d4ca52ee8550d9572c7 # v4.5.1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build HEAD image and tag as baseline + target
+        run: |
+          # Build once, tag twice. Both tags use the same binary so the
+          # SSAR fix is present in the baseline. The upgrade changes the
+          # Deployment's image tag from :ci-baseline to :ci-head, proving
+          # the rollout mechanism works.
+          docker build -t ${{ env.IMAGE_REPO }}:${{ env.TARGET_TAG }} .
+          docker tag ${{ env.IMAGE_REPO }}:${{ env.TARGET_TAG }} \
+                     ${{ env.IMAGE_REPO }}:${{ env.BASELINE_TAG }}
+
+      - name: Create Kind cluster
+        uses: helm/kind-action@ef37e7f390d99f746eb8b610417061a60e82a6cc # v1
+        with:
+          cluster_name: upgrade-smoke
+          wait: 60s
+
+      - name: Load images into Kind
+        run: |
+          kind load docker-image ${{ env.IMAGE_REPO }}:${{ env.BASELINE_TAG }} --name upgrade-smoke
+          kind load docker-image ${{ env.IMAGE_REPO }}:${{ env.TARGET_TAG }} --name upgrade-smoke
+
+      - name: Install baseline via Helm
+        run: |
+          kubectl create namespace ${{ env.NAMESPACE }}
+          helm install ${{ env.RELEASE_NAME }} ./deploy/helm/kubestellar-console \
+            -n ${{ env.NAMESPACE }} \
+            --set image.repository=${{ env.IMAGE_REPO }} \
+            --set image.tag=${{ env.BASELINE_TAG }} \
+            --set image.pullPolicy=IfNotPresent \
+            --set 'extraEnv[0].name=DEV_MODE' \
+            --set-string 'extraEnv[0].value=true' \
+            --set 'extraEnv[1].name=ALLOW_DEV_MODE_IN_CLUSTER' \
+            --set-string 'extraEnv[1].value=true' \
+            --set 'persistence.accessModes[0]=ReadWriteOnce' \
+            --set backup.enabled=false \
+            --wait --timeout=${{ env.HELM_INSTALL_TIMEOUT }}
+
+      - name: Port-forward and verify baseline health
+        run: |
+          kubectl -n ${{ env.NAMESPACE }} port-forward \
+            svc/${{ env.RELEASE_NAME }}-kubestellar-console 8080:8080 &
+          PF_PID=$!
+          echo "PF_PID=$PF_PID" >> "$GITHUB_ENV"
+
+          # Poll /health (no auth required) until the backend is up.
+          # /api/* routes require a JWT even in DEV_MODE; /health does not.
+          DEADLINE=$(( $(date +%s) + ${{ env.HEALTH_TIMEOUT_S }} ))
+          echo "Waiting for /health (timeout: ${{ env.HEALTH_TIMEOUT_S }}s)..."
+          while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+            if curl -sf http://127.0.0.1:8080/health > /dev/null 2>&1; then
+              echo "Backend healthy after $(( $(date +%s) - DEADLINE + ${{ env.HEALTH_TIMEOUT_S }} ))s"
+              break
+            fi
+            sleep ${{ env.HEALTH_POLL_INTERVAL_S }}
+          done
+
+          echo "--- /health ---"
+          curl -sf http://127.0.0.1:8080/health | jq .
+
+      - name: Get dev-mode auth cookie
+        run: |
+          # DEV_MODE auto-creates a dev-user on /auth/github and returns
+          # a kc_auth HttpOnly cookie. All /api/* routes require this JWT.
+          COOKIE_JAR="${GITHUB_WORKSPACE}/cookies.txt"
+          curl -sS --max-time 10 \
+            -c "$COOKIE_JAR" \
+            -o /dev/null \
+            http://127.0.0.1:8080/auth/github
+          echo "COOKIE_JAR=$COOKIE_JAR" >> "$GITHUB_ENV"
+
+          # Verify cookie was set
+          if ! grep -q 'kc_auth' "$COOKIE_JAR"; then
+            echo "FAIL: dev-mode login did not set kc_auth cookie"
+            cat "$COOKIE_JAR"
+            exit 1
+          fi
+          echo "Got dev-mode auth cookie"
+
+      - name: Verify dev user is admin
+        run: |
+          echo "--- /api/me (user role check) ---"
+          ME=$(curl -sS -b "$COOKIE_JAR" http://127.0.0.1:8080/api/me)
+          echo "$ME" | jq '{login: .githubLogin, role: .role, id: .id}'
+
+          echo "$ME" | jq -e '.role == "admin"' \
+            || { echo "FAIL: dev user role is not admin — got $(echo "$ME" | jq -r .role)"; exit 1; }
+          echo "Dev user has admin role"
+
+      - name: Verify self-upgrade status
+        run: |
+          echo "--- /api/self-upgrade/status ---"
+          STATUS=$(curl -sS -b "$COOKIE_JAR" http://127.0.0.1:8080/api/self-upgrade/status)
+          echo "$STATUS" | jq .
+
+          # Verify canPatch is true — RBAC is working
+          echo "$STATUS" | jq -e '.canPatch == true' \
+            || { echo "FAIL: canPatch is not true — selfUpgrade RBAC may be broken"; exit 1; }
+
+      - name: Trigger upgrade to HEAD
+        run: |
+          echo "Triggering upgrade to tag: ${{ env.TARGET_TAG }}"
+          HTTP_CODE=$(curl -sS -o "${GITHUB_WORKSPACE}/trigger_response.json" -w '%{http_code}' \
+            -X POST http://127.0.0.1:8080/api/self-upgrade/trigger \
+            -b "$COOKIE_JAR" \
+            -H 'Content-Type: application/json' \
+            -H 'X-Requested-With: XMLHttpRequest' \
+            -d '{"imageTag":"${{ env.TARGET_TAG }}"}')
+          echo "HTTP $HTTP_CODE"
+          cat "${GITHUB_WORKSPACE}/trigger_response.json" | jq . 2>/dev/null || cat "${GITHUB_WORKSPACE}/trigger_response.json"
+
+          if [ "$HTTP_CODE" -ge 400 ]; then
+            echo "FAIL: trigger returned HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+          jq -e '.success == true' "${GITHUB_WORKSPACE}/trigger_response.json" \
+            || { echo "FAIL: trigger returned success=false"; jq -r '.error // .message // "no detail"' "${GITHUB_WORKSPACE}/trigger_response.json"; exit 1; }
+
+      - name: Poll Deployment image until rollover to :ci-head
+        run: |
+          DEPLOY="${{ env.RELEASE_NAME }}-kubestellar-console"
+          DEADLINE=$(( $(date +%s) + ${{ env.UPGRADE_TIMEOUT_S }} ))
+
+          echo "Waiting for Deployment $DEPLOY image to roll to :${{ env.TARGET_TAG }}"
+          while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+            IMG=$(kubectl -n ${{ env.NAMESPACE }} get deployment "$DEPLOY" \
+              -o jsonpath='{.spec.template.spec.containers[0].image}')
+            echo "  $(date +%H:%M:%S) image=$IMG"
+            case "$IMG" in
+              *:"${{ env.TARGET_TAG }}")
+                echo "Image rolled to target tag"
+                break
+                ;;
+            esac
+            sleep ${{ env.HEALTH_POLL_INTERVAL_S }}
+          done
+
+          # Wait for rollout to complete (new pods ready)
+          kubectl -n ${{ env.NAMESPACE }} rollout status \
+            "deployment/$DEPLOY" --timeout=${{ env.ROLLOUT_TIMEOUT }}
+
+      - name: Verify upgraded pod is healthy
+        run: |
+          # Port-forward may have died during rollout — restart it
+          kill "$PF_PID" 2>/dev/null || true
+          sleep 2
+          kubectl -n ${{ env.NAMESPACE }} port-forward \
+            svc/${{ env.RELEASE_NAME }}-kubestellar-console 8080:8080 &
+
+          # Poll /health (no auth) until the upgraded pod responds
+          DEADLINE=$(( $(date +%s) + ${{ env.HEALTH_TIMEOUT_S }} ))
+          echo "Waiting for post-upgrade /health (timeout: ${{ env.HEALTH_TIMEOUT_S }}s)..."
+          while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+            if curl -sf http://127.0.0.1:8080/health > /dev/null 2>&1; then
+              echo "Upgraded pod healthy after $(( $(date +%s) - DEADLINE + ${{ env.HEALTH_TIMEOUT_S }} ))s"
+              break
+            fi
+            sleep ${{ env.HEALTH_POLL_INTERVAL_S }}
+          done
+
+          echo "--- Post-upgrade /health ---"
+          curl -sf http://127.0.0.1:8080/health | jq .
+
+          echo "--- Post-upgrade /api/self-upgrade/status ---"
+          curl -sf -b "$COOKIE_JAR" http://127.0.0.1:8080/api/self-upgrade/status | jq .
+
+          echo "Upgrade smoke test PASSED"
+
+      - name: Trigger Helm rollback to baseline
+        run: |
+          DEPLOY="${{ env.RELEASE_NAME }}-kubestellar-console"
+
+          # Show Helm history so the revision is visible in CI logs
+          echo "--- Helm history before rollback ---"
+          helm history ${{ env.RELEASE_NAME }} -n ${{ env.NAMESPACE }}
+
+          # Revision 1 is always the baseline install in this workflow.
+          # The self-upgrade patches the Deployment directly (not via helm upgrade),
+          # so only one Helm revision exists. helm rollback re-applies it,
+          # reverting the image tag from :ci-head back to :ci-baseline.
+          echo "Rolling back $DEPLOY to revision 1 (:${{ env.BASELINE_TAG }})"
+          helm rollback ${{ env.RELEASE_NAME }} 1 \
+            -n ${{ env.NAMESPACE }} \
+            --wait \
+            --timeout=${{ env.HELM_INSTALL_TIMEOUT }}
+
+          kubectl -n ${{ env.NAMESPACE }} rollout status \
+            "deployment/$DEPLOY" --timeout=${{ env.ROLLOUT_TIMEOUT }}
+
+      - name: Verify post-rollback image tag
+        run: |
+          DEPLOY="${{ env.RELEASE_NAME }}-kubestellar-console"
+          IMG=$(kubectl -n ${{ env.NAMESPACE }} get deployment "$DEPLOY" \
+            -o jsonpath='{.spec.template.spec.containers[0].image}')
+          echo "Post-rollback image: $IMG"
+
+          case "$IMG" in
+            *":${{ env.BASELINE_TAG }}")
+              echo "Image correctly rolled back to :${{ env.BASELINE_TAG }}"
+              ;;
+            *)
+              echo "FAIL: post-rollback image is $IMG, expected *:${{ env.BASELINE_TAG }}"
+              exit 1
+              ;;
+          esac
+
+      - name: Verify post-rollback health
+        run: |
+          # Kill any leftover port-forward and start a fresh one
+          pkill -f "port-forward.*8080" 2>/dev/null || true
+          sleep ${{ env.PORT_FORWARD_SETTLE_S }}
+          kubectl -n ${{ env.NAMESPACE }} port-forward \
+            svc/${{ env.RELEASE_NAME }}-kubestellar-console 8080:8080 &
+
+          DEADLINE=$(( $(date +%s) + ${{ env.HEALTH_TIMEOUT_S }} ))
+          echo "Waiting for post-rollback /health (timeout: ${{ env.HEALTH_TIMEOUT_S }}s)..."
+          HEALTHY=false
+          while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+            if curl -sf http://127.0.0.1:8080/health > /dev/null 2>&1; then
+              echo "Post-rollback pod healthy after $(( $(date +%s) - DEADLINE + ${{ env.HEALTH_TIMEOUT_S }} ))s"
+              HEALTHY=true
+              break
+            fi
+            sleep ${{ env.HEALTH_POLL_INTERVAL_S }}
+          done
+
+          if ! $HEALTHY; then
+            echo "FAIL: post-rollback pod did not become healthy within ${{ env.HEALTH_TIMEOUT_S }}s"
+            exit 1
+          fi
+
+          echo "--- Post-rollback /health ---"
+          curl -sf http://127.0.0.1:8080/health | jq .
+
+          echo "Rollback smoke test PASSED"
+
+      - name: Dump diagnostics on failure
+        if: failure()
+        run: |
+          echo "=== Namespace resources ==="
+          kubectl -n ${{ env.NAMESPACE }} get all
+          echo ""
+          echo "=== Deployment describe ==="
+          kubectl -n ${{ env.NAMESPACE }} describe \
+            deployment/${{ env.RELEASE_NAME }}-kubestellar-console
+          echo ""
+          echo "=== Pod logs (tail 500) ==="
+          kubectl -n ${{ env.NAMESPACE }} logs \
+            deployment/${{ env.RELEASE_NAME }}-kubestellar-console \
+            --tail=500 || true
+          echo ""
+          echo "=== Events ==="
+          kubectl -n ${{ env.NAMESPACE }} get events \
+            --sort-by='.lastTimestamp' | tail -30

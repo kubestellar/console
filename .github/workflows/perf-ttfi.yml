@@ -1,0 +1,174 @@
+name: Performance TTFI Gate
+
+on:
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - 'web/**'
+      - 'scripts/perf-test.sh'
+      - '.github/workflows/perf-ttfi.yml'
+  workflow_dispatch:
+  schedule:
+    # Every 2 hours at :15 — same cadence as perf-react-commits and
+    # perf-bundle-size. On scheduled runs ONLY, a failure files a
+    # `[perf-regression] ttfi-all-cards` issue via the reusable workflow.
+    - cron: '15 */2 * * *'
+
+# Least-privilege: read + issues:write. issues:write is required at the
+# workflow level because the `notify` job calls the reusable
+# `_perf-regression-issue.yml` workflow, and reusable workflows cannot
+# receive more permissions than their caller.
+permissions: read-all  # default read; writes scoped to job below
+env:
+  CI: true
+  PERF_SIGNAL: ttfi-all-cards
+
+jobs:
+  all-cards-ttfi:
+    permissions:
+      issues: write
+    name: All Cards TTFI (Hard Gate)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Start preview server
+        run: |
+          npx vite preview --port 4174 --host &
+          echo "Waiting for preview server..."
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:4174 > /dev/null 2>&1; then
+              echo "Preview server ready after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::Preview server failed to start within 30s"
+          exit 1
+
+      - name: Run all-card TTFI suite
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:4174
+        run: npm run test:e2e:perf:ttfi
+
+      - name: Compare against baseline (hard fail)
+        env:
+          CI_TOLERANCE_PCT: '15'
+        run: node e2e/perf/compare-ttfi.mjs
+
+      - name: Write perf-result.json (scheduled + manual dispatch)
+        # Scheduled runs drive the auto-issue notifier in production; manual
+        # dispatches need it too so we can dry-run the full notify pipeline
+        # without waiting for a cron tick. PR-time failures already surface on
+        # the PR via the check status, so PR runs are still excluded.
+        # `always()` is required so this step still runs after the
+        # `Compare against baseline (hard fail)` step fails — that's exactly
+        # when we need the JSON written for the notify job. See #6170.
+        if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        working-directory: .
+        env:
+          LAST_SUCCESSFUL_SHA: ''
+        run: |
+          set -euo pipefail
+          REPORT="web/e2e/test-results/ttfi-report.json"
+          if [ ! -f "$REPORT" ]; then
+            echo "::warning::$REPORT missing; skipping perf-result.json"
+            exit 0
+          fi
+          # TTFI report schema: { summary: { worstCardTtfi, budgetMs } }
+          VALUE=$(node -e "const r=require('./${REPORT}');process.stdout.write(String((r.summary&&r.summary.worstCardTtfi)||0))")
+          BUDGET=$(node -e "const r=require('./${REPORT}');process.stdout.write(String((r.summary&&r.summary.budgetMs)||0))")
+          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          cat > web/perf-result.json <<EOF
+          {
+            "signal": "ttfi-all-cards",
+            "displayName": "Worst-case card TTFI",
+            "value": ${VALUE},
+            "budget": ${BUDGET},
+            "unit": "ms",
+            "context": {
+              "runId": "${GITHUB_RUN_ID}",
+              "runUrl": "${RUN_URL}",
+              "headSha": "${GITHUB_SHA}",
+              "lastSuccessfulSha": "${LAST_SUCCESSFUL_SHA}"
+            }
+          }
+          EOF
+
+      - name: Upload perf result artifact (scheduled + manual dispatch)
+        if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: perf-result-ttfi-all-cards
+          path: web/perf-result.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload TTFI artifacts
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ttfi-artifacts
+          path: |
+            web/e2e/test-results/ttfi-report.json
+            web/e2e/test-results/ttfi-summary.md
+            web/e2e/test-results/ttfi-regression.md
+            web/perf-report/
+          retention-days: 14
+
+      - name: Publish summary
+        if: always()
+        run: |
+          echo "## All-Card TTFI Gate" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f "e2e/test-results/ttfi-summary.md" ]; then
+            cat e2e/test-results/ttfi-summary.md >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f "e2e/test-results/ttfi-regression.md" ]; then
+            cat e2e/test-results/ttfi-regression.md >> $GITHUB_STEP_SUMMARY
+          fi
+
+  notify:
+    name: Notify on regression (scheduled or manual dispatch)
+    needs: all-cards-ttfi
+    # File auto-issues on scheduled runs and manual dispatches (so we can
+    # dry-run the full notifier pipeline without waiting for a cron tick).
+    # PR failures still excluded — they already surface as red checks on the PR.
+    if: failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    # Job-level permissions for the reusable workflow. A reusable workflow can
+    # never receive MORE permissions than its caller job, so this block is the
+    # documented way to guarantee `issues: write` reaches
+    # `_perf-regression-issue.yml` even if the workflow-level default is later
+    # tightened (e.g. to `read-all`). Without this, the auto-issue creator
+    # silently no-ops with a permission denied. See #6170.
+    permissions:
+      contents: read
+      issues: write
+      actions: read
+    uses: ./.github/workflows/_perf-regression-issue.yml
+    with:
+      result-path: web/perf-result.json
+      signal: ttfi-all-cards

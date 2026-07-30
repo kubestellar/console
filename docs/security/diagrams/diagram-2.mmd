@@ -1,0 +1,25 @@
+%%{init: {'flowchart': {'htmlLabels': false, 'padding': 25, 'nodeSpacing': 60, 'rankSpacing': 60}, 'themeVariables': {'fontSize': '13px'}}}%%
+flowchart LR
+    RB[Remote browser<br/>any other LAN host]
+    LB[Local browser<br/>127.0.0.1]
+
+    subgraph Gates["kc-agent defense in depth"]
+        direction TB
+        BIND[Bind check<br/>127.0.0.1 only<br/>server.go:578]
+        CORS[Origin allow-list<br/>strict match<br/>server.go:92-100]
+        REB[DNS-rebinding guard<br/>matchOrigin<br/>server.go:799-822]
+        TOK["Token check<br/>(optional, off by default)<br/>server.go:214-218"]
+        KA[kc-agent handlers<br/>kubectl via user kubeconfig]
+    end
+
+    RB -.rejected at OS<br/>socket layer.-> BIND
+    LB --> BIND
+    BIND --> CORS
+    CORS --> REB
+    REB --> TOK
+    TOK --> KA
+
+    classDef rejected stroke:#f44,stroke-width:2px
+    classDef allowed stroke:#0f0,stroke-width:2px
+    class RB rejected
+    class LB,BIND,CORS,REB,TOK,KA allowed

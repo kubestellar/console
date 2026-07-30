@@ -1,0 +1,425 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kubestellar-console.fullname" . }}
+  labels:
+    {{- include "kubestellar-console.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  progressDeadlineSeconds: {{ .Values.deployment.progressDeadlineSeconds }}
+  selector:
+    matchLabels:
+      {{- include "kubestellar-console.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: {{ .Values.deployment.strategy.type }}
+    {{- if eq .Values.deployment.strategy.type "RollingUpdate" }}
+    rollingUpdate:
+      maxSurge: {{ .Values.deployment.strategy.rollingUpdate.maxSurge }}
+      maxUnavailable: {{ .Values.deployment.strategy.rollingUpdate.maxUnavailable }}
+    {{- end }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "kubestellar-console.labels" . | nindent 8 }}
+        app.kubernetes.io/component: server
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "kubestellar-console.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automount }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if and .Values.backup.enabled .Values.backup.autoRestore }}
+      initContainers:
+        - name: db-restore
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          # #6323/#6324: init container uses the same image as the app
+          # container (`appuser`), so it needs the same numeric UID.
+          # Without this, the init container would also hit
+          # "container has runAsNonRoot and image has non-numeric user"
+          # on clusters enforcing PodSecurity restricted.
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.backup.resources | nindent 12 }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              DB_PATH="{{ .Values.database.sqlitePath }}"
+              BACKUP_DIR="{{ .Values.backup.directory }}"
+              # Schema-only DBs are <=200KB; anything larger has real data
+              MIN_DATA_SIZE=200000
+
+              # get_file_size: portable file size using stat (GNU/BSD) or wc -c fallback
+              get_file_size() {
+                stat -c%s "$1" 2>/dev/null || stat -f%z "$1" 2>/dev/null || wc -c < "$1" 2>/dev/null | tr -d ' ' || echo "0"
+              }
+
+              if [ -f "$DB_PATH" ]; then
+                DB_SIZE=$(get_file_size "$DB_PATH")
+                if [ "$DB_SIZE" -gt "$MIN_DATA_SIZE" ]; then
+                  echo "Database exists with data (${DB_SIZE} bytes), skipping restore"
+                  exit 0
+                fi
+                echo "Database exists but appears empty (${DB_SIZE} bytes)"
+              else
+                echo "No database file found at $DB_PATH"
+              fi
+
+              # Find the latest backup
+              LATEST=$(ls -1t "$BACKUP_DIR"/console-*.db 2>/dev/null | head -1)
+              if [ -z "$LATEST" ]; then
+                echo "No backups found in $BACKUP_DIR, starting fresh"
+                exit 0
+              fi
+
+              BACKUP_SIZE=$(get_file_size "$LATEST")
+              if [ "$BACKUP_SIZE" -le "$MIN_DATA_SIZE" ]; then
+                echo "Latest backup $LATEST is also empty (${BACKUP_SIZE} bytes), skipping"
+                exit 0
+              fi
+
+              echo "Restoring from backup: $LATEST (${BACKUP_SIZE} bytes)"
+              mkdir -p "$(dirname "$DB_PATH")"
+              cp "$LATEST" "${DB_PATH}.tmp" && mv "${DB_PATH}.tmp" "$DB_PATH"
+              echo "Restore complete"
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+            - name: backups
+              mountPath: {{ .Values.backup.directory }}
+              readOnly: true
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          terminationMessagePolicy: FallbackToLogsOnError
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          {{- if .Values.watchdog.enabled }}
+          # Startup probe gives the watchdog reverse proxy time to initialize
+          # before liveness/readiness probes begin. Without this, the pod may
+          # enter CrashLoopBackOff on slow nodes or clusters with slow block
+          # storage provisioning (e.g. IBM VPC Block on vllm-d).
+          # Budget = startupProbe.failureThreshold * startupProbe.periodSeconds.
+          # Default: 24 * 5s = 120s. Configurable via .Values.startupProbe.
+          startupProbe:
+            httpGet:
+              path: /watchdog/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: {{ .Values.startupProbe.periodSeconds }}
+            failureThreshold: {{ .Values.startupProbe.failureThreshold }}
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: {{ if .Values.watchdog.enabled }}/watchdog/health{{ else }}/healthz{{ end }}
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: {{ if .Values.watchdog.enabled }}/watchdog/ready{{ else }}/healthz{{ end }}
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            timeoutSeconds: 5
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          env:
+            - name: PORT
+              value: "8080"
+            {{- if .Values.watchdog.enabled }}
+            - name: BACKEND_PORT
+              value: "8081"
+            {{- end }}
+            - name: DATABASE_PATH
+              value: {{ .Values.database.sqlitePath | quote }}
+            - name: KUBESTELLAR_OPS_PATH
+              value: {{ .Values.kubestellar.opsPath | quote }}
+            - name: KUBESTELLAR_DEPLOY_PATH
+              value: {{ .Values.kubestellar.deployPath | quote }}
+            {{- if and .Values.route.enabled .Values.route.host }}
+            - name: FRONTEND_URL
+              value: "https://{{ .Values.route.host }}"
+            {{- else if and .Values.ingress.enabled .Values.ingress.hosts }}
+            - name: FRONTEND_URL
+              value: "https://{{ (index .Values.ingress.hosts 0).host }}"
+            {{- end }}
+            {{- if .Values.github.url }}
+            - name: GITHUB_URL
+              value: {{ .Values.github.url | quote }}
+            {{- end }}
+            {{- if .Values.github.existingSecret }}
+            - name: GITHUB_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.github.existingSecret }}
+                  key: {{ .Values.github.existingSecretKeys.clientId }}
+            - name: GITHUB_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.github.existingSecret }}
+                  key: {{ .Values.github.existingSecretKeys.clientSecret }}
+            {{- else if and .Values.github.clientId .Values.github.clientSecret }}
+            - name: GITHUB_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "kubestellar-console.fullname" . }}
+                  key: github-client-id
+            - name: GITHUB_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "kubestellar-console.fullname" . }}
+                  key: github-client-secret
+            {{- end }}
+            {{- with .Values.auth }}
+            {{- if .allowedGitHubLogins }}
+            - name: AUTH_ALLOWED_GITHUB_LOGINS
+              value: {{ .allowedGitHubLogins | quote }}
+            {{- end }}
+            {{- if .adminGitHubLogins }}
+            - name: AUTH_ADMIN_GITHUB_LOGINS
+              value: {{ .adminGitHubLogins | quote }}
+            {{- end }}
+            {{- end }}
+            {{- if or .Values.claude.existingSecret .Values.claude.apiKey }}
+            - name: CLAUDE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.claude.existingSecret | default (include "kubestellar-console.fullname" .) }}
+                  key: {{ .Values.claude.existingSecretKey | default "claude-api-key" }}
+                  optional: true
+            {{- end }}
+            {{- if or .Values.feedbackGithubToken.existingSecret .Values.feedbackGithubToken.token }}
+            - name: FEEDBACK_GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.feedbackGithubToken.existingSecret | default (include "kubestellar-console.fullname" .) }}
+                  key: {{ .Values.feedbackGithubToken.existingSecretKey | default "feedback-github-token" }}
+                  optional: true
+            {{- end }}
+            {{- if or .Values.googleDrive.existingSecret .Values.googleDrive.apiKey }}
+            - name: GOOGLE_DRIVE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.googleDrive.existingSecret | default (include "kubestellar-console.fullname" .) }}
+                  key: {{ .Values.googleDrive.existingSecretKey | default "google-drive-api-key" }}
+                  optional: true
+            - name: BENCHMARK_FOLDER_ID
+              value: {{ .Values.googleDrive.folderId | quote }}
+            {{- end }}
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.jwt.existingSecret | default (include "kubestellar-console.fullname" .) }}
+                  key: {{ .Values.jwt.existingSecretKey | default "jwt-secret" }}
+            {{- if .Values.enabledDashboards }}
+            - name: ENABLED_DASHBOARDS
+              value: {{ .Values.enabledDashboards | quote }}
+            {{- end }}
+            {{- if .Values.consoleProject }}
+            - name: CONSOLE_PROJECT
+              value: {{ .Values.consoleProject | quote }}
+            {{- end }}
+            {{- with .Values.branding }}
+            {{- if .appName }}
+            - name: APP_NAME
+              value: {{ .appName | quote }}
+            {{- end }}
+            {{- if .appShortName }}
+            - name: APP_SHORT_NAME
+              value: {{ .appShortName | quote }}
+            {{- end }}
+            {{- if .tagline }}
+            - name: APP_TAGLINE
+              value: {{ .tagline | quote }}
+            {{- end }}
+            {{- if .logoUrl }}
+            - name: LOGO_URL
+              value: {{ .logoUrl | quote }}
+            {{- end }}
+            {{- if .faviconUrl }}
+            - name: FAVICON_URL
+              value: {{ .faviconUrl | quote }}
+            {{- end }}
+            {{- if .themeColor }}
+            - name: THEME_COLOR
+              value: {{ .themeColor | quote }}
+            {{- end }}
+            {{- if .docsUrl }}
+            - name: DOCS_URL
+              value: {{ .docsUrl | quote }}
+            {{- end }}
+            {{- if .communityUrl }}
+            - name: COMMUNITY_URL
+              value: {{ .communityUrl | quote }}
+            {{- end }}
+            {{- if .websiteUrl }}
+            - name: WEBSITE_URL
+              value: {{ .websiteUrl | quote }}
+            {{- end }}
+            {{- if .issuesUrl }}
+            - name: ISSUES_URL
+              value: {{ .issuesUrl | quote }}
+            {{- end }}
+            {{- if .repoUrl }}
+            - name: REPO_URL
+              value: {{ .repoUrl | quote }}
+            {{- end }}
+            {{- if .hostedDomain }}
+            - name: HOSTED_DOMAIN
+              value: {{ .hostedDomain | quote }}
+            {{- end }}
+            {{- end }}
+            {{- if .Values.clusterName }}
+            - name: CLUSTER_NAME
+              value: {{ .Values.clusterName | quote }}
+            {{- end }}
+            {{- if or .Values.kubeconfig.content .Values.kubeconfig.existingSecret }}
+            - name: KUBECONFIG
+              value: {{ include "kubestellar-console.kubeconfigPath" . | quote }}
+            {{- end }}
+            # Suppress local kc-agent connections — in-cluster deployments
+            # accessed via port-forward or ingress have no local kc-agent
+            # on the user's machine. Without this, the frontend sends
+            # WebSocket/HTTP requests to 127.0.0.1:8585 that always fail,
+            # causing console errors and 429 cascades. (#10267)
+            - name: NO_LOCAL_AGENT
+              value: "true"
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: HELM_RELEASE_NAME
+              value: {{ .Release.Name | quote }}
+            {{- if .Values.ai.defaultMode }}
+            - name: AI_DEFAULT_MODE
+              value: {{ .Values.ai.defaultMode | quote }}
+            {{- end }}
+            {{- if .Values.ai.tokenLimits.enabled }}
+            - name: AI_TOKEN_LIMITS_ENABLED
+              value: "true"
+            - name: AI_MONTHLY_TOKEN_LIMIT
+              value: {{ .Values.ai.tokenLimits.monthlyLimit | quote }}
+            - name: AI_TOKEN_WARNING_THRESHOLD
+              value: {{ .Values.ai.tokenLimits.warningThreshold | quote }}
+            - name: AI_TOKEN_CRITICAL_THRESHOLD
+              value: {{ .Values.ai.tokenLimits.criticalThreshold | quote }}
+            {{- end }}
+            {{- if .Values.selfUpgrade.enabled }}
+            - name: SELF_UPGRADE_ENABLED
+              value: "true"
+            {{- end }}
+            {{- if .Values.kagenti.enabled }}
+            {{- if .Values.kagenti.forceDefaultAgent }}
+            - name: DEFAULT_AGENT
+              value: "kagenti"
+            {{- end }}
+            {{- if .Values.kagenti.controllerUrl }}
+            - name: KAGENTI_CONTROLLER_URL
+              value: {{ .Values.kagenti.controllerUrl | quote }}
+            {{- end }}
+            - name: KAGENTI_NAMESPACE
+              value: {{ .Values.kagenti.namespace | quote }}
+            - name: KAGENTI_SERVICE_NAME
+              value: {{ .Values.kagenti.serviceName | quote }}
+            - name: KAGENTI_DEPLOYMENT_NAME
+              value: {{ .Values.kagenti.deploymentName | quote }}
+            - name: KAGENTI_LLM_SECRET_NAME
+              value: {{ .Values.kagenti.llmSecretName | quote }}
+            - name: KAGENTI_SERVICE_PORT
+              value: {{ .Values.kagenti.servicePort | quote }}
+            - name: KAGENTI_SERVICE_PROTOCOL
+              value: {{ .Values.kagenti.serviceProtocol | quote }}
+            {{- if .Values.kagenti.directAgentUrl }}
+            - name: KAGENTI_AGENT_URL
+              value: {{ .Values.kagenti.directAgentUrl | quote }}
+            {{- end }}
+            {{- if .Values.kagenti.directAgentName }}
+            - name: KAGENTI_AGENT_NAME
+              value: {{ .Values.kagenti.directAgentName | quote }}
+            {{- end }}
+            {{- if .Values.kagenti.directAgentNamespace }}
+            - name: KAGENTI_AGENT_NAMESPACE
+              value: {{ .Values.kagenti.directAgentNamespace | quote }}
+            {{- end }}
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          volumeMounts:
+            - name: kc-config
+              mountPath: /app/.kc
+            - name: tmp
+              mountPath: /tmp
+            {{- if .Values.persistence.enabled }}
+            - name: data
+              mountPath: /app/data
+            {{- end }}
+            {{- if or .Values.kubeconfig.content .Values.kubeconfig.existingSecret }}
+            - name: kubeconfig
+              mountPath: {{ .Values.kubeconfig.mountPath | quote }}
+              readOnly: true
+            {{- end }}
+            {{- if and .Values.branding .Values.branding.logoConfigMap }}
+            - name: custom-logos
+              mountPath: /app/web/dist/custom-logos
+              readOnly: true
+            {{- end }}
+      volumes:
+        - name: kc-config
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+        {{- if .Values.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "kubestellar-console.fullname" . }}
+        {{- end }}
+        {{- if or .Values.kubeconfig.content .Values.kubeconfig.existingSecret }}
+        - name: kubeconfig
+          secret:
+            secretName: {{ include "kubestellar-console.kubeconfigSecretName" . }}
+            items:
+              - key: {{ .Values.kubeconfig.existingSecretKey | quote }}
+                path: {{ .Values.kubeconfig.fileName | quote }}
+        {{- end }}
+        {{- if and .Values.branding .Values.branding.logoConfigMap }}
+        - name: custom-logos
+          configMap:
+            name: {{ .Values.branding.logoConfigMap }}
+        {{- end }}
+        {{- if and .Values.backup.enabled .Values.backup.autoRestore }}
+        - name: backups
+          persistentVolumeClaim:
+            claimName: {{ include "kubestellar-console.fullname" . }}-backups
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

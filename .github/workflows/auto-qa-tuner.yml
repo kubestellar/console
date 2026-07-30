@@ -1,0 +1,928 @@
+name: Auto-QA Tuner
+
+# Learns from accepted/rejected AI-generated PRs and CNCF landscape to tune auto-qa issue creation.
+# Three feedback loops:
+#   daily-feedback:      Tracks per-category acceptance rates from last 24h
+#   weekly-analysis:     Broader pattern analysis, creates summary report issue
+#   cncf-intelligence:   Scans CNCF repos for improvement patterns
+
+on:
+  schedule:
+    - cron: '0 3 * * *'    # Daily at 3am UTC
+    - cron: '0 4 * * 0'    # Sunday at 4am UTC
+    - cron: '0 5 * * 3'    # Wednesday at 5am UTC
+  workflow_dispatch:
+    inputs:
+      job_override:
+        description: 'Which job to run (daily|weekly|cncf|all)'
+        required: false
+        default: 'all'
+        type: string
+
+permissions:
+  contents: read  # default read; writes scoped to job below
+
+concurrency:
+  group: auto-qa-tuner
+  cancel-in-progress: false
+
+env:
+  CONFIG_FILE: .github/auto-qa-tuning.json
+  BLOCKED_THRESHOLD: 20
+  BOOSTED_THRESHOLD: 80
+  MIN_SAMPLES: 10
+
+jobs:
+  # ============================================================
+  # Job A: Daily Feedback — track AI-generated PR acceptance per category
+  # ============================================================
+  daily-feedback:
+    permissions:
+      # contents: write required to update .github/auto-qa-tuning.json with acceptance rates
+      contents: write
+      # pull-requests: write required to label and interact with AI-generated PRs
+      pull-requests: write
+    if: >
+      github.event.schedule == '0 3 * * *' ||
+      (github.event_name == 'workflow_dispatch' &&
+       (inputs.job_override == 'daily' || inputs.job_override == 'all'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Collect AI-generated PR feedback (last 24h)
+        id: feedback
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SINCE=$(date -u -d '24 hours ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-1d +%Y-%m-%dT%H:%M:%SZ)
+          echo "Scanning AI-generated PRs since $SINCE"
+
+          # Merged AI-generated PRs
+          gh pr list --state merged --limit 50 \
+            --search "label:ai-generated merged:>=$SINCE" \
+            --json number,title,labels,mergedAt \
+            > /tmp/merged.json 2>/dev/null || echo "[]" > /tmp/merged.json
+
+          # Rejected AI-generated PRs (closed without merge)
+          gh pr list --state closed --limit 50 \
+            --search "label:ai-generated closed:>=$SINCE -is:merged" \
+            --json number,title,labels,closedAt \
+            > /tmp/closed.json 2>/dev/null || echo "[]" > /tmp/closed.json
+
+          MERGED_COUNT=$(jq 'length' /tmp/merged.json)
+          CLOSED_COUNT=$(jq 'length' /tmp/closed.json)
+          echo "Found $MERGED_COUNT merged, $CLOSED_COUNT rejected"
+          echo "merged_count=$MERGED_COUNT" >> "$GITHUB_OUTPUT"
+          echo "closed_count=$CLOSED_COUNT" >> "$GITHUB_OUTPUT"
+
+      - name: Update tuning config
+        if: steps.feedback.outputs.merged_count != '0' || steps.feedback.outputs.closed_count != '0'
+        run: |
+          CONFIG="$CONFIG_FILE"
+
+          # Initialize config if empty or missing
+          if [ ! -s "$CONFIG" ] || ! jq empty "$CONFIG" 2>/dev/null; then
+            echo '{"schema_version":1,"last_updated":"","rolling_window_days":30,"categories":{},"weekly_insights":{"best_pr_size":"","size_acceptance":{},"type_acceptance":{},"common_rejection_reasons":[]},"cncf_insights":{"last_scan_date":"","suggested_checks":[]},"history":[]}' > "$CONFIG"
+          fi
+
+          # Extract auto-qa:* categories from merged PRs
+          jq -r '.[].labels[].name' /tmp/merged.json 2>/dev/null | \
+            grep -E '^auto-qa:' | grep -v '^auto-qa$' | \
+            sed 's/^auto-qa://' | sort | uniq -c | \
+            awk '{print $2, $1}' > /tmp/merged-cats.txt || true
+
+          # Extract auto-qa:* categories from closed PRs
+          jq -r '.[].labels[].name' /tmp/closed.json 2>/dev/null | \
+            grep -E '^auto-qa:' | grep -v '^auto-qa$' | \
+            sed 's/^auto-qa://' | sort | uniq -c | \
+            awk '{print $2, $1}' > /tmp/closed-cats.txt || true
+
+          # Also categorize by PR title keywords for PRs without auto-qa labels
+          categorize_title() {
+            local title="$1"
+            title_lower=$(echo "$title" | tr '[:upper:]' '[:lower:]')
+            if echo "$title_lower" | grep -qE 'aria|a11y|accessibility|keyboard nav|screen reader|dom nest|html|semantic'; then echo "a11y"
+            elif echo "$title_lower" | grep -qE 'security|hardcoded|credential|token|vuln|cve'; then echo "security"
+            elif echo "$title_lower" | grep -qE 'performance|lazy|unused dep|bundle|optim'; then echo "performance"
+            elif echo "$title_lower" | grep -qE 'operator|workflow|helm|deploy|cluster|kubeconfig'; then echo "operator"
+            elif echo "$title_lower" | grep -qE 'test|coverage|monitor|alert|observ|sre'; then echo "sre"
+            elif echo "$title_lower" | grep -qE 'feat|enhance|ui-design|loading|spinner|skeleton|refresh|design'; then echo "features"
+            elif echo "$title_lower" | grep -qE 'error|catch|resilience|toast|feedback'; then echo "resilience"
+            elif echo "$title_lower" | grep -qE 'inventory|consistency|demo'; then echo "consistency"
+            else echo "operator"
+            fi
+          }
+
+          # For PRs without auto-qa labels, categorize by title
+          for FILE in /tmp/merged.json /tmp/closed.json; do
+            OUTCOME=$([ "$FILE" = "/tmp/merged.json" ] && echo "merged" || echo "closed")
+            CATFILE="/tmp/${OUTCOME}-cats.txt"
+            jq -r '.[] | select((.labels | map(.name) | any(startswith("auto-qa:"))) | not) | .title' "$FILE" 2>/dev/null | while read -r TITLE; do
+              [ -z "$TITLE" ] && continue
+              CAT=$(categorize_title "$TITLE")
+              echo "$CAT 1" >> "$CATFILE"
+            done
+          done
+
+          # Consolidate duplicate categories
+          for FILE in /tmp/merged-cats.txt /tmp/closed-cats.txt; do
+            if [ -s "$FILE" ]; then
+              sort "$FILE" | awk '{a[$1]+=$2} END{for(k in a) print k, a[k]}' > "${FILE}.tmp"
+              mv "${FILE}.tmp" "$FILE"
+            fi
+          done
+
+          # Update merged counts
+          while read -r CAT COUNT; do
+            [ -z "$CAT" ] && continue
+            TMP=$(mktemp)
+            jq --arg cat "$CAT" --argjson count "$COUNT" '
+              .categories[$cat] //= {"merged":0,"closed":0,"acceptance_rate":0,"status":"normal","last_evaluated":""} |
+              .categories[$cat].merged += $count |
+              .categories[$cat].last_evaluated = (now | todate)
+            ' "$CONFIG" > "$TMP" && mv "$TMP" "$CONFIG"
+          done < /tmp/merged-cats.txt
+
+          # Update closed counts
+          while read -r CAT COUNT; do
+            [ -z "$CAT" ] && continue
+            TMP=$(mktemp)
+            jq --arg cat "$CAT" --argjson count "$COUNT" '
+              .categories[$cat] //= {"merged":0,"closed":0,"acceptance_rate":0,"status":"normal","last_evaluated":""} |
+              .categories[$cat].closed += $count |
+              .categories[$cat].last_evaluated = (now | todate)
+            ' "$CONFIG" > "$TMP" && mv "$TMP" "$CONFIG"
+          done < /tmp/closed-cats.txt
+
+          # Recalculate acceptance rates and statuses
+          TMP=$(mktemp)
+          jq --argjson blocked_thresh "$BLOCKED_THRESHOLD" --argjson boosted_thresh "$BOOSTED_THRESHOLD" --argjson min_samples "$MIN_SAMPLES" '
+            .categories |= with_entries(
+              .value.acceptance_rate = (
+                if (.value.merged + .value.closed) > 0
+                then ((.value.merged / (.value.merged + .value.closed) * 100 | round) / 100)
+                else 0 end
+              ) |
+              .value.status = (
+                if (.value.merged + .value.closed) >= $min_samples and (.value.acceptance_rate * 100) < $blocked_thresh
+                then "blocked"
+                elif (.value.merged + .value.closed) >= $min_samples and (.value.acceptance_rate * 100) > $boosted_thresh
+                then "boosted"
+                else "normal" end
+              )
+            ) |
+            .last_updated = (now | todate) |
+            .history = (.history[-29:] + [{
+              "date": (now | strftime("%Y-%m-%d")),
+              "total_merged": ([.categories[].merged] | add // 0),
+              "total_closed": ([.categories[].closed] | add // 0),
+              "categories_blocked": [.categories | to_entries[] | select(.value.status == "blocked") | .key],
+              "categories_boosted": [.categories | to_entries[] | select(.value.status == "boosted") | .key]
+            }])
+          ' "$CONFIG" > "$TMP" && mv "$TMP" "$CONFIG"
+
+          # ── Compute rotation weights from acceptance rates ──
+          # High-acceptance categories get more focus days, blocked get 0
+          # Formula: weight = acceptance_rate * 1.5 (capped at 2.0, min 0.3)
+          #   blocked → 0, boosted → 2.0, normal scales linearly
+          TMP=$(mktemp)
+          jq '
+            .rotation_weights = (
+              .categories | to_entries | map(
+                if .value.status == "blocked" then {key: .key, value: 0}
+                elif .value.status == "boosted" then {key: .key, value: 2.0}
+                elif (.value.merged + .value.closed) < 3 then {key: .key, value: 1.0}
+                else {key: .key, value: ((.value.acceptance_rate * 1.5 * 100 | round) / 100 | if . > 2.0 then 2.0 elif . < 0.3 then 0.3 else . end)}
+                end
+              ) | from_entries
+            )
+          ' "$CONFIG" > "$TMP" && mv "$TMP" "$CONFIG"
+
+          # ── Compute dynamic max issues per run ──
+          # High overall acceptance → more issues (5), low → fewer (2)
+          TOTAL_M=$(jq '[.categories[].merged] | add // 0' "$CONFIG")
+          TOTAL_C=$(jq '[.categories[].closed] | add // 0' "$CONFIG")
+          TOTAL_ALL=$((TOTAL_M + TOTAL_C))
+          if [ "$TOTAL_ALL" -gt 0 ]; then
+            RATE=$(echo "scale=2; $TOTAL_M * 100 / $TOTAL_ALL" | bc)
+            RATE_INT=${RATE%.*}
+            if [ "$RATE_INT" -ge 70 ]; then
+              MAX_ISSUES=5
+            elif [ "$RATE_INT" -ge 50 ]; then
+              MAX_ISSUES=3
+            else
+              MAX_ISSUES=2
+            fi
+          else
+            MAX_ISSUES=3
+          fi
+          TMP=$(mktemp)
+          jq --argjson mi "$MAX_ISSUES" '.max_issues_override = $mi' "$CONFIG" > "$TMP" && mv "$TMP" "$CONFIG"
+
+          # ── Compute PR guidance from size data ──
+          BEST_SIZE=$(jq -r '.weekly_insights.best_pr_size // "S"' "$CONFIG")
+          case "$BEST_SIZE" in
+            XS) GUIDANCE="Keep changes under 10 lines for best acceptance rate." ;;
+            S)  GUIDANCE="Keep changes under 50 lines (size S) for best acceptance rate. Split larger fixes into multiple PRs." ;;
+            M)  GUIDANCE="Changes up to 200 lines (size M) are acceptable. Avoid PRs over 200 lines." ;;
+            *)  GUIDANCE="Keep PRs small and focused. Smaller PRs have higher acceptance rates." ;;
+          esac
+          TMP=$(mktemp)
+          jq --arg g "$GUIDANCE" '.pr_guidance = $g' "$CONFIG" > "$TMP" && mv "$TMP" "$CONFIG"
+
+          echo "Updated tuning config:"
+          jq '.categories | to_entries[] | "\(.key): merged=\(.value.merged) closed=\(.value.closed) rate=\(.value.acceptance_rate) status=\(.value.status)"' -r "$CONFIG"
+          echo "Rotation weights:"
+          jq -r '.rotation_weights | to_entries[] | "  \(.key): \(.value)"' "$CONFIG"
+          echo "Max issues: $(jq '.max_issues_override' "$CONFIG")"
+          echo "PR guidance: $(jq -r '.pr_guidance' "$CONFIG")"
+
+      - name: Detect regression patterns and update focus overrides
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          CONFIG="$CONFIG_FILE"
+          [ ! -f "$CONFIG" ] && exit 0
+
+          SEVEN_DAYS_AGO=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-7d +%Y-%m-%dT%H:%M:%SZ)
+
+          # Fetch auto-qa issues from the past 7 days (both open and closed)
+          gh issue list --state all --limit 100 \
+            --label auto-qa \
+            --search "created:>=$SEVEN_DAYS_AGO" \
+            --json number,title,labels,state,createdAt \
+            > /tmp/recent-autoqa-issues.json 2>/dev/null || echo "[]" > /tmp/recent-autoqa-issues.json
+
+          ISSUE_COUNT=$(jq 'length' /tmp/recent-autoqa-issues.json)
+          echo "Found $ISSUE_COUNT auto-qa issues in the past 7 days"
+
+          if [ "$ISSUE_COUNT" -eq 0 ]; then
+            echo "No recent issues — skipping regression detection"
+            exit 0
+          fi
+
+          # Count issues per auto-qa sub-label (e.g., auto-qa:a11y, auto-qa:loading-gaps)
+          jq -r '.[].labels[].name' /tmp/recent-autoqa-issues.json 2>/dev/null \
+            | grep -E '^auto-qa:' | grep -v '^auto-qa$' \
+            | sed 's/^auto-qa://' \
+            | sort | uniq -c | sort -rn \
+            > /tmp/regression-counts.txt || true
+
+          echo "Issue frequency by sub-category:"
+          cat /tmp/regression-counts.txt
+
+          # Identify repeat offenders: sub-categories with 3+ issues in 7 days
+          # These indicate regressions that keep being reintroduced
+          REPEAT_THRESHOLD=3
+          REPEAT_CATS=$(awk -v thresh="$REPEAT_THRESHOLD" '$1 >= thresh {print $2}' /tmp/regression-counts.txt | head -5)
+
+          # Map sub-categories back to focus areas
+          map_to_focus() {
+            local subcat="$1"
+            case "$subcat" in
+              unused-deps|lazy-loading|bundle-analysis|large-files|import-cost) echo "performance" ;;
+              hardcoded-creds|dep-age|hardcoded) echo "security" ;;
+              aria|aria-gaps|keyboard|keyboard-nav|color-contrast|event-parity) echo "a11y" ;;
+              magic-numbers|tooltips) echo "operator" ;;
+              single-cluster|health) echo "sre" ;;
+              todos|complexity|console-logs|any-types|memory-leaks) echo "features" ;;
+              swallowed|loading-states|modal-safety|feedback-gaps|loading-gaps) echo "resilience" ;;
+              hardcoded-colors|spacing|dark-mode|touch-targets|component-patterns) echo "consistency" ;;
+              *) echo "" ;;
+            esac
+          }
+
+          # Build focus_overrides: areas with repeat regressions get boosted
+          FOCUS_OVERRIDES=""
+          for CAT in $REPEAT_CATS; do
+            FOCUS=$(map_to_focus "$CAT")
+            if [ -n "$FOCUS" ]; then
+              COUNT=$(grep -w "$CAT" /tmp/regression-counts.txt | awk '{print $1}')
+              echo "Regression detected: $CAT ($COUNT issues in 7d) -> boosting focus area: $FOCUS"
+              FOCUS_OVERRIDES="${FOCUS_OVERRIDES:+$FOCUS_OVERRIDES,}$FOCUS"
+            fi
+          done
+
+          # Deduplicate focus overrides
+          FOCUS_OVERRIDES=$(echo "$FOCUS_OVERRIDES" | tr ',' '\n' | sort -u | tr '\n' ',' | sed 's/,$//')
+
+          # Also detect title-level repeats (same issue title pattern appearing 2+ times)
+          jq -r '.[].title' /tmp/recent-autoqa-issues.json \
+            | sed 's/\[Auto-QA\] //' | sed 's/[0-9]\+/N/g' \
+            | sort | uniq -c | sort -rn \
+            | awk '$1 >= 2 {$1=""; print substr($0,2)}' \
+            > /tmp/repeat-titles.txt || true
+
+          REPEAT_TITLE_COUNT=$(wc -l < /tmp/repeat-titles.txt | tr -d ' ')
+          if [ "$REPEAT_TITLE_COUNT" -gt 0 ]; then
+            echo "Repeat issue titles (same pattern 2+ times in 7d):"
+            head -10 /tmp/repeat-titles.txt
+          fi
+
+          # Write focus_overrides and regression data to tuning config
+          TMP=$(mktemp)
+          OVERRIDES_JSON=$(echo "$FOCUS_OVERRIDES" | tr ',' '\n' | jq -R -s 'split("\n") | map(select(. != ""))')
+          REPEAT_TITLES_JSON=$(head -5 /tmp/repeat-titles.txt | jq -R -s 'split("\n") | map(select(. != ""))')
+
+          jq --argjson overrides "$OVERRIDES_JSON" \
+             --argjson repeats "$REPEAT_TITLES_JSON" \
+             --argjson issue_count "$ISSUE_COUNT" \
+             --argjson repeat_count "$REPEAT_TITLE_COUNT" '
+            .regression_insights = {
+              "focus_overrides": $overrides,
+              "repeat_issue_patterns": $repeats,
+              "total_issues_7d": $issue_count,
+              "repeat_pattern_count": $repeat_count,
+              "last_analyzed": (now | todate)
+            }
+          ' "$CONFIG" > "$TMP" && mv "$TMP" "$CONFIG"
+
+          echo "Focus overrides: ${FOCUS_OVERRIDES:-none}"
+          echo "Repeat patterns: $REPEAT_TITLE_COUNT"
+
+      - name: Commit tuning config
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$CONFIG_FILE"
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          BRANCH="auto-qa-tuner/daily-$(date +%Y%m%d-%H%M%S)"
+          git checkout -b "$BRANCH"
+          git commit -s -m "chore: update auto-qa tuning config (daily feedback)"
+          git push origin "$BRANCH"
+          gh pr create \
+            --title "chore: auto-qa tuning config update (daily feedback) $(date +%Y-%m-%d)" \
+            --body "Automated daily feedback update from the Auto-QA Tuner workflow." \
+            --base main
+
+  # ============================================================
+  # Job B: Weekly Analysis — broader patterns, create report issue
+  # ============================================================
+  weekly-analysis:
+    permissions:
+      # contents: write required to update .github/auto-qa-tuning.json with weekly insights
+      contents: write
+      # issues: write required to create weekly analysis summary issues
+      issues: write
+      # pull-requests: write required to open tuning config update PRs
+      pull-requests: write
+    needs: daily-feedback
+    if: >
+      !failure() && !cancelled() &&
+      (github.event.schedule == '0 4 * * 0' ||
+       (github.event_name == 'workflow_dispatch' &&
+        (inputs.job_override == 'weekly' || inputs.job_override == 'all')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Analyze weekly AI-generated PR patterns
+        id: analysis
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          WEEK_AGO=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-7d +%Y-%m-%dT%H:%M:%SZ)
+          TODAY=$(date -u +%Y-%m-%d)
+          WEEK_START=$(date -u -d '7 days ago' +%Y-%m-%d 2>/dev/null || date -u -v-7d +%Y-%m-%d)
+
+          # Fetch merged AI-generated PRs with size info
+          gh pr list --state merged --limit 100 \
+            --search "label:ai-generated merged:>=$WEEK_AGO" \
+            --json number,title,labels,mergedAt,additions,deletions \
+            > /tmp/w-merged.json 2>/dev/null || echo "[]" > /tmp/w-merged.json
+
+          # Fetch rejected AI-generated PRs
+          gh pr list --state closed --limit 100 \
+            --search "label:ai-generated closed:>=$WEEK_AGO -is:merged" \
+            --json number,title,labels,closedAt,additions,deletions,comments \
+            > /tmp/w-closed.json 2>/dev/null || echo "[]" > /tmp/w-closed.json
+
+          MERGED_COUNT=$(jq 'length' /tmp/w-merged.json)
+          CLOSED_COUNT=$(jq 'length' /tmp/w-closed.json)
+          TOTAL=$((MERGED_COUNT + CLOSED_COUNT))
+          if [ "$TOTAL" -gt 0 ]; then
+            RATE=$(( MERGED_COUNT * 100 / TOTAL ))
+          else
+            RATE=0
+          fi
+
+          # Size classification (additions + deletions)
+          classify_size() {
+            local lines=$1
+            if [ "$lines" -lt 10 ]; then echo "XS"
+            elif [ "$lines" -lt 50 ]; then echo "S"
+            elif [ "$lines" -lt 200 ]; then echo "M"
+            elif [ "$lines" -lt 500 ]; then echo "L"
+            elif [ "$lines" -lt 1000 ]; then echo "XL"
+            else echo "XXL"
+            fi
+          }
+
+          # Build size tables
+          for SIZE in XS S M L XL XXL; do
+            echo "${SIZE}_merged=0" >> /tmp/sizes.txt
+            echo "${SIZE}_closed=0" >> /tmp/sizes.txt
+          done
+
+          jq -r '.[] | "\(.additions + .deletions)"' /tmp/w-merged.json | while read -r LINES; do
+            SIZE=$(classify_size "$LINES")
+            echo "$SIZE" >> /tmp/merged-sizes.txt
+          done
+          jq -r '.[] | "\(.additions + .deletions)"' /tmp/w-closed.json | while read -r LINES; do
+            SIZE=$(classify_size "$LINES")
+            echo "$SIZE" >> /tmp/closed-sizes.txt
+          done
+
+          # Change type from title
+          classify_type() {
+            local title="$1"
+            if echo "$title" | grep -qE '🐛|[Ff]ix|[Bb]ug'; then echo "bug_fix"
+            elif echo "$title" | grep -qE '✨|[Aa]dd|[Ff]eat|[Ee]nhance'; then echo "enhancement"
+            elif echo "$title" | grep -qE '♻️|[Rr]efactor|[Cc]lean|[Ee]xtract|[Ss]tandardize'; then echo "refactor"
+            elif echo "$title" | grep -qE '📖|[Dd]oc|[Rr]eadme'; then echo "docs"
+            elif echo "$title" | grep -qE '🚀|[Tt]est|[Cc]overage'; then echo "testing"
+            else echo "other"
+            fi
+          }
+
+          jq -r '.[].title' /tmp/w-merged.json | while read -r T; do
+            classify_type "$T" >> /tmp/merged-types.txt
+          done
+          jq -r '.[].title' /tmp/w-closed.json | while read -r T; do
+            classify_type "$T" >> /tmp/closed-types.txt
+          done
+
+          # Extract rejection reasons from close comments
+          > /tmp/rejection-reasons.txt
+          for PR in $(jq -r '.[].number' /tmp/w-closed.json 2>/dev/null); do
+            COMMENT=$(gh pr view "$PR" --json comments --jq '.comments[-1].body // ""' 2>/dev/null | head -3)
+            [ -n "$COMMENT" ] && echo "- PR #$PR: $COMMENT" >> /tmp/rejection-reasons.txt
+          done
+
+          # Build the report body
+          cat > /tmp/report.md << REPORT_EOF
+          ## Auto-QA Tuning Weekly Report
+
+          **Period:** $WEEK_START to $TODAY
+          **Total AI-Generated PRs:** $TOTAL ($MERGED_COUNT merged, $CLOSED_COUNT rejected)
+          **Overall Acceptance Rate:** ${RATE}%
+
+          ### Category Performance (Rolling 30-Day)
+
+          | Category | Merged | Rejected | Rate | Status |
+          |----------|--------|----------|------|--------|
+          REPORT_EOF
+
+          # Add category rows from tuning config
+          if [ -f "$CONFIG_FILE" ]; then
+            jq -r '.categories | to_entries | sort_by(.value.acceptance_rate) | reverse[] |
+              "| \(.key) | \(.value.merged) | \(.value.closed) | \(.value.acceptance_rate * 100 | round)% | \(
+                if .value.status == "boosted" then ":rocket: Boosted"
+                elif .value.status == "blocked" then ":no_entry: Blocked"
+                else "Normal" end
+              ) |"' "$CONFIG_FILE" >> /tmp/report.md
+          fi
+
+          # Size analysis
+          cat >> /tmp/report.md << 'SIZE_EOF'
+
+          ### PR Size Analysis
+
+          | Size | Lines | Merged | Rejected | Rate |
+          |------|-------|--------|----------|------|
+          SIZE_EOF
+
+          for SIZE in XS S M L XL XXL; do
+            M_COUNT=$(grep -c "^${SIZE}$" /tmp/merged-sizes.txt 2>/dev/null || echo 0)
+            C_COUNT=$(grep -c "^${SIZE}$" /tmp/closed-sizes.txt 2>/dev/null || echo 0)
+            STOTAL=$((M_COUNT + C_COUNT))
+            if [ "$STOTAL" -gt 0 ]; then SRATE=$((M_COUNT * 100 / STOTAL)); else SRATE=0; fi
+            case $SIZE in
+              XS) RANGE="0-9" ;; S) RANGE="10-49" ;; M) RANGE="50-199" ;;
+              L) RANGE="200-499" ;; XL) RANGE="500-999" ;; XXL) RANGE="1000+" ;;
+            esac
+            echo "| $SIZE | $RANGE | $M_COUNT | $C_COUNT | ${SRATE}% |" >> /tmp/report.md
+          done
+
+          # Type analysis
+          cat >> /tmp/report.md << 'TYPE_EOF'
+
+          ### Change Type Analysis
+
+          | Type | Merged | Rejected | Rate |
+          |------|--------|----------|------|
+          TYPE_EOF
+
+          for TYPE in bug_fix enhancement refactor docs testing other; do
+            M_COUNT=$(grep -c "^${TYPE}$" /tmp/merged-types.txt 2>/dev/null || echo 0)
+            C_COUNT=$(grep -c "^${TYPE}$" /tmp/closed-types.txt 2>/dev/null || echo 0)
+            TTOTAL=$((M_COUNT + C_COUNT))
+            if [ "$TTOTAL" -gt 0 ]; then TRATE=$((M_COUNT * 100 / TTOTAL)); else TRATE=0; fi
+            echo "| $TYPE | $M_COUNT | $C_COUNT | ${TRATE}% |" >> /tmp/report.md
+          done
+
+          # Rejection reasons
+          if [ -s /tmp/rejection-reasons.txt ]; then
+            echo "" >> /tmp/report.md
+            echo "### Rejection Reasons" >> /tmp/report.md
+            echo "" >> /tmp/report.md
+            head -10 /tmp/rejection-reasons.txt >> /tmp/report.md
+          fi
+
+          # Recommendations
+          cat >> /tmp/report.md << 'REC_EOF'
+
+          ### Recommendations
+
+          Based on this week's data:
+          REC_EOF
+
+          if [ -f "$CONFIG_FILE" ]; then
+            BLOCKED=$(jq -r '[.categories | to_entries[] | select(.value.status == "blocked") | .key] | join(", ")' "$CONFIG_FILE")
+            BOOSTED=$(jq -r '[.categories | to_entries[] | select(.value.status == "boosted") | .key] | join(", ")' "$CONFIG_FILE")
+            [ -n "$BLOCKED" ] && echo "- **Block:** $BLOCKED (consistently rejected)" >> /tmp/report.md
+            [ -n "$BOOSTED" ] && echo "- **Boost:** $BOOSTED (consistently accepted)" >> /tmp/report.md
+          fi
+          echo "- **Optimal PR size:** S (10-49 lines) — keep AI fixes small and focused" >> /tmp/report.md
+          echo "" >> /tmp/report.md
+          echo "---" >> /tmp/report.md
+          echo "*Auto-generated by auto-qa-tuner weekly analysis*" >> /tmp/report.md
+
+          echo "report_ready=true" >> "$GITHUB_OUTPUT"
+
+      - name: Create weekly report issue
+        if: steps.analysis.outputs.report_ready == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Ensure label exists
+          gh label create "auto-qa-tuning-report" --color "7057ff" --description "Weekly auto-qa tuning report" 2>/dev/null || true
+
+          # Close previous report issues
+          gh issue list --label "auto-qa-tuning-report" --state open --json number --jq '.[].number' | while read -r NUM; do
+            gh issue close "$NUM" --comment "Superseded by new weekly report" 2>/dev/null || true
+          done
+
+          # Create new report
+          gh issue create \
+            --title "[Auto-QA Tuning] Weekly Report $(date +%Y-%m-%d)" \
+            --label "auto-qa-tuning-report" \
+            --body-file /tmp/report.md
+
+      - name: Update weekly insights in tuning config
+        run: |
+          CONFIG="$CONFIG_FILE"
+          [ ! -f "$CONFIG" ] && exit 0
+
+          # Find best size and type from this week
+          BEST_SIZE="S"
+          BEST_TYPE="bug_fix"
+          for SIZE in XS S M L XL XXL; do
+            M=$(grep -c "^${SIZE}$" /tmp/merged-sizes.txt 2>/dev/null || echo 0)
+            C=$(grep -c "^${SIZE}$" /tmp/closed-sizes.txt 2>/dev/null || echo 0)
+            T=$((M + C))
+            if [ "$T" -ge 3 ]; then
+              R=$((M * 100 / T))
+              if [ "$R" -gt 70 ]; then BEST_SIZE="$SIZE"; fi
+            fi
+          done
+
+          # Extract rejection reasons as JSON array
+          REASONS=$(head -5 /tmp/rejection-reasons.txt 2>/dev/null | jq -R -s 'split("\n") | map(select(. != ""))' 2>/dev/null || echo '[]')
+
+          TMP=$(mktemp)
+          jq --arg size "$BEST_SIZE" --arg type "$BEST_TYPE" --argjson reasons "$REASONS" '
+            .weekly_insights.best_pr_size = $size |
+            .weekly_insights.best_change_type = $type |
+            .weekly_insights.common_rejection_reasons = $reasons |
+            .weekly_insights.last_report_date = (now | strftime("%Y-%m-%d"))
+          ' "$CONFIG" > "$TMP" && mv "$TMP" "$CONFIG"
+
+      - name: Commit tuning config
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$CONFIG_FILE"
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          BRANCH="auto-qa-tuner/weekly-$(date +%Y%m%d-%H%M%S)"
+          git checkout -b "$BRANCH"
+          git commit -s -m "chore: update auto-qa tuning config (weekly analysis)"
+          git push origin "$BRANCH"
+          gh pr create \
+            --title "chore: auto-qa tuning config update (weekly analysis) $(date +%Y-%m-%d)" \
+            --body "Automated weekly analysis update from the Auto-QA Tuner workflow." \
+            --base main
+
+  # ============================================================
+  # Job C: CNCF Intelligence — scan landscape repos for patterns
+  # ============================================================
+  cncf-intelligence:
+    permissions:
+      # contents: write required to update .github/auto-qa-tuning.json with CNCF intelligence data
+      contents: write
+      # issues: write required to create CNCF landscape insights issues
+      issues: write
+      # pull-requests: write required to open tuning config update PRs
+      pull-requests: write
+    needs: weekly-analysis
+    if: >
+      !failure() && !cancelled() &&
+      (github.event.schedule == '0 5 * * 3' ||
+       (github.event_name == 'workflow_dispatch' &&
+        (inputs.job_override == 'cncf' || inputs.job_override == 'all')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Select and scan CNCF repos
+        id: scan
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          WEEK_AGO=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-7d +%Y-%m-%dT%H:%M:%SZ)
+
+          # Frontend-heavy CNCF & cloud-native projects (dashboards, web UIs, consoles)
+          # Pick 4 random per run — these all have React/TS/Vue frontends
+          REPOS=(
+            "backstage/backstage"              # React, TypeScript, plugin architecture
+            "grafana/grafana"                  # React, TypeScript, dashboard panels
+            "kubernetes/dashboard"             # React, TypeScript, K8s UI
+            "argoproj/argo-cd"                 # React, TypeScript, GitOps UI
+            "rancher/dashboard"                # Vue, TypeScript, K8s management UI
+            "headlamp-k8s/headlamp"            # React, TypeScript, K8s UI
+            "kubevirt/kubevirt-ui"              # React, TypeScript, VM management
+            "goharbor/harbor"                  # React frontend for container registry
+            "meshery/meshery"                  # React, Next.js, service mesh UI
+            "opencost/opencost"                # React dashboard for K8s cost monitoring
+            "jaegertracing/jaeger-ui"          # React, trace visualization
+            "cilium/hubble-ui"                 # React, network observability UI
+            "kiali/kiali"                      # React, Istio service mesh UI
+          )
+
+          TOTAL=${#REPOS[@]}
+          SELECTED=()
+          ATTEMPTS=0
+          while [ ${#SELECTED[@]} -lt 4 ] && [ $ATTEMPTS -lt 20 ]; do
+            IDX=$(( RANDOM % TOTAL ))
+            REPO="${REPOS[$IDX]}"
+            DUPLICATE=false
+            for S in "${SELECTED[@]}"; do
+              [ "$S" = "$REPO" ] && DUPLICATE=true && break
+            done
+            $DUPLICATE || SELECTED+=("$REPO")
+            ATTEMPTS=$((ATTEMPTS + 1))
+          done
+
+          echo "Selected repos: ${SELECTED[*]}"
+          echo "selected=${SELECTED[*]}" >> "$GITHUB_OUTPUT"
+
+          # ── UX Theme definitions ──
+          # These are the lenses we use to evaluate what CNCF projects are doing
+          # that makes them more adoptable and better for users
+          declare -A THEME_REGEX
+          THEME_REGEX[error_ux]='error.boundar|error.message|error.state|user.friendly.error|fallback.ui|error.page|error.display|toast|snackbar|notification|alert.component'
+          THEME_REGEX[loading_ux]='loading|skeleton|spinner|placeholder|progressive|lazy.load|suspense|shimmer|empty.state|no.data|zero.state'
+          THEME_REGEX[accessibility]='a11y|aria|screen.reader|keyboard.nav|focus.trap|focus.management|tab.order|wcag|contrast|semantic.html|role='
+          THEME_REGEX[navigation_ux]='breadcrumb|sidebar|nav|route|deep.link|back.button|browser.history|url.param|search|filter|sort|pagination'
+          THEME_REGEX[responsive_design]='responsive|mobile|breakpoint|media.query|viewport|touch|swipe|collapse|drawer|adaptive'
+          THEME_REGEX[data_viz]='chart|graph|visualization|sparkline|tooltip|legend|axis|time.series|heatmap|treemap|table.sort|column.resize'
+          THEME_REGEX[form_ux]='form|validation|input|select|dropdown|autocomplete|typeahead|date.picker|file.upload|multi.select|combobox'
+          THEME_REGEX[realtime_ux]='websocket|sse|streaming|live.update|real.time|poll|refresh|auto.refresh|watch|subscribe|event.source'
+          THEME_REGEX[onboarding]='onboard|wizard|stepper|tour|walkthrough|getting.started|setup|first.run|welcome|empty.state.action'
+          THEME_REGEX[dark_mode]='dark.mode|theme|color.scheme|light.mode|appearance|prefers-color-scheme|css.variable|design.token'
+          THEME_NAMES=("error_ux" "loading_ux" "accessibility" "navigation_ux" "responsive_design" "data_viz" "form_ux" "realtime_ux" "onboarding" "dark_mode")
+
+          # Human-readable theme labels for the report
+          declare -A THEME_LABELS
+          THEME_LABELS[error_ux]="Error UX & User Feedback"
+          THEME_LABELS[loading_ux]="Loading States & Empty States"
+          THEME_LABELS[accessibility]="Accessibility"
+          THEME_LABELS[navigation_ux]="Navigation & Search"
+          THEME_LABELS[responsive_design]="Responsive & Mobile"
+          THEME_LABELS[data_viz]="Data Visualization"
+          THEME_LABELS[form_ux]="Forms & Input"
+          THEME_LABELS[realtime_ux]="Real-time & Live Updates"
+          THEME_LABELS[onboarding]="Onboarding & Guided Setup"
+          THEME_LABELS[dark_mode]="Theming & Dark Mode"
+
+          declare -A THEME_TOTALS
+          for T in "${THEME_NAMES[@]}"; do THEME_TOTALS[$T]=0; done
+
+          # ── Scan each repo: fetch title + body, filter for frontend PRs ──
+          > /tmp/cncf-insights-detail.md
+          TOTAL_FRONTEND_PRS=0
+
+          for REPO in "${SELECTED[@]}"; do
+            echo "Scanning $REPO..."
+            FILE="/tmp/cncf-$(echo "$REPO" | tr '/' '-').json"
+            SHORT=$(echo "$REPO" | cut -d/ -f2)
+
+            # Fetch merged PRs with title AND body
+            # Strip HTML comments and common template prefixes to get actual description
+            gh pr list --repo "$REPO" --state merged --limit 50 \
+              --json title,body,url,mergedAt,labels \
+              --jq "[.[] | select(.mergedAt > \"$WEEK_AGO\") | {title, body: ((.body // \"\") | gsub(\"<!--[^>]*-->\"; \"\") | gsub(\"^[\\\\s\\\\n]+\"; \"\") | .[:300]), url, labels: [.labels[].name]}]" \
+              > "$FILE" 2>/dev/null || echo "[]" > "$FILE"
+
+            if ! jq empty "$FILE" 2>/dev/null; then
+              echo "[]" > "$FILE"
+            fi
+
+            ALL_COUNT=$(jq length "$FILE")
+            echo "  Total merged PRs: $ALL_COUNT"
+
+            # Filter for frontend/UX-relevant PRs by scanning title + body
+            jq '[.[] | select(
+              (.title + " " + .body) | test("react|component|hook|tsx|jsx|css|style|ui|frontend|dashboard|panel|widget|modal|dialog|drawer|sidebar|nav|theme|dark.mode|a11y|aria|loading|skeleton|spinner|error.boundar|toast|form|input|select|table|chart|graph|responsive|mobile|onboard|wizard|empty.state|tooltip|dropdown|popover|badge|icon|animation|transition|i18n|locale|rtl"; "i")
+            )]' "$FILE" > "/tmp/cncf-${SHORT}-frontend.json" 2>/dev/null || echo "[]" > "/tmp/cncf-${SHORT}-frontend.json"
+
+            FE_COUNT=$(jq length "/tmp/cncf-${SHORT}-frontend.json")
+            echo "  Frontend-relevant PRs: $FE_COUNT"
+            TOTAL_FRONTEND_PRS=$((TOTAL_FRONTEND_PRS + FE_COUNT))
+
+            # Scan frontend PRs for UX themes
+            COMBINED=$(jq -r '.[] | .title + " " + .body' "/tmp/cncf-${SHORT}-frontend.json" 2>/dev/null)
+
+            for THEME in "${THEME_NAMES[@]}"; do
+              REGEX="${THEME_REGEX[$THEME]}"
+              COUNT=$(echo "$COMBINED" | grep -ciE "$REGEX" 2>/dev/null || true)
+              COUNT=${COUNT:-0}
+              THEME_TOTALS[$THEME]=$((${THEME_TOTALS[$THEME]} + COUNT))
+              [ "$COUNT" -gt 0 ] && echo "  ${THEME_LABELS[$THEME]}: $COUNT"
+            done
+
+            # ── Extract contextual insights from each frontend PR ──
+            # For each frontend PR, extract what it does and why it matters
+            if [ "$FE_COUNT" -gt 0 ]; then
+              echo "" >> /tmp/cncf-insights-detail.md
+              echo "#### $REPO ($FE_COUNT frontend PRs)" >> /tmp/cncf-insights-detail.md
+              echo "" >> /tmp/cncf-insights-detail.md
+
+              # Get the most interesting PRs (skip pure dep bumps and automation)
+              jq -r '.[] | select(.title | test("bump|renovate|dependabot|\\[bot\\]"; "i") | not) | {title, body: ((.body // "") | gsub("### Summary"; "") | gsub("### Occurred changes.*"; "") | gsub("### Technical notes.*"; "") | gsub("Fixes #[0-9]+"; "") | gsub("Fixes https://[^ ]+"; "") | gsub("Signed-off-by:.*"; "") | gsub("^[\\s\\n]+"; "") | if (. | length) > 0 then . else "(no description)" end), url}' "/tmp/cncf-${SHORT}-frontend.json" | \
+              jq -s '.[0:6]' | \
+              jq -r '.[] | "- **[\(.title)](\(.url))**\n  > \(.body | gsub("\n"; " ") | gsub("\\s+"; " ") | .[:250])\n"' >> /tmp/cncf-insights-detail.md 2>/dev/null || true
+            fi
+
+            sleep 2  # Rate limiting
+          done
+
+          # ── Build the report ──
+          echo "## CNCF Landscape Intelligence Report" > /tmp/cncf-report.md
+          echo "" >> /tmp/cncf-report.md
+          echo "**Scanned repos:** ${SELECTED[*]}" >> /tmp/cncf-report.md
+          echo "**Period:** Last 7 days | **Frontend-relevant PRs found:** $TOTAL_FRONTEND_PRS" >> /tmp/cncf-report.md
+          echo "" >> /tmp/cncf-report.md
+
+          # UX Theme summary table
+          echo "### UX Theme Distribution" >> /tmp/cncf-report.md
+          echo "" >> /tmp/cncf-report.md
+          echo "| Theme | Hits | Relevance to Console |" >> /tmp/cncf-report.md
+          echo "|-------|------|---------------------|" >> /tmp/cncf-report.md
+
+          declare -A THEME_RELEVANCE
+          THEME_RELEVANCE[error_ux]="Error boundaries, toast notifications, fallback UIs"
+          THEME_RELEVANCE[loading_ux]="Skeleton screens, loading spinners, empty states for cards"
+          THEME_RELEVANCE[accessibility]="ARIA labels, keyboard navigation, screen reader support"
+          THEME_RELEVANCE[navigation_ux]="Sidebar navigation, deep linking, search/filter/sort"
+          THEME_RELEVANCE[responsive_design]="Mobile-friendly dashboard layouts, collapsible panels"
+          THEME_RELEVANCE[data_viz]="Charts, graphs, time series for metrics cards"
+          THEME_RELEVANCE[form_ux]="Cluster creation forms, config editors, validation"
+          THEME_RELEVANCE[realtime_ux]="SSE streams, live dashboard updates, auto-refresh"
+          THEME_RELEVANCE[onboarding]="First-run experience, setup wizards, empty state CTAs"
+          THEME_RELEVANCE[dark_mode]="Theme switching, CSS variables, design tokens"
+
+          for THEME in "${THEME_NAMES[@]}"; do
+            TOTAL_T=${THEME_TOTALS[$THEME]:-0}
+            if [ "$TOTAL_T" -gt 0 ]; then
+              echo "| ${THEME_LABELS[$THEME]} | $TOTAL_T | ${THEME_RELEVANCE[$THEME]} |" >> /tmp/cncf-report.md
+            fi
+          done
+
+          # Detailed insights section
+          echo "" >> /tmp/cncf-report.md
+          echo "### What These Projects Are Doing (with context)" >> /tmp/cncf-report.md
+          echo "" >> /tmp/cncf-report.md
+          echo "Each PR below includes its description so you can see *what* they changed and *why* — not just a title." >> /tmp/cncf-report.md
+
+          if [ -s /tmp/cncf-insights-detail.md ]; then
+            cat /tmp/cncf-insights-detail.md >> /tmp/cncf-report.md
+          else
+            echo "" >> /tmp/cncf-report.md
+            echo "*No frontend-relevant PRs found in selected repos this week.*" >> /tmp/cncf-report.md
+          fi
+
+          # Actionable suggestions — tied to specific themes
+          echo "" >> /tmp/cncf-report.md
+          echo "### Actionable Takeaways for KubeStellar Console" >> /tmp/cncf-report.md
+          echo "" >> /tmp/cncf-report.md
+
+          FOUND_SUGGESTION=false
+          for THEME in "${THEME_NAMES[@]}"; do
+            TOTAL_T=${THEME_TOTALS[$THEME]:-0}
+            if [ "$TOTAL_T" -ge 2 ]; then
+              FOUND_SUGGESTION=true
+              LABEL="${THEME_LABELS[$THEME]}"
+              REL="${THEME_RELEVANCE[$THEME]}"
+              echo "- **${LABEL}** (${TOTAL_T} PRs across repos) — CNCF projects are actively investing here. For our console: ${REL}." >> /tmp/cncf-report.md
+            fi
+          done
+
+          if [ "$FOUND_SUGGESTION" = false ]; then
+            echo "*No strong patterns detected this week. Try again next scan.*" >> /tmp/cncf-report.md
+          fi
+
+          echo "" >> /tmp/cncf-report.md
+          echo "---" >> /tmp/cncf-report.md
+          echo "*Auto-generated by auto-qa-tuner CNCF intelligence scan*" >> /tmp/cncf-report.md
+
+          echo "scan_ready=true" >> "$GITHUB_OUTPUT"
+
+      - name: Create CNCF insights issue
+        if: steps.scan.outputs.scan_ready == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Ensure label exists
+          gh label create "cncf-insights" --color "0e8a16" --description "CNCF landscape intelligence insights" 2>/dev/null || true
+
+          # Close previous insights issues
+          gh issue list --label "cncf-insights" --state open --json number --jq '.[].number' | while read -r NUM; do
+            gh issue close "$NUM" --comment "Superseded by new CNCF scan" 2>/dev/null || true
+          done
+
+          gh issue create \
+            --title "[CNCF Insights] UX patterns from $(date +%Y-%m-%d)" \
+            --label "cncf-insights" \
+            --body-file /tmp/cncf-report.md
+
+      - name: Update CNCF suggestions in tuning config
+        run: |
+          CONFIG="$CONFIG_FILE"
+          [ ! -f "$CONFIG" ] && exit 0
+
+          # Build suggestions from themes that had enough signal
+          SUGGESTIONS='[]'
+          THEME_NAMES=("error_ux" "loading_ux" "accessibility" "navigation_ux" "responsive_design" "data_viz" "form_ux" "realtime_ux" "onboarding" "dark_mode")
+
+          for THEME in "${THEME_NAMES[@]}"; do
+            TOTAL_P=0
+            for REPO in ${{ steps.scan.outputs.selected }}; do
+              FILE="/tmp/cncf-$(echo "$REPO" | cut -d/ -f2)-frontend.json"
+              [ ! -f "$FILE" ] && continue
+              case $THEME in
+                error_ux) REGEX='error.boundar|error.message|error.state|fallback.ui|toast|snackbar|notification' ;;
+                loading_ux) REGEX='loading|skeleton|spinner|placeholder|lazy.load|suspense|empty.state' ;;
+                accessibility) REGEX='a11y|aria|screen.reader|keyboard.nav|focus|wcag|contrast' ;;
+                navigation_ux) REGEX='breadcrumb|sidebar|nav|route|deep.link|search|filter|sort|pagination' ;;
+                responsive_design) REGEX='responsive|mobile|breakpoint|media.query|viewport|touch' ;;
+                data_viz) REGEX='chart|graph|visualization|sparkline|tooltip|legend|time.series' ;;
+                form_ux) REGEX='form|validation|input|select|dropdown|autocomplete|date.picker' ;;
+                realtime_ux) REGEX='websocket|sse|streaming|live.update|real.time|poll|refresh' ;;
+                onboarding) REGEX='onboard|wizard|stepper|tour|walkthrough|getting.started|setup' ;;
+                dark_mode) REGEX='dark.mode|theme|color.scheme|appearance|css.variable|design.token' ;;
+              esac
+              C=$(jq -r '.[] | .title + " " + .body' "$FILE" 2>/dev/null | grep -ciE "$REGEX" || true)
+              C=${C:-0}
+              C=$((C + 0))
+              TOTAL_P=$((TOTAL_P + C))
+            done
+            if [ "$TOTAL_P" -ge 5 ]; then
+              SUGGESTIONS=$(echo "$SUGGESTIONS" | jq --arg pattern "$THEME" --argjson count "$TOTAL_P" \
+                '. + [{"pattern": $pattern, "count": $count, "added": (now | strftime("%Y-%m-%d")), "priority": "medium"}]')
+            fi
+          done
+
+          TMP=$(mktemp)
+          jq --argjson suggestions "$SUGGESTIONS" '
+            .cncf_insights.last_scan_date = (now | strftime("%Y-%m-%d")) |
+            .cncf_insights.suggested_checks = $suggestions
+          ' "$CONFIG" > "$TMP" && mv "$TMP" "$CONFIG"
+
+      - name: Commit tuning config
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$CONFIG_FILE"
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          BRANCH="auto-qa-tuner/cncf-$(date +%Y%m%d-%H%M%S)"
+          git checkout -b "$BRANCH"
+          git commit -s -m "chore: update auto-qa tuning config (CNCF intelligence)"
+          git push origin "$BRANCH"
+          gh pr create \
+            --title "chore: auto-qa tuning config update (CNCF intelligence) $(date +%Y-%m-%d)" \
+            --body "Automated CNCF intelligence update from the Auto-QA Tuner workflow." \
+            --base main

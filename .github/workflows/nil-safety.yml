@@ -1,0 +1,649 @@
+name: Nil Safety
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/nilaway-baseline.json'
+      - '.github/array-safety-baseline.txt'
+      - 'web/src/**.ts'
+      - 'web/src/**.tsx'
+  schedule:
+    - cron: '30 4 * * *'
+  workflow_dispatch:
+    inputs:
+      skip_issue_creation:
+        description: 'Skip creating issues (dry run)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  GO_VERSION: "1.26.5"
+
+permissions: read-all  # default read; writes scoped to job below
+
+jobs:
+  # ── PR Check: Block new nil-safety violations ──────────────────────
+  pr-check:
+    permissions:
+      issues: write
+      pull-requests: write
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check for Go file changes
+        id: go-files
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          FILES=$(gh pr diff "${{ github.event.pull_request.number }}" --name-only 2>/dev/null || git diff --name-only "origin/${{ github.base_ref }}...HEAD")
+          if echo "$FILES" | grep -qE '\.(go)$|^go\.(mod|sum)$'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "### Nil Safety: Skipped (no Go changes)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Setup Go
+        if: steps.go-files.outputs.changed == 'true'
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install nilaway
+        if: steps.go-files.outputs.changed == 'true'
+        run: go install go.uber.org/nilaway/cmd/nilaway@v0.0.0-20260318203545-ad240b12fb4c
+
+      - name: Install build dependencies
+        if: steps.go-files.outputs.changed == 'true'
+        run: sudo apt-get install -y -qq gcc musl-tools > /dev/null 2>&1
+
+      - name: Run nilaway
+        if: steps.go-files.outputs.changed == 'true'
+        id: nilaway
+        continue-on-error: true
+        run: |
+          CGO_ENABLED=1 nilaway -include-pkgs="github.com/kubestellar/console" ./... 2>&1 | \
+            sed 's/\x1b\[[0-9;]*m//g' | \
+            sed "s|${PWD}/||g" | tee /tmp/nilaway-output.txt
+          echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+
+      - name: Filter against baseline
+        if: steps.go-files.outputs.changed == 'true'
+        id: filter
+        run: |
+          BASELINE=".github/nilaway-baseline.json"
+          RAW="/tmp/nilaway-output.txt"
+          NEW="/tmp/nilaway-new.txt"
+
+          python3 - "$RAW" "$BASELINE" "$NEW" << 'PYEOF'
+          import json, sys, re, os
+
+          raw_file, baseline_file, output_file = sys.argv[1], sys.argv[2], sys.argv[3]
+
+          # Load baseline (file:line:col entries)
+          baseline = set()
+          if os.path.exists(baseline_file):
+              with open(baseline_file) as f:
+                  baseline = set(json.load(f))
+
+          new_findings = []
+          with open(raw_file) as f:
+              for line in f:
+                  line = line.strip()
+                  if not line or ': error: ' not in line:
+                      continue
+                  # Extract file:line:col from "path/file.go:LINE:COL: error: ..."
+                  m = re.match(r'^(.+?:\d+:\d+): error: (.+)', line)
+                  if m:
+                      loc = m.group(1)
+                      if loc not in baseline:
+                          new_findings.append(line)
+
+          with open(output_file, 'w') as f:
+              f.write('\n'.join(new_findings) + '\n' if new_findings else '')
+          PYEOF
+
+          NEW_COUNT=$(grep -c ': error: ' "$NEW" 2>/dev/null) || NEW_COUNT=0
+          echo "new_count=$NEW_COUNT" >> "$GITHUB_OUTPUT"
+
+          if [ "$NEW_COUNT" -gt 0 ]; then
+            echo "### Nil Safety: $NEW_COUNT new finding(s)" >> "$GITHUB_STEP_SUMMARY"
+            echo '' >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            head -50 "$NEW" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Nil Safety: No new findings" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Fail on new findings
+        if: steps.go-files.outputs.changed == 'true' && steps.filter.outputs.new_count != '0'
+        run: |
+          echo "::error::nilaway found ${{ steps.filter.outputs.new_count }} new nil-safety violation(s). See job summary for details."
+          echo ""
+          cat /tmp/nilaway-new.txt
+          echo ""
+          echo "To fix: add nil checks before dereferencing pointers. Run locally with:"
+          echo "  go install go.uber.org/nilaway/cmd/nilaway@latest"
+          echo "  CGO_ENABLED=1 nilaway ./..."
+          exit 1
+
+  # ── Nightly: Full scan with issue creation ─────────────────────────
+  nightly-scan:
+    permissions:
+      issues: write
+      pull-requests: write
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install nilaway
+        run: go install go.uber.org/nilaway/cmd/nilaway@v0.0.0-20260318203545-ad240b12fb4c
+
+      - name: Install build dependencies
+        run: sudo apt-get install -y -qq gcc musl-tools > /dev/null 2>&1
+
+      - name: Run full nilaway scan
+        id: scan
+        continue-on-error: true
+        run: |
+          CGO_ENABLED=1 nilaway -include-pkgs="github.com/kubestellar/console" ./... 2>&1 | \
+            sed 's/\x1b\[[0-9;]*m//g' | \
+            sed "s|${PWD}/||g" | tee /tmp/nilaway-full.txt
+
+          TOTAL=$(grep -c ': error: ' /tmp/nilaway-full.txt 2>/dev/null || echo "0")
+          echo "total=$TOTAL" >> "$GITHUB_OUTPUT"
+
+          # Group findings by file for issue body
+          python3 - /tmp/nilaway-full.txt /tmp/nilaway-grouped.md << 'PYEOF'
+          import sys, re
+          from collections import defaultdict
+
+          findings = defaultdict(list)
+          with open(sys.argv[1]) as f:
+              for line in f:
+                  line = line.strip()
+                  if not line or ': error: ' not in line:
+                      continue
+                  m = re.match(r'^(.+?):(\d+):\d+: error: (.+)', line)
+                  if m:
+                      file_path = m.group(1)
+                      line_no = m.group(2)
+                      message = m.group(3).split('. Observed')[0]
+                      findings[file_path].append(f"  - Line {line_no}: {message}")
+                  else:
+                      findings["(unknown)"].append(f"  - {line}")
+
+          with open(sys.argv[2], 'w') as f:
+              for fp in sorted(findings.keys()):
+                  f.write(f"**`{fp}`**\n")
+                  for item in findings[fp]:
+                      f.write(f"{item}\n")
+                  f.write("\n")
+          PYEOF
+
+          echo "### Nil Safety Nightly: $TOTAL finding(s)" >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/nilaway-grouped.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Ensure labels exist
+        if: steps.scan.outputs.total != '0'
+        env:
+          GH_TOKEN: ${{ secrets.CONSOLE_AUTO }}
+        run: |
+          gh label create "auto-qa:nil-safety" \
+            --repo "${{ github.repository }}" \
+            --color "E53935" \
+            --description "Nil pointer safety issues detected by nilaway" \
+            2>/dev/null || true
+
+      - name: Create issues for findings
+        if: steps.scan.outputs.total != '0' && inputs.skip_issue_creation != true
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          TOTAL_FINDINGS: ${{ steps.scan.outputs.total }}
+          COMMIT_SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          github-token: ${{ secrets.CONSOLE_AUTO }}
+          script: |
+            const fs = require('fs');
+            const sha = process.env.COMMIT_SHA.substring(0, 7);
+            const runUrl = process.env.RUN_URL;
+            const total = process.env.TOTAL_FINDINGS;
+            const now = new Date().toISOString().split('T')[0];
+
+            const grouped = fs.readFileSync('/tmp/nilaway-grouped.md', 'utf8');
+
+            // Check for existing nil-safety issues (open + recently closed)
+            const [{ data: openIssues }, { data: closedIssues }] = await Promise.all([
+              github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                labels: 'auto-qa:nil-safety',
+                per_page: 100,
+              }),
+              github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'closed',
+                labels: 'auto-qa:nil-safety',
+                per_page: 50,
+                sort: 'updated',
+                direction: 'desc',
+              }),
+            ]);
+
+            const DEDUP_WINDOW_DAYS = 2;
+            const dedup_window_ms = DEDUP_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+            const dedupCutoff = new Date(Date.now() - dedup_window_ms);
+            const recentlyClosed = closedIssues.filter(i => new Date(i.closed_at) > dedupCutoff);
+
+            // Normalize title for dedup: strip numbers
+            const normalize = (t) => t.replace(/\[Auto-QA\]\s*/, '').replace(/\d+/g, 'N').toLowerCase().trim();
+
+            const title = `[Auto-QA] Go nil-safety: ${total} potential nil pointer issues`;
+            const pattern = normalize(title);
+            const existing = [...openIssues, ...recentlyClosed];
+            const duplicate = existing.find(i => normalize(i.title) === pattern);
+
+            if (duplicate) {
+              const status = duplicate.state === 'open' ? 'still open' : `closed ${new Date(duplicate.closed_at).toLocaleDateString()}`;
+              core.info(`Skipping duplicate: "${title}" matches #${duplicate.number} (${status})`);
+              return;
+            }
+
+            const body = [
+              `## Auto-QA [Nil Safety]: Go nil pointer analysis`,
+              '',
+              `**Detected:** ${now} | **Commit:** \`${sha}\` | **Run:** [View](${runUrl})`,
+              `**Tool:** [nilaway](https://github.com/uber-go/nilaway) | **Total findings:** ${total}`,
+              '',
+              '### Findings by File',
+              '',
+              grouped,
+              '',
+              '### How to Fix',
+              '- Add nil checks before dereferencing pointers returned from functions',
+              '- Guard map lookups with comma-ok pattern: `val, ok := m[key]`',
+              '- Check interface values for nil before calling methods',
+              '- Use early returns after error checks instead of continuing with potentially nil values',
+              '- Run `go install go.uber.org/nilaway/cmd/nilaway@latest && nilaway ./...` locally to verify fixes',
+              '',
+              '---',
+              `*This issue was automatically created by the [nil-safety workflow](${runUrl}).*`,
+            ].join('\n');
+
+            const { data: issue } = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['bug', 'help wanted', 'auto-qa', 'triage/accepted', 'auto-qa:nil-safety'],
+            });
+
+            core.info(`Created issue #${issue.number}: ${title}`);
+
+            // Auto-assign Copilot
+            try {
+              await github.request('POST /repos/{owner}/{repo}/issues/{issue_number}/assignees', {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                assignees: ['copilot-swe-agent[bot]'],
+              });
+              core.info(`Assigned Copilot to #${issue.number}`);
+            } catch (e) {
+              core.warning(`Could not assign Copilot to #${issue.number}: ${e.message}`);
+            }
+
+  # ── TypeScript: Catch unsafe optional chaining patterns ────────────
+  ts-null-safety:
+    permissions:
+      issues: write
+      pull-requests: write
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Scan for unsafe optional chaining with .join()
+        id: scan
+        run: |
+          # Catches patterns where optional chaining produces `undefined` before .join():
+          #
+          #   x?.map(...).join(...)        — returns "undefined" in template literals
+          #   x?.slice(0,2).join(...)      — same issue
+          #   x?.property.join(...)        — crashes if property is undefined
+          #   x?.join(...)                 — returns undefined instead of ""
+          #
+          # Fix: Use (x ?? []).method().join() or (x ?? []).join()
+          #
+          # Safe (not matched):
+          #   (x ?? []).map(...).join(...)
+          #   x?.toLowerCase().includes(q) — optional chaining protects entire chain
+
+          FINDINGS="/tmp/ts-null-findings.txt"
+          : > "$FINDINGS"
+
+          grep -rn --include='*.ts' --include='*.tsx' \
+            -E '(\?\.(map|filter|slice|flatMap|sort|reduce)\(.*\)\.join\(|\?\.[a-zA-Z]+\.join\(|\?\.join\()' \
+            web/src/ 2>/dev/null | \
+            grep -v 'node_modules' | \
+            grep -v '// null-safety-ignore' | \
+            tee "$FINDINGS" || true
+
+          COUNT=$(wc -l < "$FINDINGS" | tr -d ' ')
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+
+          if [ "$COUNT" -gt 0 ]; then
+            echo "### TypeScript Null Safety: $COUNT unsafe .join() pattern(s)" >> "$GITHUB_STEP_SUMMARY"
+            echo '' >> "$GITHUB_STEP_SUMMARY"
+            echo 'These lines use optional chaining before `.join()`, producing `undefined` instead of `""`:' >> "$GITHUB_STEP_SUMMARY"
+            echo '' >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            head -50 "$FINDINGS" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo '' >> "$GITHUB_STEP_SUMMARY"
+            echo '**Fix:** Replace `x?.join()` with `(x ?? []).join()` and `x?.map().join()` with `(x ?? []).map().join()`' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### TypeScript Null Safety: No unsafe patterns found" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Fail on unsafe patterns
+        if: steps.scan.outputs.count != '0'
+        run: |
+          echo "::error::Found ${{ steps.scan.outputs.count }} unsafe optional chaining + .join() pattern(s)."
+          echo ""
+          cat /tmp/ts-null-findings.txt
+          echo ""
+          echo "Optional chaining before .join() produces undefined instead of an empty string."
+          echo "Fix: Use (x ?? []).join() or (x ?? []).map().join()"
+          echo ""
+          echo "To suppress a false positive, add '// null-safety-ignore' on the same line."
+          exit 1
+
+      - name: Scan for unguarded array methods on potentially-undefined values
+        id: array-safety
+        run: |
+          # ── Array Safety Guards (P1-B) ──────────────────────────────────
+          #
+          # Catches array methods called on values that may be undefined at
+          # runtime — the #1 source of production crashes (see PR #1281).
+          #
+          # Suppression: add '// null-safety-ignore' on the same line.
+          #
+          # ── Ratcheting ──────────────────────────────────────────────────
+          # We count current violations and compare against a checked-in
+          # baseline. The build fails only if the count INCREASES, allowing
+          # gradual cleanup without blocking unrelated PRs.
+          # ────────────────────────────────────────────────────────────────
+
+          SCAN_DIRS="web/src/hooks/ web/src/components/"
+          FINDINGS="/tmp/array-safety-findings.txt"
+          : > "$FINDINGS"
+
+          # Shared exclusions: test files, node_modules, suppressed lines
+          exclude_noise() {
+            grep -v 'node_modules' | \
+            grep -v '\.test\.' | \
+            grep -v '\.spec\.' | \
+            grep -v '__tests__' | \
+            grep -v '// null-safety-ignore'
+          }
+
+          # ── Pattern A: Hook .data.arrayMethod() without guard ──────────
+          # Catches: cache.data.map(…), result.data.filter(…), cacheResult.data.forEach(…)
+          # These crash when the hook returns { data: undefined }.
+          # Safe alternatives: (cache.data ?? []).map(…) or cache.data?.map(…)
+          grep -rn --include='*.ts' --include='*.tsx' \
+            -E '\.(data)\.(map|filter|forEach|join|reduce|find|some|every|flatMap|includes)\(' \
+            $SCAN_DIRS 2>/dev/null | \
+            exclude_noise | \
+            grep -v -E '\?\.\s*(map|filter|forEach|join|reduce|find|some|every|flatMap|includes)\(' | \
+            grep -v -E '\|\|\s*\[\]' | \
+            grep -v -E '\?\?\s*\[\]' >> "$FINDINGS" || true
+
+          # ── Pattern B: data.property.arrayMethod() without guard ───────
+          # Catches: data.predictions.filter(…), data.guides.map(…), data.items.forEach(…)
+          # API response properties may be undefined when the endpoint fails.
+          # Safe alternatives: (data.items ?? []).map(…) or data.items?.map(…)
+          grep -rn --include='*.ts' --include='*.tsx' \
+            -E '\bdata\.[a-zA-Z_]+\.(map|filter|forEach|join|reduce|find|some|every|flatMap|includes)\(' \
+            $SCAN_DIRS 2>/dev/null | \
+            exclude_noise | \
+            grep -v -E '\?\.\s*(map|filter|forEach|join|reduce|find|some|every|flatMap|includes)\(' | \
+            grep -v -E '\|\|\s*\[\]' | \
+            grep -v -E '\?\?\s*\[\]' >> "$FINDINGS" || true
+
+          # ── Pattern C: for…of iterating .data or response properties ───
+          # Catches: for (const x of data.items), for (const x of result.data)
+          # Iterating undefined throws "X is not iterable" at runtime.
+          # Safe alternative: for (const x of (data.items || []))
+          grep -rn --include='*.ts' --include='*.tsx' \
+            -E 'for\s*\(\s*(const|let|var)\s+\w+\s+of\s+\w+\.data\b' \
+            $SCAN_DIRS 2>/dev/null | \
+            exclude_noise | \
+            grep -v -E '\|\|\s*\[\]' | \
+            grep -v -E '\?\?\s*\[\]' >> "$FINDINGS" || true
+
+          grep -rn --include='*.ts' --include='*.tsx' \
+            -E 'for\s*\(\s*(const|let|var)\s+\w+\s+of\s+data\.[a-zA-Z_]+\)' \
+            $SCAN_DIRS 2>/dev/null | \
+            exclude_noise | \
+            grep -v -E '\|\|\s*\[\]' | \
+            grep -v -E '\?\?\s*\[\]' >> "$FINDINGS" || true
+
+          # Deduplicate (a line may match multiple patterns)
+          sort -u "$FINDINGS" -o "$FINDINGS"
+
+          COUNT=$(wc -l < "$FINDINGS" | tr -d ' ')
+          echo "array_safety_count=$COUNT" >> "$GITHUB_OUTPUT"
+
+          # ── Ratchet baseline ────────────────────────────────────────────
+          # Baseline file stores the max allowed count. If missing, treat
+          # current count as baseline (first run bootstraps automatically).
+          BASELINE_FILE=".github/array-safety-baseline.txt"
+          if [ -f "$BASELINE_FILE" ]; then
+            BASELINE=$(cat "$BASELINE_FILE" | tr -d ' \n')
+          else
+            BASELINE="$COUNT"
+          fi
+          echo "array_safety_baseline=$BASELINE" >> "$GITHUB_OUTPUT"
+
+          # ── Summary ─────────────────────────────────────────────────────
+          if [ "$COUNT" -gt "$BASELINE" ]; then
+            echo "### Array Safety: REGRESSION — $COUNT findings (baseline: $BASELINE)" >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$COUNT" -gt 0 ]; then
+            echo "### Array Safety: $COUNT findings (at or below baseline $BASELINE)" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Array Safety: No unsafe patterns found" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          if [ "$COUNT" -gt 0 ]; then
+            echo '' >> "$GITHUB_STEP_SUMMARY"
+            echo 'Lines calling array methods on values that may be `undefined` at runtime:' >> "$GITHUB_STEP_SUMMARY"
+            echo '' >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            head -50 "$FINDINGS" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo '' >> "$GITHUB_STEP_SUMMARY"
+            echo '**Fix:** Guard with `(val ?? [])` or `(val || [])` before calling `.map()`, `.filter()`, `.join()`, etc.' >> "$GITHUB_STEP_SUMMARY"
+            echo '**Suppress false positive:** Add `// null-safety-ignore` on the same line.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Fail on array safety regression
+        if: fromJSON(steps.array-safety.outputs.array_safety_count) > fromJSON(steps.array-safety.outputs.array_safety_baseline)
+        run: |
+          echo "::error::Array safety regression: ${{ steps.array-safety.outputs.array_safety_count }} findings exceeds baseline of ${{ steps.array-safety.outputs.array_safety_baseline }}."
+          echo ""
+          cat /tmp/array-safety-findings.txt
+          echo ""
+          echo "New code is calling .map(), .filter(), .join(), .forEach(), or for...of"
+          echo "on values that may be undefined (e.g., hook .data properties, API responses)."
+          echo ""
+          echo "Fix: Guard with (value ?? []).method() or (value || []).method()"
+          echo "Suppress false positive: Add '// null-safety-ignore' on the same line."
+          exit 1
+
+      # ── AI Code Quality Checks (ratcheted baselines) ────────────────
+      # These catch patterns that AI tools commonly generate.
+      # Each has a baseline file — the check fails only if the count INCREASES.
+      # Suppress with '// ai-quality-ignore' on the same line.
+
+      - name: Scan for AI antipatterns
+        id: ai-quality
+        run: |
+          SCAN_DIRS="web/src/"
+          EXCLUDE_PATTERNS='node_modules|__tests__|\.test\.|\.spec\.|// ai-quality-ignore|// magic-number-ignore'
+          SUMMARY=""
+          FAILED=false
+
+          filter_noise() {
+            grep -v -E "$EXCLUDE_PATTERNS"
+          }
+
+          # ── Pattern 1: Magic numbers in timers ─────────────────────
+          # AI tools write setTimeout(fn, 5000) instead of using named constants.
+          MAGIC_FILE="/tmp/ai-magic-numbers.txt"
+          grep -rn --include='*.ts' --include='*.tsx' \
+            -E '(setTimeout|setInterval)\s*\([^,]+,\s*[0-9]{2,}' \
+            $SCAN_DIRS 2>/dev/null | filter_noise | sort -u > "$MAGIC_FILE" || true
+          MAGIC_COUNT=$(wc -l < "$MAGIC_FILE" | tr -d ' ')
+
+          MAGIC_BASELINE_FILE=".github/ai-magic-numbers-baseline.txt"
+          MAGIC_BASELINE=$(cat "$MAGIC_BASELINE_FILE" 2>/dev/null | tr -d ' \n' || echo "$MAGIC_COUNT")
+
+          if [ "$MAGIC_COUNT" -gt "$MAGIC_BASELINE" ]; then
+            SUMMARY="$SUMMARY\n❌ Magic numbers in timers: $MAGIC_COUNT (baseline: $MAGIC_BASELINE)"
+            FAILED=true
+          else
+            SUMMARY="$SUMMARY\n✅ Magic numbers in timers: $MAGIC_COUNT (baseline: $MAGIC_BASELINE)"
+          fi
+
+          # ── Pattern 2: No-op test assertions ───────────────────────
+          # AI "fixes" failing tests by replacing real assertions with expect(true).toBe(true).
+          NOOP_FILE="/tmp/ai-noop-assertions.txt"
+          grep -rn --include='*.ts' --include='*.tsx' \
+            -E 'expect\((true|1|false)\)\.(toBe|toEqual)\((true|1|false)\)' \
+            $SCAN_DIRS 2>/dev/null | filter_noise | sort -u > "$NOOP_FILE" || true
+          NOOP_COUNT=$(wc -l < "$NOOP_FILE" | tr -d ' ')
+
+          NOOP_BASELINE_FILE=".github/ai-noop-assertions-baseline.txt"
+          NOOP_BASELINE=$(cat "$NOOP_BASELINE_FILE" 2>/dev/null | tr -d ' \n' || echo "$NOOP_COUNT")
+
+          if [ "$NOOP_COUNT" -gt "$NOOP_BASELINE" ]; then
+            SUMMARY="$SUMMARY\n❌ No-op assertions: $NOOP_COUNT (baseline: $NOOP_BASELINE)"
+            FAILED=true
+          else
+            SUMMARY="$SUMMARY\n✅ No-op assertions: $NOOP_COUNT (baseline: $NOOP_BASELINE)"
+          fi
+
+          # ── Pattern 3: Hardcoded route strings ─────────────────────
+          # AI writes '/settings' instead of ROUTES.SETTINGS.
+          ROUTES_FILE="/tmp/ai-hardcoded-routes.txt"
+          grep -rn --include='*.ts' --include='*.tsx' \
+            -E "(href|to|navigate\(|push\(|replace\()['\"]/(settings|clusters|workloads|events|security|compliance|deploy|alerts|nodes|pods|services|operators)" \
+            $SCAN_DIRS 2>/dev/null | filter_noise | \
+            grep -v 'routes.ts' | grep -v 'ROUTES\.' | sort -u > "$ROUTES_FILE" || true
+          ROUTES_COUNT=$(wc -l < "$ROUTES_FILE" | tr -d ' ')
+
+          ROUTES_BASELINE_FILE=".github/ai-hardcoded-routes-baseline.txt"
+          ROUTES_BASELINE=$(cat "$ROUTES_BASELINE_FILE" 2>/dev/null | tr -d ' \n' || echo "$ROUTES_COUNT")
+
+          if [ "$ROUTES_COUNT" -gt "$ROUTES_BASELINE" ]; then
+            SUMMARY="$SUMMARY\n❌ Hardcoded routes: $ROUTES_COUNT (baseline: $ROUTES_BASELINE)"
+            FAILED=true
+          else
+            SUMMARY="$SUMMARY\n✅ Hardcoded routes: $ROUTES_COUNT (baseline: $ROUTES_BASELINE)"
+          fi
+
+          # ── Pattern 4: Cards missing unified controls ──────────────
+          # AI-generated cards skip useCardLoadingState, breaking the CardWrapper state system.
+          UNIFIED_FILE="/tmp/ai-missing-unified.txt"
+          : > "$UNIFIED_FILE"
+          for card in web/src/components/cards/*.tsx; do
+            base=$(basename "$card")
+            case "$base" in
+              *test*|*spec*|*index*|*Error*|*registry*|*CardData*|*Wrapper*|*Dynamic*|*Boundary*|*Panel*) continue ;;
+            esac
+            if ! grep -q 'useCardLoadingState' "$card" 2>/dev/null; then
+              echo "$card: missing useCardLoadingState" >> "$UNIFIED_FILE"
+            fi
+          done
+          UNIFIED_COUNT=$(wc -l < "$UNIFIED_FILE" | tr -d ' ')
+
+          UNIFIED_BASELINE_FILE=".github/ai-missing-unified-baseline.txt"
+          UNIFIED_BASELINE=$(cat "$UNIFIED_BASELINE_FILE" 2>/dev/null | tr -d ' \n' || echo "$UNIFIED_COUNT")
+
+          if [ "$UNIFIED_COUNT" -gt "$UNIFIED_BASELINE" ]; then
+            SUMMARY="$SUMMARY\n❌ Cards missing unified controls: $UNIFIED_COUNT (baseline: $UNIFIED_BASELINE)"
+            FAILED=true
+          else
+            SUMMARY="$SUMMARY\n✅ Cards missing unified controls: $UNIFIED_COUNT (baseline: $UNIFIED_BASELINE)"
+          fi
+
+          # ── Pattern 5: Non-localized user-facing strings ──────────
+          # AI writes title="Some Text" instead of title={t('key')} for i18n.
+          LOCALE_FILE="/tmp/ai-non-localized.txt"
+          grep -rn --include='*.tsx' \
+            -E '(title|label|placeholder|aria-label)="[A-Z][a-z]{2,}' \
+            web/src/components/cards/ web/src/components/dashboard/ \
+            2>/dev/null | filter_noise | \
+            grep -v 'className' | sort -u > "$LOCALE_FILE" || true
+          LOCALE_COUNT=$(wc -l < "$LOCALE_FILE" | tr -d ' ')
+
+          LOCALE_BASELINE_FILE=".github/ai-non-localized-baseline.txt"
+          LOCALE_BASELINE=$(cat "$LOCALE_BASELINE_FILE" 2>/dev/null | tr -d ' \n' || echo "$LOCALE_COUNT")
+
+          if [ "$LOCALE_COUNT" -gt "$LOCALE_BASELINE" ]; then
+            SUMMARY="$SUMMARY\n❌ Non-localized strings: $LOCALE_COUNT (baseline: $LOCALE_BASELINE)"
+            FAILED=true
+          else
+            SUMMARY="$SUMMARY\n✅ Non-localized strings: $LOCALE_COUNT (baseline: $LOCALE_BASELINE)"
+          fi
+
+          # ── Output ─────────────────────────────────────────────────
+          echo "### AI Code Quality Checks" >> "$GITHUB_STEP_SUMMARY"
+          printf "$SUMMARY\n" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$FAILED" = "true" ]; then
+            echo ""
+            echo "ai_quality_failed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ai_quality_failed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fail on AI quality regression
+        if: steps.ai-quality.outputs.ai_quality_failed == 'true'
+        run: |
+          echo "::error::AI code quality regression detected. See step summary for details."
+          echo ""
+          echo "Common AI antipatterns detected above baseline:"
+          echo "  - Magic numbers: use named constants (e.g., const RETRY_DELAY_MS = 5000)"
+          echo "  - No-op assertions: fix the test, don't weaken the assertion"
+          echo "  - Hardcoded routes: use ROUTES.* from config/routes.ts"
+          echo "  - Missing unified controls: add useCardLoadingState to card components"
+          echo ""
+          echo "Suppress false positive: add '// ai-quality-ignore' on the same line."
+          exit 1

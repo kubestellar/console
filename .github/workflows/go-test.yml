@@ -1,0 +1,90 @@
+name: Go Tests
+
+# Pre-merge gate that runs the FULL Go test suite on PRs. Without this,
+# Go test breakages would only surface in the nightly Release workflow —
+# historically every test failure in the nightly had to be traced back
+# to an already-merged commit. See release.yml for the other invocation.
+
+on:
+  pull_request:
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/go-coverage-ratchet.txt'
+      - '.github/go-package-coverage-ratchet.txt'
+      - '.github/workflows/go-test.yml'
+      - 'scripts/check-go-coverage-ratchet.sh'
+      - 'scripts/__tests__/check-go-coverage-ratchet.test.sh'
+      - 'scripts/testdata/check-go-coverage-ratchet/**'
+  push:
+    branches: [main]
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/go-coverage-ratchet.txt'
+      - '.github/go-package-coverage-ratchet.txt'
+      - '.github/workflows/go-test.yml'
+      - 'scripts/check-go-coverage-ratchet.sh'
+      - 'scripts/__tests__/check-go-coverage-ratchet.test.sh'
+      - 'scripts/testdata/check-go-coverage-ratchet/**'
+  workflow_dispatch:
+
+# Cancel superseded runs on the same PR/branch so we don't queue stale work.
+concurrency:
+  group: go-test-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: read-all  # default read; writes scoped to job below
+
+env:
+  GO_COVERAGE_RATCHET_FILE: .github/go-coverage-ratchet.txt
+  GO_PACKAGE_COVERAGE_RATCHET_FILE: .github/go-package-coverage-ratchet.txt
+  GO_COVERAGE_REPORT_FILE: go-coverage-summary.md
+  GO_COVERAGE_FUNCTIONS_FILE: go-coverage-functions.txt
+
+jobs:
+  test:
+    name: go test ./...
+    runs-on: ubuntu-latest
+    # Matches the release workflow's timeout budget; full suite runs in
+    # ~1-2 minutes today, cushion is for slower runners and test growth.
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.26.5'
+          cache: true
+
+      # Full suite — must match what release.yml runs or main can still
+      # break the nightly. -race catches concurrency bugs that only show
+      # up under load, which is cheap relative to the cost of a broken
+      # release pipeline.
+      - name: Run full Go test suite
+        run: go test -race -coverprofile=coverage.out -covermode=atomic -timeout 10m ./...
+
+      - name: Check Go coverage ratchet
+        run: |
+          chmod +x scripts/check-go-coverage-ratchet.sh
+          ./scripts/check-go-coverage-ratchet.sh \
+            coverage.out \
+            "$GO_COVERAGE_RATCHET_FILE" \
+            "$GO_PACKAGE_COVERAGE_RATCHET_FILE" \
+            "$GO_COVERAGE_REPORT_FILE"
+          go tool cover -func=coverage.out | tee "$GO_COVERAGE_FUNCTIONS_FILE" | tail -1
+
+      - name: Upload Go coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: go-coverage-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          path: |
+            coverage.out
+            ${{ env.GO_COVERAGE_FUNCTIONS_FILE }}
+            ${{ env.GO_COVERAGE_REPORT_FILE }}

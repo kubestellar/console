@@ -1,0 +1,35 @@
+# Example overrides for in-cluster Kagenti integration
+# Usage:
+#   helm upgrade --install <release> ./deploy/helm/kubestellar-console \
+#     -n <namespace> \
+#     -f deploy/helm/kubestellar-console/values-kagenti-incluster.example.yaml \
+#     --set image.repository=<your-registry>/kubestellar-console \
+#     --set image.tag=<your-new-tag>
+
+kagenti:
+  enabled: true
+
+  # Keep Kagenti selected by default in Missions UI
+  forceDefaultAgent: true
+
+  # Adds NetworkPolicy egress on kagenti.servicePort when networkPolicy.enabled=true
+  allowNetworkPolicyEgress: true
+
+  # Controller mode (recommended)
+  controllerUrl: ""
+  namespace: kagenti-system
+  serviceName: kagenti-backend
+  servicePort: "8000"
+  serviceProtocol: http
+
+  # Direct-agent mode (optional)
+  # directAgentUrl: "http://my-agent.my-namespace.svc:8080"
+  # directAgentName: "my-agent"
+  # directAgentNamespace: "my-namespace"
+
+# If you enforce NetworkPolicy in your cluster, enable this.
+networkPolicy:
+  enabled: true
+
+# Optional extra env values
+extraEnv: []

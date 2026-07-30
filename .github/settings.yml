@@ -1,0 +1,14 @@
+# These settings are synced to GitHub by https://probot.github.io/apps/settings/
+# Repository topics for discoverability
+repository:
+  topics:
+    - kubernetes
+    - kubestellar
+    - console
+    - dashboard
+    - multicluster
+    - edge-computing
+    - cloud-native
+    - cncf
+    - react
+    - nextjs

@@ -1,0 +1,1 @@
+export {CrossplaneManagedResources} from './CrossplaneManagedResources'

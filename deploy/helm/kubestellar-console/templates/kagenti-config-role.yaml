@@ -1,0 +1,38 @@
+{{- if and .Values.rbac.create .Values.kagenti.enabled -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "kubestellar-console.fullname" . }}-kagenti-config
+  namespace: {{ .Values.kagenti.namespace }}
+  labels:
+    {{- include "kubestellar-console.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources:
+      - secrets
+    resourceNames:
+      - {{ .Values.kagenti.llmSecretName }}
+    verbs: ["get", "create", "update", "patch"]
+  - apiGroups: ["apps"]
+    resources:
+      - deployments
+    resourceNames:
+      - {{ .Values.kagenti.deploymentName }}
+    verbs: ["get", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "kubestellar-console.fullname" . }}-kagenti-config
+  namespace: {{ .Values.kagenti.namespace }}
+  labels:
+    {{- include "kubestellar-console.labels" . | nindent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "kubestellar-console.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "kubestellar-console.fullname" . }}-kagenti-config
+{{- end }}

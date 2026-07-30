@@ -1,0 +1,9 @@
+{
+  "title": "Missing version mission",
+  "steps": [
+    {
+      "title": "Inspect cluster",
+      "description": "Review the current cluster state before making changes."
+    }
+  ]
+}

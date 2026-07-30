@@ -1,0 +1,23 @@
+{{- if .Values.persistence.enabled }}
+{{- $existingPVC := lookup "v1" "PersistentVolumeClaim" .Release.Namespace (include "kubestellar-console.fullname" .) -}}
+{{- if not $existingPVC }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "kubestellar-console.fullname" . }}
+  labels:
+    {{- include "kubestellar-console.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/resource-policy": keep
+spec:
+  accessModes:
+    {{- toYaml .Values.persistence.accessModes | nindent 4 }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.size }}
+  {{- $storageClassName := include "kubestellar-console.storageClassName" (dict "accessModes" .Values.persistence.accessModes "storageClass" .Values.persistence.storageClass) -}}
+  {{- if $storageClassName }}
+  storageClassName: {{ $storageClassName | quote }}
+  {{- end }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,377 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ACMMLevel > matches snapshot 1`] = `
+<DocumentFragment>
+  <div
+    class="h-full flex flex-col p-4 gap-4 overflow-y-auto"
+  >
+    <div
+      class="flex flex-wrap items-center justify-between gap-y-2"
+    >
+      <div
+        class="text-xs text-muted-foreground font-mono truncate"
+      >
+        kubestellar/console
+      </div>
+      <a
+        class="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors shrink-0 ml-2"
+        href="https://arxiv.org/abs/2604.09388"
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-external-link w-3 h-3"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M15 3h6v6"
+          />
+          <path
+            d="M10 14 21 3"
+          />
+          <path
+            d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
+          />
+        </svg>
+        Source
+      </a>
+    </div>
+    <div
+      class="flex items-center gap-2 gap-4"
+    >
+      <div
+        class="relative shrink-0"
+      >
+        <svg
+          class="-rotate-90"
+          height="120"
+          width="120"
+        >
+          <circle
+            class="text-muted/30"
+            cx="60"
+            cy="60"
+            fill="none"
+            r="55"
+            stroke="currentColor"
+            stroke-width="10"
+          />
+          <circle
+            class="text-primary transition-all duration-500"
+            cx="60"
+            cy="60"
+            fill="none"
+            r="55"
+            stroke="currentColor"
+            stroke-dasharray="345.57519189487726"
+            stroke-dashoffset="230.38346126325152"
+            stroke-linecap="round"
+            stroke-width="10"
+          />
+        </svg>
+        <div
+          class="absolute inset-0 flex flex-col items-center justify-center"
+        >
+          <div
+            class="text-2xl font-bold leading-none"
+          >
+            L2
+          </div>
+          <div
+            class="text-xs text-muted-foreground uppercase tracking-wide mt-0.5 max-w-[90px] text-center leading-tight"
+          >
+            Adaptive
+          </div>
+        </div>
+      </div>
+      <div
+        class="flex-1 min-w-0"
+      >
+        <div
+          class="flex items-center gap-1 gap-1.5 mb-1"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-chart-column w-3.5 h-3.5 text-primary"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M3 3v16a2 2 0 0 0 2 2h16"
+            />
+            <path
+              d="M18 17V9"
+            />
+            <path
+              d="M13 17V5"
+            />
+            <path
+              d="M8 17v-3"
+            />
+          </svg>
+          <div
+            class="text-xs text-muted-foreground"
+          >
+            Role: 
+            <span
+              class="text-foreground font-medium"
+            >
+              Rule-writer
+            </span>
+          </div>
+        </div>
+        <p
+          class="text-xs leading-snug text-muted-foreground line-clamp-3"
+        >
+          Writes rules and adapts.
+        </p>
+      </div>
+    </div>
+    <div
+      class="flex items-center gap-2 px-2 py-1.5 rounded bg-muted/30 text-xs"
+    >
+      <span
+        class="text-muted-foreground"
+      >
+        Foundations:
+      </span>
+      <span
+        class="font-mono font-medium text-yellow-400"
+      >
+        2/3
+      </span>
+      <span
+        class="text-xs text-muted-foreground ml-auto"
+      >
+        prerequisites
+      </span>
+    </div>
+    <div
+      class="p-3 rounded-md bg-primary/5 border border-primary/10"
+    >
+      <div
+        class="text-xs text-primary uppercase tracking-wide mb-1"
+      >
+        Why move to L3?
+      </div>
+      <p
+        class="text-xs text-muted-foreground leading-relaxed italic mb-1.5"
+      >
+        When feedback loops are automated.
+      </p>
+      <p
+        class="text-xs text-foreground leading-relaxed"
+      >
+        At 
+        <span
+          class="font-mono"
+        >
+          L3 Proactive
+        </span>
+         you become an 
+        <span
+          class="font-medium"
+        >
+          Analyst
+        </span>
+         — analyses data.
+      </p>
+    </div>
+    <div
+      class="text-xs text-muted-foreground leading-relaxed space-y-1.5"
+    >
+      <div
+        class="text-xs uppercase tracking-wide text-foreground/70"
+      >
+        How to level up
+      </div>
+      <p>
+        Check the 
+        <span
+          class="text-foreground font-medium"
+        >
+          Feedback Loop Inventory
+        </span>
+         below for missing criteria at L3. Click 
+        <span
+          class="text-primary"
+        >
+          Ask agent for help
+        </span>
+         on any item to have an AI agent add it, or use the 
+        <span
+          class="text-primary"
+        >
+          Help me reach L3
+        </span>
+         button at the bottom to tackle them all at once.
+      </p>
+      <p
+        class="text-muted-foreground/70"
+      >
+        No agent? Add the files manually — each criterion shows the exact detection pattern to match.
+      </p>
+    </div>
+    <div
+      class="flex flex-col gap-1"
+    >
+      <div
+        class="flex items-center gap-2 px-2 py-1 rounded text-xs transition-colors text-muted-foreground/70"
+      >
+        <span
+          class="font-mono w-5 text-right shrink-0"
+        >
+          L1
+        </span>
+        <span
+          class="truncate"
+        >
+          Managed
+        </span>
+        <span
+          class="ml-auto text-xs truncate"
+        >
+          Executor
+        </span>
+      </div>
+      <div
+        class="flex items-center gap-2 px-2 py-1 rounded text-xs transition-colors bg-primary/15 text-foreground font-semibold"
+      >
+        <span
+          class="font-mono w-5 text-right shrink-0"
+        >
+          L2
+        </span>
+        <span
+          class="truncate"
+        >
+          Adaptive
+        </span>
+        <span
+          class="ml-auto text-xs truncate"
+        >
+          Rule-writer
+        </span>
+      </div>
+      <div
+        class="flex items-center gap-2 px-2 py-1 rounded text-xs transition-colors text-muted-foreground/40"
+      >
+        <span
+          class="font-mono w-5 text-right shrink-0"
+        >
+          L3
+        </span>
+        <span
+          class="truncate"
+        >
+          Proactive
+        </span>
+        <span
+          class="ml-auto text-xs truncate"
+        >
+          Analyst
+        </span>
+      </div>
+      <div
+        class="flex items-center gap-2 px-2 py-1 rounded text-xs transition-colors text-muted-foreground/40"
+      >
+        <span
+          class="font-mono w-5 text-right shrink-0"
+        >
+          L4
+        </span>
+        <span
+          class="truncate"
+        >
+          Governing
+        </span>
+        <span
+          class="ml-auto text-xs truncate"
+        >
+          Governor
+        </span>
+      </div>
+      <div
+        class="flex items-center gap-2 px-2 py-1 rounded text-xs transition-colors text-muted-foreground/40"
+      >
+        <span
+          class="font-mono w-5 text-right shrink-0"
+        >
+          L5
+        </span>
+        <span
+          class="truncate"
+        >
+          Operating
+        </span>
+        <span
+          class="ml-auto text-xs truncate"
+        >
+          Operator
+        </span>
+      </div>
+      <div
+        class="flex items-center gap-2 px-2 py-1 rounded text-xs transition-colors text-muted-foreground/40"
+      >
+        <span
+          class="font-mono w-5 text-right shrink-0"
+        >
+          L6
+        </span>
+        <span
+          class="truncate"
+        >
+          Strategic
+        </span>
+        <span
+          class="ml-auto text-xs truncate"
+        >
+          Strategist
+        </span>
+      </div>
+    </div>
+    <div
+      class="mt-auto pt-2 border-t border-border/50"
+    >
+      <div
+        class="flex flex-wrap items-center justify-between gap-y-2 text-xs mb-1"
+      >
+        <span
+          class="text-muted-foreground"
+        >
+          Progress to L3
+        </span>
+        <span
+          class="font-mono"
+        >
+          3/5
+        </span>
+      </div>
+      <div
+        class="h-1.5 bg-muted/30 rounded-full overflow-hidden"
+      >
+        <div
+          class="h-full bg-primary transition-all duration-500"
+          style="width: 60%;"
+        />
+      </div>
+    </div>
+  </div>
+</DocumentFragment>
+`;

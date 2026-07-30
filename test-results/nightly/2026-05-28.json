@@ -1,0 +1,174 @@
+{
+  "timestamp": "2026-05-28T08:48:33Z",
+  "fastMode": false,
+  "summary": {
+    "total": 32,
+    "passed": 30,
+    "failed": 2,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "suite": "consistency-test",
+      "status": "pass",
+      "duration": 3
+    },
+    {
+      "suite": "helm-lint-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "license-compliance-test",
+      "status": "pass",
+      "duration": 4
+    },
+    {
+      "suite": "mission-security-test",
+      "status": "pass",
+      "duration": 12
+    },
+    {
+      "suite": "card-registry-integrity-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "unit-test",
+      "status": "fail",
+      "duration": 2342,
+      "failure_reason": " Test Files  4 failed | 1484 passed (1490)\n      Tests  20 failed | 27261 passed | 4 skipped (27373)\n     Errors  2 errors\n   Start at  07:14:07\n   Duration  2340.08s (transform 42.68s, setup 168.67s, import 206.75s, tests 289.96s, environment 1022.07s)\n"
+    },
+    {
+      "suite": "auth-lifecycle-test",
+      "status": "pass",
+      "duration": 28
+    },
+    {
+      "suite": "settings-migration-test",
+      "status": "pass",
+      "duration": 3
+    },
+    {
+      "suite": "update-lifecycle-test",
+      "status": "pass",
+      "duration": 62
+    },
+    {
+      "suite": "websocket-resilience-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "gosec-test",
+      "status": "pass",
+      "duration": 49
+    },
+    {
+      "suite": "dependency-audit-test",
+      "status": "pass",
+      "duration": 12
+    },
+    {
+      "suite": "secret-scan-test",
+      "status": "pass",
+      "duration": 1
+    },
+    {
+      "suite": "ts-sast-test",
+      "status": "pass",
+      "duration": 3
+    },
+    {
+      "suite": "container-scan-test",
+      "status": "pass",
+      "duration": 16
+    },
+    {
+      "suite": "security-headers-test",
+      "status": "pass",
+      "duration": 1
+    },
+    {
+      "suite": "api-contract-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "api-fuzz-test",
+      "status": "pass",
+      "duration": 154
+    },
+    {
+      "suite": "error-boundary-test",
+      "status": "pass",
+      "duration": 1
+    },
+    {
+      "suite": "console-error-scan",
+      "status": "pass",
+      "duration": 117
+    },
+    {
+      "suite": "nav-test",
+      "status": "pass",
+      "duration": 589
+    },
+    {
+      "suite": "perf-test",
+      "status": "pass",
+      "duration": 972
+    },
+    {
+      "suite": "ui-compliance-test",
+      "status": "pass",
+      "duration": 101
+    },
+    {
+      "suite": "deploy-test",
+      "status": "pass",
+      "duration": 77
+    },
+    {
+      "suite": "cache-test",
+      "status": "fail",
+      "duration": 600,
+      "failure_reason": "[CacheTest] Pass: 299, Fail: 48, Warn: 0, Skip: 0\n[CacheTest] Cache hit rate: 100%\n[CacheTest] Median warm time-to-content: 70ms\n[Browser ERROR] EventSource's response has a MIME type (\"application/json\") that is not \"text/event-stream\". Aborting the connection.\nSuite killed after 600s wall-clock timeout\n"
+    },
+    {
+      "suite": "benchmark-test",
+      "status": "pass",
+      "duration": 2
+    },
+    {
+      "suite": "ai-ml-test",
+      "status": "pass",
+      "duration": 4
+    },
+    {
+      "suite": "a11y-test",
+      "status": "pass",
+      "duration": 84
+    },
+    {
+      "suite": "error-resilience-test",
+      "status": "pass",
+      "duration": 34
+    },
+    {
+      "suite": "i18n-test",
+      "status": "pass",
+      "duration": 54
+    },
+    {
+      "suite": "interaction-test",
+      "status": "pass",
+      "duration": 39
+    },
+    {
+      "suite": "security-e2e-test",
+      "status": "pass",
+      "duration": 30
+    }
+  ]
+}

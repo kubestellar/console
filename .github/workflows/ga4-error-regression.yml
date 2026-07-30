@@ -1,0 +1,315 @@
+name: GA4 Error Rate Regression
+# Compares this week's ksc_error event counts against last week's by category.
+# Auto-files an issue when any error category spikes >25% week-over-week.
+# Designed to catch regressions that the hourly monitor misses (gradual drift
+# over days that never breaches the per-run absolute threshold).
+#
+# Secrets required:
+#   GA4_SERVICE_ACCOUNT_KEY  — Google service account JSON with GA4 Data API access
+#   GA4_PROPERTY_ID          — GA4 property ID (e.g. 525401563)
+#   CONSOLE_AUTO             — GitHub PAT with repo + issues scope
+
+on:
+  schedule:
+    - cron: '0 9 * * 1' # Every Monday 9:00 UTC (report on the week just ended)
+  workflow_dispatch:
+    inputs:
+      spike_threshold_pct:
+        description: 'Week-over-week % increase to trigger an issue (default: 25)'
+        required: false
+        default: '25'
+        type: string
+      min_error_count:
+        description: 'Minimum weekly error count to consider (filters noise, default: 10)'
+        required: false
+        default: '10'
+        type: string
+
+env:
+  ISSUE_PREFIX: "[GA4-Regression]"
+  SPIKE_THRESHOLD_PCT: 25
+  MIN_ERROR_COUNT: 10
+  MAX_ISSUES_PER_RUN: 5
+  # Absolute weekly threshold: flag any category exceeding this even if WoW trend is flat
+  ABSOLUTE_WEEKLY_THRESHOLD: 200
+
+permissions: read-all  # default read; writes scoped to job below
+concurrency:
+  group: ga4-error-regression
+  cancel-in-progress: true
+
+jobs:
+  regression-check:
+    permissions:
+      issues: write
+    if: github.repository == 'kubestellar/console'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: |
+            .github
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+
+      - name: Install googleapis
+        run: npm ci --ignore-scripts --prefix .github/ga4-scripts
+
+      - name: Ensure ga4-regression label exists
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          github-token: ${{ secrets.CONSOLE_AUTO }}
+          script: |
+            try {
+              await github.rest.issues.createLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: 'ga4-regression',
+                color: 'e11d48',
+                description: 'GA4 week-over-week error rate regression',
+              });
+            } catch (err) {
+              if (err.status !== 422) throw err;
+            }
+
+      - name: Compare error rates week-over-week
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          NODE_PATH: .github/ga4-scripts/node_modules
+          GA4_SERVICE_ACCOUNT_KEY: ${{ secrets.GA4_SERVICE_ACCOUNT_KEY }}
+          GA4_PROPERTY_ID: ${{ secrets.GA4_PROPERTY_ID }}
+          INPUT_SPIKE_THRESHOLD_PCT: ${{ inputs.spike_threshold_pct }}
+          INPUT_MIN_ERROR_COUNT: ${{ inputs.min_error_count }}
+        with:
+          github-token: ${{ secrets.CONSOLE_AUTO }}
+          script: |
+            const { google } = require('googleapis');
+
+            const spikePct    = parseInt(process.env.INPUT_SPIKE_THRESHOLD_PCT || process.env.SPIKE_THRESHOLD_PCT);
+            const minCount    = parseInt(process.env.INPUT_MIN_ERROR_COUNT || process.env.MIN_ERROR_COUNT);
+            const maxIssues   = parseInt(process.env.MAX_ISSUES_PER_RUN) || 5;
+            const absThreshold = parseInt(process.env.ABSOLUTE_WEEKLY_THRESHOLD) || 200;
+            const prefix      = process.env.ISSUE_PREFIX;
+            const propertyId  = process.env.GA4_PROPERTY_ID;
+
+            if (!process.env.GA4_SERVICE_ACCOUNT_KEY || !propertyId) {
+              core.warning('GA4_SERVICE_ACCOUNT_KEY or GA4_PROPERTY_ID not set — skipping');
+              return;
+            }
+
+            const credentials = JSON.parse(process.env.GA4_SERVICE_ACCOUNT_KEY);
+            const auth = new google.auth.GoogleAuth({
+              credentials,
+              scopes: ['https://www.googleapis.com/auth/analytics.readonly'],
+            });
+            const analyticsData = google.analyticsdata({ version: 'v1beta', auth });
+
+            // Helper: query GA4 for ksc_error counts by category in a date range
+            async function queryErrorsByCategory(startDate, endDate) {
+              const { data } = await analyticsData.properties.runReport({
+                property: `properties/${propertyId}`,
+                requestBody: {
+                  dateRanges: [{ startDate, endDate }],
+                  dimensions: [{ name: 'customEvent:error_category' }],
+                  metrics: [{ name: 'eventCount' }],
+                  dimensionFilter: {
+                    andGroup: {
+                      expressions: [
+                        {
+                          filter: {
+                            fieldName: 'eventName',
+                            stringFilter: { value: 'ksc_error' },
+                          },
+                        },
+                        {
+                          filter: {
+                            fieldName: 'hostname',
+                            stringFilter: { value: 'console.kubestellar.io' },
+                          },
+                        },
+                      ],
+                    },
+                  },
+                  orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }],
+                  limit: 50,
+                },
+              });
+
+              const result = new Map();
+              for (const row of (data.rows || [])) {
+                const category = row.dimensionValues[0].value || 'uncategorized';
+                const count    = parseInt(row.metricValues[0].value);
+                result.set(category, count);
+              }
+              return result;
+            }
+
+            core.info('Querying GA4: last 7 complete days (yesterday through 7 days ago) vs previous 7 days (8–14 days ago)…');
+
+            let thisWeek, lastWeek;
+            try {
+              [thisWeek, lastWeek] = await Promise.all([
+                queryErrorsByCategory('7daysAgo', 'yesterday'),
+                queryErrorsByCategory('14daysAgo', '8daysAgo'),
+              ]);
+            } catch (err) {
+              core.setFailed(`GA4 API query failed: ${err.message}`);
+              return;
+            }
+
+            core.info('This week error counts:');
+            for (const [cat, cnt] of thisWeek) core.info(`  ${cat}: ${cnt}`);
+            core.info('Last week error counts:');
+            for (const [cat, cnt] of lastWeek) core.info(`  ${cat}: ${cnt}`);
+
+            // Compute deltas for every category that appears in either week
+            const allCategories = new Set([...thisWeek.keys(), ...lastWeek.keys()]);
+            const regressions = [];
+
+            for (const category of allCategories) {
+              const current  = thisWeek.get(category) || 0;
+              const previous = lastWeek.get(category) || 0;
+
+              // Skip low-signal noise
+              if (current < minCount) continue;
+
+              let changePct;
+              if (previous === 0) {
+                changePct = current >= minCount ? Infinity : 0;
+              } else {
+                changePct = ((current - previous) / previous) * 100;
+              }
+
+              // Flag if WoW spike exceeds threshold OR absolute count is high
+              // The absolute check catches steady-state elevated errors that
+              // persist week after week without triggering the % change gate
+              const isWowSpike = changePct > spikePct;
+              const isAbsoluteHigh = current >= absThreshold;
+
+              if (isWowSpike || isAbsoluteHigh) {
+                regressions.push({
+                  category, current, previous, changePct,
+                  reason: isWowSpike && isAbsoluteHigh ? 'wow+absolute' : isWowSpike ? 'wow' : 'absolute',
+                });
+              }
+            }
+
+            regressions.sort((a, b) => b.current - a.current);
+
+            if (regressions.length === 0) {
+              core.info(`No regressions found (WoW threshold: +${spikePct}%, absolute threshold: ${absThreshold}, min count: ${minCount}).`);
+              return;
+            }
+
+            core.info(`Found ${regressions.length} regression(s):`);
+            for (const r of regressions) {
+              const pct = isFinite(r.changePct) ? `+${r.changePct.toFixed(0)}%` : 'new category';
+              core.info(`  ${r.category}: ${r.previous} → ${r.current} (${pct}) [${r.reason}]`);
+            }
+
+            // Deduplicate against recently-filed regression issues
+            const { data: openIssues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'ga4-regression',
+              state: 'open',
+              per_page: 30,
+            });
+
+            const normalizeTitle = (t) =>
+              t.replace(/\[GA4-Regression\]\s*/, '')
+               .replace(/\(\d+\s*vs\s*\d+[^)]*\)/g, '(N vs N)')
+               .replace(/\+?\d+%/g, '+N%')
+               .toLowerCase().trim();
+
+            const runUrl   = `${process.env.GITHUB_SERVER_URL}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const nowLabel = new Date().toISOString().split('T')[0];
+
+            let created = 0;
+
+            for (const { category, current, previous, changePct, reason } of regressions) {
+              if (created >= maxIssues) {
+                core.warning(`Rate limit: ${maxIssues} issues/run. Remaining regressions skipped.`);
+                break;
+              }
+
+              const pctLabel = isFinite(changePct) ? `+${changePct.toFixed(0)}%` : 'new';
+              const title = reason === 'absolute'
+                ? `${prefix} ${category} errors at ${current}/week (exceeds ${absThreshold} threshold)`
+                : `${prefix} ${category} errors up ${pctLabel} this week (${current} vs ${previous} last week)`;
+
+              const dup = openIssues.find(i => normalizeTitle(i.title) === normalizeTitle(title));
+              if (dup) {
+                core.info(`Skipping duplicate: "${title}" matches open #${dup.number}`);
+                continue;
+              }
+
+              const trendTable = [...allCategories]
+                .filter(c => (thisWeek.get(c) || 0) >= minCount || (lastWeek.get(c) || 0) >= minCount)
+                .sort((a, b) => (thisWeek.get(b) || 0) - (thisWeek.get(a) || 0))
+                .map(c => {
+                  const curr = thisWeek.get(c) || 0;
+                  const prev = lastWeek.get(c) || 0;
+                  const delta = prev === 0
+                    ? (curr > 0 ? '🆕 new' : '—')
+                    : curr > prev
+                      ? `🔺 +${(((curr - prev) / prev) * 100).toFixed(0)}%`
+                      : curr < prev
+                        ? `🟢 ${(((curr - prev) / prev) * 100).toFixed(0)}%`
+                        : '➡️ flat';
+                  return `| \`${c}\` | ${prev} | ${curr} | ${delta} |`;
+                })
+                .join('\n');
+
+              const body = [
+                `## Error Rate Regression: \`${category}\``,
+                '',
+                `**Week of:** ${nowLabel} | **Change:** ${pctLabel} | **Trigger:** ${reason === 'absolute' ? `absolute threshold (>${absThreshold}/week)` : reason === 'wow+absolute' ? `WoW +${spikePct}% AND absolute (>${absThreshold}/week)` : `WoW +${spikePct}%`}`,
+                `**This week:** ${current} errors | **Last week:** ${previous} errors`,
+                reason === 'absolute' ? `\n> ⚠️ **Elevated steady-state errors** — this category has been above ${absThreshold} errors/week even though the week-over-week trend may be flat. This pattern indicates a persistent issue, not a new regression.\n` : '',
+                '',
+                `**Run:** [View workflow run](${runUrl})`,
+                '',
+                '### All Error Categories — Week-over-Week',
+                '',
+                '| Category | Last Week | This Week | Trend |',
+                '|----------|-----------|-----------|-------|',
+                trendTable,
+                '',
+                '### What to Check',
+                `- Search recent PRs (last 7 days) that touched code paths emitting \`${category}\` errors`,
+                '- Open the [GA4 analytics page](https://console.kubestellar.io/analytics) and filter by this category',
+                '- Check the hourly `[GA4-Error]` issues from the past week for this category — they have stack-trace details',
+                '- If the increase started on a specific date, correlate with that day\'s merged PRs',
+                '',
+                '### Common Causes by Category',
+                category === 'card_render'     ? '- New card component introduced without proper `undefined` guards\n- Missing `isDemoData` wiring causing crash in demo mode\n- Dynamic import that throws on certain data shapes' :
+                category === 'chunk_load'      ? '- Deploy without cache-busting caused stale chunks\n- `ChunkErrorBoundary` auto-reload loop not recovering\n- New lazy-loaded route chunk not handled by the boundary' :
+                category === 'uncaught_render' ? '- Undefined/null access in a non-card component (no error boundary)\n- Missing array guards on API response data\n- Context provider state unexpectedly undefined on first render' :
+                category === 'unhandled_rejection' ? '- Async hook or Promise chain without `.catch()`\n- WebSocket error handler missing\n- Third-party library promise rejection bubbling up' :
+                '- Check browser console stack traces in the hourly [GA4-Error] issues',
+                '',
+                '---',
+                `*Auto-filed by [GA4 Error Rate Regression workflow](${runUrl}) on ${nowLabel}.*`,
+                `*Compares \`7daysAgo…yesterday\` vs \`14daysAgo…8daysAgo\` using GA4 Data API.*`,
+              ].join('\n');
+
+              const { data: issue } = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['bug', 'ga4-regression', 'ga4-error', 'help wanted', 'triage/accepted'],
+              });
+
+              core.info(`Created issue #${issue.number}: ${title}`);
+              created++;
+            }
+
+            core.info(`GA4 Regression check complete: ${created} issue(s) filed from ${regressions.length} regression(s).`);

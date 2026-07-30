@@ -1,0 +1,1 @@
+export { SidebarCustomizer } from '../SidebarCustomizer'

@@ -1,0 +1,71 @@
+name: API Contract Tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'pkg/api/**'
+      - 'cmd/console/**'
+      - 'scripts/api-contract-test.sh'
+      - '.github/workflows/api-contract.yml'
+  workflow_dispatch: {}
+
+permissions: read-all
+
+concurrency:
+  group: api-contract-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GO_VERSION: '1.26.5'
+
+jobs:
+  api-contract:
+    name: API Contract Verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Build backend
+        run: go build -o console-server ./cmd/console
+
+      - name: Start backend (demo mode)
+        run: |
+          DEV_MODE=true JWT_SECRET=ci-test-secret ./console-server --dev &
+          echo $! > /tmp/backend.pid
+
+      - name: Wait for backend
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8080/health > /dev/null 2>&1; then
+              echo "Backend ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Backend failed to start"
+          exit 1
+
+      - name: Run API contract tests
+        run: bash scripts/api-contract-test.sh --url http://localhost:8080
+
+      - name: Stop backend
+        if: always()
+        run: |
+          [ -f /tmp/backend.pid ] && kill "$(cat /tmp/backend.pid)" 2>/dev/null || true
+
+      - name: Upload contract report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: api-contract-report
+          path: |
+            /tmp/api-contract-report.json
+            /tmp/api-contract-summary.md
+          retention-days: 7

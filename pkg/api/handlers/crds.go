@@ -1,0 +1,214 @@
+package handlers
+
+import (
+	"context"
+	"strings"
+	"time"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/k8s"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+// crdListTimeout is the timeout for listing CRDs across all clusters.
+const crdListTimeout = 30 * time.Second
+
+// crdGVR is the GroupVersionResource for CustomResourceDefinitions
+var crdGVR = schema.GroupVersionResource{
+	Group:    "apiextensions.k8s.io",
+	Version:  "v1",
+	Resource: "customresourcedefinitions",
+}
+
+// crdClient defines the narrow subset of k8s.MultiClusterClient used by CRDHandlers.
+type crdClient interface {
+	DeduplicatedClusters(ctx context.Context) ([]k8s.ClusterInfo, error)
+	ListClusters(ctx context.Context) ([]k8s.ClusterInfo, error)
+	GetDynamicClient(contextName string) (dynamic.Interface, error)
+}
+
+// CRDHandlers handles Custom Resource Definition API endpoints
+type CRDHandlers struct {
+	k8sClient crdClient
+}
+
+// NewCRDHandlers creates a new CRD handlers instance.
+// Accepts *k8s.MultiClusterClient (or any crdClient implementation).
+func NewCRDHandlers(k8sClient *k8s.MultiClusterClient) *CRDHandlers {
+	h := &CRDHandlers{}
+	if k8sClient != nil {
+		h.k8sClient = k8sClient
+	}
+	return h
+}
+
+// CRDSummary represents a CRD as returned by the API
+type CRDSummary struct {
+	Name      string       `json:"name"`
+	Group     string       `json:"group"`
+	Version   string       `json:"version"`
+	Scope     string       `json:"scope"`
+	Status    string       `json:"status"`
+	Instances int          `json:"instances"`
+	Cluster   string       `json:"cluster"`
+	Versions  []CRDVersion `json:"versions,omitempty"`
+}
+
+// CRDVersion represents a single version of a CRD
+type CRDVersion struct {
+	Name    string `json:"name"`
+	Served  bool   `json:"served"`
+	Storage bool   `json:"storage"`
+}
+
+// CRDListResponse is the response for GET /api/crds
+type CRDListResponse struct {
+	CRDs       []CRDSummary `json:"crds"`
+	IsDemoData bool         `json:"isDemoData"`
+}
+
+// statusServiceUnavailableCRD uses fiber's standard constant for 503 responses.
+const statusServiceUnavailableCRD = fiber.StatusServiceUnavailable
+
+// ListCRDs returns all CRDs across clusters
+// GET /api/crds
+func (h *CRDHandlers) ListCRDs(c *fiber.Ctx) error {
+	if IsDemoMode(c) {
+		return c.JSON(CRDListResponse{
+			CRDs:       GetDemoCRDs(),
+			IsDemoData: true,
+		})
+	}
+
+	if h.k8sClient == nil {
+		return c.Status(statusServiceUnavailableCRD).JSON(CRDListResponse{
+			CRDs:       []CRDSummary{},
+			IsDemoData: true,
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), crdListTimeout)
+	defer cancel()
+
+	clusters, err := h.k8sClient.DeduplicatedClusters(ctx)
+	if err != nil {
+		var listErr error
+		clusters, listErr = h.k8sClient.ListClusters(ctx)
+		if listErr != nil {
+			return c.Status(statusServiceUnavailableCRD).JSON(fiber.Map{"error": "cluster discovery failed", "isDemoData": false})
+		}
+	}
+	allCRDs := make([]CRDSummary, 0)
+
+	for _, cluster := range clusters {
+		client, err := h.k8sClient.GetDynamicClient(cluster.Name)
+		if err != nil {
+			continue
+		}
+
+		crdList, err := client.Resource(crdGVR).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			continue
+		}
+
+		for _, item := range crdList.Items {
+			crd := parseCRDFromUnstructured(&item, cluster.Name)
+			if crd != nil {
+				allCRDs = append(allCRDs, *crd)
+			}
+		}
+	}
+
+	return c.JSON(CRDListResponse{
+		CRDs:       allCRDs,
+		IsDemoData: false,
+	})
+}
+
+// parseCRDFromUnstructured extracts CRD info from an unstructured object
+func parseCRDFromUnstructured(item *unstructured.Unstructured, cluster string) *CRDSummary {
+	spec, ok := item.Object["spec"].(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	name := item.GetName()
+
+	// Extract group
+	group, _ := spec["group"].(string)
+
+	// Extract scope
+	scope, _ := spec["scope"].(string)
+
+	// Extract versions
+	versions := make([]CRDVersion, 0)
+	var primaryVersion string
+	if versionsRaw, ok := spec["versions"].([]interface{}); ok {
+		for _, v := range versionsRaw {
+			vMap, ok := v.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			vName, _ := vMap["name"].(string)
+			served, _ := vMap["served"].(bool)
+			storage, _ := vMap["storage"].(bool)
+			versions = append(versions, CRDVersion{
+				Name:    vName,
+				Served:  served,
+				Storage: storage,
+			})
+			if storage {
+				primaryVersion = vName
+			}
+		}
+	}
+
+	if primaryVersion == "" && len(versions) > 0 {
+		primaryVersion = versions[0].Name
+	}
+
+	// Extract status
+	status := "Established"
+	if statusObj, ok := item.Object["status"].(map[string]interface{}); ok {
+		if conditions, ok := statusObj["conditions"].([]interface{}); ok {
+			for _, cond := range conditions {
+				condMap, ok := cond.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				condType, _ := condMap["type"].(string)
+				condStatus, _ := condMap["status"].(string)
+				if condType == "Established" {
+					if condStatus == "True" {
+						status = "Established"
+					} else {
+						status = "NotEstablished"
+					}
+				}
+				if condType == "Terminating" && condStatus == "True" {
+					status = "Terminating"
+				}
+			}
+		}
+	}
+
+	// Extract the short name (e.g., "certificates" from "certificates.cert-manager.io")
+	shortName := name
+	if idx := strings.Index(name, "."); idx > 0 {
+		shortName = name[:idx]
+	}
+
+	return &CRDSummary{
+		Name:     shortName,
+		Group:    group,
+		Version:  primaryVersion,
+		Scope:    scope,
+		Status:   status,
+		Cluster:  cluster,
+		Versions: versions,
+	}
+}

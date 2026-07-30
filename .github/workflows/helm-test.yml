@@ -1,0 +1,150 @@
+name: Helm Chart Test
+
+on:
+  pull_request:
+    paths:
+      - 'deploy/helm/**'
+      - '.github/workflows/helm-test.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'deploy/helm/**'
+      - '.github/workflows/helm-test.yml'
+  workflow_call: {}
+
+# Minimum permissions: checkout only — no write scopes needed
+permissions: read-all  # default read; writes scoped to job below
+
+jobs:
+  helm-lint-and-template:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Helm
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+
+      - name: Install kubeconform
+        # SHA256 pinned to kubeconform v0.6.7 linux/amd64 tarball (fixes #20490)
+        run: |
+          KUBECONFORM_VERSION="v0.6.7"
+          KUBECONFORM_SHA256="95f14e87aa28c09d5941f11bd024c1d02fdc0303ccaa23f61cef67bc92619d73"
+          curl -sSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
+            -o /tmp/kubeconform.tar.gz
+          echo "${KUBECONFORM_SHA256}  /tmp/kubeconform.tar.gz" | sha256sum --check
+          tar xz -C /usr/local/bin kubeconform < /tmp/kubeconform.tar.gz
+
+      - name: Helm lint (default values)
+        run: helm lint deploy/helm/kubestellar-console
+
+      - name: Helm lint (OpenShift values)
+        run: |
+          helm lint deploy/helm/kubestellar-console \
+            -f deploy/helm/kubestellar-console/values.yaml \
+            -f deploy/helm/kubestellar-console/values-openshift.yaml
+
+      - name: Template — default values
+        run: |
+          helm template kc deploy/helm/kubestellar-console \
+            --namespace kc \
+            > /tmp/helm-default.yaml
+          echo "Rendered $(grep -c '^kind:' /tmp/helm-default.yaml) resources (default values)"
+
+      - name: Template — OpenShift values
+        run: |
+          helm template kc deploy/helm/kubestellar-console \
+            --namespace kc \
+            -f deploy/helm/kubestellar-console/values.yaml \
+            -f deploy/helm/kubestellar-console/values-openshift.yaml \
+            --set route.enabled=true \
+            --set route.host=console.apps.example.com \
+            > /tmp/helm-openshift.yaml
+          echo "Rendered $(grep -c '^kind:' /tmp/helm-openshift.yaml) resources (OpenShift values)"
+
+      - name: Template — all optional features enabled
+        run: |
+          helm template kc deploy/helm/kubestellar-console \
+            --namespace kc \
+            --set ingress.enabled=true \
+            --set ingress.className=nginx \
+            --set ingress.hosts[0].host=console.example.com \
+            --set ingress.hosts[0].paths[0].path=/ \
+            --set ingress.hosts[0].paths[0].pathType=Prefix \
+            --set networkPolicy.enabled=true \
+            --set podDisruptionBudget.enabled=true \
+            --set github.clientId=test-id \
+            --set github.clientSecret=test-secret \
+            --set claude.apiKey=test-key \
+            --set githubToken.token=test-token \
+            --set feedbackGithubToken.token=test-token \
+            --set googleDrive.apiKey=test-key \
+            --set watchdog.enabled=true \
+            > /tmp/helm-full.yaml
+          echo "Rendered $(grep -c '^kind:' /tmp/helm-full.yaml) resources (all features)"
+
+      - name: Template — minimal (no persistence, no RBAC)
+        run: |
+          helm template kc deploy/helm/kubestellar-console \
+            --namespace kc \
+            --set persistence.enabled=false \
+            --set rbac.create=false \
+            --set serviceAccount.create=false \
+            --set watchdog.enabled=false \
+            > /tmp/helm-minimal.yaml
+          echo "Rendered $(grep -c '^kind:' /tmp/helm-minimal.yaml) resources (minimal)"
+
+      - name: Kubeconform — validate default
+        run: |
+          kubeconform -strict -summary \
+            -kubernetes-version 1.30.0 \
+            -skip Route \
+            /tmp/helm-default.yaml
+
+      - name: Kubeconform — validate OpenShift
+        run: |
+          # Skip OpenShift Route CRD (no schema available in upstream)
+          kubeconform -strict -summary \
+            -kubernetes-version 1.30.0 \
+            -skip Route \
+            /tmp/helm-openshift.yaml
+
+      - name: Kubeconform — validate all features
+        run: |
+          kubeconform -strict -summary \
+            -kubernetes-version 1.30.0 \
+            -skip Route \
+            /tmp/helm-full.yaml
+
+      - name: Kubeconform — validate minimal
+        run: |
+          kubeconform -strict -summary \
+            -kubernetes-version 1.30.0 \
+            -skip Route \
+            /tmp/helm-minimal.yaml
+
+      - name: Verify no empty/broken templates
+        run: |
+          for f in /tmp/helm-default.yaml /tmp/helm-openshift.yaml /tmp/helm-full.yaml /tmp/helm-minimal.yaml; do
+            BASENAME=$(basename "$f")
+            RESOURCE_COUNT=$(grep -c '^kind:' "$f")
+            if [ "$RESOURCE_COUNT" -lt 2 ]; then
+              echo "ERROR: $BASENAME rendered only $RESOURCE_COUNT resources — chart may be broken"
+              exit 1
+            fi
+            echo "OK: $BASENAME has $RESOURCE_COUNT resources"
+          done
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Helm Chart Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Variant | Resources |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-----------|" >> $GITHUB_STEP_SUMMARY
+          for f in /tmp/helm-default.yaml /tmp/helm-openshift.yaml /tmp/helm-full.yaml /tmp/helm-minimal.yaml; do
+            BASENAME=$(basename "$f" .yaml | sed 's/helm-//')
+            COUNT=$(grep -c '^kind:' "$f" 2>/dev/null || echo 0)
+            echo "| $BASENAME | $COUNT |" >> $GITHUB_STEP_SUMMARY
+          done

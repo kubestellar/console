@@ -1,0 +1,48 @@
+# ZAP Baseline Scan Rule Overrides
+# Format: rule_id	action	description
+# Actions: IGNORE (skip), WARN (report but don't fail), FAIL (report and fail),
+# OUTOFSCOPE (ignore a URL regex for a specific rule id)
+#
+# These rules are tuned for console.kubestellar.io which is a Netlify-hosted
+# React SPA with a Go backend API proxy.
+
+# CSP headers are managed by Netlify CDN — false positive on SPA routes
+10038	WARN	Content Security Policy (CSP) Header Not Set
+
+# X-Content-Type-Options may vary by Netlify edge node
+10021	WARN	X-Content-Type-Options Header Missing
+
+# SPA returns 200 for all routes (client-side routing)
+10010	IGNORE	Cookie No HttpOnly Flag
+
+# Source Code Disclosure - SQL: false positive triggered by GitHub Actions
+# workflow names containing "Update" in /api/github-pipelines JSON responses
+10099	WARN	Source Code Disclosure - SQL
+
+# Informational findings — too noisy for nightly
+10049	IGNORE	Storable and Cacheable Content
+10050	IGNORE	Retrieved from Cache
+10109	IGNORE	Modern Web Application
+
+# #15750: `/api/github-pipelines` includes GitHub workflow names in its JSON
+# payload. ZAP rule 10099 misclassifies the workflow title "Select tests from
+# PR context" as SQL source disclosure even though it's ordinary Actions
+# metadata. Scope only this route out for 10099 so unexpected SQL disclosures
+# on other URLs still surface.
+10099	OUTOFSCOPE	https://console\.kubestellar\.io/api/github-pipelines.*
+
+# CSP rule 10055: DO NOT blanket-IGNORE (#6321 follow-up to #6318).
+# The two current findings (script-src unsafe-eval + style-src
+# unsafe-inline) are documented exceptions in netlify.toml:148-168,
+# BUT rule 10055 covers EVERY CSP sub-alert, so IGNOREing it would
+# hide future CSP regressions (e.g. accidentally adding 'unsafe-eval'
+# to style-src, dropping object-src 'none', introducing a broad host
+# wildcard). Keep the rule active — the workflow now filters the two
+# specific finding NAMES in its JSON parse step
+# (.github/workflows/nightly-dast.yml) rather than silencing the
+# rule here. That preserves visibility for new CSP findings while
+# silencing only the documented exceptions.
+#
+# The rule is not listed below (no override) so ZAP treats it at its
+# default severity. The workflow filter, not this file, is now the
+# source of truth for "which CSP alerts are expected".

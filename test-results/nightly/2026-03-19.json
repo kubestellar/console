@@ -1,0 +1,11 @@
+{
+  "timestamp": "2026-03-19T07:20:11Z",
+  "fastMode": false,
+  "summary": {
+    "total": 32,
+    "passed": 32,
+    "failed": 0,
+    "skipped": 0
+  },
+  "results": [{"suite":"consistency-test","status":"pass","duration":3},{"suite":"helm-lint-test","status":"pass","duration":0},{"suite":"license-compliance-test","status":"pass","duration":3},{"suite":"error-boundary-test","status":"pass","duration":0},{"suite":"mission-security-test","status":"pass","duration":3},{"suite":"card-registry-integrity-test","status":"pass","duration":1},{"suite":"unit-test","status":"pass","duration":67},{"suite":"auth-lifecycle-test","status":"pass","duration":73},{"suite":"settings-migration-test","status":"pass","duration":2},{"suite":"update-lifecycle-test","status":"pass","duration":61},{"suite":"websocket-resilience-test","status":"pass","duration":2},{"suite":"gosec-test","status":"pass","duration":41},{"suite":"dependency-audit-test","status":"pass","duration":25},{"suite":"secret-scan-test","status":"pass","duration":0},{"suite":"ts-sast-test","status":"pass","duration":3},{"suite":"container-scan-test","status":"pass","duration":12},{"suite":"security-headers-test","status":"pass","duration":0},{"suite":"api-contract-test","status":"pass","duration":0},{"suite":"api-fuzz-test","status":"pass","duration":119},{"suite":"console-error-scan","status":"pass","duration":179},{"suite":"nav-test","status":"pass","duration":676},{"suite":"perf-test","status":"pass","duration":931},{"suite":"ui-compliance-test","status":"pass","duration":74},{"suite":"deploy-test","status":"pass","duration":36},{"suite":"cache-test","status":"pass","duration":74},{"suite":"benchmark-test","status":"pass","duration":138},{"suite":"ai-ml-test","status":"pass","duration":509},{"suite":"a11y-test","status":"pass","duration":73},{"suite":"error-resilience-test","status":"pass","duration":48},{"suite":"i18n-test","status":"pass","duration":30},{"suite":"interaction-test","status":"pass","duration":36},{"suite":"security-e2e-test","status":"pass","duration":20}]
+}

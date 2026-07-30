@@ -1,0 +1,619 @@
+/**
+ * Save Resolution Dialog
+ *
+ * Dialog for saving a successful mission resolution for future reference.
+ * Uses AI to generate a clean problem/solution summary for reuse.
+ */
+
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import {
+  Save,
+  CheckCircle,
+  Loader2,
+  Sparkles,
+} from 'lucide-react'
+import type { Mission } from '../../hooks/useMissions'
+import { useResolutions, detectIssueSignature, type IssueSignature, type ResolutionSteps } from '../../hooks/useResolutions'
+import { BaseModal } from '../../lib/modals/BaseModal'
+import { LOCAL_AGENT_WS_URL } from '../../lib/constants'
+import { getWsAuthParams } from '../../lib/utils/wsAuth'
+import { useTranslation } from 'react-i18next'
+import { useToast } from '../ui/Toast'
+import { ResolutionForm } from './ResolutionForm'
+
+interface AISummary {
+  title: string
+  issueType: string
+  resourceKind?: string
+  problem: string
+  solution: string
+  steps: string[]
+  yaml?: string
+}
+
+interface SaveResolutionDialogProps {
+  mission: Mission
+  isOpen: boolean
+  onClose: () => void
+  onSaved?: () => void
+}
+
+/** Timeout for AI summary generation WebSocket request */
+const AI_SUMMARY_TIMEOUT_MS = 60_000
+
+/**
+ * Maximum number of recent mission messages to include in the AI summary prompt.
+ * Older messages add diminishing context for a fix-summary while inflating the
+ * payload. Mirrors `MAX_RESENT_MESSAGES` in useMissions.tsx (used for reconnect
+ * history) — same rationale: keep the WebSocket frame small enough that the
+ * agent's 1 MB read limit is never the failure mode (#9162).
+ */
+const MAX_SUMMARY_MESSAGES = 20
+
+/**
+ * Per-message character cap when building the conversation snippet sent to the
+ * AI. Tool outputs (pod logs, YAML manifests, kubectl describe) are routinely
+ * tens of kilobytes; concatenating a handful of them blows past the agent's
+ * 1 MB WebSocket frame limit, which closes the connection and surfaces the
+ * misleading "Could not reach the local agent" error (#9162).
+ */
+const MAX_MESSAGE_CHARS = 4_000
+
+/**
+ * Hard cap on the assembled prompt sent to the agent. The agent rejects
+ * prompts longer than `maxPromptChars` (100_000) with a `prompt_too_large`
+ * error, and frames larger than `wsMaxMessageBytes` (1 MB) cause the agent
+ * to close the connection without a response. We stay well under both so a
+ * very long mission never triggers either failure mode (#9162).
+ */
+const MAX_PROMPT_CHARS = 80_000
+
+/** Marker appended when message content was truncated. */
+const TRUNCATION_MARKER = '… [truncated]'
+
+/** Marker appended when the conversation tail was truncated. */
+const CONVERSATION_TRUNCATION_MARKER = '\n\n[…earlier conversation omitted…]'
+
+/**
+ * Build the conversation snippet sent to the AI for summary generation.
+ * Caps both per-message size and the total assembled length so the resulting
+ * WebSocket frame stays under the agent's read limit (#9162).
+ */
+function buildConversationSnippet(messages: Mission['messages']): string {
+  const safeMessages = messages || []
+  // Take only the most recent messages — older context adds little to a
+  // resolution summary and risks blowing past the agent's read limit.
+  const recent = safeMessages.slice(-MAX_SUMMARY_MESSAGES)
+  const omittedCount = safeMessages.length - recent.length
+
+  const lines = recent.map(m => {
+    const content = m.content.length > MAX_MESSAGE_CHARS
+      ? m.content.slice(0, MAX_MESSAGE_CHARS) + TRUNCATION_MARKER
+      : m.content
+    return `${m.role.toUpperCase()}: ${content}`
+  })
+
+  let snippet = lines.join('\n\n')
+  if (omittedCount > 0) {
+    snippet = CONVERSATION_TRUNCATION_MARKER.trimStart() + ` (${omittedCount} earlier messages)\n\n` + snippet
+  }
+
+  // Final safety net: if the assembled snippet is still too large (e.g. all
+  // 20 recent messages were near the per-message cap), trim from the head.
+  if (snippet.length > MAX_PROMPT_CHARS) {
+    snippet = CONVERSATION_TRUNCATION_MARKER + snippet.slice(snippet.length - MAX_PROMPT_CHARS)
+  }
+  return snippet
+}
+
+/**
+ * Detect whether an error message indicates an AI provider rate limit / quota error.
+ * Matches HTTP 429 status codes, "rate limit", "quota", and "too many requests" patterns.
+ */
+function isRateLimitError(message: string): boolean {
+  const lower = message.toLowerCase()
+  return (
+    lower.includes('429') ||
+    lower.includes('rate limit') ||
+    lower.includes('rate_limit') ||
+    lower.includes('quota') ||
+    lower.includes('too many requests') ||
+    lower.includes('resource_exhausted') ||
+    lower.includes('tokens per min') ||
+    lower.includes('requests per min')
+  )
+}
+
+/** User-friendly rate limit error message */
+const RATE_LIMIT_MESSAGE =
+  'AI provider rate limit exceeded. Please wait a minute and try again, or switch to a different AI provider in Settings.'
+
+const JSON_OBJECT_START = '{'
+const JSON_OBJECT_END = '}'
+const JSON_STRING_DELIMITER = '"'
+const JSON_ESCAPE_CHARACTER = '\\'
+
+/**
+ * Extract the last complete JSON object from an AI response.
+ * This skips braces inside quoted strings and prefers the last parseable object,
+ * so prefixed reasoning text or earlier JSON-like snippets do not break parsing.
+ */
+function extractLastJsonObject(content: string): string | null {
+  const candidates: string[] = []
+  let startIndex = -1
+  let depth = 0
+  let inString = false
+  let isEscaped = false
+
+  for (let index = 0; index < content.length; index += 1) {
+    const char = content[index]
+
+    if (isEscaped) {
+      isEscaped = false
+      continue
+    }
+
+    if (char === JSON_ESCAPE_CHARACTER) {
+      if (inString) {
+        isEscaped = true
+      }
+      continue
+    }
+
+    if (char === JSON_STRING_DELIMITER) {
+      inString = !inString
+      continue
+    }
+
+    if (inString) {
+      continue
+    }
+
+    if (char === JSON_OBJECT_START) {
+      if (depth === 0) {
+        startIndex = index
+      }
+      depth += 1
+      continue
+    }
+
+    if (char === JSON_OBJECT_END && depth > 0) {
+      depth -= 1
+      if (depth === 0 && startIndex !== -1) {
+        candidates.push(content.slice(startIndex, index + 1))
+        startIndex = -1
+      }
+    }
+  }
+
+  for (let index = candidates.length - 1; index >= 0; index -= 1) {
+    const candidate = candidates[index]
+    try {
+      JSON.parse(candidate)
+      return candidate
+    } catch {
+      // Ignore invalid JSON-like snippets and keep searching backward.
+    }
+  }
+
+  return null
+}
+
+/**
+ * Request AI to generate a resolution summary from the mission conversation
+ */
+async function generateAISummary(mission: Mission): Promise<AISummary> {
+  const { url: wsUrl, protocols } = await getWsAuthParams(LOCAL_AGENT_WS_URL)
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(wsUrl, protocols)
+
+    let responseContent = ''
+    // #9162 — Track whether the connection ever opened. If the agent closes
+    // the socket mid-request (e.g. because our payload exceeded its 1 MB
+    // read limit), `onerror` would otherwise fire the misleading "Could not
+    // reach the local agent" message even though the agent is running and
+    // already accepted our connection.
+    let didOpen = false
+    // #9162 — Once we have received an explicit `error` or `result` frame,
+    // we have already settled the promise; suppress any subsequent
+    // onerror/onclose handlers from rejecting again.
+    let settled = false
+    const settle = (fn: () => void) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timeout)
+      fn()
+    }
+    const timeout = setTimeout(() => {
+      settle(() => {
+        ws.close()
+        reject(new Error('Timeout waiting for AI summary'))
+      })
+    }, AI_SUMMARY_TIMEOUT_MS)
+
+    ws.onopen = () => {
+      didOpen = true
+      try {
+        // #9162 — Build conversation context with size caps so the assembled
+        // WebSocket frame stays under the agent's 1 MB read limit. Without
+        // this, long missions (with large tool outputs) would silently exceed
+        // the limit, the agent would close the socket, and the client would
+        // surface a misleading "Could not reach the local agent" error.
+        const conversation = buildConversationSnippet(mission.messages)
+
+        const prompt = `You are helping save a resolution for future reuse. Analyze this mission conversation and create a structured summary.\n\nMISSION: ${mission.title}\nDESCRIPTION: ${mission.description}\n\nCONVERSATION:\n${conversation}\n\nCreate a JSON summary with these fields:\n- title: Short descriptive title for this resolution (max 60 chars)\n- issueType: Category like "CrashLoopBackOff", "OOMKilled", "ImagePullBackOff", "DeploymentFailed", etc.\n- resourceKind: Kubernetes resource type if applicable (Pod, Deployment, Service, etc.)\n- problem: 1-2 sentence description of what went wrong\n- solution: 1-2 sentence description of how it was fixed\n- steps: Array of specific actionable steps that fixed the issue (commands, config changes, etc.)\n- yaml: Any YAML manifests or config snippets that were part of the fix (optional)\n\nReturn ONLY valid JSON, no markdown code blocks or explanation.`
+
+        ws.send(JSON.stringify({
+          type: 'chat',
+          id: `summary-${crypto.randomUUID()}`,
+          payload: {
+            prompt: prompt,
+            sessionId: `resolution-${mission.id}`,
+            agent: mission.agent || undefined }
+        }))
+      } catch (err: unknown) {
+        settle(() => {
+          ws.close()
+          reject(err instanceof Error ? err : new Error('Failed to send AI summary request'))
+        })
+      }
+    }
+
+    ws.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data)
+
+        if (message.type === 'stream') {
+          responseContent += message.payload?.content || ''
+        } else if (message.type === 'result') {
+          const content = message.payload?.content || message.payload?.output || responseContent
+          settle(() => {
+            ws.close()
+
+            // Check if the result content itself indicates a rate limit error
+            if (isRateLimitError(content)) {
+              reject(new Error(RATE_LIMIT_MESSAGE))
+              return
+            }
+
+            // Try to parse JSON from response
+            try {
+              const jsonContent = extractLastJsonObject(content)
+              if (jsonContent) {
+                const parsed = JSON.parse(jsonContent) as Partial<AISummary>
+                resolve({
+                  title: parsed.title || mission.title,
+                  issueType: parsed.issueType || 'Unknown',
+                  resourceKind: parsed.resourceKind,
+                  problem: parsed.problem || '',
+                  solution: parsed.solution || '',
+                  steps: Array.isArray(parsed.steps) ? parsed.steps : [],
+                  yaml: parsed.yaml })
+              } else {
+                reject(new Error('Could not parse AI response as JSON'))
+              }
+            } catch {
+              reject(new Error('Failed to parse AI summary response'))
+            }
+          })
+        } else if (message.type === 'error') {
+          const errorMsg = message.payload?.message || 'AI request failed'
+          const errorCode = message.payload?.code || ''
+          settle(() => {
+            ws.close()
+            // Surface a clear rate-limit message instead of the generic backend error
+            if (isRateLimitError(errorMsg) || isRateLimitError(errorCode)) {
+              reject(new Error(RATE_LIMIT_MESSAGE))
+            } else {
+              reject(new Error(errorMsg))
+            }
+          })
+        }
+      } catch {
+        // Ignore parse errors for non-JSON messages
+      }
+    }
+
+    ws.onerror = () => {
+      settle(() => {
+        // #9162 — Distinguish a real "agent unreachable" failure from an
+        // abnormal close after the connection was already established.
+        // If `didOpen` is true, the agent accepted the WebSocket and then
+        // closed it (commonly because we exceeded its 1 MB read limit, or
+        // it crashed mid-request). Telling the user "make sure kc-agent is
+        // running" in that case is misleading — chat is still working.
+        if (didOpen) {
+          reject(new Error('Lost connection to local agent while generating summary. The mission conversation may be too large; try Regenerate or save with a manual summary.'))
+        } else {
+          reject(new Error('Could not reach the local agent — make sure kc-agent is running'))
+        }
+      })
+    }
+
+    ws.onclose = (event) => {
+      // #9162 — A close without a prior `result`/`error`/`onerror` (e.g.
+      // server hangup after we exceeded the read limit) would otherwise
+      // leave the promise pending until the AI summary timeout. Reject
+      // explicitly so the user sees actionable feedback immediately.
+      settle(() => {
+        if (didOpen) {
+          // 1009 = Message Too Big (RFC 6455). Emit a precise hint when the
+          // close code matches; otherwise stick to the generic "lost
+          // connection" message which already mentions size as a likely cause.
+          const isTooBig = event.code === 1009
+          reject(new Error(
+            isTooBig
+              ? 'Mission conversation is too large for the agent to summarize. Try Regenerate after a shorter run or save with a manual summary.'
+              : 'Connection to local agent closed before the summary completed. Try Regenerate or save with a manual summary.'
+          ))
+        } else {
+          reject(new Error('Could not reach the local agent — make sure kc-agent is running'))
+        }
+      })
+    }
+  })
+}
+
+export function SaveResolutionDialog({
+  mission,
+  isOpen,
+  onClose,
+  onSaved }: SaveResolutionDialogProps) {
+  const { t } = useTranslation(['common', 'cards'])
+  const { saveResolution } = useResolutions()
+  const { showToast } = useToast()
+
+  // Auto-detect issue signature from mission content.
+  // Memoized: avoids producing a new object reference on every render, which
+  // would otherwise invalidate the init effect's deps and (combined with an
+  // unstable generateSummary) trigger an infinite render loop that kept
+  // opening fresh AI WebSockets and froze the UI (issue #9163).
+  const autoDetectedSignature = useMemo(() => {
+    const content = [
+      mission.title,
+      mission.description,
+      ...(mission.messages || []).map(m => m.content),
+    ].join('\n')
+
+    return detectIssueSignature(content)
+  }, [mission.title, mission.description, mission.messages])
+
+  // Keep latest mission + signature in refs so generateSummary can be a stable
+  // callback (no deps) without going stale. Stable callback identity is what
+  // lets the init useEffect depend only on isOpen + mission.id.
+  const missionRef = useRef(mission)
+  const signatureRef = useRef(autoDetectedSignature)
+  const translationRef = useRef(t)
+  const showToastRef = useRef(showToast)
+  useEffect(() => {
+    missionRef.current = mission
+    signatureRef.current = autoDetectedSignature
+  }, [mission, autoDetectedSignature])
+  useEffect(() => {
+    translationRef.current = t
+    showToastRef.current = showToast
+  }, [t, showToast])
+
+  // Form state
+  const [title, setTitle] = useState('')
+  const [issueType, setIssueType] = useState('')
+  const [resourceKind, setResourceKind] = useState('')
+  const [summary, setSummary] = useState('')
+  const [steps, setSteps] = useState<string[]>([''])
+  const [yaml, setYaml] = useState('')
+  const [visibility, setVisibility] = useState<'private' | 'shared'>('private')
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // AI summary state
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [aiError, setAiError] = useState<string | null>(null)
+  const isBusy = isGenerating || isSaving
+
+  // Generate AI summary. Stable identity (empty deps) — reads latest mission
+  // via missionRef so it doesn't need mission in its closure.
+  const generateSummary = useCallback(async () => {
+    setIsGenerating(true)
+    setAiError(null)
+
+    const currentMission = missionRef.current
+    try {
+      const aiSummary = await generateAISummary(currentMission)
+
+      setTitle(aiSummary.title)
+      setIssueType(aiSummary.issueType)
+      setResourceKind(aiSummary.resourceKind || '')
+      setSummary(`**Problem:** ${aiSummary.problem}\n\n**Solution:** ${aiSummary.solution}`)
+      setSteps(aiSummary.steps.length > 0 ? aiSummary.steps : [''])
+      setYaml(aiSummary.yaml || '')
+    } catch (err: unknown) {
+      const translate = translationRef.current
+      const errorMessage = err instanceof Error
+        ? err.message
+        : translate('dashboard.missions.aiSummaryFailed')
+      setAiError(translate('dashboard.missions.aiSummaryFallbackDetail', { error: errorMessage }))
+      showToastRef.current(translate('dashboard.missions.aiSummaryFallbackNotice'), 'warning')
+      // Fall back to basic extraction
+      setTitle(currentMission.title)
+      setIssueType(signatureRef.current.type || '')
+      setResourceKind(signatureRef.current.resourceKind || '')
+    } finally {
+      setIsGenerating(false)
+    }
+  }, [])
+
+  // Initialize form when dialog opens - auto-generate AI summary.
+  // Depends only on isOpen + mission.id so streaming message updates on the
+  // active mission don't re-fire the effect (which would re-open the AI
+  // WebSocket and freeze the UI — issue #9163).
+  useEffect(() => {
+    if (!isOpen) {
+      return
+    }
+
+    let cancelled = false
+    queueMicrotask(() => {
+      if (cancelled) {
+        return
+      }
+      setError(null)
+      setAiError(null)
+
+      // Start with basic values while AI generates
+      setTitle(missionRef.current.title)
+      setIssueType(signatureRef.current.type || '')
+      setResourceKind(signatureRef.current.resourceKind || '')
+      setSummary('')
+      setSteps([''])
+      setYaml('')
+
+      // Generate AI summary
+      void generateSummary()
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen, mission.id, generateSummary])
+
+  const handleAddStep = () => {
+    setSteps(prev => [...prev, ''])
+  }
+
+  const handleRemoveStep = (index: number) => {
+    setSteps(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const handleStepChange = (index: number, value: string) => {
+    setSteps(prev => prev.map((s, i) => i === index ? value : s))
+  }
+
+  const handleSave = async () => {
+    // Validate
+    if (!title.trim()) {
+      setError(t('dashboard.missions.titleRequired'))
+      return
+    }
+    if (!issueType.trim()) {
+      setError(t('dashboard.missions.issueTypeRequired'))
+      return
+    }
+    if (!summary.trim()) {
+      setError(t('dashboard.missions.summaryRequired'))
+      return
+    }
+
+    setIsSaving(true)
+    setError(null)
+
+    try {
+      await Promise.resolve()
+
+      const issueSignature: IssueSignature = {
+        type: issueType.trim(),
+        resourceKind: resourceKind.trim() || undefined,
+        errorPattern: autoDetectedSignature.errorPattern,
+        namespace: autoDetectedSignature.namespace }
+
+      const resolution: ResolutionSteps = {
+        summary: summary.trim(),
+        steps: steps.filter(s => s.trim()),
+        yaml: yaml.trim() || undefined }
+
+      await Promise.resolve(saveResolution({
+        missionId: mission.id,
+        title: title.trim(),
+        issueSignature,
+        resolution,
+        context: {
+          cluster: mission.cluster },
+        visibility }))
+
+      await Promise.resolve(onSaved?.())
+      onClose()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t('dashboard.missions.failedToSave'))
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  return (
+    <BaseModal isOpen={isOpen} onClose={onClose} size="md" closeOnBackdrop={false} closeOnEscape={!isBusy}>
+      <BaseModal.Header title={t('dashboard.missions.saveResolution')} icon={Save} onClose={isBusy ? undefined : onClose} />
+
+      <BaseModal.Content noPadding>
+        <ResolutionForm
+          isGenerating={isGenerating}
+          aiError={aiError}
+          summary={summary}
+          title={title}
+          issueType={issueType}
+          resourceKind={resourceKind}
+          steps={steps}
+          yaml={yaml}
+          visibility={visibility}
+          error={error}
+          isBusy={isBusy}
+          onRetryGenerate={generateSummary}
+          onTitleChange={setTitle}
+          onIssueTypeChange={setIssueType}
+          onResourceKindChange={setResourceKind}
+          onSummaryChange={setSummary}
+          onStepChange={handleStepChange}
+          onAddStep={handleAddStep}
+          onRemoveStep={handleRemoveStep}
+          onYamlChange={setYaml}
+          onVisibilityChange={setVisibility}
+          t={t}
+        />
+      </BaseModal.Content>
+
+      <BaseModal.Footer showKeyboardHints={false}>
+        <button
+          onClick={generateSummary}
+          disabled={isBusy}
+          className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+        >
+          {isGenerating ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              {t('dashboard.missions.generating')}
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-4 h-4" />
+              {t('dashboard.missions.regenerate')}
+            </>
+          )}
+        </button>
+        <div className="flex items-center gap-3 ml-auto">
+          <button
+            onClick={onClose}
+            disabled={isBusy}
+            className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+          >
+            {t('actions.cancel')}
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={isBusy}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                {t('common.saving')}
+              </>
+            ) : (
+              <>
+                <CheckCircle className="w-4 h-4" />
+                {t('dashboard.missions.saveResolution')}
+              </>
+            )}
+          </button>
+        </div>
+      </BaseModal.Footer>
+    </BaseModal>
+  )
+}

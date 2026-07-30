@@ -1,0 +1,425 @@
+import { api } from '../lib/api'
+import type {
+  StellarAction,
+  StellarAuditEntry,
+  StellarDigest,
+  StellarMission,
+  StellarNotification,
+  StellarTask,
+  StellarOperationalState,
+  StellarWatch,
+} from '../types/stellar'
+
+const STELLAR_CHAT_TIMEOUT_MS = 300_000
+const STELLAR_DEFAULT_ITEM_LIMIT = 50
+const STELLAR_EXTENDED_ITEM_LIMIT = 100
+const UUID_PATH_PARAM_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+interface GetStateOptions {
+  timeout?: number
+  fallbackOnError?: boolean
+  signal?: AbortSignal
+}
+
+const isAuthError = (err: unknown): boolean => {
+  if (err instanceof Error) {
+    return err.message.includes('Unauthenticated') || err.message.includes('No authentication token') || err.name === 'UnauthenticatedError'
+  }
+
+  const errorText = String(err)
+  return errorText.includes('Unauthenticated') || errorText.includes('No authentication token')
+}
+
+const encodeValidatedUuidPathParam = (value: string, paramName: string): string => {
+  if (!UUID_PATH_PARAM_PATTERN.test(value)) {
+    throw new Error(`Invalid ${paramName}`)
+  }
+
+  return encodeURIComponent(value)
+}
+
+export interface AskResponse {
+  answer: string
+  executionId: string
+  model: string
+  provider: string
+  providerSource: 'request' | 'user-default' | 'env-default' | 'fallback' | 'auto'
+  tokens: number
+  durationMs: number
+  fallbackUsed?: boolean
+  fallbackReason?: string
+  watchCreated: boolean
+  watchId: string
+  state: StellarOperationalState
+}
+
+export interface ProviderInfo {
+  name: string
+  displayName: string
+  model: string
+  available: boolean
+  latencyMs: number
+  supportsStreaming: boolean
+  isUserDefined?: boolean
+  configId?: string
+}
+
+export interface UserProviderConfig {
+  id: string
+  provider: string
+  displayName: string
+  model: string
+  baseUrl: string
+  apiKeyMask?: string
+  isDefault: boolean
+  isActive: boolean
+  lastLatency: number
+}
+
+interface GetProvidersOptions {
+  fallbackOnError?: boolean
+}
+
+export const stellarApi = {
+  async getState(options: GetStateOptions = {}): Promise<StellarOperationalState> {
+    const { timeout, fallbackOnError = true, signal } = options
+    try {
+      const { data } = await api.get<StellarOperationalState>('/api/stellar/state', { timeout, signal })
+      return data
+    } catch (err) {
+      if (isAuthError(err)) {
+        console.debug('stellar: getState skipped (no auth token)')
+      } else {
+        console.error('stellar: getState failed:', err)
+      }
+      if (!fallbackOnError) {
+        throw err
+      }
+      return {
+        generatedAt: new Date().toISOString(),
+        clustersWatching: [],
+        eventCounts: { critical: 0, warning: 0, info: 0 },
+        recentEvents: [],
+        unreadAlerts: 0,
+        activeMissionIds: [],
+        pendingActionIds: [],
+      }
+    }
+  },
+
+  async getNotifications(limit = STELLAR_DEFAULT_ITEM_LIMIT, unreadOnly = false): Promise<StellarNotification[]> {
+    try {
+      const query = new URLSearchParams()
+      query.set('limit', String(limit))
+      if (unreadOnly) query.set('unread', 'true')
+      const { data } = await api.get<{ items: StellarNotification[] }>(`/api/stellar/notifications?${query.toString()}`)
+      return data.items || []
+    } catch (err) {
+      if (isAuthError(err)) {
+        console.debug('stellar: getNotifications skipped (no auth token)')
+      } else {
+        console.error('stellar: getNotifications failed:', err)
+      }
+      return []
+    }
+  },
+
+  async getMissions(limit = STELLAR_DEFAULT_ITEM_LIMIT): Promise<StellarMission[]> {
+    try {
+      const { data } = await api.get<{ items: StellarMission[] }>(`/api/stellar/missions?limit=${limit}`)
+      return data.items || []
+    } catch (err) {
+      if (isAuthError(err)) {
+        console.debug('stellar: getMissions skipped (no auth token)')
+      } else {
+        console.error('stellar: getMissions failed:', err)
+      }
+      return []
+    }
+  },
+
+  async getActions(status?: string, limit = STELLAR_DEFAULT_ITEM_LIMIT): Promise<StellarAction[]> {
+    try {
+      const query = new URLSearchParams()
+      query.set('limit', String(limit))
+      if (status) query.set('status', status)
+      const { data } = await api.get<{ items: StellarAction[] }>(`/api/stellar/actions?${query.toString()}`)
+      return data.items || []
+    } catch (err) {
+      if (isAuthError(err)) {
+        console.debug('stellar: getActions skipped (no auth token)')
+      } else {
+        console.error('stellar: getActions failed:', err)
+      }
+      return []
+    }
+  },
+
+  async ask(req: { prompt: string; cluster?: string; provider?: string; model?: string; history?: { role: string; content: string }[] }): Promise<AskResponse> {
+    const { data } = await api.post<AskResponse>('/api/stellar/ask', req, { timeout: STELLAR_CHAT_TIMEOUT_MS })
+    return data
+  },
+
+  async approveAction(id: string, confirmToken?: string): Promise<StellarAction> {
+    const { data } = await api.post<StellarAction>(`/api/stellar/actions/${encodeURIComponent(id)}/approve`, { confirmToken })
+    return data
+  },
+
+  async rejectAction(id: string, reason: string): Promise<StellarAction> {
+    const { data } = await api.post<StellarAction>(`/api/stellar/actions/${encodeURIComponent(id)}/reject`, { reason })
+    return data
+  },
+
+  async acknowledgeNotification(id: string): Promise<void> {
+    await api.post(`/api/stellar/notifications/${encodeURIComponent(id)}/read`, {})
+  },
+
+  async investigateNotification(id: string, investigationSummary?: string): Promise<StellarNotification> {
+    const { data } = await api.post<StellarNotification>(`/api/stellar/notifications/${encodeURIComponent(id)}/investigate`, { investigationSummary })
+    return data
+  },
+
+  async resolveNotification(id: string, resolutionNote?: string): Promise<StellarNotification> {
+    const { data } = await api.post<StellarNotification>(`/api/stellar/notifications/${encodeURIComponent(id)}/resolve`, { resolutionNote })
+    return data
+  },
+
+  async dismissNotification(id: string, dismissalReason?: string): Promise<StellarNotification> {
+    const { data } = await api.post<StellarNotification>(`/api/stellar/notifications/${encodeURIComponent(id)}/dismiss`, { dismissalReason })
+    return data
+  },
+
+  async getTasks(): Promise<StellarTask[]> {
+    try {
+      const { data } = await api.get<{ items: StellarTask[] }>('/api/stellar/tasks')
+      return data.items || []
+    } catch (err) {
+      if (isAuthError(err)) {
+        console.debug('stellar: getTasks skipped (no auth token)')
+      } else {
+        console.error('stellar: getTasks failed:', err)
+      }
+      return []
+    }
+  },
+
+  async createTask(payload: {
+    sessionId?: string
+    cluster?: string
+    title: string
+    description?: string
+    priority?: number
+    source?: string
+    parentId?: string
+    dueAt?: string
+    contextJson?: string
+  }): Promise<StellarTask> {
+    const { data } = await api.post<StellarTask>('/api/stellar/tasks', payload)
+    return data
+  },
+
+  async updateTaskStatus(id: string, status: string): Promise<void> {
+    await api.post(`/api/stellar/tasks/${encodeURIComponent(id)}/status`, { status })
+  },
+
+  async createAction(payload: {
+    description: string
+    actionType: string
+    parameters: Record<string, unknown>
+    cluster: string
+    namespace?: string
+    scheduledAt?: string | null
+  }): Promise<StellarAction> {
+    const { data } = await api.post<StellarAction>('/api/stellar/actions', payload)
+    return data
+  },
+
+  async executeAction(payload: {
+    actionType: string
+    cluster: string
+    namespace?: string
+    name?: string
+    description?: string
+    prompt?: string
+    parameters?: Record<string, unknown>
+  }): Promise<{ id: string; status: string; outcome: string; model?: string; provider?: string; duration: number }> {
+    const { data } = await api.post<{ id: string; status: string; outcome: string; model?: string; provider?: string; duration: number }>(
+      '/api/stellar/actions/execute',
+      payload,
+      { timeout: STELLAR_CHAT_TIMEOUT_MS },
+    )
+    return data
+  },
+
+  async getDigest(): Promise<{ digest: string; model: string; provider: string }> {
+    try {
+      const { data } = await api.get<{ digest: string; model: string; provider: string }>('/api/stellar/digest')
+      return data
+    } catch (err) {
+      if (isAuthError(err)) {
+        console.debug('stellar: getDigest skipped (no auth token)')
+      } else {
+        console.error('stellar: getDigest failed:', err)
+      }
+      return { digest: '', model: '', provider: '' }
+    }
+  },
+
+  async getProviders(options: GetProvidersOptions = {}): Promise<{ global: ProviderInfo[]; user: UserProviderConfig[] }> {
+    const { fallbackOnError = true } = options
+    try {
+      const { data } = await api.get<{ global: ProviderInfo[]; user: UserProviderConfig[] }>('/api/stellar/providers')
+      return data
+    } catch (err) {
+      if (isAuthError(err)) {
+        console.debug('stellar: getProviders skipped (no auth token)')
+      } else {
+        console.error('stellar: getProviders failed:', err)
+      }
+      if (!fallbackOnError) {
+        throw err
+      }
+      return { global: [], user: [] }
+    }
+  },
+
+  async createProvider(payload: { provider: string; displayName: string; apiKey: string; model: string; baseUrl?: string }): Promise<UserProviderConfig> {
+    const { data } = await api.post<UserProviderConfig>('/api/stellar/providers', payload)
+    return data
+  },
+
+  async testProvider(id: string): Promise<{ available: boolean; latencyMs: number; error?: string }> {
+    const { data } = await api.post<{ available: boolean; latencyMs: number; error?: string }>(`/api/stellar/providers/${encodeURIComponent(id)}/test`, {})
+    return data
+  },
+
+  async deleteProvider(id: string): Promise<void> {
+    await api.delete(`/api/stellar/providers/${encodeURIComponent(id)}`)
+  },
+
+  async setDefaultProvider(id: string): Promise<void> {
+    await api.post(`/api/stellar/providers/${encodeURIComponent(id)}/default`, {})
+  },
+
+  async getWatches(): Promise<StellarWatch[]> {
+    try {
+      const { data } = await api.get<{ items: StellarWatch[] }>('/api/stellar/watches')
+      return data.items || []
+    } catch (err) {
+      if (isAuthError(err)) {
+        console.debug('stellar: getWatches skipped (no auth token)')
+      } else {
+        console.error('stellar: getWatches failed:', err)
+      }
+      return []
+    }
+  },
+
+  async resolveWatch(id: string): Promise<void> {
+    await api.post(`/api/stellar/watches/${encodeURIComponent(id)}/resolve`, {})
+  },
+
+  async dismissWatch(id: string): Promise<void> {
+    await api.delete(`/api/stellar/watches/${encodeURIComponent(id)}`)
+  },
+
+  async snoozeWatch(id: string, minutes: number): Promise<void> {
+    await api.post(`/api/stellar/watches/${encodeURIComponent(id)}/snooze`, { minutes })
+  },
+
+  async getAuditLog(limit = STELLAR_DEFAULT_ITEM_LIMIT, signal?: AbortSignal): Promise<StellarAuditEntry[]> {
+    try {
+      const { data } = await api.get<{ items: StellarAuditEntry[] }>(`/api/stellar/audit?limit=${limit}`, { signal })
+      return data.items || []
+    } catch (err) {
+      if (signal?.aborted) {
+        return []
+      }
+      if (isAuthError(err)) {
+        console.debug('stellar: getAuditLog skipped (no auth token)')
+      } else {
+        console.error('stellar: getAuditLog failed:', err)
+      }
+      return []
+    }
+  },
+  async startSolve(eventID: string): Promise<{ solveId: string; status: string; existing?: boolean }> {
+    const encodedEventID = encodeValidatedUuidPathParam(eventID, 'eventID')
+    const { data } = await api.post<{ solveId: string; status: string; existing?: boolean }>(`/api/stellar/solve/${encodedEventID}`)
+    return data
+  },
+  async listSolves(limit = STELLAR_EXTENDED_ITEM_LIMIT): Promise<import('../types/stellar').StellarSolve[]> {
+    try {
+      const { data } = await api.get<{ items: import('../types/stellar').StellarSolve[] }>(`/api/stellar/solves?limit=${limit}`)
+      return data.items || []
+    } catch (err) {
+      if (isAuthError(err)) {
+        console.debug('stellar: listSolves skipped (no auth token)')
+      } else {
+        console.error('stellar: listSolves failed:', err)
+      }
+      return []
+    }
+  },
+  async listActivity(limit = STELLAR_EXTENDED_ITEM_LIMIT): Promise<import('../types/stellar').StellarActivity[]> {
+    try {
+      const { data } = await api.get<{ items: import('../types/stellar').StellarActivity[] }>(`/api/stellar/activity?limit=${limit}`)
+      return data.items || []
+    } catch (err) {
+      if (isAuthError(err)) {
+        console.debug('stellar: listActivity skipped (no auth token)')
+      } else {
+        console.error('stellar: listActivity failed:', err)
+      }
+      return []
+    }
+  },
+}
+
+export async function getStellarState(): Promise<StellarOperationalState> {
+  return stellarApi.getState()
+}
+
+export async function getStellarNotifications(limit = STELLAR_DEFAULT_ITEM_LIMIT, unreadOnly = false): Promise<StellarNotification[]> {
+  return stellarApi.getNotifications(limit, unreadOnly)
+}
+
+export async function markStellarNotificationRead(id: string): Promise<void> {
+  return stellarApi.acknowledgeNotification(id)
+}
+
+export async function getStellarMissions(limit = STELLAR_DEFAULT_ITEM_LIMIT): Promise<StellarMission[]> {
+  return stellarApi.getMissions(limit)
+}
+
+export async function getStellarActions(status?: string, limit = STELLAR_DEFAULT_ITEM_LIMIT): Promise<StellarAction[]> {
+  return stellarApi.getActions(status, limit)
+}
+
+export async function getStellarTasks(): Promise<StellarTask[]> {
+  return stellarApi.getTasks()
+}
+
+export async function approveStellarAction(id: string, confirmToken?: string): Promise<StellarAction> {
+  return stellarApi.approveAction(id, confirmToken)
+}
+
+export async function rejectStellarAction(id: string, reason: string): Promise<StellarAction> {
+  return stellarApi.rejectAction(id, reason)
+}
+
+export async function askStellar(prompt: string, cluster?: string): Promise<AskResponse> {
+  return stellarApi.ask({ prompt, cluster })
+}
+
+export async function getStellarDigest(): Promise<StellarDigest> {
+  const data = await stellarApi.getDigest()
+  return {
+    generatedAt: new Date().toISOString(),
+    windowHours: 24,
+    overallHealth: data.digest,
+    incidents: [],
+    changes: [],
+    recommendedActions: [],
+  }
+}
