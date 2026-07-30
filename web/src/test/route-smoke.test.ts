@@ -105,7 +105,8 @@ function findModalFiles(): string[] {
         /\.(tsx?)$/.test(entry.name) &&
         /(Modal|Dialog)\.(tsx?)$/.test(entry.name) &&
         !entry.name.endsWith('.test.tsx') &&
-        !entry.name.endsWith('.test.ts')
+        !entry.name.endsWith('.test.ts') &&
+        !entry.name.startsWith('use') // hook files (e.g. useSyncDialog.ts) aren't components
       ) {
         results.push(full)
       }
