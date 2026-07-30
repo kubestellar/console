@@ -1,18 +1,14 @@
-import { useState, useEffect, useRef } from 'react'
-import { useLocalAgent } from '../../../hooks/useLocalAgent'
-import { useDrillDownWebSocket } from '../../../hooks/useDrillDownWebSocket'
+import { useState } from 'react'
 import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { useMissions } from '../../../hooks/useMissions'
-import { ClusterBadge } from '../../ui/ClusterBadge'
 import {
-  Shield, Info, Loader2,
-  Layers, Server, RefreshCw, Stethoscope, ChevronLeft,
-  CheckCircle, XCircle, AlertTriangle,
-  FileText, AlertCircle
+  Shield, Loader2,
+  Layers, RefreshCw, Stethoscope,
+  CheckCircle,
+  FileText
 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { TOUCH_TARGET_SIZE_CLASS } from '../../../lib/constants/ui'
-import { StatusBadge } from '../../ui/StatusBadge'
 import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
 import {
   AIActionBar,
@@ -20,54 +16,19 @@ import {
   type ResourceContext,
 } from '../../modals'
 import { useTranslation } from 'react-i18next'
+import { usePolicyDrillDown } from './usePolicyDrillDown'
+import {
+  type TabType,
+  getStatusStyle,
+  getTabsWithCount,
+  PolicyTabBar,
+  PolicyDrillDownHeader,
+  ViolationRow,
+  PolicyRulesList,
+} from './PolicyDrillDown.parts'
 
 interface Props {
   data: Record<string, unknown>
-}
-
-type TabType = 'overview' | 'violations' | 'spec' | 'ai'
-
-// Policy status styles
-const getStatusStyle = (status: string) => {
-  const lower = status?.toLowerCase() || ''
-  if (lower === 'active' || lower === 'ready' || lower === 'enforced') {
-    return { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/30', icon: CheckCircle }
-  }
-  if (lower === 'audit' || lower === 'warn') {
-    return { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/30', icon: AlertTriangle }
-  }
-  if (lower === 'failed' || lower === 'error' || lower === 'inactive') {
-    return { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/30', icon: XCircle }
-  }
-  return { bg: 'bg-secondary', text: 'text-muted-foreground', border: 'border-border', icon: AlertCircle }
-}
-
-interface Violation {
-  resource: string
-  kind: string
-  namespace?: string
-  message: string
-  timestamp?: string
-}
-
-interface ViolationRaw {
-  name?: string
-  kind?: string
-  namespace?: string
-  message?: string
-}
-
-interface PolicySpec {
-  match?: Record<string, unknown>
-  parameters?: Record<string, unknown>
-  validationFailureAction?: string
-  background?: boolean
-  rules?: Array<{
-    name: string
-    match?: Record<string, unknown>
-    validate?: Record<string, unknown>
-    mutate?: Record<string, unknown>
-  }>
 }
 
 export function PolicyDrillDown({ data }: Props) {
@@ -83,18 +44,22 @@ export function PolicyDrillDown({ data }: Props) {
   const constraintTemplate = data.constraintTemplate as string | undefined
   const violationCount = (data.violationCount as number) || 0
 
-  const { isConnected: agentConnected } = useLocalAgent()
   const { drillToNamespace, drillToCluster, drillToPod } = useDrillDownActions()
   const { state, pop, close: closeDrillDown } = useDrillDown()
   const { startMission } = useMissions()
 
   const [activeTab, setActiveTab] = useState<TabType>('overview')
-  const [violations, setViolations] = useState<Violation[] | null>(null)
-  const [violationsLoading, setViolationsLoading] = useState(false)
-  const [policySpec, setPolicySpec] = useState<PolicySpec | null>(null)
-  const [specLoading, setSpecLoading] = useState(false)
   const [aiAnalysis] = useState<string | null>(null)
   const [aiAnalysisLoading] = useState(false)
+
+  // Use extracted hook for data loading
+  const {
+    agentConnected,
+    violations,
+    violationsLoading,
+    policySpec,
+    specLoading,
+  } = usePolicyDrillDown(cluster, policyName, policyType, policyKind, namespace)
 
   // Resource context for AI actions
   const resourceContext: ResourceContext = {
@@ -123,105 +88,6 @@ export function PolicyDrillDown({ data }: Props) {
       violationCount,
     },
   })
-  const { runKubectl } = useDrillDownWebSocket(cluster)
-
-
-  // Fetch violations
-  const fetchViolations = async () => {
-    if (!agentConnected || violations) return
-    setViolationsLoading(true)
-    try {
-      let output: string
-      if (policyType === 'kyverno') {
-        // For Kyverno, fetch policy reports
-        output = await runKubectl([
-          'get', 'policyreport,clusterpolicyreport', '-A', '-o', 'json'
-        ])
-        if (output) {
-          const data = JSON.parse(output)
-          const items = data.items || []
-          const policyViolations: Violation[] = []
-
-          for (const report of items) {
-            const results = report.results || []
-            for (const result of results) {
-              if (result.policy === policyName && result.result === 'fail') {
-                policyViolations.push({
-                  resource: result.resources?.[0]?.name || 'Unknown',
-                  kind: result.resources?.[0]?.kind || 'Unknown',
-                  namespace: result.resources?.[0]?.namespace,
-                  message: result.message || 'Policy violation',
-                  timestamp: typeof result.timestamp === 'string'
-                    ? result.timestamp
-                    : result.timestamp && typeof result.timestamp === 'object' && 'seconds' in result.timestamp
-                      ? (() => { const d = new Date(Number(result.timestamp.seconds) * 1000); return isNaN(d.getTime()) ? undefined : d.toISOString() })()
-                      : undefined,
-                })
-              }
-            }
-          }
-          setViolations(policyViolations)
-        }
-      } else {
-        // For OPA Gatekeeper, fetch constraint status
-        output = await runKubectl([
-          'get', policyKind.toLowerCase(), policyName, '-o', 'json'
-        ])
-        if (output) {
-          const constraint = JSON.parse(output)
-          const statusViolations = constraint.status?.violations || []
-          setViolations(statusViolations.map((v: ViolationRaw) => ({
-            resource: v.name || 'Unknown',
-            kind: v.kind || 'Unknown',
-            namespace: v.namespace,
-            message: v.message || 'Policy violation',
-          })))
-        }
-      }
-    } catch {
-      setViolations([])
-    }
-    setViolationsLoading(false)
-  }
-
-  // Fetch policy spec
-  const fetchSpec = async () => {
-    if (!agentConnected || policySpec) return
-    setSpecLoading(true)
-    try {
-      let output: string
-      if (policyType === 'kyverno') {
-        const resource = namespace ? `policy/${policyName}` : `clusterpolicy/${policyName}`
-        const nsArgs = namespace ? ['-n', namespace] : []
-        output = await runKubectl(['get', resource, ...nsArgs, '-o', 'json'])
-      } else {
-        output = await runKubectl([
-          'get', policyKind.toLowerCase(), policyName, '-o', 'json'
-        ])
-      }
-
-      if (output) {
-        const policy = JSON.parse(output)
-        setPolicySpec(policy.spec || {})
-      }
-    } catch {
-      setPolicySpec({})
-    }
-    setSpecLoading(false)
-  }
-
-  // Track if we've already loaded data
-  const hasLoadedRef = useRef(false)
-
-  useEffect(() => {
-    if (!agentConnected || hasLoadedRef.current) return
-    hasLoadedRef.current = true
-
-    const loadData = async () => {
-      await Promise.all([fetchViolations(), fetchSpec()])
-    }
-    loadData()
-  }, [agentConnected, fetchViolations, fetchSpec])
 
   // Start AI diagnosis
   const handleDiagnose = () => {
@@ -269,61 +135,23 @@ Please:
   }
 
   const statusStyle = getStatusStyle(policyStatus)
-  const StatusIcon = statusStyle.icon
 
-  const TABS: { id: TabType; label: string; icon: typeof Info }[] = [
-    { id: 'overview', label: 'Overview', icon: Info },
-    { id: 'violations', label: `Violations (${violationCount})`, icon: AlertCircle },
-    { id: 'spec', label: 'Policy Spec', icon: FileText },
-    { id: 'ai', label: 'AI Analysis', icon: Stethoscope },
-  ]
+  const TABS = getTabsWithCount(violationCount)
 
   return (
     <div className="flex flex-col h-full -m-6">
       {/* Header */}
-      <div className="px-6 pt-6 pb-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-6 text-sm">
-            <button onClick={() => state.stack.length > 1 ? pop() : closeDrillDown()} className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors min-h-11 min-w-11 px-2 py-2">
-              <ChevronLeft className="w-4 h-4" />
-              {t('drilldown.goBack', 'Back')}
-            </button>
-            {namespace && (
-              <button
-                onClick={() => drillToNamespace(cluster, namespace)}
-                className={cn('group flex items-center gap-2 rounded-lg border border-transparent px-3 py-2 transition-all hover:border-purple-500/30 hover:bg-purple-500/10', TOUCH_TARGET_SIZE_CLASS)}
-              >
-                <Layers className="w-4 h-4 text-purple-400" />
-                <span className="text-muted-foreground">{t('drilldown.fields.namespace')}</span>
-                <span className="font-mono text-purple-400 group-hover:text-purple-300 transition-colors">{namespace}</span>
-                <svg className="w-3 h-3 text-purple-400/70 group-hover:text-purple-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            )}
-            <button
-              onClick={() => drillToCluster(cluster)}
-              className={cn('group flex items-center gap-2 rounded-lg border border-transparent px-3 py-2 transition-all hover:border-blue-500/30 hover:bg-blue-500/10', TOUCH_TARGET_SIZE_CLASS)}
-            >
-              <Server className="w-4 h-4 text-blue-400" />
-              <span className="text-muted-foreground">{t('drilldown.fields.cluster')}</span>
-              <ClusterBadge cluster={cluster.split('/').pop() || cluster} size="sm" />
-              <svg className="w-3 h-3 text-blue-400/70 group-hover:text-blue-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Status badge */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">{policyType === 'kyverno' ? 'Kyverno' : 'OPA'}</span>
-            <span className={cn('px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1', statusStyle.bg, statusStyle.text, 'border', statusStyle.border)}>
-              <StatusIcon className="w-3 h-3" />
-              {policyStatus}
-            </span>
-          </div>
-        </div>
-      </div>
+      <PolicyDrillDownHeader
+        cluster={cluster}
+        namespace={namespace}
+        policyType={policyType}
+        policyStatus={policyStatus}
+        statusStyle={statusStyle}
+        canGoBack={state.stack.length > 1}
+        onBack={() => state.stack.length > 1 ? pop() : closeDrillDown()}
+        onNamespaceClick={namespace ? () => drillToNamespace(cluster, namespace) : undefined}
+        onClusterClick={() => drillToCluster(cluster)}
+      />
 
       {/* AI Action Bar */}
       <div className="px-6 pb-4">
@@ -337,28 +165,11 @@ Please:
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-border px-6">
-        <div className="flex gap-1">
-          {TABS.map((tab) => {
-            const Icon = tab.icon
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  cn('flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition-colors', TOUCH_TARGET_SIZE_CLASS),
-                  activeTab === tab.id
-                    ? 'text-primary border-primary'
-                    : 'text-muted-foreground border-transparent hover:text-foreground hover:border-border'
-                )}
-              >
-                <Icon className="w-4 h-4" />
-                {tab.label}
-              </button>
-            )
-          })}
-        </div>
-      </div>
+      <PolicyTabBar
+        activeTab={activeTab}
+        tabs={TABS}
+        onSelect={setActiveTab}
+      />
 
       {/* Tab Content */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -414,20 +225,7 @@ Please:
 
             {/* Policy Rules (Kyverno) */}
             {policyType === 'kyverno' && policySpec?.rules && policySpec.rules.length > 0 && (
-              <div className="p-4 rounded-lg border border-border bg-card/50">
-                <h4 className="text-sm font-medium text-foreground mb-3">Rules ({policySpec.rules.length})</h4>
-                <div className="space-y-2">
-                  {policySpec.rules.map((rule, i) => (
-                    <div key={i} className="p-3 rounded-lg bg-secondary/50 flex items-center justify-between">
-                      <span className="text-sm font-medium text-foreground">{rule.name}</span>
-                      <div className="flex gap-2">
-                        {rule.validate && <StatusBadge color="blue" size="xs">Validate</StatusBadge>}
-                        {rule.mutate && <StatusBadge color="purple" size="xs">Mutate</StatusBadge>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <PolicyRulesList rules={policySpec.rules} />
             )}
           </div>
         )}
@@ -442,37 +240,14 @@ Please:
             ) : violations && violations.length > 0 ? (
               <div className="space-y-2">
                 {violations.map((violation, i) => (
-                  <div
+                  <ViolationRow
                     key={i}
-                    onClick={() => {
-                      if (violation.kind === 'Pod' && violation.namespace) {
-                        drillToPod(cluster, violation.namespace, violation.resource)
-                      }
-                    }}
-                    className={cn(
-                      'flex items-start gap-3 p-3 rounded-lg border border-red-500/30 bg-red-500/10',
-                      violation.kind === 'Pod' && violation.namespace && 'cursor-pointer hover:bg-red-500/20 transition-colors'
-                    )}
-                  >
-                    <XCircle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-foreground">{violation.kind}/{violation.resource}</span>
-                        {violation.namespace && (
-                          <span className="text-xs text-muted-foreground">in {violation.namespace}</span>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-1">{violation.message}</p>
-                      {violation.timestamp && (
-                        <span className="text-xs text-muted-foreground">{violation.timestamp}</span>
-                      )}
-                    </div>
-                    {violation.kind === 'Pod' && violation.namespace && (
-                      <svg className="w-4 h-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    )}
-                  </div>
+                    violation={violation}
+                    onClick={violation.kind === 'Pod' && violation.namespace
+                      ? () => drillToPod(cluster, violation.namespace!, violation.resource)
+                      : undefined
+                    }
+                  />
                 ))}
               </div>
             ) : (

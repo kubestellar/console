@@ -1,17 +1,14 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
-import { useLocalAgent } from '../../../hooks/useLocalAgent'
-import { useDrillDownWebSocket } from '../../../hooks/useDrillDownWebSocket'
+import { useState, useMemo } from 'react'
 import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { FileText, Code, Info, Tag, Zap, Loader2, Copy, Check, ChevronLeft, Layers, Server, Box } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { StatusBadge } from '../../ui/StatusBadge'
-import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { getHealthColors } from '../../../lib/statusColors'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import { Gauge } from '../../charts/Gauge'
 import { useTranslation } from 'react-i18next'
-import { copyToClipboard } from '../../../lib/clipboard'
+import { useReplicaSetDrillDown } from './useReplicaSetDrillDown'
 
 interface Props {
   data: Record<string, unknown>
@@ -24,149 +21,27 @@ export function ReplicaSetDrillDown({ data }: Props) {
   const cluster = data.cluster as string
   const namespace = data.namespace as string
   const replicasetName = data.replicaset as string
-  const { isConnected: agentConnected } = useLocalAgent()
   const { drillToNamespace, drillToCluster, drillToPod, drillToDeployment } = useDrillDownActions()
   const { state, pop } = useDrillDown()
-  const { runKubectl } = useDrillDownWebSocket(cluster)
 
   const [activeTab, setActiveTab] = useState<TabType>('overview')
-  const [replicas, setReplicas] = useState<number>(0)
-  const [readyReplicas, setReadyReplicas] = useState<number>(0)
-  const [pods, setPods] = useState<Array<{ name: string; status: string; restarts: number }>>([])
-  const [ownerDeployment, setOwnerDeployment] = useState<string | null>(null)
-  const [labels, setLabels] = useState<Record<string, string> | null>(null)
-  const [eventsOutput, setEventsOutput] = useState<string | null>(null)
-  const [eventsLoading, setEventsLoading] = useState(false)
-  const [describeOutput, setDescribeOutput] = useState<string | null>(null)
-  const [describeLoading, setDescribeLoading] = useState(false)
-  const [yamlOutput, setYamlOutput] = useState<string | null>(null)
-  const [yamlLoading, setYamlLoading] = useState(false)
-  const [copiedField, setCopiedField] = useState<string | null>(null)
-  const copiedFieldTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-
-  // Fetch ReplicaSet data
-  const fetchData = async () => {
-    if (!agentConnected) return
-
-    try {
-      const output = await runKubectl(['get', 'replicaset', replicasetName, '-n', namespace, '-o', 'json'])
-      if (output) {
-        let rs
-        try {
-          rs = JSON.parse(output)
-        } catch {
-          console.warn('[ReplicaSetDrillDown] Failed to parse ReplicaSet JSON output')
-          return
-        }
-        setReplicas(rs.spec?.replicas || 0)
-        setReadyReplicas(rs.status?.readyReplicas || 0)
-        setLabels(rs.metadata?.labels || {})
-
-        // Get owner deployment
-        const ownerRef = rs.metadata?.ownerReferences?.find((o: { kind: string }) => o.kind === 'Deployment')
-        if (ownerRef) {
-          setOwnerDeployment(ownerRef.name)
-        }
-
-        // Get pods managed by this ReplicaSet
-        const selector = Object.entries(rs.spec?.selector?.matchLabels || {})
-          .map(([k, v]) => `${k}=${v}`)
-          .join(',')
-        if (selector) {
-          const podsOutput = await runKubectl(['get', 'pods', '-n', namespace, '-l', selector, '-o', 'json'])
-          if (podsOutput) {
-            let podList
-            try {
-              podList = JSON.parse(podsOutput)
-            } catch {
-              console.warn('[ReplicaSetDrillDown] Failed to parse Pods JSON output')
-              setPods([])
-              return
-            }
-            const podInfo = podList.items?.map((p: { metadata: { name: string }; status: { phase: string; containerStatuses?: Array<{ restartCount: number }> } }) => ({
-              name: p.metadata.name,
-              status: p.status.phase,
-              restarts: p.status.containerStatuses?.reduce((sum: number, c: { restartCount: number }) => sum + c.restartCount, 0) || 0
-            })) || []
-            setPods(podInfo)
-          }
-        }
-      }
-    } catch {
-      // Ignore fetch errors
-    }
-  }
-
-  const fetchEvents = async () => {
-    if (!agentConnected || eventsOutput) return
-    setEventsLoading(true)
-    const output = await runKubectl(['get', 'events', '-n', namespace, '--field-selector', `involvedObject.name=${replicasetName}`, '-o', 'wide'])
-    setEventsOutput(output)
-    setEventsLoading(false)
-  }
-
-  const fetchDescribe = async () => {
-    if (!agentConnected || describeOutput) return
-    setDescribeLoading(true)
-    const output = await runKubectl(['describe', 'replicaset', replicasetName, '-n', namespace])
-    setDescribeOutput(output)
-    setDescribeLoading(false)
-  }
-
-  const fetchYaml = async () => {
-    if (!agentConnected || yamlOutput) return
-    setYamlLoading(true)
-    const output = await runKubectl(['get', 'replicaset', replicasetName, '-n', namespace, '-o', 'yaml'])
-    setYamlOutput(output)
-    setYamlLoading(false)
-  }
-
-  // Track if we've already loaded data to prevent refetching
-  const hasLoadedRef = useRef(false)
-
-  // Pre-fetch tab data when agent connects
-  // Batched to limit concurrent WebSocket connections (max 2 at a time)
-  useEffect(() => {
-    if (!agentConnected || hasLoadedRef.current) return
-    hasLoadedRef.current = true
-
-    const loadData = async () => {
-      // Batch 1: Overview data (2 concurrent)
-      await Promise.all([
-        fetchData(),
-        fetchEvents(),
-      ])
-
-      // Batch 2: Describe + YAML (2 concurrent, lower priority)
-      await Promise.all([
-        fetchDescribe(),
-        fetchYaml(),
-      ])
-    }
-
-    loadData()
-  }, [agentConnected, fetchData, fetchDescribe, fetchEvents, fetchYaml])
-
-  useEffect(() => {
-    return () => {
-      if (copiedFieldTimeoutRef.current) {
-        clearTimeout(copiedFieldTimeoutRef.current)
-      }
-    }
-  }, [])
-
-  const handleCopy = (field: string, value: string) => {
-    copyToClipboard(value)
-    setCopiedField(field)
-    if (copiedFieldTimeoutRef.current) {
-      clearTimeout(copiedFieldTimeoutRef.current)
-    }
-    copiedFieldTimeoutRef.current = setTimeout(() => {
-      setCopiedField(null)
-      copiedFieldTimeoutRef.current = null
-    }, UI_FEEDBACK_TIMEOUT_MS)
-  }
+  const {
+    agentConnected,
+    replicas,
+    readyReplicas,
+    pods,
+    ownerDeployment,
+    labels,
+    eventsOutput,
+    eventsLoading,
+    describeOutput,
+    describeLoading,
+    yamlOutput,
+    yamlLoading,
+    copiedField,
+    handleCopy,
+  } = useReplicaSetDrillDown(cluster, namespace, replicasetName)
 
   const isHealthy = readyReplicas === replicas && replicas > 0
   const healthColors = getHealthColors(isHealthy)
