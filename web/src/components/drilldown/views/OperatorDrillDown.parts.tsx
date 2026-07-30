@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 import { Loader2, Package, FileText, ExternalLink, Settings, RefreshCw, ChevronLeft, Server, Layers } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { sanitizeUrl } from '../../../lib/utils/sanitizeUrl'
