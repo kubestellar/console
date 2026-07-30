@@ -32,7 +32,7 @@ export function HelmOverviewPanel({
   helmActionLoading,
   onConfirmUninstall,
 }: HelmOverviewPanelProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation('common')
   const status = getReleaseStatus(releaseInfo?.status)
   const statusConfig = RELEASE_STATUS_CONFIG[status]
   const StatusIcon = statusConfig.icon
@@ -50,7 +50,7 @@ export function HelmOverviewPanel({
             <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
               <div className="flex items-center gap-1.5">
                 <GitBranch className="w-4 h-4" />
-                <span>{t('drilldown.helm.chart')}: {chartName || releaseInfo?.chart || t('common.loading')}</span>
+                <span>{t('drilldown.helm.chart')}: {chartName || releaseInfo?.chart || t('loading')}</span>
               </div>
               {(chartVersion || releaseInfo?.app_version) && (
                 <div className="flex items-center gap-1.5">
@@ -80,11 +80,11 @@ export function HelmOverviewPanel({
         </div>
         <div className="p-4 rounded-lg border border-border bg-card/50">
           <div className="text-2xl font-bold text-foreground">{parsedResources.filter(r => r.kind === 'Deployment').length}</div>
-          <div className="text-xs text-muted-foreground">{t('common.deployments')}</div>
+          <div className="text-xs text-muted-foreground">{t('deployments')}</div>
         </div>
         <div className="p-4 rounded-lg border border-border bg-card/50">
           <div className="text-2xl font-bold text-foreground">{parsedResources.filter(r => r.kind === 'Service').length}</div>
-          <div className="text-xs text-muted-foreground">{t('common.services')}</div>
+          <div className="text-xs text-muted-foreground">{t('services')}</div>
         </div>
         <div className="p-4 rounded-lg border border-border bg-card/50">
           <div className="text-2xl font-bold text-foreground">{parsedResources.length}</div>
@@ -118,7 +118,7 @@ export function HelmOverviewPanel({
                 onClick={onShowMoreResources}
                 className="text-xs text-primary hover:underline"
               >
-                {t('common.moreItems', { count: parsedResources.length - 10 })}
+                {t('moreItems', { count: parsedResources.length - 10 })}
               </button>
             )}
           </div>
