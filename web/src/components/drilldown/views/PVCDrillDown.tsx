@@ -1,224 +1,87 @@
-import { useState, useEffect, useRef } from 'react'
-import { useLocalAgent } from '../../../hooks/useLocalAgent'
-import { useDrillDownWebSocket } from '../../../hooks/useDrillDownWebSocket'
+import { useState } from 'react'
 import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
-import { ClusterBadge } from '../../ui/ClusterBadge'
-import { HardDrive, Code, Info, Tag, Loader2, Copy, Check, ChevronLeft, Layers, Server, Database } from 'lucide-react'
+import { Loader2, Copy, Check } from 'lucide-react'
 import { cn } from '../../../lib/cn'
-import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { useTranslation } from 'react-i18next'
-import { copyToClipboard } from '../../../lib/clipboard'
+import { usePVCDrillDown } from './usePVCDrillDown'
+import {
+  type TabType,
+  getStatusColor,
+  getTabs,
+  CopyButton,
+  PVCDrillDownHeader,
+  PVCTabBar,
+  LabelsSection,
+  AnnotationsSection,
+  Info,
+  Database,
+  Server,
+  Layers,
+} from './PVCDrillDown.parts'
 
 interface Props {
   data: Record<string, unknown>
 }
-
-type TabType = 'overview' | 'describe' | 'yaml'
 
 export function PVCDrillDown({ data }: Props) {
   const { t } = useTranslation()
   const cluster = data.cluster as string
   const namespace = data.namespace as string
   const pvcName = data.pvc as string
-  const { isConnected: agentConnected } = useLocalAgent()
   const { drillToNamespace, drillToCluster } = useDrillDownActions()
   const { state, pop } = useDrillDown()
-  const { runKubectl } = useDrillDownWebSocket(cluster)
 
   const [activeTab, setActiveTab] = useState<TabType>('overview')
-  const [status, setStatus] = useState<string>(data.status as string || '')
-  const [capacity, setCapacity] = useState<string>(data.capacity as string || '')
-  const [accessModes, setAccessModes] = useState<string[]>((data.accessModes as string[]) || [])
-  const [storageClass, setStorageClass] = useState<string>(data.storageClass as string || '')
-  const [volumeName, setVolumeName] = useState<string>(data.volumeName as string || '')
-  const [volumeMode, setVolumeMode] = useState<string>('')
-  const [labels, setLabels] = useState<Record<string, string> | null>(null)
-  const [annotations, setAnnotations] = useState<Record<string, string> | null>(null)
-  const [describeOutput, setDescribeOutput] = useState<string | null>(null)
-  const [describeLoading, setDescribeLoading] = useState(false)
-  const [yamlOutput, setYamlOutput] = useState<string | null>(null)
-  const [yamlLoading, setYamlLoading] = useState(false)
-  const [copiedField, setCopiedField] = useState<string | null>(null)
-  const copiedFieldTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
 
+  const {
+    status,
+    capacity,
+    accessModes,
+    storageClass,
+    volumeName,
+    volumeMode,
+    labels,
+    annotations,
+    describeOutput,
+    describeLoading,
+    yamlOutput,
+    yamlLoading,
+    copiedField,
+    isLoading,
+    handleCopy,
+    fetchDescribe,
+    fetchYaml,
+    agentConnected,
+  } = usePVCDrillDown(cluster, namespace, pvcName, data)
 
-  // Fetch PVC data from cluster
-  const fetchData = async () => {
-    if (!agentConnected) return
-
-    setIsLoading(true)
-    try {
-      const output = await runKubectl(['get', 'pvc', pvcName, '-n', namespace, '-o', 'json'])
-      if (output) {
-        let pvc
-        try {
-          pvc = JSON.parse(output)
-        } catch {
-          setLabels(null)
-          setAnnotations(null)
-          return
-        }
-        setStatus(pvc.status?.phase || '')
-        setCapacity(pvc.status?.capacity?.storage || pvc.spec?.resources?.requests?.storage || '')
-        setAccessModes(pvc.spec?.accessModes || [])
-        setStorageClass(pvc.spec?.storageClassName || '')
-        setVolumeName(pvc.spec?.volumeName || '')
-        setVolumeMode(pvc.spec?.volumeMode || 'Filesystem')
-        setLabels(pvc.metadata?.labels || null)
-        setAnnotations(pvc.metadata?.annotations || null)
-      }
-    } catch {
-      // Parse error — keep data from props
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const fetchedRef = useRef(false)
-  useEffect(() => {
-    if (!fetchedRef.current) {
-      fetchedRef.current = true
-      void fetchData()
-    }
-  }, [agentConnected])
-
-  const fetchDescribe = async () => {
-    if (!agentConnected || describeLoading) return
-    setDescribeLoading(true)
-    const output = await runKubectl(['describe', 'pvc', pvcName, '-n', namespace])
-    setDescribeOutput(output || 'No output received')
-    setDescribeLoading(false)
-  }
-
-  const fetchYaml = async () => {
-    if (!agentConnected || yamlLoading) return
-    setYamlLoading(true)
-    const output = await runKubectl(['get', 'pvc', pvcName, '-n', namespace, '-o', 'yaml'])
-    setYamlOutput(output || 'No output received')
-    setYamlLoading(false)
-  }
-
-  useEffect(() => {
-    return () => {
-      if (copiedFieldTimeoutRef.current) {
-        clearTimeout(copiedFieldTimeoutRef.current)
-      }
-    }
-  }, [])
-
-  const handleCopy = async (text: string, field: string) => {
-    const ok = await copyToClipboard(text)
-    if (ok) {
-      setCopiedField(field)
-      if (copiedFieldTimeoutRef.current) {
-        clearTimeout(copiedFieldTimeoutRef.current)
-      }
-      copiedFieldTimeoutRef.current = setTimeout(() => {
-        setCopiedField(null)
-        copiedFieldTimeoutRef.current = null
-      }, UI_FEEDBACK_TIMEOUT_MS)
-    }
-  }
-
-  const CopyButton = ({ text, field }: { text: string; field: string }) => (
-    <button
-      onClick={() => void handleCopy(text, field)}
-      className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
-      title="Copy to clipboard"
-    >
-      {copiedField === field ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-    </button>
-  )
-
-  const statusColor = (() => {
-    const s = status?.toLowerCase() || ''
-    if (s === 'bound') return 'bg-green-500/20 text-green-400'
-    if (s === 'pending') return 'bg-yellow-500/20 text-yellow-400'
-    if (s === 'lost') return 'bg-red-500/20 text-red-400'
-    return 'bg-muted text-muted-foreground'
-  })()
-
-  const tabs: { id: TabType; label: string; icon: typeof Info }[] = [
-    { id: 'overview', label: t('drilldown.overview', 'Overview'), icon: Info },
-    { id: 'describe', label: t('drilldown.describe', 'Describe'), icon: Code },
-    { id: 'yaml', label: 'YAML', icon: Code },
-  ]
+  const statusColor = getStatusColor(status)
+  const tabs = getTabs(t)
 
   return (
     <div className="space-y-4">
-      {/* Back navigation */}
-      {state.stack.length > 1 && (
-        <button
-          type="button"
-          onClick={pop}
-          className="flex items-center gap-2 hover:bg-secondary/50 border border-transparent hover:border-border px-3 py-1.5 rounded-lg transition-all text-muted-foreground hover:text-foreground"
-          aria-label={t('drilldown.goBack')}
-          title={t('drilldown.goBack')}
-        >
-          <ChevronLeft className="w-4 h-4" />
-          <span>{t('common.back')}</span>
-        </button>
-      )}
-      
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
-            <HardDrive className="w-5 h-5 text-green-400" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold text-foreground">{pvcName}</h2>
-              {status && (
-                <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium', statusColor)}>
-                  {status}
-                </span>
-              )}
-              {isLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
-            </div>
-            <div className="flex items-center gap-2 mt-0.5">
-              <button
-                onClick={() => drillToCluster(cluster)}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ClusterBadge cluster={cluster} size="sm" />
-              </button>
-              <span className="text-muted-foreground">/</span>
-              <button
-                onClick={() => drillToNamespace(cluster, namespace)}
-                className="flex items-center gap-1 text-sm text-purple-400 hover:text-purple-300 transition-colors"
-              >
-                <Layers className="w-3.5 h-3.5" />
-                {namespace}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <PVCDrillDownHeader
+        pvcName={pvcName}
+        status={status}
+        statusColor={statusColor}
+        isLoading={isLoading}
+        cluster={cluster}
+        namespace={namespace}
+        canGoBack={state.stack.length > 1}
+        onBack={pop}
+        onClusterClick={() => drillToCluster(cluster)}
+        onNamespaceClick={() => drillToNamespace(cluster, namespace)}
+      />
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-border">
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => {
-              setActiveTab(tab.id)
-              if (tab.id === 'describe' && !describeOutput) void fetchDescribe()
-              if (tab.id === 'yaml' && !yamlOutput) void fetchYaml()
-            }}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 transition-colors',
-              activeTab === tab.id
-                ? 'border-primary text-foreground'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            )}
-          >
-            <tab.icon className="w-3.5 h-3.5" />
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <PVCTabBar
+        activeTab={activeTab}
+        tabs={tabs}
+        onSelect={setActiveTab}
+        describeOutput={describeOutput}
+        yamlOutput={yamlOutput}
+        fetchDescribe={fetchDescribe}
+        fetchYaml={fetchYaml}
+      />
 
       {/* Tab content */}
       {activeTab === 'overview' && (
@@ -241,7 +104,7 @@ export function PVCDrillDown({ data }: Props) {
                   <span className="text-muted-foreground">{t('drilldown.capacity', 'Capacity')}</span>
                   <div className="flex items-center gap-1">
                     <span className="text-foreground font-mono">{capacity || 'N/A'}</span>
-                    {capacity && <CopyButton text={capacity} field="capacity" />}
+                    {capacity && <CopyButton text={capacity} field="capacity" copiedField={copiedField} onCopy={handleCopy} />}
                   </div>
                 </div>
                 <div className="flex items-center justify-between py-1.5 border-b border-border/50">
@@ -277,14 +140,14 @@ export function PVCDrillDown({ data }: Props) {
                   <span className="text-muted-foreground">{t('drilldown.storageClass', 'Storage Class')}</span>
                   <div className="flex items-center gap-1">
                     <span className="text-foreground font-mono">{storageClass || 'default'}</span>
-                    {storageClass && <CopyButton text={storageClass} field="storageClass" />}
+                    {storageClass && <CopyButton text={storageClass} field="storageClass" copiedField={copiedField} onCopy={handleCopy} />}
                   </div>
                 </div>
                 <div className="flex items-center justify-between py-1.5 border-b border-border/50">
                   <span className="text-muted-foreground">{t('drilldown.boundVolume', 'Bound Volume')}</span>
                   <div className="flex items-center gap-1">
                     <span className="text-foreground font-mono text-xs">{volumeName || 'Unbound'}</span>
-                    {volumeName && <CopyButton text={volumeName} field="volumeName" />}
+                    {volumeName && <CopyButton text={volumeName} field="volumeName" copiedField={copiedField} onCopy={handleCopy} />}
                   </div>
                 </div>
                 <div className="flex items-center justify-between py-1.5 border-b border-border/50">
@@ -313,37 +176,12 @@ export function PVCDrillDown({ data }: Props) {
 
           {/* Labels */}
           {labels && Object.keys(labels).length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                <Tag className="w-4 h-4 text-yellow-400" />
-                {t('drilldown.labels', 'Labels')}
-              </h3>
-              <div className="flex flex-wrap gap-1.5">
-                {Object.entries(labels).map(([key, value]) => (
-                  <span key={key} className="px-2 py-1 rounded bg-secondary/50 text-xs font-mono text-foreground">
-                    {key}={value}
-                  </span>
-                ))}
-              </div>
-            </div>
+            <LabelsSection labels={labels} />
           )}
 
           {/* Annotations */}
           {annotations && Object.keys(annotations).length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                <Tag className="w-4 h-4 text-muted-foreground" />
-                {t('drilldown.annotations', 'Annotations')}
-              </h3>
-              <div className="space-y-1">
-                {Object.entries(annotations).map(([key, value]) => (
-                  <div key={key} className="flex items-start gap-2 text-xs">
-                    <span className="font-mono text-muted-foreground break-all">{key}</span>
-                    <span className="text-foreground break-all">{value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <AnnotationsSection annotations={annotations} />
           )}
         </div>
       )}
