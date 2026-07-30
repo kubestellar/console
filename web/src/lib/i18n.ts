@@ -159,42 +159,50 @@ export default i18n
 
 // Type-safe translation namespaces.
 //
-// IMPORTANT: `resources` is intentionally typed as a flat
-// `Record<string, string>` shape per namespace instead of
-// `typeof resources['en']`. Deriving the literal `typeof` type of our
-// translation JSON (common.json + cards.json are ~10k lines combined) and
-// feeding it into i18next's heavily-overloaded `t()` signature triggers a
-// known TypeScript compiler crash once the resource type crosses a certain
-// scale: `Error: Debug Failure. No error for last overload signature`
-// (see https://github.com/microsoft/TypeScript/issues/63195). This is a
-// real internal `tsc` assertion failure, not a type error in our code, and
-// it aborts the whole build (`tsc -b`) rather than reporting a diagnostic.
+// IMPORTANT: we intentionally do NOT set `CustomTypeOptions.resources` at
+// all (leaving it at i18next's own default). Every attempt to type it
+// ourselves ran into a different problem:
 //
-// Widening only the leaf *values* to `string` (keeping the full recursive
-// key union) still crashes at the same scale, because the crash is driven
-// by the size of the derived key/overload space, not the value types. The
-// only reliable fix is to stop deriving a large literal type from the JSON
-// at all.
+// - `typeof resources['en']` (the original code): deriving the literal
+//   `typeof` type of our translation JSON (common.json + cards.json are
+//   ~10k lines combined) and feeding it into i18next's heavily-overloaded
+//   `t()` signature triggers a known TypeScript compiler crash once the
+//   resource type crosses a certain scale:
+//   `Error: Debug Failure. No error for last overload signature`
+//   (see https://github.com/microsoft/TypeScript/issues/63195). This is a
+//   real internal `tsc` assertion failure, not a type error in our code,
+//   and it aborts the whole build (`tsc -b`) rather than reporting a
+//   diagnostic.
+// - Widening only the leaf *values* to `string` (`FlattenLeafValues`,
+//   keeping the full recursive key union) still crashes at the same
+//   scale, because the crash is driven by the size of the derived *key*
+//   union/overload space, not the value types.
+// - `Record<namespace, Record<string, unknown>>` avoids the crash but
+//   made i18next's overload resolution collapse `t()`'s return type to
+//   `never`/`{}` for nested and namespaced (`ns:a.b`) keys.
+// - `Record<namespace, { [key: string]: string | Namespace }>` (recursive)
+//   avoided that regression but made `t()`'s return type a
+//   `string | Namespace` union for any non-literal key, breaking call
+//   sites that need a plain `string` (JSX children, `aria-label`, etc).
+// - `Record<namespace, Record<string, string>>` (flat) avoided *that*
+//   regression too, but because `keyof Record<string, string>` is the
+//   generic `string` type, i18next's key-path-splitting type utilities
+//   (which expect literal key unions) fell back to matching properties of
+//   JS's built-in `String.prototype` (e.g. `.search`, `.match`), producing
+//   bizarre errors like `t('common.search', ...)` resolving to the type of
+//   `String.prototype.search`.
 //
-// Two other shapes were tried and rejected:
-// - `Record<string, unknown>` made i18next's overload resolution collapse
-//   `t()`'s return type to `never`/`{}` for nested and namespaced (`ns:a.b`)
-//   keys (e.g. `t('common:common.unhealthy').toLowerCase()`), a regression
-//   from plain `string`.
-// - A self-referential `{ [key: string]: string | Namespace }` shape made
-//   `t()`'s return type a `string | Namespace` union for any non-literal
-//   key, breaking call sites that need a plain `string` (JSX children,
-//   `aria-label`, etc).
-// `Record<string, string>` (flat, one level) is not derived from `typeof`
-// so it can't trigger the scale crash, and keeps `t()`'s return type a
-// plain `string` for ordinary non-literal-key calls, matching real runtime
-// behavior (i18next always returns a string unless `returnObjects` is set).
-// Individual key strings passed to `t()` are no longer compile-time
-// validated against the real JSON — invalid keys are caught by the
-// i18n-compliance lint/test scripts and code review instead.
+// Leaving `resources` unset entirely falls back to i18next's own default
+// (`object`), which sidesteps all of the above: it isn't derived from
+// `typeof` (no crash regardless of scale), and it isn't a `Record`-like
+// mapped/index type (no `keyof`-driven collisions). `t()` calls keep
+// returning a plain `string` in the common case. The tradeoff is the same
+// as with every shape above except the original: individual key strings
+// passed to `t()` are no longer compile-time validated against the real
+// JSON — invalid keys are caught by the i18n-compliance lint/test scripts
+// and code review instead.
 declare module 'i18next' {
   interface CustomTypeOptions {
     defaultNS: typeof defaultNS
-    resources: Record<(typeof namespaces)[number], Record<string, string>>
   }
 }
