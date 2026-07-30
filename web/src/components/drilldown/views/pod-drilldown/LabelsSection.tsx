@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronUp, Loader2, Copy, Check, Pencil, Trash2, Plus, Save, X } from 'lucide-react'
 import { cn } from '../../../../lib/cn'
 import { Button } from '../../../ui/Button'
+import { Input } from '../../../ui/Input'
 import { useTranslation } from 'react-i18next'
 import { usePodLabelsContext } from './PodLabelsContext'
 
@@ -100,11 +101,12 @@ export function LabelsSection({ labels }: LabelsSectionProps) {
                   {isRemoved ? (
                     <span className="text-xs text-red-400 line-through flex-1">{value}</span>
                   ) : (
-                    <input
+                    <Input
                       type="text"
                       value={currentValue || ''}
                       onChange={(e) => handleLabelChange(key, e.target.value)}
-                      className="flex-1 text-xs font-mono bg-secondary/50 border border-border rounded px-2 py-1 text-foreground min-w-0"
+                      inputSize="sm"
+                      className="flex-1 font-mono bg-secondary/50 min-w-0"
                     />
                   )}
                   <div className="flex items-center gap-1 shrink-0">
@@ -134,20 +136,22 @@ export function LabelsSection({ labels }: LabelsSectionProps) {
 
           <div className="flex items-center gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/20">
             <Plus className="w-4 h-4 text-green-400 shrink-0" />
-            <input
+            <Input
               type="text"
               placeholder={t('common.key')}
               value={newLabelKey}
               onChange={(e) => setNewLabelKey(e.target.value)}
-              className="w-32 text-xs font-mono bg-secondary/50 border border-border rounded px-2 py-1 text-foreground"
+              inputSize="sm"
+              className="w-32 font-mono bg-secondary/50"
             />
             <span className="text-muted-foreground">=</span>
-            <input
+            <Input
               type="text"
               placeholder={t('common.value')}
               value={newLabelValue}
               onChange={(e) => setNewLabelValue(e.target.value)}
-              className="flex-1 text-xs font-mono bg-secondary/50 border border-border rounded px-2 py-1 text-foreground min-w-0"
+              inputSize="sm"
+              className="flex-1 font-mono bg-secondary/50 min-w-0"
             />
           </div>
 
