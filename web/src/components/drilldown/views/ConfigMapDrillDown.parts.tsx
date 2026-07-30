@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 import {
   FileText, Tag, ChevronDown, ChevronUp, Loader2,
   Copy, Check, ChevronLeft, Layers, Server, Database,
