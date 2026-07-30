@@ -7,6 +7,7 @@
  */
 import { AlertCircle, CheckCircle, Clock, TrendingUp, Sparkles, Loader2 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
+import { Skeleton } from '../../ui/Skeleton'
 import { useTranslation } from 'react-i18next'
 
 type AIAnalysisPanelProps = {
@@ -36,9 +37,9 @@ export function AIAnalysisPanel({
 
   if (dataLoading) {
     return (
-      <div className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm text-muted-foreground bg-secondary/30">
-        <Loader2 className="w-4 h-4 animate-spin" />
-        {t('common:common.loading', 'Loading...')}
+      <div className="space-y-2">
+        <Skeleton className="h-10 w-full rounded-lg" />
+        <Skeleton className="h-4 w-3/4 rounded" />
       </div>
     )
   }
