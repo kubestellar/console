@@ -139,6 +139,7 @@ export function NamespaceDrillDown({ data }: Props) {
                 </span>
               )}
             </button>
+          ))}
         </div>
       </div>
 
@@ -204,7 +205,6 @@ export function NamespaceDrillDown({ data }: Props) {
             <div className="space-y-2">
               {nsEvents.map((event, i) => (
                 <EventRow key={i} event={event} />
-              ))}
               ))}
             </div>
           ) : (
