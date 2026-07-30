@@ -25,6 +25,26 @@ function getLoader(lazyComp: unknown): () => Promise<{ default: unknown }> {
   return (lazyComp as { _payload: { _result: () => Promise<{ default: unknown }> } })._payload._result
 }
 
+/**
+ * Attaches a no-op rejection handler immediately, then returns the same
+ * promise so callers can still assert on it later (e.g. via
+ * `expect(promise).rejects.toThrow(...)`).
+ *
+ * Needed because these tests advance vi's fake timers through several retry/
+ * timeout ticks *before* the real assertion attaches its `.catch`/`.rejects`
+ * handler. Node's unhandled-rejection tracking checks at each tick boundary,
+ * so a promise that rejects early but isn't "observed" until several
+ * `advanceTimersByTimeAsync` calls later gets flagged as an unhandled
+ * rejection (a false positive — the real assertion below always awaits it).
+ * Attaching this handler synchronously at creation time marks the promise as
+ * handled without affecting the later assertion (multiple `.catch`/`.then`
+ * handlers may be attached to the same promise). See #22004.
+ */
+function expectEventualRejection<T>(promise: Promise<T>): Promise<T> {
+  promise.catch(() => { /* observed above; real assertion happens later */ })
+  return promise
+}
+
 describe('safeLazy', () => {
   beforeEach(() => {
     vi.useFakeTimers()
@@ -61,7 +81,7 @@ describe('safeLazy', () => {
       'Foo',
     )
 
-    const resultPromise = getLoader(LazyComp)()
+    const resultPromise = expectEventualRejection(getLoader(LazyComp)())
     // Advance past retry delays (500ms + 1000ms) since safeLazy retries all errors
     await vi.advanceTimersByTimeAsync(500)
     await vi.advanceTimersByTimeAsync(1000)
@@ -75,7 +95,7 @@ describe('safeLazy', () => {
       'MissingExport',
     )
 
-    const resultPromise = getLoader(LazyComp)()
+    const resultPromise = expectEventualRejection(getLoader(LazyComp)())
     await vi.advanceTimersByTimeAsync(500)
     await vi.advanceTimersByTimeAsync(1000)
 
@@ -91,7 +111,7 @@ describe('safeLazy', () => {
       'BadExport',
     )
 
-    const resultPromise = getLoader(LazyComp)()
+    const resultPromise = expectEventualRejection(getLoader(LazyComp)())
     await vi.advanceTimersByTimeAsync(500)
     await vi.advanceTimersByTimeAsync(1000)
 
@@ -126,7 +146,7 @@ describe('safeLazy', () => {
     const importFn = vi.fn().mockRejectedValue(new Error('Network failure'))
 
     const LazyComp = safeLazy(importFn, 'Component')
-    const resultPromise = getLoader(LazyComp)()
+    const resultPromise = expectEventualRejection(getLoader(LazyComp)())
 
     // Advance past retry delays (500ms + 1000ms)
     await vi.advanceTimersByTimeAsync(500)
@@ -145,7 +165,7 @@ describe('safeLazy', () => {
     )
 
     const LazyComp = safeLazy(importFn, 'HungComponent')
-    const resultPromise = getLoader(LazyComp)()
+    const resultPromise = expectEventualRejection(getLoader(LazyComp)())
 
     // Advance past timeout (5s) + retry delays for each attempt
     // Attempt 1: 5s timeout → reject → 500ms delay
