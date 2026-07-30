@@ -16,7 +16,7 @@ import { vi, beforeEach, afterEach } from 'vitest'
 
 const { mockClusterCacheRef } = vi.hoisted(() => ({
   mockClusterCacheRef: {
-    clusters: [] as Array<{ name: string; server?: string }>,
+    clusters: [] as Array<{ name: string; context: string; server?: string }>,
   },
 }))
 
@@ -65,8 +65,8 @@ vi.mock('../mcp/shared', () => ({
 
 vi.mock('../mcp/clusterCacheRef', () => ({
   clusterCacheRef: mockClusterCacheRef,
-  setClusterCacheRefClusters: vi.fn((clusters: Array<{ name: string; server?: string }> | unknown[]) => {
-    mockClusterCacheRef.clusters = clusters as Array<{ name: string; server?: string }>
+  setClusterCacheRefClusters: vi.fn((clusters: Array<{ name: string; context: string; server?: string }> | unknown[]) => {
+    mockClusterCacheRef.clusters = clusters as Array<{ name: string; context: string; server?: string }>
   }),
 }))
 
@@ -142,12 +142,12 @@ let mod: typeof import('../useCachedLLMd')
 
 async function loadModule() {
   const shared = await import('../mcp/shared') as {
-    clusterCacheRef: { clusters: Array<{ name: string; server?: string }> }
+    clusterCacheRef: { clusters: Array<{ name: string; context: string; server?: string }> }
   }
   shared.clusterCacheRef.clusters = mockClusterCacheRef.clusters
 
   const clusterCacheRefModule = await import('../mcp/clusterCacheRef') as {
-    setClusterCacheRefClusters: (clusters: Array<{ name: string; server?: string }>) => void
+    setClusterCacheRefClusters: (clusters: Array<{ name: string; context: string; server?: string }>) => void
   }
   clusterCacheRefModule.setClusterCacheRefClusters(mockClusterCacheRef.clusters)
 
@@ -160,16 +160,16 @@ export function setupUseCachedLLMdTestEnv() {
       vi.resetModules()
       vi.clearAllMocks()
       mockClusterCacheRef.clusters = [
-        { name: 'vllm-d', server: 'https://vllm-d.example.com' },
-        { name: 'platform-eval', server: 'https://platform-eval.example.com' },
-        { name: 'cluster-1', server: 'https://cluster-1.example.com' },
-        { name: 'cluster-2', server: 'https://cluster-2.example.com' },
-        { name: 'cluster-a', server: 'https://cluster-a.example.com' },
-        { name: 'cluster-b', server: 'https://cluster-b.example.com' },
-        { name: 'my-cluster', server: 'https://my-cluster.example.com' },
-        { name: 'bad-cluster', server: 'https://bad-cluster.example.com' },
-        { name: 'c1', server: 'https://c1.example.com' },
-        { name: 'c2', server: 'https://c2.example.com' },
+        { name: 'vllm-d', context: 'ctx-vllm-d', server: 'https://vllm-d.example.com' },
+        { name: 'platform-eval', context: 'ctx-platform-eval', server: 'https://platform-eval.example.com' },
+        { name: 'cluster-1', context: 'ctx-cluster-1', server: 'https://cluster-1.example.com' },
+        { name: 'cluster-2', context: 'ctx-cluster-2', server: 'https://cluster-2.example.com' },
+        { name: 'cluster-a', context: 'ctx-cluster-a', server: 'https://cluster-a.example.com' },
+        { name: 'cluster-b', context: 'ctx-cluster-b', server: 'https://cluster-b.example.com' },
+        { name: 'my-cluster', context: 'ctx-my-cluster', server: 'https://my-cluster.example.com' },
+        { name: 'bad-cluster', context: 'ctx-bad-cluster', server: 'https://bad-cluster.example.com' },
+        { name: 'c1', context: 'ctx-c1', server: 'https://c1.example.com' },
+        { name: 'c2', context: 'ctx-c2', server: 'https://c2.example.com' },
       ]
 
       // Default useCache: return whatever initialData is provided
