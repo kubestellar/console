@@ -44,13 +44,28 @@ vi.mock('react-i18next', () => ({
 describe('EnterpriseComplianceCards', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    (useCache as any).mockReturnValue({
+      data: null,
+      isLoading: true,
+      isRefreshing: false,
+      isDemoFallback: false,
+      isFailed: false,
+      consecutiveFailures: 0,
+      error: null,
+    });
   });
 
   describe('HIPAACard (Pattern A - useEffect/authFetch)', () => {
     it('renders loading state initially', async () => {
-      // Return an unresolved promise to keep it in loading state
-      const promise = new Promise(() => {});
-      (authFetch as any).mockReturnValue(promise);
+      (useCache as any).mockReturnValue({
+        data: null,
+        isLoading: true,
+        isRefreshing: false,
+        isDemoFallback: false,
+        isFailed: false,
+        consecutiveFailures: 0,
+        error: null,
+      });
 
       render(
         <MemoryRouter>
@@ -58,15 +73,23 @@ describe('EnterpriseComplianceCards', () => {
         </MemoryRouter>
       );
 
-      expect(screen.getByTestId('card-skeleton')).toBeInTheDocument();
+      const loadingText = screen.getByText('Loading…');
+      expect(loadingText).toBeInTheDocument();
+      expect(loadingText.className).toContain('text-muted-foreground');
     });
 
     it('renders success state and navigates on click', async () => {
       const user = userEvent.setup();
-      const mockResponse = { ok: true };
       const mockData = { overall_score: 85, safeguards_passed: 10, safeguards_failed: 2, phi_namespaces: 3, encrypted_flows: 7 };
-      (authFetch as any).mockResolvedValue(mockResponse);
-      (safeJson as any).mockResolvedValue(mockData);
+      (useCache as any).mockReturnValue({
+        data: mockData,
+        isLoading: false,
+        isRefreshing: false,
+        isDemoFallback: false,
+        isFailed: false,
+        consecutiveFailures: 0,
+        error: null,
+      });
 
       render(
         <MemoryRouter>
@@ -90,8 +113,15 @@ describe('EnterpriseComplianceCards', () => {
     });
 
     it('renders error state on fetch rejection', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      (authFetch as any).mockRejectedValue(new Error('Network error'));
+      (useCache as any).mockReturnValue({
+        data: null,
+        isLoading: false,
+        isRefreshing: false,
+        isDemoFallback: false,
+        isFailed: true,
+        consecutiveFailures: 3,
+        error: 'Network error',
+      });
 
       render(
         <MemoryRouter>
@@ -104,11 +134,18 @@ describe('EnterpriseComplianceCards', () => {
         expect(errorText).toBeInTheDocument();
         expect(errorText.className).toContain('text-red-400');
       });
-      consoleSpy.mockRestore();
     });
 
     it('renders "No data" state when response is not ok', async () => {
-      (authFetch as any).mockResolvedValue({ ok: false });
+      (useCache as any).mockReturnValue({
+        data: null,
+        isLoading: false,
+        isRefreshing: false,
+        isDemoFallback: false,
+        isFailed: false,
+        consecutiveFailures: 0,
+        error: null,
+      });
 
       render(
         <MemoryRouter>
@@ -119,13 +156,12 @@ describe('EnterpriseComplianceCards', () => {
       await waitFor(() => {
         expect(screen.getByText('No data')).toBeInTheDocument();
       });
-      expect(safeJson).not.toHaveBeenCalled();
     });
   });
 
   describe('NISTCard (Pattern B - useCache)', () => {
     it('renders loading state when data is null and no error', () => {
-      (useCache as any).mockReturnValue({ data: null, error: false, isLoading: true });
+      (useCache as any).mockReturnValue({ data: null, error: null });
 
       render(
         <MemoryRouter>
@@ -133,11 +169,11 @@ describe('EnterpriseComplianceCards', () => {
         </MemoryRouter>
       );
 
-      expect(screen.getByTestId('card-skeleton')).toBeInTheDocument();
+      expect(screen.getByText('Loading…')).toBeInTheDocument();
     });
 
     it('renders error state with translated text', () => {
-      (useCache as any).mockReturnValue({ data: null, error: new Error('fail') });
+      (useCache as any).mockReturnValue({ data: null, error: 'failedToLoad' });
 
       render(
         <MemoryRouter>

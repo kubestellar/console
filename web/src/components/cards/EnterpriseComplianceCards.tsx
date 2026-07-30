@@ -4,14 +4,11 @@
  * Lightweight summary cards for the Console Studio that link to full dashboards.
  * Each card fetches summary data and renders a compact view.
  */
-import { useState, useEffect } from 'react'
 import { Shield, FileText, Activity, Lock, WifiOff, Award, CheckCircle2, XCircle, KeyRound, Clock, Package, Scale } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { authFetch, safeJson } from '../../lib/api'
 import { useCache } from '../../lib/cache'
-import { useDemoMode } from '../../hooks/useDemoMode'
-import { Skeleton } from '../ui/Skeleton'
+import { useCardLoadingState } from './CardDataContext'
 import { TechnicalAcronym } from '../shared/TechnicalAcronym'
 
 // ── Shared helpers ────────────────────────────────────────────────────────
@@ -21,24 +18,22 @@ const SCORE_WARN = 'hsl(var(--chart-warning, 45 93% 47%))'
 const SCORE_BAD = 'hsl(var(--chart-danger, 0 84% 60%))'
 const RING_BG = 'hsl(var(--muted) / 0.4)'
 const ERROR_TEXT_CLASS = 'text-red-400 text-sm'
+const LOADING_TEXT_CLASS = 'text-muted-foreground text-sm'
 const ENTERPRISE_SUMMARY_CACHE_PREFIX = 'enterprise-summary:'
 
-function CardSkeleton() {
-  return (
-    <div className="space-y-2" data-testid="card-skeleton">
-      <Skeleton className="h-4 w-full rounded" />
-      <Skeleton className="h-4 w-3/4 rounded" />
-    </div>
-  )
-}
-
-function useSummaryData<T extends Record<string, unknown>>(endpoint: string, demoData?: T) {
-  const { t } = useTranslation('cards')
-  const { data, error, isLoading } = useCache<T | null>({
+function useSummaryData<T extends Record<string, unknown>>(endpoint: string) {
+  const {
+    data,
+    isLoading,
+    isRefreshing,
+    isDemoFallback,
+    isFailed,
+    consecutiveFailures,
+    error,
+  } = useCache<T | null>({
     key: `${ENTERPRISE_SUMMARY_CACHE_PREFIX}${endpoint}`,
     category: 'rbac',
     initialData: null,
-    demoData: demoData ?? null,
     fetcher: async () => {
       const response = await authFetch(endpoint)
       if (!response.ok) {
@@ -50,8 +45,12 @@ function useSummaryData<T extends Record<string, unknown>>(endpoint: string, dem
 
   return {
     data,
-    error: error ? t('failedToLoad') : null,
     isLoading,
+    isRefreshing,
+    isDemoFallback,
+    isFailed,
+    consecutiveFailures,
+    error,
   }
 }
 
@@ -102,33 +101,25 @@ function MiniStat({ label, value, color = 'text-foreground' }: { label: string; 
 // ── HIPAA Card ──────────────────────────────────────────────────────────────
 
 export function HIPAACard() {
-  const { t } = useTranslation('errors')
-  const { isDemoMode } = useDemoMode()
   const nav = useNavigate()
-  const [data, setData] = useState<Record<string, number> | null>(null)
-  const [isLoading, setIsLoading] = useState(!isDemoMode)
-  const [error, setError] = useState<string | null>(null)
-  useEffect(() => {
-    if (isDemoMode) {
-      setData({ overall_score: 87, safeguards_passed: 34, safeguards_failed: 6, phi_namespaces: 8, encrypted_flows: 42 })
-      setIsLoading(false)
-      return
-    }
-    setIsLoading(true)
-    authFetch('/api/compliance/hipaa/summary')
-      .then(r => r.ok ? safeJson<Record<string, number>>(r) : null)
-      .then(setData)
-      .catch((err: unknown) => { setError(err instanceof Error ? err.message : t('messages.failedToLoad')); console.error(err) })
-      .finally(() => setIsLoading(false))
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDemoMode])
+  const { data, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, error } = useSummaryData<Record<string, number>>('/api/compliance/hipaa/summary')
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
+    isLoading,
+    hasAnyData: data != null,
+    isRefreshing,
+    isDemoData: isDemoFallback,
+    isFailed,
+    consecutiveFailures,
+  })
   return (
     <CardShell title="HIPAA Compliance" icon={Shield} onClick={() => nav('/hipaa')}>
       {error ? (
         <p className="text-red-400 text-sm">{error}</p>
-      ) : isLoading ? (
-        <CardSkeleton />
-      ) : data ? (
+      ) : showSkeleton ? (
+        <p className="text-muted-foreground text-sm">Loading…</p>
+      ) : showEmptyState || !data ? (
+        <p className="text-muted-foreground text-sm">No data</p>
+      ) : (
         <div className="flex items-center gap-4">
           <ScoreRing score={data.overall_score ?? 0} />
           <div className="grid grid-cols-2 gap-2 flex-1">
@@ -138,8 +129,6 @@ export function HIPAACard() {
             <MiniStat label="Encrypted Flows" value={data.encrypted_flows ?? 0} color="text-blue-400" />
           </div>
         </div>
-      ) : (
-        <p className="text-muted-foreground text-sm">No data</p>
       )}
     </CardShell>
   )
@@ -148,33 +137,25 @@ export function HIPAACard() {
 // ── GxP Card ─────────────────────────────────────────────────────────────────
 
 export function GxPCard() {
-  const { t } = useTranslation('errors')
-  const { isDemoMode } = useDemoMode()
   const nav = useNavigate()
-  const [data, setData] = useState<Record<string, unknown> | null>(null)
-  const [isLoading, setIsLoading] = useState(!isDemoMode)
-  const [error, setError] = useState<string | null>(null)
-  useEffect(() => {
-    if (isDemoMode) {
-      setData({ chain_integrity: true, total_records: 4820, total_signatures: 4710, pending_signatures: 12 })
-      setIsLoading(false)
-      return
-    }
-    setIsLoading(true)
-    authFetch('/api/compliance/gxp/summary')
-      .then(r => r.ok ? safeJson<Record<string, unknown>>(r) : null)
-      .then(setData)
-      .catch((err: unknown) => { setError(err instanceof Error ? err.message : t('messages.failedToLoad')); console.error(err) })
-      .finally(() => setIsLoading(false))
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDemoMode])
+  const { data, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, error } = useSummaryData<Record<string, unknown>>('/api/compliance/gxp/summary')
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
+    isLoading,
+    hasAnyData: data != null,
+    isRefreshing,
+    isDemoData: isDemoFallback,
+    isFailed,
+    consecutiveFailures,
+  })
   return (
     <CardShell title="GxP Validation (21 CFR 11)" icon={FileText} onClick={() => nav('/gxp')}>
       {error ? (
         <p className="text-red-400 text-sm">{error}</p>
-      ) : isLoading ? (
-        <CardSkeleton />
-      ) : data ? (
+      ) : showSkeleton ? (
+        <p className="text-muted-foreground text-sm">Loading…</p>
+      ) : showEmptyState || !data ? (
+        <p className="text-muted-foreground text-sm">No data</p>
+      ) : (
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             {data.chain_integrity
@@ -188,8 +169,6 @@ export function GxPCard() {
             <MiniStat label="Pending" value={Number(data.pending_signatures ?? 0)} color="text-yellow-400" />
           </div>
         </div>
-      ) : (
-        <p className="text-muted-foreground text-sm">No data</p>
       )}
     </CardShell>
   )
@@ -198,41 +177,31 @@ export function GxPCard() {
 // ── BAA Card ─────────────────────────────────────────────────────────────────
 
 export function BAACard() {
-  const { t } = useTranslation('errors')
-  const { isDemoMode } = useDemoMode()
   const nav = useNavigate()
-  const [data, setData] = useState<Record<string, number> | null>(null)
-  const [isLoading, setIsLoading] = useState(!isDemoMode)
-  const [error, setError] = useState<string | null>(null)
-  useEffect(() => {
-    if (isDemoMode) {
-      setData({ total_agreements: 18, active_agreements: 14, expiring_soon: 3, expired: 1 })
-      setIsLoading(false)
-      return
-    }
-    setIsLoading(true)
-    authFetch('/api/compliance/baa/summary')
-      .then(r => r.ok ? safeJson<Record<string, number>>(r) : null)
-      .then(setData)
-      .catch((err: unknown) => { setError(err instanceof Error ? err.message : t('messages.failedToLoad')); console.error(err) })
-      .finally(() => setIsLoading(false))
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDemoMode])
+  const { data, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, error } = useSummaryData<Record<string, number>>('/api/compliance/baa/summary')
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
+    isLoading,
+    hasAnyData: data != null,
+    isRefreshing,
+    isDemoData: isDemoFallback,
+    isFailed,
+    consecutiveFailures,
+  })
   return (
     <CardShell title="BAA Tracker" icon={FileText} onClick={() => nav('/baa')}>
       {error ? (
         <p className="text-red-400 text-sm">{error}</p>
-      ) : isLoading ? (
-        <CardSkeleton />
-      ) : data ? (
+      ) : showSkeleton ? (
+        <p className="text-muted-foreground text-sm">Loading…</p>
+      ) : showEmptyState || !data ? (
+        <p className="text-muted-foreground text-sm">No data</p>
+      ) : (
         <div className="grid grid-cols-2 gap-2">
           <MiniStat label="Total" value={data.total_agreements ?? 0} />
           <MiniStat label="Active" value={data.active_agreements ?? 0} color="text-green-400" />
           <MiniStat label="Expiring" value={data.expiring_soon ?? 0} color="text-yellow-400" />
           <MiniStat label="Expired" value={data.expired ?? 0} color="text-red-400" />
         </div>
-      ) : (
-        <p className="text-muted-foreground text-sm">No data</p>
       )}
     </CardShell>
   )
@@ -325,7 +294,7 @@ export function ComplianceReportsCard() {
 
 export function NISTCard() {
   const nav = useNavigate()
-  const { data, error, isLoading } = useSummaryData<Record<string, number>>('/api/compliance/nist/summary')
+  const { data, error } = useSummaryData<Record<string, number>>('/api/compliance/nist/summary')
   return (
     <CardShell title="NIST 800-53" icon={Shield} onClick={() => nav('/nist')}>
       {data ? (
@@ -338,7 +307,7 @@ export function NISTCard() {
             <MiniStat label="Total" value={data.total_controls ?? 0} />
           </div>
         </div>
-      ) : isLoading ? <CardSkeleton /> : <p className={ERROR_TEXT_CLASS}>{error ?? 'No data'}</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
@@ -347,7 +316,7 @@ export function NISTCard() {
 
 export function STIGCard() {
   const nav = useNavigate()
-  const { data, error, isLoading } = useSummaryData<Record<string, number>>('/api/compliance/stig/summary')
+  const { data, error } = useSummaryData<Record<string, number>>('/api/compliance/stig/summary')
   return (
     <CardShell title="DISA STIG" icon={Shield} onClick={() => nav('/stig')}>
       {data ? (
@@ -360,7 +329,7 @@ export function STIGCard() {
             <MiniStat label="Not a Finding" value={data.not_a_finding ?? 0} color="text-green-400" />
           </div>
         </div>
-      ) : isLoading ? <CardSkeleton /> : <p className={ERROR_TEXT_CLASS}>{error ?? 'No data'}</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
@@ -369,7 +338,7 @@ export function STIGCard() {
 
 export function AirGapCard() {
   const nav = useNavigate()
-  const { data, error, isLoading } = useSummaryData<Record<string, number>>('/api/compliance/airgap/summary')
+  const { data, error } = useSummaryData<Record<string, number>>('/api/compliance/airgap/summary')
   return (
     <CardShell title="Air-Gap Readiness" icon={WifiOff} onClick={() => nav('/air-gap')}>
       {data ? (
@@ -382,7 +351,7 @@ export function AirGapCard() {
             <MiniStat label="Met" value={data.met_requirements ?? 0} color="text-green-400" />
           </div>
         </div>
-      ) : isLoading ? <CardSkeleton /> : <p className={ERROR_TEXT_CLASS}>{error ?? 'No data'}</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
@@ -391,7 +360,7 @@ export function AirGapCard() {
 
 export function SIEMIntegrationCard() {
   const nav = useNavigate()
-  const { data, error, isLoading } = useSummaryData<Record<string, number>>('/api/v1/compliance/siem/summary')
+  const { data, error } = useSummaryData<Record<string, number>>('/api/v1/compliance/siem/summary')
   return (
     <CardShell title="SIEM Integration" icon={Activity} onClick={() => nav('/enterprise/siem')}>
       {data ? (
@@ -401,7 +370,7 @@ export function SIEMIntegrationCard() {
           <MiniStat label="Critical" value={data.critical_alerts ?? 0} color="text-red-400" />
           <MiniStat label="Active" value={data.active_alerts ?? 0} color="text-yellow-400" />
         </div>
-      ) : isLoading ? <CardSkeleton /> : <p className={ERROR_TEXT_CLASS}>{error ?? 'No data'}</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
@@ -410,7 +379,7 @@ export function SIEMIntegrationCard() {
 
 export function IncidentResponseCard() {
   const nav = useNavigate()
-  const { data, error, isLoading } = useSummaryData<Record<string, unknown>>('/api/v1/compliance/incidents/metrics')
+  const { data, error } = useSummaryData<Record<string, unknown>>('/api/v1/compliance/incidents/metrics')
   return (
     <CardShell title="Incident Response" icon={Shield} onClick={() => nav('/enterprise/incident-response')}>
       {data ? (
@@ -420,7 +389,7 @@ export function IncidentResponseCard() {
           <MiniStat label="Resolved (30d)" value={Number(data.resolved_last_30d ?? 0)} color="text-green-400" />
           <MiniStat label="Escalation" value={`${Number(data.escalation_rate ?? 0)}%`} color="text-yellow-400" />
         </div>
-      ) : isLoading ? <CardSkeleton /> : <p className={ERROR_TEXT_CLASS}>{error ?? 'No data'}</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
@@ -429,7 +398,7 @@ export function IncidentResponseCard() {
 
 export function ThreatIntelCard() {
   const nav = useNavigate()
-  const { data, error, isLoading } = useSummaryData<Record<string, number>>('/api/v1/compliance/threat-intel/summary')
+  const { data, error } = useSummaryData<Record<string, number>>('/api/v1/compliance/threat-intel/summary')
   return (
     <CardShell title="Threat Intelligence" icon={Shield} onClick={() => nav('/enterprise/threat-intel')}>
       {data ? (
@@ -442,7 +411,7 @@ export function ThreatIntelCard() {
             <MiniStat label="Risk Score" value={data.risk_score ?? 0} color="text-yellow-400" />
           </div>
         </div>
-      ) : isLoading ? <CardSkeleton /> : <p className={ERROR_TEXT_CLASS}>{error ?? 'No data'}</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
@@ -451,7 +420,7 @@ export function ThreatIntelCard() {
 
 export function FedRAMPCard() {
   const nav = useNavigate()
-  const { data, error, isLoading } = useSummaryData<Record<string, unknown>>('/api/compliance/fedramp/score')
+  const { data, error } = useSummaryData<Record<string, unknown>>('/api/compliance/fedramp/score')
   return (
     <CardShell title="FedRAMP Readiness" icon={Award} onClick={() => nav('/fedramp')}>
       {data ? (
@@ -466,7 +435,7 @@ export function FedRAMPCard() {
             } />
           </div>
         </div>
-      ) : isLoading ? <CardSkeleton /> : <p className={ERROR_TEXT_CLASS}>{error ?? 'No data'}</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
@@ -475,7 +444,7 @@ export function FedRAMPCard() {
 
 export function OIDCFederationCard() {
   const nav = useNavigate()
-  const { data, error, isLoading } = useSummaryData<Record<string, number>>('/api/identity/oidc/summary')
+  const { data, error } = useSummaryData<Record<string, number>>('/api/identity/oidc/summary')
   return (
     <CardShell title="OIDC Federation" icon={KeyRound} onClick={() => nav('/enterprise/oidc')}>
       {data ? (
@@ -485,7 +454,7 @@ export function OIDCFederationCard() {
           <MiniStat label="Sessions" value={data.active_sessions ?? 0} color="text-green-400" />
           <MiniStat label="MFA" value={`${data.mfa_adoption ?? 0}%`} color="text-cyan-400" />
         </div>
-      ) : isLoading ? <CardSkeleton /> : <p className={ERROR_TEXT_CLASS}>{error ?? 'No data'}</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
@@ -494,7 +463,7 @@ export function OIDCFederationCard() {
 
 export function RBACAuditCard() {
   const nav = useNavigate()
-  const { data, error, isLoading } = useSummaryData<Record<string, number>>('/api/identity/rbac/summary')
+  const { data, error } = useSummaryData<Record<string, number>>('/api/identity/rbac/summary')
   return (
     <CardShell title={<><TechnicalAcronym term="RBAC" /> Audit</>} icon={Lock} onClick={() => nav('/enterprise/rbac-audit')}>
       {data ? (
@@ -507,7 +476,7 @@ export function RBACAuditCard() {
             <MiniStat label="Score" value={`${data.compliance_score ?? 0}%`} color="text-green-400" />
           </div>
         </div>
-      ) : isLoading ? <CardSkeleton /> : <p className={ERROR_TEXT_CLASS}>{error ?? 'No data'}</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
@@ -516,7 +485,7 @@ export function RBACAuditCard() {
 
 export function SessionManagementCard() {
   const nav = useNavigate()
-  const { data, error, isLoading } = useSummaryData<Record<string, number>>('/api/identity/sessions/summary')
+  const { data, error } = useSummaryData<Record<string, number>>('/api/identity/sessions/summary')
   return (
     <CardShell title="Session Management" icon={Clock} onClick={() => nav('/enterprise/sessions')}>
       {data ? (
@@ -526,7 +495,7 @@ export function SessionManagementCard() {
           <MiniStat label="Avg Duration" value={`${data.avg_duration_minutes ?? 0}m`} />
           <MiniStat label="Violations" value={data.policy_violations ?? 0} color={data.policy_violations > 0 ? 'text-red-400' : 'text-green-400'} />
         </div>
-      ) : isLoading ? <CardSkeleton /> : <p className={ERROR_TEXT_CLASS}>{error ?? 'No data'}</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
@@ -535,7 +504,7 @@ export function SessionManagementCard() {
 
 export function SBOMManagerCard() {
   const nav = useNavigate()
-  const { data, error, isLoading } = useSummaryData<Record<string, number>>('/api/supply-chain/sbom/summary')
+  const { data, error } = useSummaryData<Record<string, number>>('/api/supply-chain/sbom/summary')
   return (
     <CardShell title="SBOM Manager" icon={Package} onClick={() => nav('/enterprise/sbom')}>
       {data ? (
@@ -545,7 +514,7 @@ export function SBOMManagerCard() {
           <MiniStat label="Critical" value={data.critical_count ?? 0} color="text-red-500" />
           <MiniStat label="Coverage" value={`${data.sbom_coverage ?? 0}%`} color="text-green-400" />
         </div>
-      ) : isLoading ? <CardSkeleton /> : <p className={ERROR_TEXT_CLASS}>{error ?? 'No data'}</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
@@ -554,7 +523,7 @@ export function SBOMManagerCard() {
 
 export function SigstoreVerifyCard() {
   const nav = useNavigate()
-  const { data, error, isLoading } = useSummaryData<Record<string, number>>('/api/supply-chain/signing/summary')
+  const { data, error } = useSummaryData<Record<string, number>>('/api/supply-chain/signing/summary')
   return (
     <CardShell title="Sigstore Verify" icon={Shield} onClick={() => nav('/enterprise/sigstore')}>
       {data ? (
@@ -564,7 +533,7 @@ export function SigstoreVerifyCard() {
           <MiniStat label="Verified" value={data.verified_images ?? 0} color="text-green-400" />
           <MiniStat label="Violations" value={data.policy_violations ?? 0} color="text-red-400" />
         </div>
-      ) : isLoading ? <CardSkeleton /> : <p className={ERROR_TEXT_CLASS}>{error ?? 'No data'}</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
@@ -573,7 +542,7 @@ export function SigstoreVerifyCard() {
 
 export function SLSAProvenanceCard() {
   const nav = useNavigate()
-  const { data, error, isLoading } = useSummaryData<Record<string, unknown>>('/api/supply-chain/slsa/summary')
+  const { data, error } = useSummaryData<Record<string, unknown>>('/api/supply-chain/slsa/summary')
   const levelDistribution = (data?.level_distribution as Record<string, number> | undefined) ?? {}
   return (
     <CardShell title="SLSA Provenance" icon={Lock} onClick={() => nav('/enterprise/slsa')}>
@@ -584,7 +553,7 @@ export function SLSAProvenanceCard() {
           <MiniStat label="L3+" value={(levelDistribution['3'] ?? 0) + (levelDistribution['4'] ?? 0)} color="text-emerald-400" />
           <MiniStat label="Verified" value={Number(data.verified_workloads ?? 0)} color="text-green-400" />
         </div>
-      ) : isLoading ? <CardSkeleton /> : <p className={ERROR_TEXT_CLASS}>{error ?? 'No data'}</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
@@ -593,7 +562,7 @@ export function SLSAProvenanceCard() {
 
 export function RiskMatrixCard() {
   const nav = useNavigate()
-  const { data, error, isLoading } = useSummaryData<Record<string, number>>('/api/v1/compliance/erm/risk-matrix/summary')
+  const { data, error } = useSummaryData<Record<string, number>>('/api/v1/compliance/erm/risk-matrix/summary')
   return (
     <CardShell title="Risk Matrix" icon={Scale} onClick={() => nav('/enterprise/risk-matrix')}>
       {data ? (
@@ -603,7 +572,7 @@ export function RiskMatrixCard() {
           <MiniStat label="High" value={data.high ?? 0} color="text-red-300" />
           <MiniStat label="Medium" value={data.medium ?? 0} color="text-orange-400" />
         </div>
-      ) : isLoading ? <CardSkeleton /> : <p className={ERROR_TEXT_CLASS}>{error ?? 'No data'}</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
@@ -612,7 +581,7 @@ export function RiskMatrixCard() {
 
 export function RiskRegisterCard() {
   const nav = useNavigate()
-  const { data, error, isLoading } = useSummaryData<Record<string, number>>('/api/v1/compliance/erm/risk-register/summary')
+  const { data, error } = useSummaryData<Record<string, number>>('/api/v1/compliance/erm/risk-register/summary')
   return (
     <CardShell title="Risk Register" icon={Scale} onClick={() => nav('/enterprise/risk-register')}>
       {data ? (
@@ -622,7 +591,7 @@ export function RiskRegisterCard() {
           <MiniStat label="Total" value={data.total_risks ?? 0} />
           <MiniStat label="Avg Score" value={Number(data.avg_risk_score ?? 0).toFixed(1)} color="text-orange-400" />
         </div>
-      ) : isLoading ? <CardSkeleton /> : <p className={ERROR_TEXT_CLASS}>{error ?? 'No data'}</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
@@ -631,7 +600,7 @@ export function RiskRegisterCard() {
 
 export function RiskAppetiteCard() {
   const nav = useNavigate()
-  const { data, error, isLoading } = useSummaryData<Record<string, number>>('/api/v1/compliance/erm/risk-appetite/summary')
+  const { data, error } = useSummaryData<Record<string, number>>('/api/v1/compliance/erm/risk-appetite/summary')
   return (
     <CardShell title="Risk Appetite" icon={Scale} onClick={() => nav('/enterprise/risk-appetite')}>
       {data ? (
@@ -641,7 +610,7 @@ export function RiskAppetiteCard() {
           <MiniStat label="Within" value={data.within_appetite ?? 0} color="text-green-400" />
           <MiniStat label="KRI Breach" value={data.kri_breaches ?? 0} color="text-red-400" />
         </div>
-      ) : isLoading ? <CardSkeleton /> : <p className={ERROR_TEXT_CLASS}>{error ?? 'No data'}</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
