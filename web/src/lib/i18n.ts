@@ -157,10 +157,24 @@ configuredI18n.init({
 
 export default i18n
 
+// Recursively widen every leaf value of a translation resource object to
+// `string`. This keeps full type-safety for translation *keys* (used by
+// `t()` autocompletion and dot-path validation) while avoiding a TypeScript
+// compiler crash ("Debug Failure: No error for last overload signature")
+// that occurs when huge translation JSON files (our `common.json`/`cards.json`
+// are ~10k lines combined) are used as literal `typeof` types directly in
+// i18next's heavily-overloaded `t()` signature. Without this, the sheer
+// number of distinct string-literal leaf types combined with `t()`'s
+// overload set trips an internal TS assertion during `tsc -b`.
+// See: https://github.com/microsoft/TypeScript/issues/63195
+type FlattenLeafValues<T> = {
+  [K in keyof T]: T[K] extends object ? FlattenLeafValues<T[K]> : string
+}
+
 // Type-safe translation keys
 declare module 'i18next' {
   interface CustomTypeOptions {
     defaultNS: typeof defaultNS
-    resources: typeof resources['en']
+    resources: FlattenLeafValues<typeof resources['en']>
   }
 }
