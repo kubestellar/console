@@ -201,6 +201,7 @@ export function Pagination({ currentPage, totalPages, totalCount, onPageChange }
           start: (currentPage - 1) * PAGE_SIZE + 1,
           end: Math.min(currentPage * PAGE_SIZE, totalCount),
           total: totalCount,
+          defaultValue: `Showing ${(currentPage - 1) * PAGE_SIZE + 1}\u2013${Math.min(currentPage * PAGE_SIZE, totalCount)} of ${totalCount}`,
         })}
       </span>
       <div className="flex items-center gap-1">
@@ -221,6 +222,7 @@ export function Pagination({ currentPage, totalPages, totalCount, onPageChange }
           {t('pagination.pageOf', {
             page: currentPage,
             total: totalPages,
+            defaultValue: `Page ${currentPage} of ${totalPages}`,
           })}
         </span>
         <button
