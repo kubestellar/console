@@ -26,10 +26,11 @@ import {
   hasCrossClusterTagMismatch,
   normalizeClusterDataCache,
 } from './ClusterResourceTree.utils'
+import type { ClusterInfo } from '../../../hooks/mcp/types'
 import type { ClusterDataCache } from './types'
 
 interface UseClusterDataCacheParams {
-  clusters: Array<{ name: string }>
+  clusters: ClusterInfo[]
 }
 
 export function useClusterDataCache({ clusters }: UseClusterDataCacheParams) {

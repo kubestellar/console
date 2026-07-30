@@ -49,7 +49,6 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
   } = useChartFilters({ storageKey: 'cluster-resource-tree' })
 
   const {
-    selectedCluster,
     setSelectedCluster,
     loadingClusters,
     setLoadingClusters,
