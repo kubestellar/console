@@ -241,36 +241,43 @@ export function GrantAccessModal({ namespace, existingAccess, onClose, onGranted
               {showDropdown && availableSubjects.length > 0 && (
                 <div id="grant-access-subject-listbox" role="listbox" className="absolute z-10 top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
                   {filteredSubjects.map((name, index) => (
-                    <button
+                    <Button
                       key={name}
                       id={`grant-access-subject-option-${index}`}
                       role="option"
                       aria-selected={activeSuggestionIndex === index}
                       onClick={() => selectSubject(name)}
-                      className={`flex w-full items-center min-h-11 px-3 py-2 text-left text-sm text-white hover:bg-secondary/50 transition-colors ${activeSuggestionIndex === index ? 'bg-secondary/50' : ''}`}
+                      variant="ghost"
+                      size="md"
+                      className={`w-full text-left text-sm justify-start ${activeSuggestionIndex === index ? 'bg-secondary/50' : 'hover:bg-secondary/50'} min-h-11 px-3 py-2`}
                     >
                       {name}
-                    </button>
+                    </Button>
                   ))}
                   {showCustomOption && (
-                    <button
+                    <Button
                       id={`grant-access-subject-option-${filteredSubjects.length}`}
                       role="option"
                       aria-selected={activeSuggestionIndex === filteredSubjects.length}
                       onClick={() => selectSubject(subjectName)}
-                      className={`flex w-full items-center min-h-11 px-3 py-2 text-left text-sm text-blue-400 hover:bg-secondary/50 transition-colors border-t border-border ${activeSuggestionIndex === filteredSubjects.length ? 'bg-secondary/50' : ''}`}
+                      variant="ghost"
+                      size="md"
+                      className={`w-full text-left text-sm justify-start text-blue-400 border-t border-border min-h-11 px-3 py-2 ${activeSuggestionIndex === filteredSubjects.length ? 'bg-secondary/50' : 'hover:bg-secondary/50'}`}
                     >
                       Use &quot;{subjectName}&quot;
-                    </button>
+                    </Button>
                   )}
                 </div>
               )}
             </div>
             {showDropdown && (
-              <button
+              <Button
                 onClick={() => setShowDropdown(false)}
-                className="fixed inset-0 z-0"
+                className="fixed inset-0 z-0 p-0 m-0 bg-transparent"
                 aria-label="Close dropdown"
+                variant="ghost"
+                size="sm"
+                title="Close dropdown"
               />
             )}
           </div>

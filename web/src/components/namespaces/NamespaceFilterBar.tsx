@@ -1,6 +1,7 @@
 import { Search, Layers, Server } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Input } from '../ui/Input'
+import { Button } from '../ui/Button'
 
 type GroupByMode = 'cluster' | 'type'
 
@@ -33,8 +34,10 @@ export function NamespaceFilterBar({
         />
       </div>
       <div className="flex w-full flex-wrap items-center gap-1 rounded-lg bg-secondary/30 p-1 sm:w-auto sm:flex-nowrap sm:self-start">
-        <button
+        <Button
           onClick={() => onGroupByChange('cluster')}
+          variant="ghost"
+          size="md"
           className={`flex flex-1 items-center justify-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors sm:flex-none ${groupBy === 'cluster'
             ? 'bg-blue-500/20 text-blue-400'
             : 'text-muted-foreground hover:text-foreground'
@@ -43,9 +46,11 @@ export function NamespaceFilterBar({
         >
           <Server className="w-4 h-4" />
           By Cluster
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={() => onGroupByChange('type')}
+          variant="ghost"
+          size="md"
           className={`flex flex-1 items-center justify-center gap-1.5 px-3 py-1.5 rounded text-sm transition-colors sm:flex-none ${groupBy === 'type'
             ? 'bg-blue-500/20 text-blue-400'
             : 'text-muted-foreground hover:text-foreground'
@@ -54,7 +59,7 @@ export function NamespaceFilterBar({
         >
           <Layers className="w-4 h-4" />
           By Type
-        </button>
+        </Button>
       </div>
     </div>
   )
