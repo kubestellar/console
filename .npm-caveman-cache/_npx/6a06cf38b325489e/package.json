@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "caveman-installer": "github:JuliusBrussee/caveman#0d95a81d35a9"
+  },
+  "_npx": {
+    "packages": [
+      "github:JuliusBrussee/caveman#0d95a81d35a9"
+    ]
+  }
+}
