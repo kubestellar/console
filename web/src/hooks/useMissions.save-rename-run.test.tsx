@@ -1,10 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, act, render, screen, waitFor } from '@testing-library/react'
+import { renderHook, act } from '@testing-library/react'
 import React from 'react'
 import { MissionProvider, useMissions } from './useMissions'
 import { getDemoMode } from './useDemoMode'
-import { emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
-import { fetchMissionContent, missionCache } from '../lib/missions/missionCache'
+import { emitMissionError, emitMissionRated } from '../lib/analytics'
 
 // ── External module mocks ─────────────────────────────────────────────────────
 
@@ -445,4 +444,3 @@ describe('runSavedMission', () => {
 })
 
 // ── Cluster targeting in startMission ────────────────────────────────────────
-

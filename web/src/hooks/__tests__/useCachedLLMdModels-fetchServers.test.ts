@@ -1,3 +1,4 @@
+describe('useCachedLLMdModels', () => {
     it('returns expected shape with models alias', async () => {
       const { useCachedLLMdModels } = await loadModule()
       const { result } = renderHook(() => useCachedLLMdModels())
@@ -6,7 +7,6 @@
       expect(result.current).toHaveProperty('data')
       expect(result.current).toHaveProperty('isLoading')
       expect(result.current).toHaveProperty('refetch')
-    })
 
     it('uses correct cache key', async () => {
       const { useCachedLLMdModels } = await loadModule()
