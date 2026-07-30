@@ -160,16 +160,16 @@ export function setupUseCachedLLMdTestEnv() {
       vi.resetModules()
       vi.clearAllMocks()
       mockClusterCacheRef.clusters = [
-        { name: 'vllm-d', context: 'vllm-d', server: 'https://vllm-d.example.com' },
-        { name: 'platform-eval', context: 'platform-eval', server: 'https://platform-eval.example.com' },
-        { name: 'cluster-1', context: 'cluster-1', server: 'https://cluster-1.example.com' },
-        { name: 'cluster-2', context: 'cluster-2', server: 'https://cluster-2.example.com' },
-        { name: 'cluster-a', context: 'cluster-a', server: 'https://cluster-a.example.com' },
-        { name: 'cluster-b', context: 'cluster-b', server: 'https://cluster-b.example.com' },
-        { name: 'my-cluster', context: 'my-cluster', server: 'https://my-cluster.example.com' },
-        { name: 'bad-cluster', context: 'bad-cluster', server: 'https://bad-cluster.example.com' },
-        { name: 'c1', context: 'c1', server: 'https://c1.example.com' },
-        { name: 'c2', context: 'c2', server: 'https://c2.example.com' },
+        { name: 'vllm-d', context: 'ctx-vllm-d', server: 'https://vllm-d.example.com' },
+        { name: 'platform-eval', context: 'ctx-platform-eval', server: 'https://platform-eval.example.com' },
+        { name: 'cluster-1', context: 'ctx-cluster-1', server: 'https://cluster-1.example.com' },
+        { name: 'cluster-2', context: 'ctx-cluster-2', server: 'https://cluster-2.example.com' },
+        { name: 'cluster-a', context: 'ctx-cluster-a', server: 'https://cluster-a.example.com' },
+        { name: 'cluster-b', context: 'ctx-cluster-b', server: 'https://cluster-b.example.com' },
+        { name: 'my-cluster', context: 'ctx-my-cluster', server: 'https://my-cluster.example.com' },
+        { name: 'bad-cluster', context: 'ctx-bad-cluster', server: 'https://bad-cluster.example.com' },
+        { name: 'c1', context: 'ctx-c1', server: 'https://c1.example.com' },
+        { name: 'c2', context: 'ctx-c2', server: 'https://c2.example.com' },
       ]
 
       // Default useCache: return whatever initialData is provided

@@ -7,7 +7,6 @@ import { vi, beforeEach, afterEach } from 'vitest'
 let demoModeValue = false
 const demoModeListeners = new Set<() => void>()
 
-
 vi.mock('../../demoMode', () => ({
   isDemoMode: () => demoModeValue,
   subscribeDemoMode: (cb: () => void) => {
@@ -39,7 +38,6 @@ vi.mock('../workerRpc', () => ({
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
 
 async function importFresh() {
   vi.resetModules()
