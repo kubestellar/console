@@ -14,6 +14,7 @@ import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { Select } from '../ui/Select'
 import { useCardLoadingState, useCardDemoState } from './CardDataContext'
 import { STORAGE_KEY_NS_OVERVIEW_CLUSTER, STORAGE_KEY_NS_OVERVIEW_NAMESPACE } from '../../lib/constants/storage'
+import { getDefaultClusterSelection } from '../../lib/clusterSelection'
 import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 
 interface NamespaceOverviewProps {
@@ -22,8 +23,6 @@ interface NamespaceOverviewProps {
     namespace?: string
   }
 }
-
-const SINGLE_VISIBLE_CLUSTER_COUNT = 1
 
 export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   const { t } = useTranslation(['common', 'cards'])
@@ -74,12 +73,13 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
     safeSetItem(STORAGE_KEY_NS_OVERVIEW_NAMESPACE, selectedNamespace)
   }, [selectedNamespace])
 
-  // Auto-select a cluster only when the visible choice is unambiguous.
+  const defaultCluster = useMemo(() => getDefaultClusterSelection(clusters), [clusters])
+
   useEffect(() => {
-    if (selectedCluster || clusters.length !== SINGLE_VISIBLE_CLUSTER_COUNT) return
-    // clusters[0] is intentional: only auto-selected when exactly ONE cluster exists (unambiguous choice)
-    setSelectedCluster(clusters[0].name)
-  }, [clusters, selectedCluster])
+    if (!selectedCluster && defaultCluster) {
+      setSelectedCluster(defaultCluster)
+    }
+  }, [defaultCluster, selectedCluster])
 
   const { issues: allPodIssues, isDemoFallback: podIssuesDemoFallback, isRefreshing: isPodIssuesRefreshing, isFailed: podIssuesFailed, consecutiveFailures: podIssuesConsecutiveFailures, lastRefresh: podIssuesLastRefresh } = useCachedPodIssues(selectedCluster)
   const { issues: allDeploymentIssues, isDemoFallback: deploymentIssuesDemoFallback, isRefreshing: isDeploymentIssuesRefreshing, isFailed: deploymentIssuesFailed, consecutiveFailures: deploymentIssuesConsecutiveFailures, lastRefresh: deploymentIssuesLastRefresh } = useCachedDeploymentIssues(selectedCluster)

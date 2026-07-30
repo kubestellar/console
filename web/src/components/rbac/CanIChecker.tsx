@@ -5,6 +5,7 @@ import { useClusters, useNamespaces } from '../../hooks/useMCP'
 import { Button } from '../ui/Button'
 import { useTranslation } from 'react-i18next'
 import { PageErrorBoundary } from '../PageErrorBoundary'
+import { getDefaultClusterSelection } from '../../lib/clusterSelection'
 import {
   COMMON_VERBS,
   COMMON_RESOURCES,
@@ -39,12 +40,13 @@ function CanICheckerContent() {
     dispatch({ type: 'SET_FIELD', field, value })
   }
 
-  // Auto-select the first cluster when clusters load and none is selected yet
+  const defaultCluster = useMemo(() => getDefaultClusterSelection(rawClusters), [rawClusters])
+
   useEffect(() => {
-    if (!cluster && clusters.length > 0) {
-      dispatch({ type: 'SET_FIELD', field: 'cluster', value: clusters[0] })
+    if (!cluster && defaultCluster) {
+      dispatch({ type: 'SET_FIELD', field: 'cluster', value: defaultCluster })
     }
-  }, [cluster, clusters])
+  }, [cluster, defaultCluster])
 
   // Get selected cluster for namespace fetching
   const selectedCluster = cluster
