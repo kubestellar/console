@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Globe, Server, Info, Tag, Loader2, Copy, Check, ExternalLink, Activity } from 'lucide-react'
