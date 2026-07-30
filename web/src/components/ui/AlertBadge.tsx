@@ -7,7 +7,7 @@ import { formatTimeAgo } from '../../lib/formatters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useMissions } from '../../hooks/useMissions'
 import { useMobile } from '../../hooks/useMobile'
-import { getSeverityIcon, ALERT_SEVERITY_ORDER } from '../../types/alerts'
+import { getSeverityIcon } from '../../types/alerts'
 import type { AlertSeverity } from '../../types/alerts'
 import { CardAIActions } from '../../lib/cards/CardComponents'
 import { ROUTES } from '../../config/routes'
@@ -17,6 +17,7 @@ import { Button } from './Button'
 import { Input } from './Input'
 import { groupAlertsForDisplay, type GroupedAlert } from '../../lib/alerts/groupAlertsForDisplay'
 import { VirtualizedList } from './VirtualizedList'
+import { filterAndSortAlerts } from './AlertBadge.utils'
 
 /** Maximum numeric value to display in the badge before switching to overflow text (e.g. "99+") */
 const BADGE_MAX_COUNT = 99
@@ -134,32 +135,11 @@ export function AlertBadge() {
     }
   }
 
-  // Filter and sort alerts
-  const filteredAlerts = useMemo(() => {
-    let result = [...activeAlerts]
-
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
-      result = result.filter(a =>
-        a.ruleName.toLowerCase().includes(query) ||
-        a.message.toLowerCase().includes(query) ||
-        (a.cluster?.toLowerCase() || '').includes(query)
-      )
-    }
-
-    // Apply severity filter
-    if (severityFilter !== 'all') {
-      result = result.filter(a => a.severity === severityFilter)
-    }
-
-    // Sort by severity and time
-    return result.sort((a, b) => {
-      const severityDiff = ALERT_SEVERITY_ORDER[a.severity] - ALERT_SEVERITY_ORDER[b.severity]
-      if (severityDiff !== 0) return severityDiff
-      return new Date(b.firedAt).getTime() - new Date(a.firedAt).getTime()
-    })
-  }, [activeAlerts, searchQuery, severityFilter])
+  // Filter and sort alerts (pure logic extracted to AlertBadge.utils.ts, see #21762/#21768)
+  const filteredAlerts = useMemo(
+    () => filterAndSortAlerts(activeAlerts, searchQuery, severityFilter),
+    [activeAlerts, searchQuery, severityFilter]
+  )
 
   const displayedAlerts = useMemo(
     () => groupAlertsForDisplay(filteredAlerts),
