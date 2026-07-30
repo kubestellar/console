@@ -1,6 +1,8 @@
 import { ChevronDown, ChevronUp, Loader2, Copy, Check, Pencil, Trash2, Plus, Save, X } from 'lucide-react'
 import { cn } from '../../../../lib/cn'
 import { Button } from '../../../ui/Button'
+import { Input } from '../../../ui/Input'
+import { TextArea } from '../../../ui/TextArea'
 import { useTranslation } from 'react-i18next'
 import { usePodLabelsContext } from './PodLabelsContext'
 
@@ -121,11 +123,13 @@ export function AnnotationsSection({ annotations }: AnnotationsSectionProps) {
                   {isRemoved ? (
                     <span className="text-xs text-red-400 line-through font-mono break-all">{value}</span>
                   ) : (
-                    <textarea
+                    <TextArea
                       value={currentValue || ''}
                       onChange={(e) => handleAnnotationChange(key, e.target.value)}
                       rows={2}
-                      className="w-full text-xs font-mono bg-secondary/50 border border-border rounded px-2 py-1 text-foreground resize-y"
+                      resizable
+                      textAreaSize="sm"
+                      className="font-mono bg-secondary/50"
                     />
                   )}
                 </div>
@@ -136,20 +140,23 @@ export function AnnotationsSection({ annotations }: AnnotationsSectionProps) {
           <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20">
             <div className="flex items-center gap-2 mb-2">
               <Plus className="w-4 h-4 text-green-400 shrink-0" />
-              <input
+              <Input
                 type="text"
                 placeholder="annotation-key"
                 value={newAnnotationKey}
                 onChange={(e) => setNewAnnotationKey(e.target.value)}
-                className="flex-1 text-xs font-mono bg-secondary/50 border border-border rounded px-2 py-1 text-foreground"
+                inputSize="sm"
+                className="flex-1 font-mono bg-secondary/50"
               />
             </div>
-            <textarea
+            <TextArea
               placeholder="annotation value"
               value={newAnnotationValue}
               onChange={(e) => setNewAnnotationValue(e.target.value)}
               rows={2}
-              className="w-full text-xs font-mono bg-secondary/50 border border-border rounded px-2 py-1 text-foreground resize-y"
+              resizable
+              textAreaSize="sm"
+              className="font-mono bg-secondary/50"
             />
           </div>
 
