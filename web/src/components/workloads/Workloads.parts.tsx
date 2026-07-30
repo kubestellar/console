@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 import { AlertTriangle, ChevronRight, Plus, RefreshCw, Trash2, Terminal } from 'lucide-react'
 import type { TFunction } from 'i18next'
 import { StatusIndicator, type Status } from '../charts/StatusIndicator'

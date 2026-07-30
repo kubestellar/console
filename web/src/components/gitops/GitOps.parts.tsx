@@ -1,10 +1,10 @@
-/* eslint-disable react-refresh/only-export-components */
 import type { TFunction } from 'i18next'
 import { RefreshCw, GitBranch, FolderGit, Box, Loader2 } from 'lucide-react'
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { PortalTooltip } from '../cards/llmd/shared/PortalTooltip'
 import { STATUS_TOOLTIPS } from '../shared/TechnicalAcronym'
 import { StatusBadge } from '../ui/StatusBadge'
+import { Select } from '../ui/Select'
 import type { GitOpsApp } from './GitOps.types'
 
 interface GitOpsFiltersProps {
@@ -19,10 +19,11 @@ interface GitOpsFiltersProps {
 export function GitOpsFilters({ clusters, selectedCluster, statusFilter, onClusterChange, onStatusFilterChange, t }: GitOpsFiltersProps) {
   return (
     <div className="flex flex-wrap items-center gap-4 mb-6">
-      <select
+      <Select
         value={selectedCluster}
         onChange={(e) => onClusterChange(e.target.value)}
-        className="px-4 py-2 rounded-lg bg-card/50 border border-border text-foreground text-sm"
+        selectSize="lg"
+        className="bg-card/50"
       >
         <option value="">{t('gitops.allClusters')}</option>
         {clusters.map((cluster) => (
@@ -30,7 +31,7 @@ export function GitOpsFilters({ clusters, selectedCluster, statusFilter, onClust
             {cluster.context || cluster.name.split('/').pop()}
           </option>
         ))}
-      </select>
+      </Select>
 
       <div className="flex gap-2">
         {([
