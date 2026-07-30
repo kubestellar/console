@@ -70,11 +70,14 @@ describe('useReplicaSetDrillDown', () => {
       ],
     }
 
-    // fetchData → rs JSON, then pods JSON. fetchEvents/Describe/Yaml return strings.
+    // fetchData and fetchEvents run concurrently in Promise.all (Batch 1), so calls resolve
+    // in this order: rs JSON (fetchData's first await), events output (fetchEvents, which has
+    // no earlier await), then pods JSON (fetchData's second await, once rs has resolved).
+    // Batch 2 (describe + yaml) only starts once Batch 1 fully settles.
     mockRunKubectl
       .mockResolvedValueOnce(JSON.stringify(rs))
-      .mockResolvedValueOnce(JSON.stringify(pods))
       .mockResolvedValueOnce('events output')
+      .mockResolvedValueOnce(JSON.stringify(pods))
       .mockResolvedValueOnce('describe output')
       .mockResolvedValueOnce('yaml output')
 
@@ -93,7 +96,7 @@ describe('useReplicaSetDrillDown', () => {
       { name: 'web-2', status: 'Pending', restarts: 0 },
     ])
 
-    const podsCall = mockRunKubectl.mock.calls[1][0] as string[]
+    const podsCall = mockRunKubectl.mock.calls[2][0] as string[]
     expect(podsCall.slice(0, 5)).toEqual(['get', 'pods', '-n', 'ns1', '-l'])
     // Selector should include both matchLabels entries joined by comma.
     const selector = podsCall[5]
