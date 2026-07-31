@@ -20,6 +20,7 @@ interface ClusterCostsRowProps {
   totalMonthly: number
   pricingMode: PricingMode
   isOverridden: boolean
+  isDemoData?: boolean
   onDrillDown: (cluster: ClusterCostItem) => void
   onCycleProvider: (clusterName: string, next: CloudProvider) => void
   onClearOverride: (clusterName: string) => void
@@ -30,6 +31,7 @@ export function ClusterCostsRow({
   totalMonthly,
   pricingMode,
   isOverridden,
+  isDemoData,
   onDrillDown,
   onCycleProvider,
   onClearOverride,
@@ -81,7 +83,7 @@ export function ClusterCostsRow({
           {/* 4. Cluster name */}
           <span className="text-sm font-medium text-foreground truncate min-w-0">{cluster.name}</span>
           {/* 5. Health dot */}
-          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${cluster.healthy ? 'bg-green-500' : 'bg-red-500'}`} />
+          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${isDemoData ? 'bg-blue-400' : cluster.healthy ? 'bg-green-500' : 'bg-red-500'}`} />
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <span className="text-sm font-medium text-green-400 shrink-0">

@@ -1,8 +1,16 @@
+/**
+ * GitHubActivityItems — Pure UI item components for GitHubActivity card.
+ * Renders PRs, Issues, Releases, and Contributors as individual list rows.
+ *
+ * Pure UI component — no data fetching; all data is passed via props.
+ * Demo data support provided by parent GitHubActivity card via useCache demoData.
+ */
 import { memo } from 'react'
 import { GitPullRequest, Package, TrendingUp, AlertCircle, Clock, CheckCircle, XCircle, GitMerge } from 'lucide-react'
 import { formatTimeAgo } from '../../lib/formatters'
 import { cn } from '../../lib/cn'
 import { useTranslation } from 'react-i18next'
+import { Skeleton } from '../ui/Skeleton'
 import { StatusBadge } from '../ui/StatusBadge'
 import { sanitizeUrl } from '../../lib/utils/sanitizeUrl'
 import type { GitHubPR, GitHubIssue, GitHubRelease, GitHubContributor } from './GitHubActivity.types'
@@ -198,3 +206,14 @@ const ContributorItem = memo(function ContributorItem({ contributor }: { contrib
 })
 
 export { PRItem, IssueItem, ReleaseItem, ContributorItem }
+
+/** Skeleton placeholder used by GitHubActivity while items are loading. */
+export function GitHubActivityItemSkeleton() {
+  return (
+    <div className="space-y-2 p-1">
+      <Skeleton className="h-14 w-full rounded-lg" />
+      <Skeleton className="h-14 w-full rounded-lg" />
+      <Skeleton className="h-14 w-3/4 rounded-lg" />
+    </div>
+  )
+}

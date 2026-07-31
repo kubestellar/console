@@ -5,10 +5,11 @@
  * Pure UI component — renders mission items based on props; no data fetching.
  * Demo data support provided by parent mission cards.
  */
-import { ChevronRight, RefreshCw, Cpu, HardDrive, Sparkles, Zap, ThumbsUp, ThumbsDown, CheckCircle, Loader2, AlertCircle } from 'lucide-react'
+import { ChevronRight, RefreshCw, Cpu, HardDrive, Sparkles, Zap, ThumbsUp, ThumbsDown, CheckCircle, AlertCircle } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { StatusBadge } from '../../ui/StatusBadge'
+import { Skeleton } from '../../ui/Skeleton'
 import { CardAIActions } from '../../../lib/cards/CardComponents'
 import { useTranslation } from 'react-i18next'
 import { TrendIcon } from './TrendIcon'
@@ -44,9 +45,10 @@ export function UnifiedItemsList({
 
   if (dataLoading) {
     return (
-      <div className="flex items-center justify-center h-full py-4 text-sm text-muted-foreground">
-        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-        {t('common:common.loading', 'Loading...')}
+      <div className="space-y-2 py-2">
+        <Skeleton className="h-8 w-full rounded" />
+        <Skeleton className="h-8 w-full rounded" />
+        <Skeleton className="h-8 w-3/4 rounded" />
       </div>
     )
   }
