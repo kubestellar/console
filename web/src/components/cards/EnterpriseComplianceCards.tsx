@@ -102,7 +102,7 @@ export function HIPAACard() {
   const nav = useNavigate()
   const { data, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, error } = useSummaryData<Record<string, number>>('/api/compliance/hipaa/summary')
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !data,
     hasAnyData: data != null,
     isRefreshing,
     isDemoData: isDemoFallback,
@@ -138,7 +138,7 @@ export function GxPCard() {
   const nav = useNavigate()
   const { data, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, error } = useSummaryData<Record<string, unknown>>('/api/compliance/gxp/summary')
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !data,
     hasAnyData: data != null,
     isRefreshing,
     isDemoData: isDemoFallback,
@@ -178,7 +178,7 @@ export function BAACard() {
   const nav = useNavigate()
   const { data, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, error } = useSummaryData<Record<string, number>>('/api/compliance/baa/summary')
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !data,
     hasAnyData: data != null,
     isRefreshing,
     isDemoData: isDemoFallback,
@@ -294,7 +294,7 @@ export function NISTCard() {
   const nav = useNavigate()
   const { data, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, error } = useSummaryData<Record<string, number>>('/api/compliance/nist/summary')
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !data,
     hasAnyData: data != null,
     isRefreshing,
     isDemoData: isDemoFallback,
@@ -330,7 +330,7 @@ export function STIGCard() {
   const nav = useNavigate()
   const { data, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, error } = useSummaryData<Record<string, number>>('/api/compliance/stig/summary')
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !data,
     hasAnyData: data != null,
     isRefreshing,
     isDemoData: isDemoFallback,
@@ -366,7 +366,7 @@ export function AirGapCard() {
   const nav = useNavigate()
   const { data, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, error } = useSummaryData<Record<string, number>>('/api/compliance/airgap/summary')
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !data,
     hasAnyData: data != null,
     isRefreshing,
     isDemoData: isDemoFallback,
@@ -402,7 +402,7 @@ export function SIEMIntegrationCard() {
   const nav = useNavigate()
   const { data, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, error } = useSummaryData<Record<string, number>>('/api/v1/compliance/siem/summary')
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !data,
     hasAnyData: data != null,
     isRefreshing,
     isDemoData: isDemoFallback,
@@ -435,7 +435,7 @@ export function IncidentResponseCard() {
   const nav = useNavigate()
   const { data, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, error } = useSummaryData<Record<string, unknown>>('/api/v1/compliance/incidents/metrics')
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !data,
     hasAnyData: data != null,
     isRefreshing,
     isDemoData: isDemoFallback,
@@ -468,7 +468,7 @@ export function ThreatIntelCard() {
   const nav = useNavigate()
   const { data, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, error } = useSummaryData<Record<string, number>>('/api/v1/compliance/threat-intel/summary')
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !data,
     hasAnyData: data != null,
     isRefreshing,
     isDemoData: isDemoFallback,
@@ -504,7 +504,7 @@ export function FedRAMPCard() {
   const nav = useNavigate()
   const { data, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, error } = useSummaryData<Record<string, unknown>>('/api/compliance/fedramp/score')
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !data,
     hasAnyData: data != null,
     isRefreshing,
     isDemoData: isDemoFallback,
@@ -542,7 +542,7 @@ export function OIDCFederationCard() {
   const nav = useNavigate()
   const { data, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, error } = useSummaryData<Record<string, number>>('/api/identity/oidc/summary')
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !data,
     hasAnyData: data != null,
     isRefreshing,
     isDemoData: isDemoFallback,
@@ -575,7 +575,7 @@ export function RBACAuditCard() {
   const nav = useNavigate()
   const { data, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, error } = useSummaryData<Record<string, number>>('/api/identity/rbac/summary')
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !data,
     hasAnyData: data != null,
     isRefreshing,
     isDemoData: isDemoFallback,
@@ -611,7 +611,7 @@ export function SessionManagementCard() {
   const nav = useNavigate()
   const { data, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, error } = useSummaryData<Record<string, number>>('/api/identity/sessions/summary')
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !data,
     hasAnyData: data != null,
     isRefreshing,
     isDemoData: isDemoFallback,
@@ -644,7 +644,7 @@ export function SBOMManagerCard() {
   const nav = useNavigate()
   const { data, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, error } = useSummaryData<Record<string, number>>('/api/supply-chain/sbom/summary')
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !data,
     hasAnyData: data != null,
     isRefreshing,
     isDemoData: isDemoFallback,
@@ -677,7 +677,7 @@ export function SigstoreVerifyCard() {
   const nav = useNavigate()
   const { data, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, error } = useSummaryData<Record<string, number>>('/api/supply-chain/signing/summary')
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !data,
     hasAnyData: data != null,
     isRefreshing,
     isDemoData: isDemoFallback,
@@ -710,7 +710,7 @@ export function SLSAProvenanceCard() {
   const nav = useNavigate()
   const { data, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, error } = useSummaryData<Record<string, unknown>>('/api/supply-chain/slsa/summary')
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !data,
     hasAnyData: data != null,
     isRefreshing,
     isDemoData: isDemoFallback,
@@ -744,7 +744,7 @@ export function RiskMatrixCard() {
   const nav = useNavigate()
   const { data, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, error } = useSummaryData<Record<string, number>>('/api/v1/compliance/erm/risk-matrix/summary')
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !data,
     hasAnyData: data != null,
     isRefreshing,
     isDemoData: isDemoFallback,
@@ -777,7 +777,7 @@ export function RiskRegisterCard() {
   const nav = useNavigate()
   const { data, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, error } = useSummaryData<Record<string, number>>('/api/v1/compliance/erm/risk-register/summary')
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !data,
     hasAnyData: data != null,
     isRefreshing,
     isDemoData: isDemoFallback,
@@ -810,7 +810,7 @@ export function RiskAppetiteCard() {
   const nav = useNavigate()
   const { data, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, error } = useSummaryData<Record<string, number>>('/api/v1/compliance/erm/risk-appetite/summary')
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !data,
     hasAnyData: data != null,
     isRefreshing,
     isDemoData: isDemoFallback,
