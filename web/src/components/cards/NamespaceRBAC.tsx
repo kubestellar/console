@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Users, Key, Lock, ChevronRight, AlertCircle } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedNamespaces, useCachedK8sRoles, useCachedK8sRoleBindings, useCachedK8sServiceAccounts } from '../../hooks/useCachedData'
@@ -88,7 +88,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
     return safeClusters.filter(c => selectedClusters.includes(c.name))
   })()
 
-  const defaultCluster = getDefaultClusterSelection(filteredClusters)
+  const defaultCluster = useMemo(() => getDefaultClusterSelection(filteredClusters), [filteredClusters])
 
   useEffect(() => {
     if (isDemoData && !selectedCluster && defaultCluster) {
