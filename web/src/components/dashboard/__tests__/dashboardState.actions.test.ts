@@ -349,18 +349,22 @@ describe('removeCardFromBoard', () => {
     await removeCardFromBoard('unknown', deps)
     expect(mockEmitCardRemoved).not.toHaveBeenCalled()
     expect(deps.recordCardRemoved).not.toHaveBeenCalled()
+    expect(deps.setLocalCards).not.toHaveBeenCalled()
   })
 
   it('swallows api.delete failures (already-removed cards)', async () => {
     const deps = baseDeps()
     mockApiDelete.mockRejectedValueOnce(new Error('gone'))
     await expect(removeCardFromBoard('a', deps)).resolves.toBeUndefined()
+    const result = applyUpdater(deps.setLocalCards.mock.calls[0][0], deps.localCards)
+    expect(result.map(c => c.id)).toEqual(['b'])
   })
 
   it('skips api.delete when no dashboard is loaded', async () => {
     const deps = { ...baseDeps(), dashboard: null }
     await removeCardFromBoard('a', deps)
     expect(mockApiDelete).not.toHaveBeenCalled()
+    expect(deps.setLocalCards).not.toHaveBeenCalled()
   })
 })
 
@@ -392,6 +396,8 @@ describe('updateCardWidth', () => {
     deps.localCards = [makeCard({ id: 'new-1' })]
     await updateCardWidth('new-1', 6, deps)
     expect(mockApiPut).not.toHaveBeenCalled()
+    const result = applyUpdater(deps.setLocalCards.mock.calls[0][0], deps.localCards)
+    expect(result[0].position).toEqual({ x: 0, y: 0, w: 6, h: 2 })
   })
 
   it('toasts on api.put failure', async () => {
@@ -421,6 +427,15 @@ describe('updateCardHeight', () => {
     expect(mockApiPut).toHaveBeenCalledWith('/api/cards/a', {
       position: { x: 0, y: 0, w: 4, h: 5 },
     })
+  })
+
+  it('skips api.put for local-only card ids', async () => {
+    const deps = baseDeps()
+    deps.localCards = [makeCard({ id: 'new-1' })]
+    await updateCardHeight('new-1', 5, deps)
+    expect(mockApiPut).not.toHaveBeenCalled()
+    const result = applyUpdater(deps.setLocalCards.mock.calls[0][0], deps.localCards)
+    expect(result[0].position).toEqual({ x: 0, y: 0, w: 4, h: 5 })
   })
 
   it('toasts on api.put failure', async () => {
