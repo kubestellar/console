@@ -9,7 +9,6 @@ import {
   ComplianceFrameworksCard,
   ScoreRing
 } from '../EnterpriseComplianceCards';
-import { authFetch, safeJson } from '../../../lib/api';
 import { useCache } from '../../../lib/cache';
 
 const mockNavigate = vi.fn();
