@@ -25,7 +25,7 @@ const ENTERPRISE_SUMMARY_CACHE_PREFIX = 'enterprise-summary:'
 
 function CardSkeleton() {
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" data-testid="card-skeleton">
       <Skeleton className="h-4 w-full rounded" />
       <Skeleton className="h-4 w-3/4 rounded" />
     </div>
