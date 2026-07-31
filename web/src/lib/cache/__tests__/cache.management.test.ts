@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, act, waitFor } from '@testing-library/react'
+// @testing-library/react imports removed (unused in this split)
 
 // ---------------------------------------------------------------------------
 // Controllable demo-mode mock
@@ -8,7 +8,7 @@ import { renderHook, act, waitFor } from '@testing-library/react'
 let demoModeValue = false
 const demoModeListeners = new Set<() => void>()
 
-function setDemoMode(val: boolean) {
+function _setDemoMode(val: boolean) {
   demoModeValue = val
   demoModeListeners.forEach(fn => fn())
 }
@@ -47,7 +47,7 @@ vi.mock('../workerRpc', () => ({
 
 /** Offset (ms) to make seeded cache data older than any refresh interval,
  *  ensuring the initial fetch is NOT skipped by the fresh-data guard (#7653). */
-const STALE_AGE_MS = 600_000
+const _STALE_AGE_MS = 600_000
 
 async function importFresh() {
   vi.resetModules()
@@ -58,7 +58,7 @@ async function importFresh() {
  * Seed sessionStorage with a valid cache entry (CACHE_VERSION = 4).
  * The key will be stored as "kcc:<cacheKey>" to match the SS_PREFIX constant.
  */
-function seedSessionStorage(cacheKey: string, data: unknown, timestamp: number): void {
+function _seedSessionStorage(cacheKey: string, data: unknown, timestamp: number): void {
   const CACHE_VERSION = 4
   sessionStorage.setItem(
     `kcc:${cacheKey}`,
