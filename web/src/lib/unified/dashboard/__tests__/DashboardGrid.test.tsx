@@ -1,4 +1,4 @@
-import React from 'react'
+import type { ReactNode } from 'react'
 /**
  * Tests for DashboardGrid component
  *
@@ -42,7 +42,7 @@ vi.mock('../../../../components/cards/cardRegistry', () => ({
 vi.mock('../../../../components/cards/CardWrapper', () => ({
   CardWrapper: (props: Record<string, unknown>) => (
     <div data-testid={`card-wrapper-${props.cardType}`}>
-      {props.children as React.ReactNode}
+      {props.children as ReactNode}
     </div>
   ),
 }))
@@ -58,7 +58,7 @@ vi.mock('../../../../components/dashboard/DashboardHealthIndicator', () => ({
 
 // Mock dnd-kit - provide minimal implementations
 vi.mock('@dnd-kit/core', () => ({
-  DndContext: ({ children }: { children: React.ReactNode }) => (
+  DndContext: ({ children }: { children: ReactNode }) => (
     <div data-testid="dnd-context">{children}</div>
   ),
   closestCenter: vi.fn(),
@@ -66,7 +66,7 @@ vi.mock('@dnd-kit/core', () => ({
   PointerSensor: vi.fn(),
   useSensor: vi.fn(() => ({})),
   useSensors: vi.fn(() => []),
-  DragOverlay: ({ children }: { children: React.ReactNode }) => (
+  DragOverlay: ({ children }: { children: ReactNode }) => (
     <div data-testid="drag-overlay">{children}</div>
   ),
 }))
@@ -78,7 +78,7 @@ vi.mock('@dnd-kit/sortable', () => ({
     result.splice(to, 0, removed)
     return result
   }),
-  SortableContext: ({ children }: { children: React.ReactNode }) => (
+  SortableContext: ({ children }: { children: ReactNode }) => (
     <div data-testid="sortable-context">{children}</div>
   ),
   sortableKeyboardCoordinates: vi.fn(),

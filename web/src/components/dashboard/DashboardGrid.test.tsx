@@ -1,4 +1,3 @@
-import React from 'react'
 import { describe, it, expect, vi } from 'vitest'
 
 vi.mock('@dnd-kit/core', () => ({
@@ -56,7 +55,7 @@ describe('DashboardGrid Component', () => {
       triggerRefresh: vi.fn(),
     }
     expect(() => {
-      DashboardGrid(props as any)
+      DashboardGrid(props as Parameters<typeof DashboardGrid>[0])
     }).not.toThrow()
   })
 })

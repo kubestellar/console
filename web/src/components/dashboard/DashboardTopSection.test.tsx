@@ -1,4 +1,3 @@
-import React from 'react'
 import { describe, it, expect, vi } from 'vitest'
 
 vi.mock('react-i18next', () => ({
@@ -40,7 +39,7 @@ describe('DashboardTopSection Component', () => {
       triggerRefresh: vi.fn(),
     }
     expect(() => {
-      DashboardTopSection(props as any)
+      DashboardTopSection(props as Parameters<typeof DashboardTopSection>[0])
     }).not.toThrow()
   })
 })

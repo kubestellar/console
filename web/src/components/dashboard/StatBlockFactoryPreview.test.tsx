@@ -1,4 +1,3 @@
-import React from 'react'
 import { describe, it, expect, vi } from 'vitest'
 
 vi.mock('../../lib/stats/types', () => ({
