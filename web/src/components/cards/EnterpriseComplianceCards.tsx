@@ -17,8 +17,6 @@ const SCORE_GOOD = 'hsl(var(--chart-success, 142 71% 45%))'
 const SCORE_WARN = 'hsl(var(--chart-warning, 45 93% 47%))'
 const SCORE_BAD = 'hsl(var(--chart-danger, 0 84% 60%))'
 const RING_BG = 'hsl(var(--muted) / 0.4)'
-const ERROR_TEXT_CLASS = 'text-red-400 text-sm'
-const LOADING_TEXT_CLASS = 'text-muted-foreground text-sm'
 const ENTERPRISE_SUMMARY_CACHE_PREFIX = 'enterprise-summary:'
 
 function useSummaryData<T extends Record<string, unknown>>(endpoint: string) {
