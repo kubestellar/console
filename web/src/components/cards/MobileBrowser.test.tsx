@@ -29,6 +29,7 @@ vi.mock('./CardWrapper', () => ({
 
 vi.mock('../../lib/constants/network', () => ({
   POLL_INTERVAL_SLOW_MS: 30000,
+  FETCH_DEFAULT_TIMEOUT_MS: 10000,
 }))
 
 // ---------------------------------------------------------------------------

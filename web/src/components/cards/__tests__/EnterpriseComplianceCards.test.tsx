@@ -160,7 +160,15 @@ describe('EnterpriseComplianceCards', () => {
 
   describe('NISTCard (Pattern B - useCache)', () => {
     it('renders loading state when data is null and no error', () => {
-      mockedUseCache.mockReturnValue({ data: null, error: null });
+      mockedUseCache.mockReturnValue({
+        data: null,
+        isLoading: true,
+        isRefreshing: false,
+        isDemoFallback: false,
+        isFailed: false,
+        consecutiveFailures: 0,
+        error: null,
+      });
 
       render(
         <MemoryRouter>
