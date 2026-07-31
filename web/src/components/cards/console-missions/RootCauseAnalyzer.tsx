@@ -5,7 +5,7 @@
  * Pure UI component — renders root cause groups based on props; no data fetching.
  * Demo data support provided by parent mission cards.
  */
-import { ChevronRight, CheckCircle, Loader2, AlertCircle } from 'lucide-react'
+import { ChevronRight, CheckCircle, AlertCircle } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { Skeleton } from '../../ui/Skeleton'
 import { ClusterBadge } from '../../ui/ClusterBadge'

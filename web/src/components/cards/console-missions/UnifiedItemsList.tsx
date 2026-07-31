@@ -5,7 +5,7 @@
  * Pure UI component — renders mission items based on props; no data fetching.
  * Demo data support provided by parent mission cards.
  */
-import { ChevronRight, RefreshCw, Cpu, HardDrive, Sparkles, Zap, ThumbsUp, ThumbsDown, CheckCircle, Loader2, AlertCircle } from 'lucide-react'
+import { ChevronRight, RefreshCw, Cpu, HardDrive, Sparkles, Zap, ThumbsUp, ThumbsDown, CheckCircle, AlertCircle } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { StatusBadge } from '../../ui/StatusBadge'

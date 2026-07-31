@@ -5,7 +5,7 @@
  * Pure UI component — renders analysis panel based on props; no data fetching.
  * Demo data support provided by parent mission cards.
  */
-import { AlertCircle, CheckCircle, Clock, TrendingUp, Sparkles, Loader2 } from 'lucide-react'
+import { AlertCircle, CheckCircle, Clock, TrendingUp, Sparkles } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { Skeleton } from '../../ui/Skeleton'
 import { useTranslation } from 'react-i18next'
