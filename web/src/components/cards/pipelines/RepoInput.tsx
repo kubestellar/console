@@ -13,7 +13,7 @@
 import { useState, useRef } from 'react'
 import { X } from 'lucide-react'
 import { normalizeRepoInput } from '../../acmm/ACMMProvider'
-import { useDemoMode } from '../../hooks/useDemoMode'
+import { useDemoMode } from '../../../hooks/useDemoMode'
 
 const DEMO_REPO = 'kubestellar/console'
 
