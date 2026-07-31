@@ -40,8 +40,6 @@ vi.mock('../../lib/analytics', async (importOriginal) => ({
 import {
   GlobalFiltersProvider,
   useGlobalFilters,
-  SEVERITY_LEVELS,
-  STATUS_LEVELS,
 } from '../useGlobalFilters'
 
 // ---------------------------------------------------------------------------
