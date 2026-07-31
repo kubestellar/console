@@ -95,7 +95,7 @@ import type { TFunction } from 'i18next'
 
 const tPass: TFunction = ((key: string, fallback?: string | Record<string, unknown>, opts?: Record<string, unknown>) => {
   // Support both (key, fallback, opts) and (key, opts) signatures.
-  let template = ''
+  let template: string
   let vars: Record<string, unknown> | undefined
   if (typeof fallback === 'string') {
     template = fallback
