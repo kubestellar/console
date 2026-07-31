@@ -622,7 +622,11 @@ export const CardWrapper = memo(function CardWrapper({
   // signature. Wrap it in a simple function that forwards all arguments.
   const headerT = useCallback(
     (key: string, defaultValue?: string, options?: Record<string, unknown>) =>
-      t(key, defaultValue, options),
+      (t as (key: string, defaultValue?: string, options?: Record<string, unknown>) => string)(
+        key,
+        defaultValue,
+        options,
+      ),
     [t]
   )
 
