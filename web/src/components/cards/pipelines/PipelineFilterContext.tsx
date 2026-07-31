@@ -115,7 +115,7 @@ export function PipelineFilterProvider({ children, initialRepo }: { children: Re
   )
   const [config, setConfig] = useState<StoredRepoConfig>(loadConfig)
   const [lastUpdated, setLastUpdated] = useState<number | null>(() => repoListUpdatedAt ?? Date.now())
-  const serverRepos = useMemo(() => getPipelineRepos(), [repoListUpdatedAt])
+  const serverRepos = getPipelineRepos()
 
   // Wrap setSelectedRepos to persist on every change
   const setSelectedRepos = useCallback((updater: Set<string> | ((prev: Set<string>) => Set<string>)) => {
@@ -209,7 +209,7 @@ export function PipelineFilterProvider({ children, initialRepo }: { children: Re
   const resetToDefaults = useCallback(() => {
     setConfig(EMPTY_CONFIG)
     setSelectedRepos(new Set())
-  }, [])
+  }, [setSelectedRepos])
 
   const hasCustomization = config.added.length > 0 || config.hidden.length > 0
 
