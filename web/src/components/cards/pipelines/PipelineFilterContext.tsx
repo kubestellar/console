@@ -176,7 +176,7 @@ export function PipelineFilterProvider({ children, initialRepo }: { children: Re
   const resetToDefaults = useCallback(() => {
     setConfig(EMPTY_CONFIG)
     setSelectedRepos(new Set())
-  }, [])
+  }, [setSelectedRepos])
 
   const hasCustomization = config.added.length > 0 || config.hidden.length > 0
 
