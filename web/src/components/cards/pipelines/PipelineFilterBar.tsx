@@ -31,7 +31,7 @@ export function PipelineFilterBar() {
   // the install dialog — we don't give away the full feature for free.
   // The custom event 'open-install' is listened to by Layout.tsx:114
   // which renders the SetupInstructionsDialog.
-  const isDemo = ctx.isDemoMode
+  const isDemo = ctx?.isDemoMode ?? false
   const showInstallGate = useCallback(() => {
     window.dispatchEvent(new CustomEvent('open-install'))
   }, [])
