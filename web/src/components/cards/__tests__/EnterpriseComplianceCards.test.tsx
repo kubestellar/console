@@ -1,4 +1,3 @@
-import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -12,10 +11,11 @@ import {
 import { useCache } from '../../../lib/cache';
 
 const mockNavigate = vi.fn();
+const mockedUseCache = vi.mocked(useCache);
 vi.mock('react-router-dom', async (importOriginal) => {
   const actual = await importOriginal();
   return {
-    ...actual as any,
+    ...actual,
     useNavigate: () => mockNavigate,
   };
 });
@@ -43,7 +43,7 @@ vi.mock('react-i18next', () => ({
 describe('EnterpriseComplianceCards', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (useCache as any).mockReturnValue({
+    mockedUseCache.mockReturnValue({
       data: null,
       isLoading: true,
       isRefreshing: false,
@@ -56,7 +56,7 @@ describe('EnterpriseComplianceCards', () => {
 
   describe('HIPAACard (Pattern A - useEffect/authFetch)', () => {
     it('renders loading state initially', async () => {
-      (useCache as any).mockReturnValue({
+      mockedUseCache.mockReturnValue({
         data: null,
         isLoading: true,
         isRefreshing: false,
@@ -80,7 +80,7 @@ describe('EnterpriseComplianceCards', () => {
     it('renders success state and navigates on click', async () => {
       const user = userEvent.setup();
       const mockData = { overall_score: 85, safeguards_passed: 10, safeguards_failed: 2, phi_namespaces: 3, encrypted_flows: 7 };
-      (useCache as any).mockReturnValue({
+      mockedUseCache.mockReturnValue({
         data: mockData,
         isLoading: false,
         isRefreshing: false,
@@ -112,7 +112,7 @@ describe('EnterpriseComplianceCards', () => {
     });
 
     it('renders error state on fetch rejection', async () => {
-      (useCache as any).mockReturnValue({
+      mockedUseCache.mockReturnValue({
         data: null,
         isLoading: false,
         isRefreshing: false,
@@ -136,7 +136,7 @@ describe('EnterpriseComplianceCards', () => {
     });
 
     it('renders "No data" state when response is not ok', async () => {
-      (useCache as any).mockReturnValue({
+      mockedUseCache.mockReturnValue({
         data: null,
         isLoading: false,
         isRefreshing: false,
@@ -160,7 +160,7 @@ describe('EnterpriseComplianceCards', () => {
 
   describe('NISTCard (Pattern B - useCache)', () => {
     it('renders loading state when data is null and no error', () => {
-      (useCache as any).mockReturnValue({ data: null, error: null });
+      mockedUseCache.mockReturnValue({ data: null, error: null });
 
       render(
         <MemoryRouter>
@@ -172,7 +172,7 @@ describe('EnterpriseComplianceCards', () => {
     });
 
     it('renders error state with translated text', () => {
-      (useCache as any).mockReturnValue({ data: null, error: 'failedToLoad' });
+      mockedUseCache.mockReturnValue({ data: null, error: 'failedToLoad' });
 
       render(
         <MemoryRouter>
@@ -188,7 +188,7 @@ describe('EnterpriseComplianceCards', () => {
     it('renders success state and navigates on click', async () => {
       const user = userEvent.setup();
       const mockData = { overall_score: 72, implemented_controls: 50, partial_controls: 10, planned_controls: 5, total_controls: 65 };
-      (useCache as any).mockReturnValue({ data: mockData, error: false });
+      mockedUseCache.mockReturnValue({ data: mockData, error: false });
 
       render(
         <MemoryRouter>
