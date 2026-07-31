@@ -137,9 +137,8 @@ test.describe('Tour/Onboarding', () => {
       await page.goto('/')
       await page.waitForLoadState('domcontentloaded')
 
-      // Reload page
-      await page.reload()
-      await page.waitForLoadState('domcontentloaded')
+      // Reload page — use waitUntil: 'domcontentloaded' to fix Firefox NS_ERROR_FAILURE (#22097)
+      await page.reload({ waitUntil: 'domcontentloaded' })
 
       // Verify flag is still set — addInitScript re-runs on reload and
       // re-sets the flag before page scripts execute.
