@@ -621,8 +621,12 @@ export const CardWrapper = memo(function CardWrapper({
   // instantiation (TS2589) because of its complex overloaded/generic call
   // signature. Wrap it in a simple function that forwards all arguments.
   const headerT = useCallback(
-    (key: string, defaultValue?: string, options?: Record<string, unknown>) =>
-      t(key, defaultValue, options),
+    (key: string, defaultValue?: string, options?: Record<string, unknown>): string => {
+      if (defaultValue !== undefined) {
+        return t(key, defaultValue, options) as string
+      }
+      return t(key) as string
+    },
     [t]
   )
 
