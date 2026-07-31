@@ -98,14 +98,18 @@ export { fetchWithRetry } from './fetchWithRetry'
 // clusterUtils — extracted cluster utility functions
 export { shareMetricsBetweenSameServerClusters, deduplicateClustersByServer, detectDistributionFromNamespaces, detectDistributionFromServer } from './clusterUtils'
 
+const MAX_CLUSTER_NAME_LENGTH = 24
+const MAX_TRUNCATED_LENGTH = 23
+const MAX_SEGMENTS_TO_KEEP = 3
+
 /** Shorten a cluster name for display — strips context prefix, truncates long names */
 export function clusterDisplayName(name: string): string {
   const parts = name.split('/')
   const base = parts[parts.length - 1]
-  if (base.length > 24) {
+  if (base.length > MAX_CLUSTER_NAME_LENGTH) {
     const segments = base.split(/[-_.]/)
-    if (segments.length > 2) return segments.slice(0, 3).join('-')
-    return base.slice(0, 23) + '…'
+    if (segments.length > 2) return segments.slice(0, MAX_SEGMENTS_TO_KEEP).join('-')
+    return base.slice(0, MAX_TRUNCATED_LENGTH) + '…'
   }
   return base
 }
