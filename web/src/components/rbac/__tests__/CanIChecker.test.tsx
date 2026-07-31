@@ -102,10 +102,9 @@ describe('CanIChecker — Initial Rendering', () => {
     const clusterSelect = screen.getByTestId('can-i-cluster') as HTMLSelectElement
     const options = Array.from(clusterSelect.options)
 
-    expect(options).toHaveLength(3)
-    expect(options[0].value).toBe('')
-    expect(options[1].value).toBe('cluster-a')
-    expect(options[2].value).toBe('cluster-b')
+    expect(options).toHaveLength(2)
+    expect(options[0].value).toBe('cluster-a')
+    expect(options[1].value).toBe('cluster-b')
   })
 
   it('populates namespace dropdown with fetched namespaces', () => {
