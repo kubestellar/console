@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
-import { mockApiFallback } from './helpers/setup'
+import { mockApiFallback, reloadPageSafely } from './helpers/setup'
 
 /**
  * Sets up authentication and MCP mocks for tour tests.
@@ -137,9 +137,8 @@ test.describe('Tour/Onboarding', () => {
       await page.goto('/')
       await page.waitForLoadState('domcontentloaded')
 
-      // Reload page
-      await page.reload()
-      await page.waitForLoadState('domcontentloaded')
+      // Reload page — use robust helper that retries on Firefox failures
+      await reloadPageSafely(page)
 
       // Verify flag is still set — addInitScript re-runs on reload and
       // re-sets the flag before page scripts execute.

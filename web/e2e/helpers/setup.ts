@@ -937,3 +937,29 @@ export async function setupDashboardTest(page: Page): Promise<void> {
   // (#nightly-playwright).
   await page.locator('#root').waitFor({ state: 'visible', timeout: 15000 })
 }
+
+/**
+ * Robust page reload with Firefox-specific error recovery.
+ * Firefox occasionally experiences NS_ERROR_FAILURE or NS_BINDING_ABORTED on
+ * page.reload(). This helper adds retry logic and explicit wait conditions.
+ */
+export async function reloadPageSafely(page: Page, maxRetries: number = 3): Promise<void> {
+  let lastError: Error | null = null
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 30_000 })
+      // Additional wait to ensure page is fully interactive
+      await page.locator('#root').waitFor({ state: 'visible', timeout: 10_000 })
+      return
+    } catch (error) {
+      lastError = error as Error
+      if (attempt < maxRetries - 1) {
+        // Brief pause before retry
+        await new Promise((resolve) => setTimeout(resolve, 500))
+      }
+    }
+  }
+  if (lastError) {
+    throw lastError
+  }
+}
