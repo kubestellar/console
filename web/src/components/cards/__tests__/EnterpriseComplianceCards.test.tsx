@@ -58,9 +58,7 @@ describe('EnterpriseComplianceCards', () => {
         </MemoryRouter>
       );
 
-      const loadingText = screen.getByText('Loading…');
-      expect(loadingText).toBeInTheDocument();
-      expect(loadingText.className).toContain('text-muted-foreground');
+      expect(screen.getByTestId('card-skeleton')).toBeInTheDocument();
     });
 
     it('renders success state and navigates on click', async () => {
@@ -127,7 +125,7 @@ describe('EnterpriseComplianceCards', () => {
 
   describe('NISTCard (Pattern B - useCache)', () => {
     it('renders loading state when data is null and no error', () => {
-      (useCache as any).mockReturnValue({ data: null, error: false });
+      (useCache as any).mockReturnValue({ data: null, error: false, isLoading: true });
 
       render(
         <MemoryRouter>
@@ -135,7 +133,7 @@ describe('EnterpriseComplianceCards', () => {
         </MemoryRouter>
       );
 
-      expect(screen.getByText('Loading…')).toBeInTheDocument();
+      expect(screen.getByTestId('card-skeleton')).toBeInTheDocument();
     });
 
     it('renders error state with translated text', () => {
