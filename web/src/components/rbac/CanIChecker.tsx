@@ -131,6 +131,7 @@ function CanICheckerContent() {
           onChange={(value) => setField('cluster', value)}
           testId="can-i-cluster"
         >
+          <option value="">{t('rbac.selectCluster')}</option>
           {clusters.map((c) => (
             <option key={c} value={c}>{c}</option>
           ))}
