@@ -359,12 +359,12 @@ describe('getDisplayPodName', () => {
   })
 
   it('translates aggregate labels using the t function', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const t = ((key: string) => {
       if (key === 'llmd.prefill') return 'PRE'
       if (key === 'llmd.decode') return 'DEC'
       if (key === 'llmd.unified') return 'UNI'
       return key
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     }) as unknown as TFunction<any>
 
     expect(getDisplayPodName(t, 'Prefill (3)')).toBe('PRE (3)')
