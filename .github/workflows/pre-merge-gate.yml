@@ -7,9 +7,19 @@ on:
 
 permissions: read-all  # default read; writes scoped to job below
 
+# NOTE: cancel-in-progress is deliberately false. build-gate is a REQUIRED
+# status check in branch protection. When a run is cancelled, GitHub records
+# the check as `cancelled` (not `success`), which branch protection treats as
+# unsatisfied — and cancelling the run for the current head SHA leaves that SHA
+# with no passing build-gate at all. With admin-merge disabled, such a PR can
+# never merge until a fresh run completes. Rapid re-pushes (e.g. a fix-up commit
+# pushed onto a PR) previously cancelled the in-flight run and stranded the PR.
+# Letting each run finish guarantees every head SHA ends with a real
+# success/failure conclusion. The only cost is some extra CI minutes on
+# superseded commits, which is far cheaper than a permanently unmergeable queue.
 concurrency:
   group: pre-merge-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build-gate:
