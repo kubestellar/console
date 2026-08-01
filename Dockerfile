@@ -58,20 +58,7 @@ WORKDIR /app
 ARG APP_VERSION=0.0.0
 ARG COMMIT_HASH=unknown
 
-# Cache npm dependencies independently of source changes.
-# Install dependencies first so that the npm ci layer is reused whenever
-# package.json / package-lock.json are unchanged, even if other source files
-# differ. This is especially valuable for QEMU arm64 builds.
-COPY web/package.json web/package-lock.json ./
-RUN for attempt in 1 2 3; do \
-      npm ci --legacy-peer-deps && exit 0; \
-      echo "npm ci failed on attempt ${attempt}; retrying..." >&2; \
-      sleep $((attempt * 5)); \
-    done; \
-    echo "npm ci failed after 3 attempts" >&2; \
-    exit 1
-
-# Copy the rest of the frontend source.
+# Copy the frontend source.
 # WARNING (local builds): if web/dist/ is present in your working tree from a
 # previous build it will be copied here and the conditional below will skip
 # Vite, silently shipping stale assets. Remove web/dist/ before building
@@ -84,6 +71,7 @@ COPY web/ ./
 RUN if [ -d dist ] && [ -n "$(ls -A dist 2>/dev/null)" ]; then \
       echo "Using pre-built frontend dist/"; \
     else \
+      npm ci --legacy-peer-deps && \
       VITE_APP_VERSION=${APP_VERSION} VITE_COMMIT_HASH=${COMMIT_HASH} npm run build; \
     fi
 
