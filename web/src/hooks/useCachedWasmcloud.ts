@@ -36,6 +36,7 @@ const WASMCLOUD_CACHE_CATEGORY = 'deployments'
 const WASMCLOUD_STATUS_ENDPOINT = '/api/wasmcloud/status'
 const DEFAULT_LATTICE_VERSION = 'unknown'
 const DEFAULT_LATTICE_ID = ''
+const HTTP_NOT_FOUND_STATUS = 404
 
 const EMPTY_STATS: WasmcloudStats = {
   hostCount: 0,
@@ -152,7 +153,7 @@ async function fetchJson<T>(
     })
 
     if (!resp.ok) {
-      if (options?.treat404AsEmpty && resp.status === 404) {
+      if (options?.treat404AsEmpty && resp.status === HTTP_NOT_FOUND_STATUS) {
         return { data: null, failed: false }
       }
       return { data: null, failed: true }

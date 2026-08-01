@@ -134,11 +134,21 @@ test.describe('Onboarding Tour', () => {
       return
     }
 
-    // Wait for any modal/overlay backdrop to disappear before clicking
-    const overlay = page.locator('.fixed.inset-0, [class*="backdrop"], [class*="overlay"]').first()
-    await overlay.waitFor({ state: 'hidden', timeout: 2000 }).catch(() => {
-      // Overlay might not exist or already hidden - safe to proceed
-    })
+    // If a full-screen modal overlay (e.g. welcome dialog, announcement) is
+    // visible it intercepts pointer events on the tour controls beneath it.
+    // Press Escape first (handles most dialogs); if the overlay persists,
+    // click its own dismiss/close button as a fallback before proceeding.
+    const overlay = page.locator('.fixed.inset-0').first()
+    const hasOverlay = await overlay.isVisible().catch(() => false)
+    if (hasOverlay) {
+      await page.keyboard.press('Escape')
+      const closed = await overlay.waitFor({ state: 'hidden', timeout: 3000 }).then(() => true).catch(() => false)
+      if (!closed) {
+        const modalCloseBtn = overlay.getByRole('button', { name: /close|dismiss|got it|ok/i }).first()
+        await modalCloseBtn.click({ timeout: 2000 }).catch(() => {})
+        await overlay.waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {})
+      }
+    }
 
     await skipBtn.first().click()
 

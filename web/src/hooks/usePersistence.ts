@@ -88,13 +88,12 @@ export function usePersistence() {
         setConfig(data)
       }
       // Silently ignore 401 - user needs to re-authenticate
-    } catch (err: unknown) {
-      console.error('[usePersistence] Failed to fetch config:', err)
+    } catch {
       setError('Failed to load persistence config')
     } finally {
       setLoading(false)
     }
-  }, [isBackendAvailable, hasRealToken, token])
+  }, [isBackendAvailable, hasRealToken])
 
   // Fetch status from backend
   const fetchStatus = useCallback(async () => {
@@ -108,11 +107,10 @@ export function usePersistence() {
         setStatus(data)
       }
       // Silently ignore 401 - user needs to re-authenticate
-    } catch (err: unknown) {
-      console.error('[usePersistence] Failed to fetch status:', err)
+    } catch {
       setError('Failed to load persistence status')
     }
-  }, [isBackendAvailable, hasRealToken, token])
+  }, [isBackendAvailable, hasRealToken])
 
   // Update config
   const updateConfig = async (newConfig: Partial<PersistenceConfig>): Promise<boolean> => {
@@ -141,8 +139,7 @@ export function usePersistence() {
         setError(errorData.error || 'Failed to update config')
         return false
       }
-    } catch (err: unknown) {
-      console.error('[usePersistence] Failed to update config:', err)
+    } catch {
       setError('Failed to update config')
       return false
     }
@@ -183,8 +180,7 @@ export function usePersistence() {
       if (response.ok) {
         return await response.json()
       }
-    } catch (err: unknown) {
-      console.error('[usePersistence] Failed to test connection:', err)
+    } catch {
       showToast(
         t('settings.persistence.connectionFailedFor', 'Failed to test connection to {{cluster}}', { cluster }),
         'error'
@@ -210,8 +206,7 @@ export function usePersistence() {
         await fetchStatus()
         return true
       }
-    } catch (err: unknown) {
-      console.error('[usePersistence] Failed to sync:', err)
+    } catch {
       setError('Failed to trigger sync')
     } finally {
       setSyncing(false)
