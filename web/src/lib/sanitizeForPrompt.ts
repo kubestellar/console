@@ -1,6 +1,7 @@
 const DEFAULT_PROMPT_INPUT_MAX_LENGTH = 500
 const ESCAPED_LT_PATTERN = /\\u0*03[cC]|\\x3[cC]/g
 const ESCAPED_GT_PATTERN = /\\u0*03[eE]|\\x3[eE]/g
+const CODE_FENCE_PATTERN = /```/g
 const PROMPT_ENTITY_MAP: Record<string, string> = {
   '&': '&amp;',
   '"': '&quot;',
@@ -14,6 +15,7 @@ const PROMPT_ENTITY_MAP: Record<string, string> = {
  */
 export function sanitizeForPrompt(input: string, maxLength = DEFAULT_PROMPT_INPUT_MAX_LENGTH): string {
   return input
+    .replace(CODE_FENCE_PATTERN, "'''")
     .replace(ESCAPED_LT_PATTERN, '<')
     .replace(ESCAPED_GT_PATTERN, '>')
     .replace(/[<>]/g, '')
