@@ -58,7 +58,7 @@ describe('EnterpriseComplianceCards', () => {
         </MemoryRouter>
       );
 
-      expect(screen.getByTestId('card-skeleton')).toBeInTheDocument();
+      expect(screen.getByText('Loading…')).toBeInTheDocument();
     });
 
     it('renders success state and navigates on click', async () => {
@@ -133,7 +133,7 @@ describe('EnterpriseComplianceCards', () => {
         </MemoryRouter>
       );
 
-      expect(screen.getByTestId('card-skeleton')).toBeInTheDocument();
+      expect(screen.getByText('Loading…')).toBeInTheDocument();
     });
 
     it('renders error state with translated text', () => {
