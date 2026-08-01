@@ -1,0 +1,48 @@
+import React from 'react'
+import { describe, it, expect, vi } from 'vitest'
+import { render } from '@testing-library/react'
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
+  initReactI18next: {},
+}))
+
+vi.mock('../../config/routes', () => ({
+  ROUTES: {},
+}))
+
+import { DashboardTopSection } from './DashboardTopSection'
+
+describe('DashboardTopSection Component', () => {
+  it('exports DashboardTopSection component', () => {
+    expect(DashboardTopSection).toBeDefined()
+    expect(typeof DashboardTopSection).toBe('function')
+  })
+
+  it('renders with required props', () => {
+    const props = {
+      activeNudge: null,
+      autoRefresh: false,
+      clusters: [],
+      clustersError: null,
+      currentCardTypes: [],
+      dismissNudge: vi.fn(),
+      getStatValue: vi.fn(),
+      handleAddRecommendedCard: vi.fn(),
+      handleNudgeAction: vi.fn(),
+      handleOpenDashboardCatalog: vi.fn(),
+      handleRunHealthCheck: vi.fn(),
+      isClustersLoading: false,
+      isFetching: false,
+      lastUpdated: null,
+      navigate: vi.fn(),
+      openAddCardModal: vi.fn(),
+      openMissionSidebar: vi.fn(),
+      setAutoRefresh: vi.fn(),
+      triggerRefresh: vi.fn(),
+    }
+    expect(() => {
+      render(<DashboardTopSection {...props} />)
+    }).not.toThrow()
+  })
+})
