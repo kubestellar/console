@@ -4,6 +4,7 @@ import { useClusters, type PodIssue } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { LimitedAccessWarning } from '../ui/LimitedAccessWarning'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
@@ -155,12 +156,17 @@ export function PodIssues() {
   return (
     <div className="h-full flex flex-col content-loaded">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2">
           <StatusBadge color="red" title={`${rawIssues.length} pods with issues`}>
             {rawIssues.length} issues
           </StatusBadge>
         </div>
+        <RefreshIndicator
+          isRefreshing={isRefreshing}
+          lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+          size="xs"
+        />
       </div>
 
       <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

@@ -6,6 +6,47 @@ exports[`KagentAgentListCard > matches snapshot 1`] = `
     class="space-y-3 p-1"
   >
     <div
+      class="flex items-center justify-between gap-2 px-1"
+    >
+      <div
+        class="text-xs uppercase tracking-wider text-muted-foreground"
+      >
+        overview
+      </div>
+      <span
+        aria-label="Not yet updated"
+        class="inline-flex items-center gap-0.5 text-muted-foreground text-2xs"
+        role="status"
+        title="Not yet updated"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-clock w-2.5 h-2.5"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+          />
+          <path
+            d="M12 6v6l4 2"
+          />
+        </svg>
+        <span>
+          pending
+        </span>
+      </span>
+    </div>
+    <div
       class="grid grid-cols-3 gap-2"
     >
       <div

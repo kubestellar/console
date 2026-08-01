@@ -33,11 +33,22 @@ const FALLBACK_REPOS = [
 /** Last-known repo list from the server. Updated on every successful fetch.
  * Cards call `getPipelineRepos()` to get the current list for their dropdown. */
 let serverRepos: string[] = FALLBACK_REPOS
+let serverReposUpdatedAt: number | null = null
+const serverReposListeners = new Set<() => void>()
 
 /** Returns the current repo list. After the first successful fetch, this
  * reflects whatever the server's PIPELINE_REPOS env var is set to. */
 export function getPipelineRepos(): string[] {
   return serverRepos
+}
+
+export function getPipelineReposLastRefresh(): number | null {
+  return serverReposUpdatedAt
+}
+
+export function subscribePipelineRepos(callback: () => void): () => void {
+  serverReposListeners.add(callback)
+  return () => serverReposListeners.delete(callback)
 }
 
 export type Conclusion =
@@ -330,6 +341,8 @@ async function fetchView<T>(params: URLSearchParams): Promise<T> {
   // scan (set via PIPELINE_REPOS env var).
   if (Array.isArray(body.repos) && body.repos.length > 0) {
     serverRepos = body.repos
+    serverReposUpdatedAt = Date.now()
+    for (const notify of serverReposListeners) notify()
   }
   return body
 }
