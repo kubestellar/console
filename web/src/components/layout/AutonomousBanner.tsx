@@ -13,7 +13,7 @@ export function AutonomousBanner({ onDismiss }: { onDismiss: () => void }) {
       <div className="flex min-w-0 items-center gap-2 md:gap-3">
         <span className="shrink-0 text-sm" aria-hidden="true">🐝</span>
         <span className="min-w-0 truncate text-sm font-medium text-purple-300">
-          {t('layout.autonomousBannerMessage')}
+          {t('autonomousBannerMessage')}
         </span>
       </div>
       <div className="flex shrink-0 items-center gap-1 md:gap-2">
@@ -23,7 +23,7 @@ export function AutonomousBanner({ onDismiss }: { onDismiss: () => void }) {
           rel="noopener noreferrer"
           className="hidden sm:inline-flex items-center gap-1 rounded bg-purple-500/20 px-2 py-1 text-xs text-purple-300 transition-colors whitespace-nowrap hover:bg-purple-500/30"
         >
-          {t('layout.watchLive')}
+          {t('watchLive')}
           <ExternalLink className="w-3 h-3" aria-hidden="true" />
         </a>
         <a
@@ -32,7 +32,7 @@ export function AutonomousBanner({ onDismiss }: { onDismiss: () => void }) {
           rel="noopener noreferrer"
           className="text-xs text-purple-300 underline underline-offset-2 whitespace-nowrap sm:hidden"
         >
-          {t('layout.watchLiveMobile')}
+          {t('watchLiveMobile')}
         </a>
         <button
           onClick={() => {
