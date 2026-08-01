@@ -1,4 +1,3 @@
-import React from 'react'
 /**
  * Unit tests for ACMMRecommendations card component.
  * Covers: loading skeleton, happy-path recommendations list, level slider,
