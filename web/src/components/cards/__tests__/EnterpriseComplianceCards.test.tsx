@@ -41,6 +41,16 @@ vi.mock('react-i18next', () => ({
   })
 }));
 
+vi.mock('../../hooks/useDemoMode', () => ({
+  useDemoMode: () => ({ isDemoMode: false })
+}));
+
+vi.mock('../ui/RefreshIndicator', () => ({
+  RefreshIndicator: ({ isRefreshing, lastUpdated }: { isRefreshing: boolean; lastUpdated: Date | null }) => (
+    <div data-testid="refresh-indicator" data-refreshing={isRefreshing} data-last-updated={lastUpdated?.toISOString() || ''} />
+  )
+}));
+
 describe('EnterpriseComplianceCards', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -58,7 +68,11 @@ describe('EnterpriseComplianceCards', () => {
         </MemoryRouter>
       );
 
-      expect(screen.getByTestId('card-skeleton')).toBeInTheDocument();
+      const loadingText = screen.getByText('Loading…');
+      expect(loadingText).toBeInTheDocument();
+      expect(loadingText.className).toContain('text-muted-foreground');
+      // Verify freshness indicator is rendered
+      expect(screen.getByTestId('refresh-indicator')).toBeInTheDocument();
     });
 
     it('renders success state and navigates on click', async () => {
@@ -125,7 +139,12 @@ describe('EnterpriseComplianceCards', () => {
 
   describe('NISTCard (Pattern B - useCache)', () => {
     it('renders loading state when data is null and no error', () => {
-      (useCache as any).mockReturnValue({ data: null, error: false, isLoading: true });
+      (useCache as any).mockReturnValue({ 
+        data: null, 
+        error: false, 
+        isRefreshing: true, 
+        lastRefresh: null 
+      });
 
       render(
         <MemoryRouter>
@@ -133,11 +152,19 @@ describe('EnterpriseComplianceCards', () => {
         </MemoryRouter>
       );
 
-      expect(screen.getByTestId('card-skeleton')).toBeInTheDocument();
+      expect(screen.getByText('Loading…')).toBeInTheDocument();
+      // Verify freshness indicator is rendered with pending state
+      expect(screen.getByTestId('refresh-indicator')).toBeInTheDocument();
+      expect(screen.getByTestId('refresh-indicator')).toHaveAttribute('data-refreshing', 'true');
     });
 
     it('renders error state with translated text', () => {
-      (useCache as any).mockReturnValue({ data: null, error: new Error('fail') });
+      (useCache as any).mockReturnValue({ 
+        data: null, 
+        error: new Error('fail'), 
+        isRefreshing: false, 
+        lastRefresh: null 
+      });
 
       render(
         <MemoryRouter>
@@ -153,7 +180,13 @@ describe('EnterpriseComplianceCards', () => {
     it('renders success state and navigates on click', async () => {
       const user = userEvent.setup();
       const mockData = { overall_score: 72, implemented_controls: 50, partial_controls: 10, planned_controls: 5, total_controls: 65 };
-      (useCache as any).mockReturnValue({ data: mockData, error: false });
+      const lastRefresh = new Date('2024-01-01T12:00:00Z').toISOString();
+      (useCache as any).mockReturnValue({ 
+        data: mockData, 
+        error: false, 
+        isRefreshing: false, 
+        lastRefresh 
+      });
 
       render(
         <MemoryRouter>
@@ -162,6 +195,8 @@ describe('EnterpriseComplianceCards', () => {
       );
 
       expect(screen.getByText('72%')).toBeInTheDocument();
+      // Verify freshness indicator shows updated state
+      expect(screen.getByTestId('refresh-indicator')).toHaveAttribute('data-refreshing', 'false');
       
       const cardTitle = screen.getByText('NIST 800-53');
       await user.click(cardTitle);
