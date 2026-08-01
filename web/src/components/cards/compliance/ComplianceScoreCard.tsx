@@ -16,8 +16,8 @@ import { COMPLIANCE_INSTALL_PROMPT } from './complianceConstants'
 
 export function ComplianceScoreCard({ config: _config }: CardConfig) {
   const { t } = useTranslation(['common', 'cards'])
-  const { statuses: kubescapeStatuses, aggregated: kubescapeAgg, isLoading: ksLoading, isRefreshing: ksRefreshing, isDemoData: ksDemoData, installed: ksInstalled, hasErrors: ksHasErrors, clustersChecked: ksChecked, totalClusters: ksTotal, unavailableReason: ksUnavailable } = useKubescape()
-  const { statuses: kyvernoStatuses, isLoading: kyLoading, isRefreshing: kyRefreshing, isDemoData: kyDemoData, installed: kyInstalled, hasErrors: kyHasErrors, clustersChecked: kyChecked, totalClusters: kyTotal, unavailableReason: kyUnavailable } = useKyverno()
+  const { statuses: kubescapeStatuses, aggregated: kubescapeAgg, isLoading: ksLoading, isRefreshing: ksRefreshing, lastRefresh: ksRefresh, isDemoData: ksDemoData, installed: ksInstalled, hasErrors: ksHasErrors, clustersChecked: ksChecked, totalClusters: ksTotal, unavailableReason: ksUnavailable } = useKubescape()
+  const { statuses: kyvernoStatuses, isLoading: kyLoading, isRefreshing: kyRefreshing, lastRefresh: kyRefresh, isDemoData: kyDemoData, installed: kyInstalled, hasErrors: kyHasErrors, clustersChecked: kyChecked, totalClusters: kyTotal, unavailableReason: kyUnavailable } = useKyverno()
   const { selectedClusters } = useGlobalFilters()
   const { startMission } = useMissions()
   const [showBreakdown, setShowBreakdown] = useState(false)
@@ -53,12 +53,21 @@ export function ComplianceScoreCard({ config: _config }: CardConfig) {
   const isDemoData = ksDemoData || kyDemoData
   const scoreHasData = !usingFallback || isDemoData
   const scoreFailed = ksHasErrors && kyHasErrors
+  const lastRefresh = [ksRefresh, kyRefresh].reduce<Date | null>(
+    (latest, current) => {
+      if (!current) return latest
+      if (!latest || current.getTime() > latest.getTime()) return current
+      return latest
+    },
+    null,
+  )
   useCardLoadingState({
     isLoading: isLoading && !scoreHasData,
     isRefreshing: ksRefreshing || kyRefreshing,
     hasAnyData: scoreHasData,
     isDemoData,
     isFailed: scoreFailed,
+    lastRefresh: lastRefresh?.getTime() ?? null,
   })
 
   const handleInstallCompliance = () => {
