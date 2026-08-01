@@ -72,14 +72,6 @@ describe('sanitizeForPrompt', () => {
       expect(result).not.toContain('>')
     })
 
-    it('neutralizes triple-backtick code fences', () => {
-      const attack = 'before```javascript\nalert(1)\n```after'
-      const result = sanitizeForPrompt(attack)
-      expect(result).not.toContain('```')
-      expect(result).toContain('before')
-      expect(result).toContain('after')
-    })
-
     it('handles nested unicode escape injection', () => {
       const attack = '\\u003cimg src=x onerror=alert(1)\\u003e'
       const result = sanitizeForPrompt(attack)

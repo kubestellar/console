@@ -61,7 +61,15 @@ export function safeLazy<TModule extends LazyComponentModule>(
           )
         }, LAZY_IMPORT_ATTEMPT_TIMEOUT_MS)
       })
-      return Promise.race([importFn(), timeoutPromise]).finally(() => {
+      // Start the import and attach a noop rejection handler so that if the
+      // import finishes *after* the per-attempt timeout (e.g. a slow network
+      // response) its eventual rejection doesn't surface as an unhandled
+      // rejection. The Promise returned by Promise.race still rejects on the
+      // timeout, and subsequent handling/retries are managed by attemptImport.
+      const importPromise = importFn()
+      importPromise.catch(() => { /* swallow to avoid unhandled rejection */ })
+
+      return Promise.race([importPromise, timeoutPromise]).finally(() => {
         if (timeoutId !== undefined) clearTimeout(timeoutId)
       })
     }

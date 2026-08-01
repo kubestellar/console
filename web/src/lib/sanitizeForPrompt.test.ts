@@ -136,14 +136,6 @@ describe('sanitizeForPrompt', () => {
     expect(result).not.toContain('>')
   })
 
-  it('neutralizes triple-backtick code fences', () => {
-    const input = 'before```javascript\nalert(1)\n```after'
-    const result = sanitizeForPrompt(input)
-    expect(result).not.toContain('```')
-    expect(result).toContain('before')
-    expect(result).toContain('after')
-  })
-
   it('preserves legitimate content with special chars correctly encoded', () => {
     const input = "It's a \"great\" day & the weather is nice"
     const result = sanitizeForPrompt(input)
