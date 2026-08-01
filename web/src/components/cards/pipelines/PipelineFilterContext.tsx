@@ -17,6 +17,7 @@ import { createContext, useContext, useState, useCallback, useEffect, useMemo, t
 import { getPipelineRepos } from '../../../hooks/useGitHubPipelines'
 import { safeGetJSON, safeSetJSON } from '../../../lib/utils/localStorage'
 import { mergeRepos } from './pulse-utils'
+import { useDemoMode } from '../../../hooks/useDemoMode'
 
 /** localStorage key for user-managed repo overrides */
 const STORAGE_KEY = 'kc-pipeline-repos'
@@ -81,6 +82,8 @@ export interface PipelineFilterState {
   hasCustomization: boolean
   /** Reset to server defaults (clear all added + hidden + selection) */
   resetToDefaults: () => void
+  /** Whether demo mode is active — cards can use this to show demo data */
+  isDemoMode: boolean
 }
 
 const PipelineFilterCtx = createContext<PipelineFilterState | null>(null)
@@ -91,6 +94,7 @@ export function PipelineFilterProvider({ children, initialRepo }: { children: Re
   )
   const [config, setConfig] = useState<StoredRepoConfig>(loadConfig)
   const serverRepos = getPipelineRepos()
+  const { isDemoMode } = useDemoMode()
 
   // Wrap setSelectedRepos to persist on every change
   const setSelectedRepos = useCallback((updater: Set<string> | ((prev: Set<string>) => Set<string>)) => {
@@ -203,6 +207,7 @@ export function PipelineFilterProvider({ children, initialRepo }: { children: Re
     hiddenRepos: config.hidden,
     hasCustomization,
     resetToDefaults,
+    isDemoMode,
   }), [
     selectedRepos,
     toggleRepo,
@@ -217,6 +222,7 @@ export function PipelineFilterProvider({ children, initialRepo }: { children: Re
     config.hidden,
     hasCustomization,
     resetToDefaults,
+    isDemoMode,
   ])
 
   return (

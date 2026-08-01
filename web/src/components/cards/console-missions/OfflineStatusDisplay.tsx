@@ -19,6 +19,7 @@ interface OfflineStatusDisplayProps {
     memoryPressure: number
   }
   predictionIntervalMinutes: number
+  isDemoData?: boolean
   onDrillToCluster: (cluster: string) => void
   onTriggerAnalysis: () => void
   t: TFunction<['cards', 'common']>
@@ -37,12 +38,13 @@ export function OfflineStatusDisplay({
   heuristicPredictionCount,
   thresholds,
   predictionIntervalMinutes,
+  isDemoData,
   onDrillToCluster,
   onTriggerAnalysis,
   t,
 }: OfflineStatusDisplayProps) {
   return (
-    <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-4">
+    <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-4" data-demo={isDemoData || undefined}>
       <div
         className={cn(
           'p-2 rounded-lg border',

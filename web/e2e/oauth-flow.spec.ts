@@ -175,8 +175,12 @@ test.describe('OAuth flow - frontend (mocked backend)', () => {
     expect(finalUrl).not.toMatch(/[?&]access_token=/i)
     expect(finalUrl).not.toContain('#kc_x=')
 
-    const hasSession = await page.evaluate(() => localStorage.getItem('kc-has-session'))
-    expect(hasSession).toBe('true')
+    // Poll for kc-has-session rather than reading it synchronously — AuthCallback
+    // sets it asynchronously and a direct page.evaluate() can race ahead of it.
+    await expect.poll(
+      () => page.evaluate(() => localStorage.getItem('kc-has-session')),
+      { timeout: ELEMENT_VISIBLE_TIMEOUT_MS }
+    ).toBe('true')
   })
 
   test('OAuth error redirect surfaces actionable troubleshooting UI', async ({ page }) => {
