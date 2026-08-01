@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { renderHook } from '@testing-library/react'
-import { loadModule, makeDeployment, mockKubectlProxy, mockExecJson, mockUseCache, setupUseCachedLLMdTestEnv } from './useCachedLLMd.test.shared'
+import { loadModule, makeDeployment, mockKubectlProxy, mockExecJson, setupUseCachedLLMdTestEnv } from './useCachedLLMd.test.shared'
 
 setupUseCachedLLMdTestEnv()
 
