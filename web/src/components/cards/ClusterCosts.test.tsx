@@ -47,8 +47,7 @@ vi.mock('../../lib/cards/cardHooks', () => ({
   commonComparators: {
     number: () => () => 0,
     string: () => () => 0,
-  },
-}))
+  }
 
 vi.mock('../../lib/cards/CardComponents', () => ({
   CardSearchInput: ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (

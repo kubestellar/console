@@ -1,7 +1,15 @@
-import { describe, it, expect, vi } from 'vitest'
+import React from "react"
+import { describe, it, expect, vi } from "vitest"
+import { render } from "@testing-library/react"
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+vi.mock('react-i18next', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-i18next')>()
+  return {
+    ...actual,
+    useTranslation: () => ({ t: (key: string) => key }),
+    initReactI18next: { type: '3rdParty', init: () => {} },
+  }
+}),
 }))
 
 vi.mock('../../hooks/useMarketplace', () => ({
@@ -27,8 +35,6 @@ describe('MarketplaceCard Component', () => {
     const onInstall = vi.fn()
     const onRemove = vi.fn()
 
-    expect(() => {
-      MarketplaceCard({ item, onInstall, onRemove, isInstalled: false })
-    }).not.toThrow()
+    expect(() => render(<MarketplaceCard {...{ item, onInstall, onRemove, isInstalled: false }} />)).not.toThrow()
   })
 })

@@ -1,7 +1,15 @@
-import { describe, it, expect, vi } from 'vitest'
+import React from "react"
+import { describe, it, expect, vi } from "vitest"
+import { render } from "@testing-library/react"
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+vi.mock('react-i18next', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-i18next')>()
+  return {
+    ...actual,
+    useTranslation: () => ({ t: (key: string) => key }),
+    initReactI18next: { type: '3rdParty', init: () => {} },
+  }
+}),
 }))
 
 import { DashboardEmptyState } from './DashboardEmptyState'
@@ -23,12 +31,10 @@ describe('DashboardEmptyState Component', () => {
   })
 
   it('renders with connection status', () => {
-    expect(() => {
-      DashboardEmptyState({
+    expect(() => render(<DashboardEmptyState {...{
         onAddCard: vi.fn(),
         onOpenTemplates: vi.fn(),
         connectionStatus: 'connected',
-      })
-    }).not.toThrow()
+      }} />)).not.toThrow()
   })
 })

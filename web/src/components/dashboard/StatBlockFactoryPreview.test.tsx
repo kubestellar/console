@@ -1,4 +1,6 @@
-import { describe, it, expect, vi } from 'vitest'
+import React from "react"
+import { describe, it, expect, vi } from "vitest"
+import { render } from "@testing-library/react"
 
 vi.mock('../../lib/stats/types', () => ({
   COLOR_CLASSES: {},
@@ -18,17 +20,13 @@ describe('StatsPreview Component', () => {
   })
 
   it('renders with empty blocks', () => {
-    expect(() => {
-      StatsPreview({ title: 'Test Stats', blocks: [] })
-    }).not.toThrow()
+    expect(() => render(<StatsPreview {...{ title: 'Test Stats', blocks: [] }} />)).not.toThrow()
   })
 
   it('renders with blocks', () => {
     const blocks = [
       { id: '1', label: 'CPU', icon: 'cpu', color: 'blue', field: 'cpu' },
     ]
-    expect(() => {
-      StatsPreview({ title: 'Test Stats', blocks })
-    }).not.toThrow()
+    expect(() => render(<StatsPreview {...{ title: 'Test Stats', blocks }} />)).not.toThrow()
   })
 })

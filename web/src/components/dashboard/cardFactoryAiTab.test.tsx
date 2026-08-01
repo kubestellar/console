@@ -1,4 +1,6 @@
-import { describe, it, expect, vi } from 'vitest'
+import React from "react"
+import { describe, it, expect, vi } from "vitest"
+import { render } from "@testing-library/react"
 
 vi.mock('../../lib/dynamic-cards', () => ({
   saveDynamicCard: vi.fn(),
@@ -27,8 +29,6 @@ describe('AiCardTab Component', () => {
   })
 
   it('renders with onCardCreated callback', () => {
-    expect(() => {
-      AiCardTab({ onCardCreated: vi.fn() })
-    }).not.toThrow()
+    expect(() => render(<AiCardTab {...{ onCardCreated: vi.fn() }} />)).not.toThrow()
   })
 })

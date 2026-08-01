@@ -1,4 +1,6 @@
-import { describe, it, expect, vi } from 'vitest'
+import React from "react"
+import { describe, it, expect, vi } from "vitest"
+import { render } from "@testing-library/react"
 
 vi.mock('../../hooks/useMarketplace', () => ({
   useAuthorProfile: () => ({
@@ -18,20 +20,14 @@ describe('AuthorBadge Component', () => {
   })
 
   it('renders with author name only', () => {
-    expect(() => {
-      AuthorBadge({ author: 'john' })
-    }).not.toThrow()
+    expect(() => render(<AuthorBadge {...{ author: 'john' }} />)).not.toThrow()
   })
 
   it('renders with github handle', () => {
-    expect(() => {
-      AuthorBadge({ author: 'John Doe', github: 'johndoe' })
-    }).not.toThrow()
+    expect(() => render(<AuthorBadge {...{ author: 'John Doe', github: 'johndoe' }} />)).not.toThrow()
   })
 
   it('renders in compact mode', () => {
-    expect(() => {
-      AuthorBadge({ author: 'Jane', github: 'jane', compact: true })
-    }).not.toThrow()
+    expect(() => render(<AuthorBadge {...{ author: 'Jane', github: 'jane', compact: true }} />)).not.toThrow()
   })
 })

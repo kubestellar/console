@@ -65,8 +65,7 @@ vi.mock('../../../lib/cards/cardHooks', () => ({
     containerRef: { current: null },
     containerStyle: {},
   }),
-  commonComparators: { string: () => () => 0 },
-}))
+  commonComparators: { string: () => () => 0 }
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },

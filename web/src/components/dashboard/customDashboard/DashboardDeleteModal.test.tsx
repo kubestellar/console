@@ -1,7 +1,15 @@
-import { describe, it, expect, vi } from 'vitest'
+import React from "react"
+import { describe, it, expect, vi } from "vitest"
+import { render } from "@testing-library/react"
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+vi.mock('react-i18next', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-i18next')>()
+  return {
+    ...actual,
+    useTranslation: () => ({ t: (key: string) => key }),
+    initReactI18next: { type: '3rdParty', init: () => {} },
+  }
+}),
 }))
 
 vi.mock('../../../lib/modals', () => ({
@@ -21,24 +29,20 @@ describe('DashboardDeleteModal Component', () => {
   })
 
   it('renders when open', () => {
-    expect(() => {
-      DashboardDeleteModal({
+    expect(() => render(<DashboardDeleteModal {...{
         isOpen: true,
         onClose: vi.fn(),
         onConfirm: vi.fn(),
         dashboardName: 'Test Dashboard',
-      })
-    }).not.toThrow()
+      }} />)).not.toThrow()
   })
 
   it('renders when closed', () => {
-    expect(() => {
-      DashboardDeleteModal({
+    expect(() => render(<DashboardDeleteModal {...{
         isOpen: false,
         onClose: vi.fn(),
         onConfirm: vi.fn(),
         dashboardName: 'Test Dashboard',
-      })
-    }).not.toThrow()
+      }} />)).not.toThrow()
   })
 })

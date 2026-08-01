@@ -1,3 +1,4 @@
+import React from "react"
 /**
  * Unit tests for useNamespaceResources.
  *
@@ -42,6 +43,7 @@ vi.mock('../../../../hooks/useDrillDown', () => ({
     drillToPVC,
   }),
 }))
+import { render } from "@testing-library/react"
 
 // Data-source hooks. Individual tests can reassign these before calling
 // renderHook to simulate loading/loaded states.
