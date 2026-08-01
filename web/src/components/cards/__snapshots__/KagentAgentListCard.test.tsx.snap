@@ -6,6 +6,42 @@ exports[`KagentAgentListCard > matches snapshot 1`] = `
     class="space-y-3 p-1"
   >
     <div
+      class="flex items-center justify-between gap-2 px-1"
+    >
+      <div
+        class="text-xs uppercase tracking-wider text-muted-foreground"
+      >
+        overview
+      </div>
+      <div
+        class="flex items-center gap-1.5 text-xs text-muted-foreground"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-rotate-cw w-3 h-3"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M23 4v6h-6"
+          />
+          <path
+            d="M20.49 15a9 9 0 1 1-2-8.83"
+          />
+        </svg>
+        <span>
+          now
+        </span>
+      </div>
+    </div>
+    <div
       class="grid grid-cols-3 gap-2"
     >
       <div
