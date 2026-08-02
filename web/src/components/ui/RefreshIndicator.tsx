@@ -79,6 +79,7 @@ export const RefreshIndicator = memo(function RefreshIndicator({
   if (isVisuallySpinning) {
     return (
       <span
+        data-testid="refresh-indicator"
         className={cn(
           'inline-flex items-center gap-0.5 text-blue-400',
           textSize,
@@ -97,6 +98,7 @@ export const RefreshIndicator = memo(function RefreshIndicator({
 
   return (
     <span
+      data-testid="refresh-indicator"
       className={cn(
         'inline-flex items-center gap-0.5',
         isStale ? 'text-yellow-400' : 'text-muted-foreground',
