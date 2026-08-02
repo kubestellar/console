@@ -7,9 +7,9 @@ import type { GroupConfig } from './types'
  *  static "Auto-investigation in progress" placeholder shown when nothing is happening. */
 export function getGroupSubtitle(
   group: GroupConfig,
-  items: StellarNotification[],
-  solves: StellarSolve[],
-  solveProgress: Record<string, StellarSolveProgress>,
+  items: StellarNotification[] = [],
+  solves: StellarSolve[] = [],
+  solveProgress: Record<string, StellarSolveProgress> = {},
 ): string {
   if (group.key === 'critical') {
     let active = 0, resolved = 0, escalated = 0
