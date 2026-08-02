@@ -36,9 +36,9 @@ scanner:
     
     # Specific required checks that must be green
     required_checks:
-      - build
-      - go-test
-      - lint
+      - build-gate
+      - Analyze Go
+      - "Lint warning regression check"
       
     # Require base branch (main) to be green before merging
     require_green_base_branch: true
