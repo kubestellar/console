@@ -3,7 +3,7 @@ import { TrendingUp, Cpu, MemoryStick, Box, Server, Clock } from 'lucide-react'
 import { LazyEChart } from '../charts/LazyEChart'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { useCardLoadingState } from './CardDataContext'
+import { useCardLoadingState, useCardDemoState } from './CardDataContext'
 import { CardClusterFilter } from '../../lib/cards/CardComponents'
 import { useTranslation } from 'react-i18next'
 import {
@@ -19,7 +19,6 @@ import {
   CHART_BODY_FONT_SIZE,
   CHART_TEXT_MUTED } from '../../lib/constants'
 import { getChartColor } from '../../lib/chartColors'
-import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface ResourcePoint {
   time: string
@@ -46,7 +45,7 @@ export const ResourceTrend = memo(function ResourceTrend() {
   const { t } = useTranslation()
   const { deduplicatedClusters: clusters, isLoading, isRefreshing, isFailed, consecutiveFailures } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
-  const { isDemoMode } = useDemoMode()
+  const { shouldUseDemoData: isDemoMode } = useCardDemoState({ requires: 'agent' })
   const [view, setView] = useState<MetricView>('all')
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { RotateCcw, HelpCircle, BarChart3, X } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
-import { useReportCardDataState } from './CardDataContext'
+import { useReportCardDataState, useCardDemoState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { useGameKeys } from '../../hooks/useGameKeys'
@@ -133,7 +133,8 @@ export function Kubedle(_props: CardComponentProps) {
   // Existing "kubedle.*" keys live in common.json; new ones go in cards.json.
   const { t } = useTranslation()
   const { t: tCards } = useTranslation('cards')
-  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
+  const { showDemoBadge } = useCardDemoState({ requires: 'none' })
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: showDemoBadge })
   const { isExpanded } = useCardExpanded()
 
   const gameContainerRef = useRef<HTMLDivElement>(null)

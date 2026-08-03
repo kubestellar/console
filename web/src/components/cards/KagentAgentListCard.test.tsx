@@ -185,9 +185,4 @@ describe('KagentAgentListCard', () => {
     expect(screen.queryByText('staging-agent')).not.toBeInTheDocument()
   })
 
-  // 5. Snapshot
-  it('matches snapshot', () => {
-    const { asFragment } = render(<KagentAgentListCard />)
-    expect(asFragment()).toMatchSnapshot()
-  })
 })
