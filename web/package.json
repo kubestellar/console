@@ -144,7 +144,7 @@
     "vite-plugin-compression2": "^2.5.3",
     "vite-plugin-istanbul": "^9.0.1",
     "vitest": "^4.1.10",
-    "wait-on": "^9.0.3",
+    "wait-on": "^9.1.0",
     "ws": "^8.21.1"
   },
   "msw": {
