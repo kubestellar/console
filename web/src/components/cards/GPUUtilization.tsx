@@ -4,13 +4,12 @@ import { CardClusterFilter } from '../../lib/cards/CardComponents'
 import { useGPUTaintFilter, GPUTaintFilterControl } from './GPUTaintFilter'
 import { Skeleton, SkeletonStats } from '../ui/Skeleton'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
-import { useCardLoadingState } from './CardDataContext'
 import { LazyEChart } from '../charts/LazyEChart'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedGPUNodes } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useTranslation } from 'react-i18next'
-import { useDemoMode } from '../../hooks/useDemoMode'
+import { useCardDemoState, useCardLoadingState } from './CardDataContext'
 import {
   CHART_HEIGHT_COMPACT,
   CHART_GRID_STROKE,
@@ -67,7 +66,7 @@ const GPUUtilization = memo(function GPUUtilization() {
     consecutiveFailures,
     lastRefresh: gpuLastRefresh } = useCachedGPUNodes()
   const { deduplicatedClusters: clusters } = useClusters()
-  const { isDemoMode } = useDemoMode()
+    const { shouldUseDemoData: isDemoMode } = useCardDemoState({ requires: 'agent' })
 
   const hasData = gpuNodes.length > 0
   const isLoading = hookLoading && !hasData

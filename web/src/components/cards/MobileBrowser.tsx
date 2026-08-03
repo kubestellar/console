@@ -6,11 +6,9 @@ import {
   Wifi, Battery, Signal
 } from 'lucide-react'
 import { useCardExpanded } from './CardWrapper'
+import { useCardDemoState, useReportCardDataState } from './CardDataContext'
 import { POLL_INTERVAL_SLOW_MS } from '../../lib/constants/network'
-import { useDemoMode } from '../../hooks/useDemoMode'
 import type { CSSProperties } from 'react'
-
-const DEMO_URL = 'https://kubestellar.io'
 
 // Inline style constants
 const MOBILE_BROWSER_IFRAME_STYLE_1: CSSProperties = {
@@ -54,7 +52,8 @@ const QUICK_LINKS = [
 export function MobileBrowser() {
   const { isExpanded } = useCardExpanded()
   const { t } = useTranslation('cards')
-  const { isDemoMode } = useDemoMode()
+  const { showDemoBadge } = useCardDemoState({ requires: 'none' })
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: showDemoBadge })
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(0)
@@ -86,15 +85,14 @@ export function MobileBrowser() {
   const isIPad = shouldUseIPad
 
   const [tabs, setTabs] = useState<Tab[]>(() => {
-    if (isDemoMode) return [{ id: '1', url: DEMO_URL, title: 'KubeStellar' }]
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
       if (saved) {
         const parsed = JSON.parse(saved)
-        return parsed.tabs || [{ id: '1', url: DEMO_URL, title: 'KubeStellar' }]
+        return parsed.tabs || [{ id: '1', url: 'https://kubestellar.io', title: 'KubeStellar' }]
       }
     } catch { /* ignore */ }
-    return [{ id: '1', url: DEMO_URL, title: 'KubeStellar' }]
+    return [{ id: '1', url: 'https://kubestellar.io', title: 'KubeStellar' }]
   })
   const [activeTabId, setActiveTabId] = useState(() => {
     try {

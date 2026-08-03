@@ -1,4 +1,3 @@
-import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -9,14 +8,14 @@ import {
   ComplianceFrameworksCard,
   ScoreRing
 } from '../EnterpriseComplianceCards';
-import { authFetch, safeJson } from '../../../lib/api';
 import { useCache } from '../../../lib/cache';
 
 const mockNavigate = vi.fn();
+const mockedUseCache = vi.mocked(useCache);
 vi.mock('react-router-dom', async (importOriginal) => {
   const actual = await importOriginal();
   return {
-    ...actual as any,
+    ...actual,
     useNavigate: () => mockNavigate,
   };
 });
@@ -44,13 +43,28 @@ vi.mock('react-i18next', () => ({
 describe('EnterpriseComplianceCards', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockedUseCache.mockReturnValue({
+      data: null,
+      isLoading: true,
+      isRefreshing: false,
+      isDemoFallback: false,
+      isFailed: false,
+      consecutiveFailures: 0,
+      error: null,
+    });
   });
 
   describe('HIPAACard (Pattern A - useEffect/authFetch)', () => {
     it('renders loading state initially', async () => {
-      // Return an unresolved promise to keep it in loading state
-      const promise = new Promise(() => {});
-      (authFetch as any).mockReturnValue(promise);
+      mockedUseCache.mockReturnValue({
+        data: null,
+        isLoading: true,
+        isRefreshing: false,
+        isDemoFallback: false,
+        isFailed: false,
+        consecutiveFailures: 0,
+        error: null,
+      });
 
       render(
         <MemoryRouter>
@@ -58,15 +72,23 @@ describe('EnterpriseComplianceCards', () => {
         </MemoryRouter>
       );
 
-      expect(screen.getByText('Loading…')).toBeInTheDocument();
+      const loadingText = screen.getByText('Loading…');
+      expect(loadingText).toBeInTheDocument();
+      expect(loadingText.className).toContain('text-muted-foreground');
     });
 
     it('renders success state and navigates on click', async () => {
       const user = userEvent.setup();
-      const mockResponse = { ok: true };
       const mockData = { overall_score: 85, safeguards_passed: 10, safeguards_failed: 2, phi_namespaces: 3, encrypted_flows: 7 };
-      (authFetch as any).mockResolvedValue(mockResponse);
-      (safeJson as any).mockResolvedValue(mockData);
+      mockedUseCache.mockReturnValue({
+        data: mockData,
+        isLoading: false,
+        isRefreshing: false,
+        isDemoFallback: false,
+        isFailed: false,
+        consecutiveFailures: 0,
+        error: null,
+      });
 
       render(
         <MemoryRouter>
@@ -90,8 +112,15 @@ describe('EnterpriseComplianceCards', () => {
     });
 
     it('renders error state on fetch rejection', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      (authFetch as any).mockRejectedValue(new Error('Network error'));
+      mockedUseCache.mockReturnValue({
+        data: null,
+        isLoading: false,
+        isRefreshing: false,
+        isDemoFallback: false,
+        isFailed: true,
+        consecutiveFailures: 3,
+        error: 'Network error',
+      });
 
       render(
         <MemoryRouter>
@@ -104,11 +133,18 @@ describe('EnterpriseComplianceCards', () => {
         expect(errorText).toBeInTheDocument();
         expect(errorText.className).toContain('text-red-400');
       });
-      consoleSpy.mockRestore();
     });
 
     it('renders "No data" state when response is not ok', async () => {
-      (authFetch as any).mockResolvedValue({ ok: false });
+      mockedUseCache.mockReturnValue({
+        data: null,
+        isLoading: false,
+        isRefreshing: false,
+        isDemoFallback: false,
+        isFailed: false,
+        consecutiveFailures: 0,
+        error: null,
+      });
 
       render(
         <MemoryRouter>
@@ -119,13 +155,20 @@ describe('EnterpriseComplianceCards', () => {
       await waitFor(() => {
         expect(screen.getByText('No data')).toBeInTheDocument();
       });
-      expect(safeJson).not.toHaveBeenCalled();
     });
   });
 
   describe('NISTCard (Pattern B - useCache)', () => {
     it('renders loading state when data is null and no error', () => {
-      (useCache as any).mockReturnValue({ data: null, error: false, isLoading: true });
+      mockedUseCache.mockReturnValue({
+        data: null,
+        isLoading: true,
+        isRefreshing: false,
+        isDemoFallback: false,
+        isFailed: false,
+        consecutiveFailures: 0,
+        error: null,
+      });
 
       render(
         <MemoryRouter>
@@ -137,7 +180,7 @@ describe('EnterpriseComplianceCards', () => {
     });
 
     it('renders error state with translated text', () => {
-      (useCache as any).mockReturnValue({ data: null, error: new Error('fail') });
+      mockedUseCache.mockReturnValue({ data: null, error: 'failedToLoad' });
 
       render(
         <MemoryRouter>
@@ -153,7 +196,7 @@ describe('EnterpriseComplianceCards', () => {
     it('renders success state and navigates on click', async () => {
       const user = userEvent.setup();
       const mockData = { overall_score: 72, implemented_controls: 50, partial_controls: 10, planned_controls: 5, total_controls: 65 };
-      (useCache as any).mockReturnValue({ data: mockData, error: false });
+      mockedUseCache.mockReturnValue({ data: mockData, error: false });
 
       render(
         <MemoryRouter>

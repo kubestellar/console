@@ -18,7 +18,6 @@ import { Button } from '../../ui/Button'
 import { CardSearchInput } from '../../../lib/cards/CardComponents'
 import { useHarborStatus } from './useHarborStatus'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
-import { useDemoMode } from '../../../hooks/useDemoMode'
 import type {
   HarborProject,
   HarborRepository,
@@ -235,7 +234,6 @@ function RepositoryRow({
 
 export function HarborStatus() {
   const { t } = useTranslation('cards')
-  useDemoMode()
   const {
     data,
     error,
