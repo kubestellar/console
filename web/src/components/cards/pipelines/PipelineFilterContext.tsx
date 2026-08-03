@@ -13,8 +13,8 @@
  * Cards on OTHER dashboards (where the provider is absent) fall back to
  * their own per-card state.
  */
-import { createContext, useContext, useState, useCallback, useEffect, useMemo, type ReactNode } from 'react'
-import { getPipelineRepos } from '../../../hooks/useGitHubPipelines'
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, useSyncExternalStore, type ReactNode } from 'react'
+import { getPipelineRepos, getPipelineReposLastRefresh, subscribePipelineRepos } from '../../../hooks/useGitHubPipelines'
 import { safeGetJSON, safeSetJSON } from '../../../lib/utils/localStorage'
 import { mergeRepos } from './pulse-utils'
 import { useDemoMode } from '../../../hooks/useDemoMode'
@@ -24,6 +24,9 @@ const STORAGE_KEY = 'kc-pipeline-repos'
 /** localStorage key for the active repo selection — persists across
  *  refreshes and restarts so the user doesn't lose their filter. */
 const SELECTION_STORAGE_KEY = 'kc-pipeline-selection'
+const STORAGE_UPDATED_AT_KEY = 'kc-pipeline-repos-updated-at'
+const SELECTION_UPDATED_AT_KEY = 'kc-pipeline-selection-updated-at'
+const PERSIST_TTL_MS = 7 * 24 * 60 * 60 * 1000
 
 /** Shape persisted in localStorage */
 export interface StoredRepoConfig {
@@ -36,20 +39,30 @@ export interface StoredRepoConfig {
 const EMPTY_CONFIG: StoredRepoConfig = { added: [], hidden: [] }
 
 function loadConfig(): StoredRepoConfig {
+  const updatedAt = safeGetJSON<number>(STORAGE_UPDATED_AT_KEY)
+  if (updatedAt && Date.now() - updatedAt > PERSIST_TTL_MS) {
+    return EMPTY_CONFIG
+  }
   return safeGetJSON<StoredRepoConfig>(STORAGE_KEY) ?? EMPTY_CONFIG
 }
 
 function saveConfig(config: StoredRepoConfig): void {
   safeSetJSON(STORAGE_KEY, config)
+  safeSetJSON(STORAGE_UPDATED_AT_KEY, Date.now())
 }
 
 function loadSelection(): Set<string> {
+  const updatedAt = safeGetJSON<number>(SELECTION_UPDATED_AT_KEY)
+  if (updatedAt && Date.now() - updatedAt > PERSIST_TTL_MS) {
+    return new Set()
+  }
   const arr = safeGetJSON<string[]>(SELECTION_STORAGE_KEY)
   return arr && arr.length > 0 ? new Set(arr) : new Set()
 }
 
 function saveSelection(sel: Set<string>): void {
   safeSetJSON(SELECTION_STORAGE_KEY, [...sel])
+  safeSetJSON(SELECTION_UPDATED_AT_KEY, Date.now())
 }
 
 
@@ -82,25 +95,34 @@ export interface PipelineFilterState {
   hasCustomization: boolean
   /** Reset to server defaults (clear all added + hidden + selection) */
   resetToDefaults: () => void
-  /** Whether demo mode is active — cards can use this to show demo data */
+  /** Whether the dashboard is currently in demo mode */
   isDemoMode: boolean
+  /** Timestamp of the last filter/config change */
+  lastUpdated: number | null
 }
 
 const PipelineFilterCtx = createContext<PipelineFilterState | null>(null)
 
 export function PipelineFilterProvider({ children, initialRepo }: { children: ReactNode; initialRepo?: string | null }) {
+  const { isDemoMode } = useDemoMode()
+  const repoListUpdatedAt = useSyncExternalStore(
+    subscribePipelineRepos,
+    getPipelineReposLastRefresh,
+    () => null,
+  )
   const [selectedRepos, setSelectedReposRaw] = useState<Set<string>>(
     () => initialRepo ? new Set([initialRepo]) : loadSelection()
   )
   const [config, setConfig] = useState<StoredRepoConfig>(loadConfig)
+  const [lastUpdated, setLastUpdated] = useState<number | null>(() => repoListUpdatedAt ?? Date.now())
   const serverRepos = getPipelineRepos()
-  const { isDemoMode } = useDemoMode()
 
   // Wrap setSelectedRepos to persist on every change
   const setSelectedRepos = useCallback((updater: Set<string> | ((prev: Set<string>) => Set<string>)) => {
     setSelectedReposRaw((prev) => {
       const next = typeof updater === 'function' ? updater(prev) : updater
       saveSelection(next)
+      setLastUpdated(Date.now())
       return next
     })
   }, [])
@@ -108,7 +130,14 @@ export function PipelineFilterProvider({ children, initialRepo }: { children: Re
   // Persist repo config on every change
   useEffect(() => {
     saveConfig(config)
+    setLastUpdated(Date.now())
   }, [config])
+
+  useEffect(() => {
+    if (repoListUpdatedAt) {
+      setLastUpdated(repoListUpdatedAt)
+    }
+  }, [repoListUpdatedAt])
 
   const repos = mergeRepos(serverRepos, config)
 
@@ -180,7 +209,7 @@ export function PipelineFilterProvider({ children, initialRepo }: { children: Re
   const resetToDefaults = useCallback(() => {
     setConfig(EMPTY_CONFIG)
     setSelectedRepos(new Set())
-  }, [])
+  }, [setSelectedRepos])
 
   const hasCustomization = config.added.length > 0 || config.hidden.length > 0
 
@@ -208,6 +237,7 @@ export function PipelineFilterProvider({ children, initialRepo }: { children: Re
     hasCustomization,
     resetToDefaults,
     isDemoMode,
+    lastUpdated,
   }), [
     selectedRepos,
     toggleRepo,
@@ -223,6 +253,7 @@ export function PipelineFilterProvider({ children, initialRepo }: { children: Re
     hasCustomization,
     resetToDefaults,
     isDemoMode,
+    lastUpdated,
   ])
 
   return (

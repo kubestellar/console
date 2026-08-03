@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Bot, AlertTriangle, CheckCircle2, Clock, XCircle } from 'lucide-react'
 import { useCachedKagentStatus, HEALTH_THRESHOLD_HEALTHY, HEALTH_THRESHOLD_WARNING } from '../../hooks/useCachedKagentStatus'
 import { useCardLoadingState } from './CardDataContext'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { Skeleton } from '../ui/Skeleton'
 
 interface KagentAgentListCardProps {
@@ -142,6 +143,17 @@ export function KagentAgentListCard({ config }: KagentAgentListCardProps) {
 
   return (
     <div className="space-y-3 p-1">
+      <div className="flex items-center justify-between gap-2 px-1">
+        <div className="text-xs uppercase tracking-wider text-muted-foreground">
+          {t('kagent.overview') || 'Overview'}
+        </div>
+        <RefreshIndicator
+          isRefreshing={isRefreshing}
+          lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+          size="xs"
+        />
+      </div>
+
       {/* Summary metrics */}
       <div className="grid grid-cols-3 gap-2">
         <MetricTile

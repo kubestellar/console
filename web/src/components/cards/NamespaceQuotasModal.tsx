@@ -12,6 +12,7 @@ import {
   GPU_RESOURCE_TYPES,
 } from '../../hooks/useMCP'
 import { useTranslation } from 'react-i18next'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 
 // Split helper component; parent card owns useCardLoadingState.
 
@@ -51,7 +52,11 @@ export function QuotaModal({
   const [error, setError] = useState<string | null>(null)
   const gpuDropdownKeyNav = useDropdownKeyNav(() => setShowGpuPresets(false))
 
-  const { namespaces: clusterNamespaces } = useCachedNamespaces(cluster || undefined)
+  const {
+    namespaces: clusterNamespaces,
+    isRefreshing: isNamespacesRefreshing,
+    lastRefresh: namespacesLastRefresh,
+  } = useCachedNamespaces(cluster || undefined)
   const availableNamespaces = cluster ? clusterNamespaces : namespaces
 
   const addResource = () => {
@@ -131,7 +136,14 @@ export function QuotaModal({
 
           {/* Namespace selector */}
           <div>
-            <label className="block text-sm font-medium text-muted-foreground mb-1">{t('common:common.namespace')}</label>
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <label className="block text-sm font-medium text-muted-foreground">{t('common:common.namespace')}</label>
+              <RefreshIndicator
+                isRefreshing={isNamespacesRefreshing}
+                lastUpdated={namespacesLastRefresh ? new Date(namespacesLastRefresh) : null}
+                size="xs"
+              />
+            </div>
             <select
               value={namespace}
               onChange={(e) => setNamespace(e.target.value)}

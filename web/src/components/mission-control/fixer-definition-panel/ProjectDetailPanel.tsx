@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import type { MissionExport } from '../../../lib/missions/types'
-import { fetchMissionContent } from '../../../lib/missions/missionCache'
+import { fetchMissionContent, missionCache } from '../../../lib/missions/missionCache'
 import type { PayloadProject } from '../types'
 import { cn } from '../../../lib/cn'
 import { ALTERNATIVES, ALTERNATIVES_DISPLAY, type ProjectAlternative } from './fixerDefinitionPanel.constants'
+import { RefreshIndicator } from '../../ui/RefreshIndicator'
 
 interface AlternativeOption extends ProjectAlternative {
   existingProject?: PayloadProject
@@ -24,6 +25,7 @@ export function ProjectDetailPanel({ project, allProjects, onAddAlternative, onR
   const [mission, setMission] = useState<MissionExport | null>(null)
   const [loadingSteps, setLoadingSteps] = useState(false)
   const fetchedRef = useRef('')
+  const missionLastUpdated = missionCache.fetchedAt > 0 ? new Date(missionCache.fetchedAt) : null
 
   useEffect(() => {
     if (!project.kbPath || fetchedRef.current === project.kbPath) {
@@ -94,6 +96,11 @@ export function ProjectDetailPanel({ project, allProjects, onAddAlternative, onR
               {project.replacesInstallMission ? 'your YAML' : 'your YAML + community'}
             </span>
           )}
+          <RefreshIndicator
+            isRefreshing={loadingSteps}
+            lastUpdated={missionLastUpdated}
+            size="xs"
+          />
         </div>
       </div>
 

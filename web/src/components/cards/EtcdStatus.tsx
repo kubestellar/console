@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import type { PodInfo } from '../../hooks/mcp/types'
 import { useCachedPods } from '../../hooks/useCachedData'
 import { useCardLoadingState } from './CardDataContext'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 
 /**
  * Detects whether a pod is an etcd member using multiple signals:
@@ -138,8 +139,15 @@ export function EtcdStatus() {
 
   return (
     <div className="space-y-2 p-1">
-      <div className="text-xs text-muted-foreground">
-        {t('etcdStatus.membersSummary', { members: etcdPods.length, clusters: byCluster.length })}
+      <div className="flex items-start justify-between gap-2">
+        <div className="text-xs text-muted-foreground">
+          {t('etcdStatus.membersSummary', { members: etcdPods.length, clusters: byCluster.length })}
+        </div>
+        <RefreshIndicator
+          isRefreshing={isRefreshing}
+          lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+          size="xs"
+        />
       </div>
       {byCluster.map(([cluster, clusterPods]) => {
         const running = clusterPods.filter(p => p.status === 'Running')

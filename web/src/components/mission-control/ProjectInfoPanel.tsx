@@ -3,10 +3,11 @@ import { AlertTriangle, Loader2 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import type { ProjectHoverInfo } from './svg/ProjectNode'
 import type { DependencyEdge } from './types'
-import { fetchMissionContent } from '../../lib/missions/missionCache'
+import { fetchMissionContent, missionCache } from '../../lib/missions/missionCache'
 import { fetchKubaraValues } from '../../lib/kubara'
 import type { MissionExport, MissionStep } from '../../lib/missions/types'
 import { STATUS_COLORS, STATUS_LABELS } from './BlueprintInfoPanelsConstants'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 
 // ---------------------------------------------------------------------------
 // Kubara chart → install steps generator (#11881)
@@ -76,6 +77,7 @@ export function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edge
   const [stepsError, setStepsError] = useState<string | null>(null)
   const [stepsRetryNonce, setStepsRetryNonce] = useState(0)
   const fetchedRef = useRef<string>('')
+  const missionLastUpdated = missionCache.fetchedAt > 0 ? new Date(missionCache.fetchedAt) : null
 
   // Fetch mission steps — try multiple KB path variants for fuzzy matching
   const slug = info.name.toLowerCase().replace(/\s+/g, '-')
@@ -163,10 +165,17 @@ export function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edge
     <div className="space-y-5">
       {/* Header */}
       <div>
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between gap-2">
           <h3 className="text-sm font-bold text-foreground pr-2">{info.displayName}</h3>
-          <div className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded whitespace-nowrap', info.installed ? 'text-green-600 dark:text-green-400 bg-green-500/10' : (STATUS_COLORS[info.status] ?? 'text-muted-foreground'))}>
-            {info.installed ? 'INSTALLED' : (STATUS_LABELS[info.status] ?? info.status.toUpperCase())}
+          <div className="flex items-center gap-2 shrink-0">
+            <RefreshIndicator
+              isRefreshing={loadingSteps}
+              lastUpdated={missionLastUpdated}
+              size="xs"
+            />
+            <div className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded whitespace-nowrap', info.installed ? 'text-green-600 dark:text-green-400 bg-green-500/10' : (STATUS_COLORS[info.status] ?? 'text-muted-foreground'))}>
+              {info.installed ? 'INSTALLED' : (STATUS_LABELS[info.status] ?? info.status.toUpperCase())}
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-1 mt-1.5 flex-wrap">

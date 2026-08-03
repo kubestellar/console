@@ -2,13 +2,13 @@
  * badgeVisibility — unit tests for the pure predicate helpers that decide
  * whether the live badge and failure banner should render on a card.
  *
- * Run from web/:  npx vitest run src/components/cards/__tests__/badgeVisibility.test.ts
+ * Run from web/:  npx vitest run src/components/cards/card-wrapper/badgeVisibility.test.ts
  */
 import { describe, it, expect } from 'vitest'
 import {
   shouldShowLiveBadge,
   shouldShowFailureBanner,
-} from '../card-wrapper/badgeVisibility'
+} from './badgeVisibility'
 
 describe('shouldShowLiveBadge', () => {
   it('returns true when live, not demo, and not failed', () => {
