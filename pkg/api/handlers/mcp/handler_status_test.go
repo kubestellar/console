@@ -39,6 +39,7 @@ func TestMCPHandlers_GetStatus_NoBridge_NoK8s(t *testing.T) {
 	req.Host = "localhost"
 	resp, err := app.Test(req)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -65,6 +66,7 @@ func TestMCPHandlers_GetStatus_WithBridge_ReportsBridgeStatus(t *testing.T) {
 	req.Host = "localhost"
 	resp, err := app.Test(req)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -103,6 +105,7 @@ func TestMCPHandlers_GetOpsTools_NoBridge_Returns503(t *testing.T) {
 	req.Host = "localhost"
 	resp, err := app.Test(req)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
 
@@ -125,6 +128,7 @@ func TestMCPHandlers_GetOpsTools_EmptyBridge_ReturnsEmptyList(t *testing.T) {
 	req.Host = "localhost"
 	resp, err := app.Test(req)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -147,6 +151,7 @@ func TestMCPHandlers_GetDeployTools_NoBridge_Returns503(t *testing.T) {
 	req.Host = "localhost"
 	resp, err := app.Test(req)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
 
@@ -166,6 +171,7 @@ func TestMCPHandlers_GetDeployTools_EmptyBridge_ReturnsEmptyList(t *testing.T) {
 	req.Host = "localhost"
 	resp, err := app.Test(req)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -207,6 +213,7 @@ func TestHandleK8sError_NoClusterConfigured_Returns503(t *testing.T) {
 	req.Host = "localhost"
 	resp, err := app.Test(req)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	defer resp.Body.Close()
 	// ErrNoClusterAccess returns 503 (see pkg/api/handlers).
 	assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
@@ -223,6 +230,7 @@ func TestHandleK8sError_NetworkError_Returns503WithSanitizedMessage(t *testing.T
 	req.Host = "localhost"
 	resp, err := app.Test(req)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
 
@@ -249,6 +257,7 @@ func TestHandleK8sError_UnknownError_Returns500Generic(t *testing.T) {
 	req.Host = "localhost"
 	resp, err := app.Test(req)
 	require.NoError(t, err)
+	require.NotNil(t, resp)
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 
