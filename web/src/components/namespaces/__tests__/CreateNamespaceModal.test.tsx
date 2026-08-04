@@ -63,7 +63,7 @@ describe('CreateNamespaceModal', () => {
     expect(screen.getAllByRole('combobox').length).toBeGreaterThan(0)
   })
 
-  it('auto-selects first cluster on initialization', () => {
+  it('does not auto-select a cluster when multiple clusters are available', () => {
     render(
       <CreateNamespaceModal
         clusters={clusters}
@@ -74,6 +74,19 @@ describe('CreateNamespaceModal', () => {
 
     const comboboxes = screen.getAllByRole('combobox')
     expect(comboboxes.length).toBeGreaterThan(0)
+    expect((comboboxes[0] as HTMLSelectElement).value).toBe('')
+  })
+
+  it('auto-selects the only cluster when exactly one is available', () => {
+    render(
+      <CreateNamespaceModal
+        clusters={['cluster-1']}
+        onClose={mockOnClose}
+        onCreated={mockOnCreated}
+      />
+    )
+
+    const comboboxes = screen.getAllByRole('combobox')
     expect((comboboxes[0] as HTMLSelectElement).value).toBe('cluster-1')
   })
 

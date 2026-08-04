@@ -301,13 +301,32 @@ async function getManifestForBatch(page: Page, batch: number, batchSize: number)
   try {
     await page.waitForFunction(() => !!window.__TTFI_MANIFEST__, { timeout: 60_000 })
   } catch (error) { console.error('Error:', error)
-    const debug = await page.evaluate(() => ({
-      path: window.location.pathname,
-      hasManifestEl: !!document.querySelector('[data-testid="ttfi-manifest"]'),
-      hasSidebar: !!document.querySelector('[data-testid="sidebar"]'),
-      bodyPreview: (document.body.textContent || '').slice(0, 300),
-      hasLoginForm: !!document.querySelector('input[type="password"]'),
-     }))
+    // Avoid calling page.evaluate when the page has been closed — that throws
+    // "Target page, context or browser has been closed" and masks the original
+    // diagnostic. Prefer a best-effort debug object.
+    type DebugInfo = {
+      pageClosed?: boolean
+      path?: string
+      hasManifestEl?: boolean
+      hasSidebar?: boolean
+      bodyPreview?: string
+      hasLoginForm?: boolean
+      evaluateError?: string
+    }
+    let debug: DebugInfo = { pageClosed: typeof page.isClosed === 'function' ? page.isClosed() : false }
+    if (!debug.pageClosed) {
+      try {
+        debug = await page.evaluate(() => ({
+          path: window.location.pathname,
+          hasManifestEl: !!document.querySelector('[data-testid="ttfi-manifest"]'),
+          hasSidebar: !!document.querySelector('[data-testid="sidebar"]'),
+          bodyPreview: (document.body.textContent || '').slice(0, 300),
+          hasLoginForm: !!document.querySelector('input[type="password"]'),
+        }))
+      } catch (e) {
+        debug.evaluateError = String(e)
+      }
+    }
     throw new Error(`TTFI manifest did not load: ${JSON.stringify(debug)}`, { cause: error })
   }
 

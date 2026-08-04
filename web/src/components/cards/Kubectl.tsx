@@ -9,6 +9,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { copyToClipboard } from '../../lib/clipboard'
+import { getDefaultClusterSelection } from '../../lib/clusterSelection'
 import type { CommandHistoryItem, YAMLManifest, OutputFormat } from './Kubectl.types'
 import { YAML_PREVIEW_LINES, validateYAML, generateCommandFromPrompt, generateYAMLFromPrompt, parseCommandArgs } from './Kubectl.utils'
 import { AIAssistantPanel } from './KubectlAIPanel'
@@ -65,8 +66,6 @@ const DEMO_COMMAND_HISTORY: CommandHistoryItem[] = [
   },
 ]
 
-const SINGLE_VISIBLE_CLUSTER_COUNT = 1
-
 export function Kubectl() {
   const { t } = useTranslation(['common', 'cards'])
   const { execute } = useKubectl()
@@ -112,21 +111,13 @@ export function Kubectl() {
     }
   }, [])
 
-  // Set a default context only when it's explicit or unambiguous.
+  const defaultContext = useMemo(() => getDefaultClusterSelection(clusters), [clusters])
+
   useEffect(() => {
-    if (selectedContext) return
-
-    const currentCtx = clusters.find(c => c.isCurrent)
-    if (currentCtx) {
-      setSelectedContext(currentCtx.name)
-      return
+    if (!selectedContext && defaultContext) {
+      setSelectedContext(defaultContext)
     }
-
-    // clusters[0] is intentional: only auto-selected when exactly ONE cluster exists (unambiguous choice)
-    if (clusters.length === SINGLE_VISIBLE_CLUSTER_COUNT) {
-      setSelectedContext(clusters[0].name)
-    }
-  }, [clusters, selectedContext])
+  }, [defaultContext, selectedContext])
 
   // Auto-scroll output to bottom
   useEffect(() => {

@@ -11,6 +11,7 @@ import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { useCardLoadingState } from './CardDataContext'
+import { getDefaultClusterSelection } from '../../lib/clusterSelection'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { useTranslation } from 'react-i18next'
 
@@ -43,8 +44,6 @@ const SORT_OPTIONS_KEYS: ReadonlyArray<{ value: SortByOption; labelKey: SortTran
  * (Issue 9268).
  */
 const TABS_WITH_RULES_COUNT: ReadonlyArray<'roles' | 'bindings' | 'serviceaccounts'> = ['roles']
-const SINGLE_VISIBLE_CLUSTER_COUNT = 1
-
 function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
   const { t } = useTranslation(['cards', 'common'])
   const [activeTab, setActiveTab] = useState<'roles' | 'bindings' | 'serviceaccounts'>('roles')
@@ -89,11 +88,13 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
     return safeClusters.filter(c => selectedClusters.includes(c.name))
   })()
 
-  // Auto-select a cluster only when demo mode leaves a single filtered choice.
+  const defaultCluster = getDefaultClusterSelection(filteredClusters)
+
   useEffect(() => {
-    if (!isDemoData || selectedCluster || filteredClusters.length !== SINGLE_VISIBLE_CLUSTER_COUNT) return
-    setSelectedCluster(filteredClusters[0].name)
-  }, [filteredClusters, isDemoData, selectedCluster])
+    if (isDemoData && !selectedCluster && defaultCluster) {
+      setSelectedCluster(defaultCluster)
+    }
+  }, [defaultCluster, isDemoData, selectedCluster])
 
   useEffect(() => {
     if (isDemoData && selectedCluster && safeNamespaces.length > 0 && !selectedNamespace) {
