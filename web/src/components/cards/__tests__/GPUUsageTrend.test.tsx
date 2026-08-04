@@ -1,4 +1,3 @@
-import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render } from '@testing-library/react'
 
@@ -45,9 +44,11 @@ vi.mock('react-i18next', async () => {
 })
 
 const mockUseCardLoadingState = vi.fn()
+const mockUseCardDemoState = vi.fn(() => ({ shouldUseDemoData: false, reason: null, showDemoBadge: false }))
 vi.mock('../CardDataContext', () => ({
   useReportCardDataState: vi.fn(),
   useCardLoadingState: (opts: unknown) => mockUseCardLoadingState(opts),
+  useCardDemoState: () => mockUseCardDemoState(),
 }))
 
 const mockGPUNodes = vi.fn()

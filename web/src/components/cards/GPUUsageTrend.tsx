@@ -9,9 +9,8 @@ import { useMetricsHistoryReadOnly } from '../../hooks/useMetricsHistory'
 import { gpuNodeCache as mcpGPUNodeCache } from '../../hooks/mcp/compute'
 import type { GPUNode } from '../../hooks/mcp/types'
 import { Skeleton, SkeletonStats } from '../ui/Skeleton'
-import { useCardLoadingState } from './CardDataContext'
+import { useCardLoadingState, useCardDemoState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
-import { useDemoMode } from '../../hooks/useDemoMode'
 import { normalizeClusterName } from '../../lib/gpu'
 import {
   CHART_HEIGHT_STANDARD,
@@ -86,7 +85,7 @@ const GPUUsageTrend = memo(function GPUUsageTrend() {
     isFailed,
     consecutiveFailures } = useCachedGPUNodes()
   const { deduplicatedClusters: clusters } = useClusters()
-  const { isDemoMode } = useDemoMode()
+  const { shouldUseDemoData: isDemoMode } = useCardDemoState({ requires: 'agent' })
   // Use the shared metrics-history snapshots as a last-known-good fallback
   // when the live GPU-nodes fetch returns empty (intermittent API failure
   // against a cluster that does have GPUs). Without this the card shows

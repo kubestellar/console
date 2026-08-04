@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_updated": "2026-08-01T04:06:57Z",
+  "last_updated": "2026-08-04T04:01:31Z",
   "rolling_window_days": 30,
   "categories": {
     "performance": {
@@ -25,18 +25,18 @@
       "last_evaluated": "2026-07-31T04:07:33Z"
     },
     "operator": {
-      "merged": 798,
+      "merged": 812,
       "closed": 269,
       "acceptance_rate": 0.75,
       "status": "normal",
-      "last_evaluated": "2026-08-01T04:06:57Z"
+      "last_evaluated": "2026-08-04T04:01:31Z"
     },
     "sre": {
-      "merged": 516,
+      "merged": 527,
       "closed": 100,
       "acceptance_rate": 0.84,
       "status": "boosted",
-      "last_evaluated": "2026-08-01T04:06:57Z"
+      "last_evaluated": "2026-08-04T04:01:31Z"
     },
     "features": {
       "merged": 40,
@@ -46,11 +46,11 @@
       "last_evaluated": "2026-08-01T04:06:57Z"
     },
     "resilience": {
-      "merged": 97,
+      "merged": 99,
       "closed": 66,
       "acceptance_rate": 0.6,
       "status": "normal",
-      "last_evaluated": "2026-08-01T04:06:57Z"
+      "last_evaluated": "2026-08-04T04:01:31Z"
     },
     "consistency": {
       "merged": 33,
@@ -61,17 +61,17 @@
     }
   },
   "weekly_insights": {
-    "best_pr_size": "S",
+    "best_pr_size": "M",
     "size_acceptance": {},
     "type_acceptance": {},
     "common_rejection_reasons": [
-      "- PR #21465: <!-- a11y-audit-comment -->",
-      "## ♿ Accessibility Audit (WCAG 2.1 AA)",
-      "- PR #21460: Superseded by #21468 (merged), which fixed the same `ReservationFormModal.test.tsx` mock more comprehensively. Closing to avoid conflicts.",
-      "- PR #21459: [APPROVALNOTIFIER] This PR is **NOT APPROVED**"
+      "- PR #22059: <!-- auto-test-generator -->",
+      "## Auto Test Generator",
+      "- PR #22057: [APPROVALNOTIFIER] This PR is **NOT APPROVED**",
+      "This pull-request has been approved by:"
     ],
     "best_change_type": "bug_fix",
-    "last_report_date": "2026-07-26"
+    "last_report_date": "2026-08-02"
   },
   "cncf_insights": {
     "last_scan_date": "2026-07-29",
@@ -97,20 +97,6 @@
     ]
   },
   "history": [
-    {
-      "date": "2026-06-17",
-      "total_merged": 1081,
-      "total_closed": 536,
-      "categories_blocked": [],
-      "categories_boosted": []
-    },
-    {
-      "date": "2026-07-03",
-      "total_merged": 1101,
-      "total_closed": 546,
-      "categories_blocked": [],
-      "categories_boosted": []
-    },
     {
       "date": "2026-07-04",
       "total_merged": 1108,
@@ -337,6 +323,24 @@
     {
       "date": "2026-08-01",
       "total_merged": 1692,
+      "total_closed": 576,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "sre"
+      ]
+    },
+    {
+      "date": "2026-08-03",
+      "total_merged": 1700,
+      "total_closed": 576,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "sre"
+      ]
+    },
+    {
+      "date": "2026-08-04",
+      "total_merged": 1719,
       "total_closed": 576,
       "categories_blocked": [],
       "categories_boosted": [

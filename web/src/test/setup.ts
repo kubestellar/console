@@ -123,11 +123,22 @@ if (isBrowserEnvironment) {
 
   // Mock agentFetch wrappers to delegate to global.fetch so test mocks intercept
   // both the legacy shared wrapper and the direct mcp/agentFetch module imports.
+  // Ensure global.fetch exists in the test environment so these wrappers can
+  // safely delegate to it without throwing when tests run in certain workers.
+  if (typeof globalThis.fetch === 'undefined') {
+    globalThis.fetch = vi.fn(async () => {
+      if (typeof Response !== 'undefined') {
+        return new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } })
+      }
+      return { ok: true, status: 200, json: async () => ({}) } as unknown as Response
+    })
+  }
+
   vi.mock('../hooks/mcp/shared', async (importOriginal) => {
     const actual = await importOriginal<typeof import('../hooks/mcp/shared')>()
     return {
       ...actual,
-      agentFetch: vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => global.fetch(url, init)),
+      agentFetch: vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => globalThis.fetch(url, init)),
     }
   })
 
@@ -135,7 +146,7 @@ if (isBrowserEnvironment) {
     const actual = await importOriginal<typeof import('../hooks/mcp/agentFetch')>()
     return {
       ...actual,
-      agentFetch: vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => global.fetch(url, init)),
+      agentFetch: vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => globalThis.fetch(url, init)),
     }
   })
 }
