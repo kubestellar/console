@@ -304,7 +304,16 @@ async function getManifestForBatch(page: Page, batch: number, batchSize: number)
     // Avoid calling page.evaluate when the page has been closed — that throws
     // "Target page, context or browser has been closed" and masks the original
     // diagnostic. Prefer a best-effort debug object.
-    let debug: any = { pageClosed: typeof page.isClosed === 'function' ? page.isClosed() : false }
+    type DebugInfo = {
+      pageClosed?: boolean
+      path?: string
+      hasManifestEl?: boolean
+      hasSidebar?: boolean
+      bodyPreview?: string
+      hasLoginForm?: boolean
+      evaluateError?: string
+    }
+    let debug: DebugInfo = { pageClosed: typeof page.isClosed === 'function' ? page.isClosed() : false }
     if (!debug.pageClosed) {
       try {
         debug = await page.evaluate(() => ({
