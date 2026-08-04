@@ -75,6 +75,7 @@ vi.mock('../../../lib/api', () => ({
     get: vi.fn().mockResolvedValue({ data: [] }),
     post: vi.fn(),
   }
+}))
 
 vi.mock('../../../lib/analytics', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../../lib/analytics')>()),

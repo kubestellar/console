@@ -19,6 +19,7 @@ vi.mock('react-router-dom', () => ({
 
 vi.mock('../../lib/api', () => ({
   api: { post: vi.fn(), get: vi.fn() }
+}))
 
 vi.mock('../ui/Toast', () => ({
   useToast: () => ({ showToast: vi.fn() }),

@@ -166,6 +166,7 @@ vi.mock('../../../lib/kubectlProxy', () => ({
   kubectlProxy: {
     exec: kubectlExecSpy,
   }
+}))
 
 vi.mock('../../cards/WorkloadImportDialog', () => ({
   WorkloadImportDialog: ({ isOpen }: { isOpen: boolean }) => (
