@@ -495,6 +495,7 @@ func TestUpdateMission_InvalidPayloadRejected(t *testing.T) {
 	// Ensure mission still has original name.
 	loaded, err := sqlStore.GetStellarMission(context.Background(), userID, m.ID)
 	require.NoError(t, err)
+	require.NotNil(t, loaded)
 	assert.Equal(t, "keep-name", loaded.Name)
 }
 
