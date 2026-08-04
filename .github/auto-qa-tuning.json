@@ -61,17 +61,17 @@
     }
   },
   "weekly_insights": {
-    "best_pr_size": "S",
+    "best_pr_size": "M",
     "size_acceptance": {},
     "type_acceptance": {},
     "common_rejection_reasons": [
-      "- PR #21465: <!-- a11y-audit-comment -->",
-      "## ♿ Accessibility Audit (WCAG 2.1 AA)",
-      "- PR #21460: Superseded by #21468 (merged), which fixed the same `ReservationFormModal.test.tsx` mock more comprehensively. Closing to avoid conflicts.",
-      "- PR #21459: [APPROVALNOTIFIER] This PR is **NOT APPROVED**"
+      "- PR #22059: <!-- auto-test-generator -->",
+      "## Auto Test Generator",
+      "- PR #22057: [APPROVALNOTIFIER] This PR is **NOT APPROVED**",
+      "This pull-request has been approved by:"
     ],
     "best_change_type": "bug_fix",
-    "last_report_date": "2026-07-26"
+    "last_report_date": "2026-08-02"
   },
   "cncf_insights": {
     "last_scan_date": "2026-07-29",
