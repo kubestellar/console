@@ -238,7 +238,7 @@ describe('useCachedLLMd fetchServers', () => {
     it('handles VPA without targetRef gracefully', async () => {
       const vpaItems = [
         {
-          metadata: { name: 'vllm-vpa', namespace: 'llm-d' },
+          metadata: { name: 'vpa-no-target', namespace: 'llm-d' },
           spec: {},
         },
       ]
@@ -256,8 +256,11 @@ describe('useCachedLLMd fetchServers', () => {
       const { fetchLLMdServers } = await loadModule()
       const servers = await fetchLLMdServers(['c1'])
 
-      const vpaServer = servers.find(s => s.name === 'vllm-vpa')
-      expect(vpaServer).toBeUndefined()
+      // VPA without targetRef is still included, with an 'unknown' target fallback
+      const vpaServer = servers.find(s => s.autoscalerType === 'vpa')
+      expect(vpaServer).toBeDefined()
+      expect(vpaServer!.componentType).toBe('autoscaler')
+      expect(vpaServer!.model).toBe('→ unknown')
     })
 
     it('skips HPA entries that do not target Deployments', async () => {
@@ -316,10 +319,10 @@ describe('useCachedLLMd fetchServers', () => {
       mockKubectlProxy.exec.mockImplementation(async (args: string[]) => {
         if (args[1] === 'deployments') {
           return mockExecJson([
-            makeDeployment('gpu-server', 'llm-d', {
+            makeDeployment('vllm-gpu-server', 'llm-d', {
               replicas: 1,
               readyReplicas: 1,
-              containerResources: { 'nvidia.com/gpu': '2' },
+              gpuLimits: { 'nvidia.com/gpu': '2' },
             }),
           ])
         }
@@ -329,18 +332,18 @@ describe('useCachedLLMd fetchServers', () => {
       const { fetchLLMdServers } = await loadModule()
       const servers = await fetchLLMdServers(['c1'])
 
-      expect(servers[0].gpuInfo).toBeDefined()
-      expect(servers[0].gpuInfo).toContain('nvidia.com/gpu: 2')
+      expect(servers[0].gpu).toBe('NVIDIA')
+      expect(servers[0].gpuCount).toBe(2)
     })
 
     it('extracts AMD GPU info from container resource limits', async () => {
       mockKubectlProxy.exec.mockImplementation(async (args: string[]) => {
         if (args[1] === 'deployments') {
           return mockExecJson([
-            makeDeployment('amd-gpu-server', 'llm-d', {
+            makeDeployment('vllm-amd-gpu-server', 'llm-d', {
               replicas: 1,
               readyReplicas: 1,
-              containerResources: { 'amd.com/gpu': '4' },
+              gpuLimits: { 'amd.com/gpu': '4' },
             }),
           ])
         }
@@ -350,18 +353,18 @@ describe('useCachedLLMd fetchServers', () => {
       const { fetchLLMdServers } = await loadModule()
       const servers = await fetchLLMdServers(['c1'])
 
-      expect(servers[0].gpuInfo).toBeDefined()
-      expect(servers[0].gpuInfo).toContain('amd.com/gpu: 4')
+      expect(servers[0].gpu).toBe('AMD')
+      expect(servers[0].gpuCount).toBe(4)
     })
 
     it('extracts generic GPU info when key contains "gpu" but not nvidia/amd', async () => {
       mockKubectlProxy.exec.mockImplementation(async (args: string[]) => {
         if (args[1] === 'deployments') {
           return mockExecJson([
-            makeDeployment('generic-gpu-server', 'llm-d', {
+            makeDeployment('vllm-generic-gpu-server', 'llm-d', {
               replicas: 1,
               readyReplicas: 1,
-              containerResources: { 'vendor.io/gpu': '1' },
+              gpuLimits: { 'vendor.io/gpu': '1' },
             }),
           ])
         }
@@ -371,18 +374,18 @@ describe('useCachedLLMd fetchServers', () => {
       const { fetchLLMdServers } = await loadModule()
       const servers = await fetchLLMdServers(['c1'])
 
-      expect(servers[0].gpuInfo).toBeDefined()
-      expect(servers[0].gpuInfo).toContain('vendor.io/gpu: 1')
+      expect(servers[0].gpu).toBe('GPU')
+      expect(servers[0].gpuCount).toBe(1)
     })
 
     it('returns no GPU info when no gpu limits exist', async () => {
       mockKubectlProxy.exec.mockImplementation(async (args: string[]) => {
         if (args[1] === 'deployments') {
           return mockExecJson([
-            makeDeployment('no-gpu-server', 'llm-d', {
+            makeDeployment('vllm-no-gpu-server', 'llm-d', {
               replicas: 1,
               readyReplicas: 1,
-              containerResources: { 'cpu': '1', 'memory': '2Gi' },
+              gpuLimits: { 'cpu': '1', 'memory': '2Gi' },
             }),
           ])
         }
@@ -392,7 +395,8 @@ describe('useCachedLLMd fetchServers', () => {
       const { fetchLLMdServers } = await loadModule()
       const servers = await fetchLLMdServers(['c1'])
 
-      expect(servers[0].gpuInfo).toBeUndefined()
+      expect(servers[0].gpu).toBeUndefined()
+      expect(servers[0].gpuCount).toBeUndefined()
     })
   })
 
@@ -437,10 +441,10 @@ describe('useCachedLLMd fetchServers', () => {
       mockKubectlProxy.exec.mockImplementation(async (args: string[]) => {
         if (args[1] === 'deployments') {
           return mockExecJson([
-            makeDeployment('inference-server', 'llm-d', {
+            makeDeployment('custom-model', 'llm-d', {
               replicas: 1,
               readyReplicas: 1,
-              podLabels: { 'llmd.org/inferenceServing': 'tgi' },
+              podLabels: { 'app.kubernetes.io/name': 'tgi', 'llmd.org/inferenceServing': 'true' },
             }),
           ])
         }
@@ -450,17 +454,19 @@ describe('useCachedLLMd fetchServers', () => {
       const { fetchLLMdServers } = await loadModule()
       const servers = await fetchLLMdServers(['c1'])
 
-      expect(servers[0].type).toBe('tgi')
+      // tgi label takes precedence over the non-matching name
+      expect(servers.find(s => s.name === 'custom-model')!.type).toBe('tgi')
     })
 
     it('detects component types: epp, gateway, prometheus, model, other', async () => {
       mockKubectlProxy.exec.mockImplementation(async (args: string[]) => {
         if (args[1] === 'deployments') {
           return mockExecJson([
-            makeDeployment('epp-server', 'llm-d', { replicas: 1, readyReplicas: 1 }),
-            makeDeployment('gateway-proxy', 'llm-d', { replicas: 1, readyReplicas: 1 }),
+            makeDeployment('my-epp-service', 'llm-d', { replicas: 1, readyReplicas: 1 }),
+            makeDeployment('istio-gateway', 'llm-d', { replicas: 1, readyReplicas: 1 }),
             makeDeployment('prometheus', 'llm-d', { replicas: 1, readyReplicas: 1 }),
-            makeDeployment('llm-model', 'llm-d', { replicas: 1, readyReplicas: 1 }),
+            makeDeployment('vllm-llama-serve', 'llm-d', { replicas: 1, readyReplicas: 1 }),
+            makeDeployment('llm-d-scheduler', 'llm-d', { replicas: 1, readyReplicas: 1 }),
           ])
         }
         return mockExecJson([])
@@ -469,20 +475,23 @@ describe('useCachedLLMd fetchServers', () => {
       const { fetchLLMdServers } = await loadModule()
       const servers = await fetchLLMdServers(['c1'])
 
-      expect(servers.find(s => s.name === 'epp-server')!.componentType).toBe('epp')
-      expect(servers.find(s => s.name === 'gateway-proxy')!.componentType).toBe('gateway')
+      expect(servers.find(s => s.name === 'my-epp-service')!.componentType).toBe('epp')
+      expect(servers.find(s => s.name === 'istio-gateway')!.componentType).toBe('gateway')
       expect(servers.find(s => s.name === 'prometheus')!.componentType).toBe('prometheus')
-      expect(servers.find(s => s.name === 'llm-model')!.componentType).toBe('model')
+      expect(servers.find(s => s.name === 'vllm-llama-serve')!.componentType).toBe('model')
+      expect(servers.find(s => s.name === 'llm-d-scheduler')!.componentType).toBe('other')
     })
 
     it('detects component type "model" for known model name patterns', async () => {
+      const modelNames = ['llama-serve', 'granite-7b', 'qwen-chat', 'mistral-7b', 'mixtral-8x7b']
+
       mockKubectlProxy.exec.mockImplementation(async (args: string[]) => {
         if (args[1] === 'deployments') {
-          return mockExecJson([
-            makeDeployment('llama2', 'llm-d', { replicas: 1, readyReplicas: 1 }),
-            makeDeployment('mistral-7b', 'llm-d', { replicas: 1, readyReplicas: 1 }),
-            makeDeployment('gpt4-turbo', 'llm-d', { replicas: 1, readyReplicas: 1 }),
-          ])
+          return mockExecJson(
+            modelNames.map(name =>
+              makeDeployment(name, 'llm-d', { replicas: 1, readyReplicas: 1 }),
+            ),
+          )
         }
         return mockExecJson([])
       })
@@ -490,7 +499,9 @@ describe('useCachedLLMd fetchServers', () => {
       const { fetchLLMdServers } = await loadModule()
       const servers = await fetchLLMdServers(['c1'])
 
-      servers.forEach(s => expect(s.componentType).toBe('model'))
+      for (const name of modelNames) {
+        expect(servers.find(s => s.name === name)!.componentType).toBe('model')
+      }
     })
 
     it('detects component type "model" via llmd.org/model label', async () => {
@@ -514,13 +525,17 @@ describe('useCachedLLMd fetchServers', () => {
     })
 
     it('detects gateway types: istio, kgateway, envoy (default)', async () => {
+      // gatewayType is tracked per NAMESPACE (nsGateway map), so each gateway
+      // flavor needs its own namespace plus a model deployment to observe it on
       mockKubectlProxy.exec.mockImplementation(async (args: string[]) => {
         if (args[1] === 'deployments') {
           return mockExecJson([
-            makeDeployment('istio-gateway', 'llm-d', { replicas: 1, readyReplicas: 1 }),
-            makeDeployment('kgateway-api', 'llm-d', { replicas: 1, readyReplicas: 1 }),
-            makeDeployment('envoy-proxy', 'llm-d', { replicas: 1, readyReplicas: 1 }),
-            makeDeployment('gateway', 'llm-d', { replicas: 1, readyReplicas: 1 }),
+            makeDeployment('istio-ingress', 'llm-d-a', { replicas: 1, readyReplicas: 1 }),
+            makeDeployment('kgateway-proxy', 'llm-d-b', { replicas: 1, readyReplicas: 1 }),
+            makeDeployment('my-gateway', 'llm-d-c', { replicas: 1, readyReplicas: 1 }),
+            makeDeployment('vllm-a', 'llm-d-a', { replicas: 1, readyReplicas: 1 }),
+            makeDeployment('vllm-b', 'llm-d-b', { replicas: 1, readyReplicas: 1 }),
+            makeDeployment('vllm-c', 'llm-d-c', { replicas: 1, readyReplicas: 1 }),
           ])
         }
         return mockExecJson([])
@@ -529,10 +544,9 @@ describe('useCachedLLMd fetchServers', () => {
       const { fetchLLMdServers } = await loadModule()
       const servers = await fetchLLMdServers(['c1'])
 
-      expect(servers.find(s => s.name === 'istio-gateway')!.gatewayType).toBe('istio')
-      expect(servers.find(s => s.name === 'kgateway-api')!.gatewayType).toBe('kgateway')
-      expect(servers.find(s => s.name === 'envoy-proxy')!.gatewayType).toBe('envoy')
-      expect(servers.find(s => s.name === 'gateway')!.gatewayType).toBe('envoy')
+      expect(servers.find(s => s.name === 'vllm-a')!.gatewayType).toBe('istio')
+      expect(servers.find(s => s.name === 'vllm-b')!.gatewayType).toBe('kgateway')
+      expect(servers.find(s => s.name === 'vllm-c')!.gatewayType).toBe('envoy')
     })
   })
 
@@ -541,9 +555,10 @@ describe('useCachedLLMd fetchServers', () => {
       mockKubectlProxy.exec.mockImplementation(async (args: string[]) => {
         if (args[1] === 'deployments') {
           return mockExecJson([
-            makeDeployment('running-server', 'llm-d', { replicas: 3, readyReplicas: 3 }),
-            makeDeployment('stopped-server', 'llm-d', { replicas: 0, readyReplicas: 0 }),
-            makeDeployment('scaling-server', 'llm-d', { replicas: 3, readyReplicas: 1 }),
+            makeDeployment('vllm-running', 'llm-d', { replicas: 3, readyReplicas: 3 }),
+            makeDeployment('vllm-stopped', 'llm-d', { replicas: 0, readyReplicas: 0 }),
+            makeDeployment('vllm-scaling', 'llm-d', { replicas: 3, readyReplicas: 1 }),
+            makeDeployment('vllm-error', 'llm-d', { replicas: 2, readyReplicas: 0 }),
           ])
         }
         return mockExecJson([])
@@ -552,9 +567,10 @@ describe('useCachedLLMd fetchServers', () => {
       const { fetchLLMdServers } = await loadModule()
       const servers = await fetchLLMdServers(['c1'])
 
-      expect(servers.find(s => s.name === 'running-server')!.status).toBe('running')
-      expect(servers.find(s => s.name === 'stopped-server')!.status).toBe('stopped')
-      expect(servers.find(s => s.name === 'scaling-server')!.status).toBe('scaling')
+      expect(servers.find(s => s.name === 'vllm-running')!.status).toBe('running')
+      expect(servers.find(s => s.name === 'vllm-stopped')!.status).toBe('stopped')
+      expect(servers.find(s => s.name === 'vllm-scaling')!.status).toBe('scaling')
+      expect(servers.find(s => s.name === 'vllm-error')!.status).toBe('error')
     })
 
     it('uses model from llmd.org/model label when present', async () => {
@@ -622,9 +638,9 @@ describe('useCachedLLMd fetchServers', () => {
       mockKubectlProxy.exec.mockImplementation(async (args: string[]) => {
         if (args[1] === 'deployments') {
           return mockExecJson([
-            makeDeployment('gateway', 'llm-d', { replicas: 1, readyReplicas: 0 }),
+            makeDeployment('istio-gateway', 'llm-d', { replicas: 1, readyReplicas: 0 }),
             makeDeployment('prometheus', 'llm-d', { replicas: 1, readyReplicas: 1 }),
-            makeDeployment('model-server', 'llm-d', { replicas: 2, readyReplicas: 2 }),
+            makeDeployment('vllm-model-server', 'llm-d', { replicas: 2, readyReplicas: 2 }),
           ])
         }
         return mockExecJson([])
@@ -633,11 +649,12 @@ describe('useCachedLLMd fetchServers', () => {
       const { fetchLLMdServers } = await loadModule()
       const servers = await fetchLLMdServers(['c1'])
 
-      const gateway = servers.find(s => s.name === 'gateway')
-      const prometheus = servers.find(s => s.name === 'prometheus')
-      
-      expect(gateway!.status).toBe('stopped')
-      expect(prometheus!.status).toBe('running')
+      // Namespace-level gateway/prometheus health is propagated onto every
+      // server in that namespace (non-running gateway collapses to 'stopped')
+      const model = servers.find(s => s.name === 'vllm-model-server')
+      expect(model!.gatewayStatus).toBe('stopped')
+      expect(model!.gatewayType).toBe('istio')
+      expect(model!.prometheusStatus).toBe('running')
     })
   })
 })
