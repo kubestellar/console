@@ -138,7 +138,7 @@ if (isBrowserEnvironment) {
     const actual = await importOriginal<typeof import('../hooks/mcp/shared')>()
     return {
       ...actual,
-      agentFetch: vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => global.fetch(url, init)),
+      agentFetch: vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => globalThis.fetch(url, init)),
     }
   })
 
@@ -146,7 +146,7 @@ if (isBrowserEnvironment) {
     const actual = await importOriginal<typeof import('../hooks/mcp/agentFetch')>()
     return {
       ...actual,
-      agentFetch: vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => global.fetch(url, init)),
+      agentFetch: vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => globalThis.fetch(url, init)),
     }
   })
 }
