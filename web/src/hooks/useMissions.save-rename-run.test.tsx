@@ -3,6 +3,7 @@ import { renderHook, act } from '@testing-library/react'
 import React from 'react'
 import { MissionProvider, useMissions } from './useMissions'
 import { getDemoMode } from './useDemoMode'
+import { missionCache } from '../lib/missions/missionCache'
 
 // ── External module mocks ─────────────────────────────────────────────────────
 
