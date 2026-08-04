@@ -522,5 +522,3 @@ describe('preflight check', () => {
 
 // ── Malicious content scanning ───────────────────────────────────────────────
 
-describe('runSavedMission malicious content scan', () => {
-})
