@@ -183,7 +183,7 @@ Please provide:
           onClick={() => healthyClusters > 0 && drillToAllClusters('healthy')}
           title={t('healthCheck.healthyClusterTooltip', { count: healthyClusters })}
         >
-          <div className="text-lg font-bold text-green-400">{healthyClusters}</div>
+          <div className="text-lg font-bold text-status-success">{healthyClusters}</div>
           <div className="text-2xs text-muted-foreground">{t('common.healthy')}</div>
         </div>
         <div
@@ -194,7 +194,7 @@ Please provide:
           onClick={() => unhealthyClusters > 0 && drillToAllClusters('unhealthy')}
           title={t('healthCheck.unhealthyClusterTooltip', { count: unhealthyClusters })}
         >
-          <div className="text-lg font-bold text-red-400">{unhealthyClusters}</div>
+          <div className="text-lg font-bold text-status-error">{unhealthyClusters}</div>
           <div className="text-2xs text-muted-foreground">{t('common.unhealthy')}</div>
         </div>
         <div

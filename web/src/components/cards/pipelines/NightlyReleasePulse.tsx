@@ -364,7 +364,7 @@ export function NightlyReleasePulse() {
           <div className="rounded-lg bg-secondary/30 px-3 py-2">
             <div className="text-xs text-muted-foreground">Streak</div>
             <div className={cn('text-sm font-medium mt-0.5',
-              streakKind === 'success' && 'text-green-400', streakKind === 'failure' && 'text-red-400')}>
+              streakKind === 'success' && 'text-status-success', streakKind === 'failure' && 'text-status-error')}>
               {streak === 0 ? '—' : `${streak}${streakKind === 'success' ? ' pass' : ' fail'}`}
             </div>
           </div>
