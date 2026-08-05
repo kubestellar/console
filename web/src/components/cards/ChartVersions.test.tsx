@@ -50,8 +50,7 @@ vi.mock('../../lib/cards/cardHooks', () => ({
   commonComparators: {
     string: (field: string) => (a: Record<string, string>, b: Record<string, string>) =>
       (a[field] ?? '').localeCompare(b[field] ?? ''),
-  },
-}))
+  }
 
 vi.mock('../ui/Skeleton', () => ({
   Skeleton: () => <div data-testid="skeleton" />,

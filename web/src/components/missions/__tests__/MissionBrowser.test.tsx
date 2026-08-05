@@ -74,7 +74,7 @@ vi.mock('../../../lib/api', () => ({
   api: {
     get: vi.fn().mockResolvedValue({ data: [] }),
     post: vi.fn(),
-  },
+  }
 }))
 
 vi.mock('../../../lib/analytics', async (importOriginal) => ({
@@ -210,8 +210,7 @@ vi.mock('../MissionBrowserSidebar', () => ({
         {renderNodes(treeNodes)}
       </div>
     )
-  },
-}))
+  }
 
 vi.mock('../ScanProgressOverlay', () => ({
   ScanProgressOverlay: ({ isScanning, result, onComplete }: { isScanning: boolean; result: { valid: boolean; findings: unknown[]; metadata: unknown } | null; onComplete: (result: { valid: boolean; findings: unknown[]; metadata: unknown }) => void }) => (

@@ -1,4 +1,3 @@
-import React from 'react'
 /**
  * Unit tests for AgenticDetectionRuns card component.
  * Covers: loading skeleton, empty state, happy-path run rows, conclusion icons,

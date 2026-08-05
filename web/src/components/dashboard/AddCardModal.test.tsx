@@ -1,4 +1,3 @@
-import React from 'react'
 import { describe, it, expect, vi } from 'vitest'
 
 // Mock the heavy cardRegistry (pulled in transitively via CardFactoryModal)

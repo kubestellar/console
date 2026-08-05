@@ -1,4 +1,3 @@
-import React from 'react'
 /**
  * Unit tests for ACMMLevel card component.
  * Covers: loading skeleton, happy-path level gauge, level ladder rows,
