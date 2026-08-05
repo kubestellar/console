@@ -9,7 +9,7 @@ vi.mock('react-i18next', async (importOriginal) => {
     useTranslation: () => ({ t: (key: string) => key }),
     initReactI18next: { type: '3rdParty', init: () => {} },
   }
-}))
+})
 
 vi.mock('../../../lib/modals', () => ({
   BaseModal: {
@@ -17,7 +17,7 @@ vi.mock('../../../lib/modals', () => ({
     Content: () => null,
     Footer: () => null,
   },
-}))
+})
 
 import { DashboardDeleteModal } from './DashboardDeleteModal'
 
