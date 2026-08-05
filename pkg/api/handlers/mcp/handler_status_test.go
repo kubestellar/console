@@ -45,10 +45,14 @@ func TestMCPHandlers_GetStatus_NoBridge_NoK8s(t *testing.T) {
 
 	var payload map[string]any
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
-	assert.Equal(t, false, payload["k8sClient"], "k8sClient should be false when nil")
+	k8sClient, ok := payload["k8sClient"]
+	require.True(t, ok, "k8sClient key should be present")
+	assert.Equal(t, false, k8sClient, "k8sClient should be false when nil")
 	bridge, ok := payload["mcpBridge"].(map[string]any)
 	require.True(t, ok, "mcpBridge should be an object")
-	assert.Equal(t, false, bridge["available"], "mcpBridge.available should be false when bridge is nil")
+	available, ok := bridge["available"]
+	require.True(t, ok, "available key should be present in bridge")
+	assert.Equal(t, false, available, "mcpBridge.available should be false when bridge is nil")
 }
 
 func TestMCPHandlers_GetStatus_WithBridge_ReportsBridgeStatus(t *testing.T) {
@@ -72,7 +76,9 @@ func TestMCPHandlers_GetStatus_WithBridge_ReportsBridgeStatus(t *testing.T) {
 
 	var payload map[string]any
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
-	assert.Equal(t, false, payload["k8sClient"])
+	k8sClient, ok := payload["k8sClient"]
+	require.True(t, ok, "k8sClient key should be present")
+	assert.Equal(t, false, k8sClient)
 	bridgePayload, ok := payload["mcpBridge"].(map[string]any)
 	require.True(t, ok, "mcpBridge must be an object")
 
@@ -81,10 +87,14 @@ func TestMCPHandlers_GetStatus_WithBridge_ReportsBridgeStatus(t *testing.T) {
 	// available=false (no clients were started).
 	ops, ok := bridgePayload["opsClient"].(map[string]any)
 	require.True(t, ok, "expected mcpBridge.opsClient object")
-	assert.Equal(t, false, ops["available"])
+	available, ok := ops["available"]
+	require.True(t, ok, "available key should be present")
+	assert.Equal(t, false, available)
 	deploy, ok := bridgePayload["deployClient"].(map[string]any)
 	require.True(t, ok, "expected mcpBridge.deployClient object")
-	assert.Equal(t, false, deploy["available"])
+	available, ok := deploy["available"]
+	require.True(t, ok, "available key should be present")
+	assert.Equal(t, false, available)
 	// The nil-bridge fallback shape { available: false } must NOT be used
 	// here — the presence of the sub-client entries proves it.
 	_, hadFallbackKey := bridgePayload["available"]
@@ -111,7 +121,9 @@ func TestMCPHandlers_GetOpsTools_NoBridge_Returns503(t *testing.T) {
 
 	var payload map[string]any
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
-	assert.Equal(t, "MCP bridge not available", payload["error"])
+	errMsg, ok := payload["error"]
+	require.True(t, ok, "error key should be present")
+	assert.Equal(t, "MCP bridge not available", errMsg)
 }
 
 func TestMCPHandlers_GetOpsTools_EmptyBridge_ReturnsEmptyList(t *testing.T) {
@@ -157,7 +169,9 @@ func TestMCPHandlers_GetDeployTools_NoBridge_Returns503(t *testing.T) {
 
 	var payload map[string]any
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
-	assert.Equal(t, "MCP bridge not available", payload["error"])
+	errMsg, ok := payload["error"]
+	require.True(t, ok, "error key should be present")
+	assert.Equal(t, "MCP bridge not available", errMsg)
 }
 
 func TestMCPHandlers_GetDeployTools_EmptyBridge_ReturnsEmptyList(t *testing.T) {
@@ -236,9 +250,14 @@ func TestHandleK8sError_NetworkError_Returns503WithSanitizedMessage(t *testing.T
 
 	var payload map[string]any
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
-	assert.Equal(t, "unavailable", payload["clusterStatus"])
-	assert.Equal(t, "network", payload["errorType"])
-	msg, _ := payload["errorMessage"].(string)
+	clusterStatus, ok := payload["clusterStatus"]
+	require.True(t, ok, "clusterStatus should be present")
+	assert.Equal(t, "unavailable", clusterStatus)
+	errorType, ok := payload["errorType"]
+	require.True(t, ok, "errorType should be present")
+	assert.Equal(t, "network", errorType)
+	msg, ok := payload["errorMessage"].(string)
+	require.True(t, ok, "errorMessage should be present and a string")
 	assert.NotEmpty(t, msg, "sanitized message must be set for network errors")
 	// The sanitized message must not leak the raw error text.
 	assert.NotContains(t, msg, "10.0.0.1", "sanitized message must not include internal address")
@@ -263,10 +282,17 @@ func TestHandleK8sError_UnknownError_Returns500Generic(t *testing.T) {
 
 	var payload map[string]any
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
-	assert.Equal(t, "error", payload["clusterStatus"])
-	assert.Equal(t, "internal", payload["errorType"])
-	assert.Equal(t, "An internal error occurred", payload["errorMessage"])
+	clusterStatus, ok := payload["clusterStatus"]
+	require.True(t, ok, "clusterStatus should be present")
+	assert.Equal(t, "error", clusterStatus)
+	errorType, ok := payload["errorType"]
+	require.True(t, ok, "errorType should be present")
+	assert.Equal(t, "internal", errorType)
+	errorMessage, ok := payload["errorMessage"]
+	require.True(t, ok, "errorMessage should be present")
+	assert.Equal(t, "An internal error occurred", errorMessage)
 	// The raw error text must not leak into the response.
-	msg, _ := payload["errorMessage"].(string)
+	msg, ok := payload["errorMessage"].(string)
+	require.True(t, ok, "errorMessage should be present and a string")
 	assert.NotContains(t, msg, "opaque")
 }
