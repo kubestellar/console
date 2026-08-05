@@ -7,7 +7,6 @@ vi.mock('react-i18next', async (importOriginal) => {
     useTranslation: () => ({ t: (key: string) => key }),
     initReactI18next: { type: '3rdParty', init: () => {} },
   }
-}),
 }))
 
 vi.mock('../../config/routes', () => ({

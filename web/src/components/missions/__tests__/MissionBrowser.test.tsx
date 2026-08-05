@@ -211,6 +211,7 @@ vi.mock('../MissionBrowserSidebar', () => ({
       </div>
     )
   }
+}))
 
 vi.mock('../ScanProgressOverlay', () => ({
   ScanProgressOverlay: ({ isScanning, result, onComplete }: { isScanning: boolean; result: { valid: boolean; findings: unknown[]; metadata: unknown } | null; onComplete: (result: { valid: boolean; findings: unknown[]; metadata: unknown }) => void }) => (
