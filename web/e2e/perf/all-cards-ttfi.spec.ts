@@ -478,6 +478,9 @@ const MODES: PerfMode[] = process.env.CI
 
 for (const mode of MODES) {
   test(`all cards TTFI (${mode})`, async ({ page }) => {
+    // Each mode runs prewarm + all batches sequentially; 75 s global timeout is
+    // insufficient for demo-warm in CI (14+ batch navigations).  Give 5 minutes.
+    test.setTimeout(300_000)
     const modeResults = await runMode(page, mode)
     report.cards.push(...modeResults)
     console.log(`[TTFI] ${mode}: ${summarizeMode(modeResults)}`)
