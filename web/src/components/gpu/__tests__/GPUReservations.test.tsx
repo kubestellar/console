@@ -34,8 +34,7 @@ vi.mock('../../../lib/analytics', async (importOriginal) => ({
   emitAddCardModalOpened: vi.fn(), emitAddCardModalAbandoned: vi.fn(),
   emitCardCategoryBrowsed: vi.fn(), emitRecommendedCardShown: vi.fn(),
   emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(),
-}
-))
+}))
 vi.mock('../../../hooks/useTokenUsage', () => ({
   useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),
   tokenUsageTracker: { getUsage: () => ({ total: 0, remaining: 0, used: 0 }), trackRequest: vi.fn(), getSettings: () => ({ enabled: false }) },

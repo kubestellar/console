@@ -14,17 +14,18 @@ vi.mock('../../../lib/demoMode', () => ({
 vi.mock('../../../hooks/useDemoMode', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../../hooks/useDemoMode')>()),
   getDemoMode: () => true, default: () => true, useDemoMode: () => true, isDemoModeForced: false,
-}
-))
+}))
+
 vi.mock('../../../lib/analytics', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../../lib/analytics')>()),
   emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
-}
-))
+}))
+
 vi.mock('../../../hooks/useTokenUsage', () => ({
   useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),
-  tokenUsageTracker: { getUsage: () => ({ total: 0, remaining: 0, used: 0 }), trackRequest: vi.fn(), getSettings: () => ({ enabled: false }) }
+  tokenUsageTracker: { getUsage: () => ({ total: 0, remaining: 0, used: 0 }), trackRequest: vi.fn(), getSettings: () => ({ enabled: false }) },
 }))
+
 
 vi.mock('../../../lib/dashboards/DashboardPage', () => ({
   DashboardPage: ({ title, subtitle, children, getStatValue }: { title: string; subtitle?: string; children?: React.ReactNode; getStatValue?: (id: string) => { value: any; progressValue?: number; max?: number } }) => (

@@ -79,8 +79,7 @@ vi.mock('../../../lib/analytics', async (importOriginal) => ({
   emitLogin: vi.fn(),
   emitEvent: vi.fn(),
   analyticsReady: Promise.resolve(),
-}
-))
+}))
 
 vi.mock('../../../lib/dashboards/DashboardPage', () => ({
   DashboardPage: ({ title, rightExtra, children }: { title: string; rightExtra?: React.ReactNode; children?: React.ReactNode }) => (

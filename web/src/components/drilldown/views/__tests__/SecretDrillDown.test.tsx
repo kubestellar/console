@@ -23,8 +23,7 @@ vi.mock('../../../../lib/analytics', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../../../lib/analytics')>()),
   emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
   emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(),
-}
-))
+}))
 
 vi.mock('../../../../hooks/useTokenUsage', () => ({
   useTokenUsage: () => ({ usage: { total: 0, remaining: 0, used: 0 }, isLoading: false }),
