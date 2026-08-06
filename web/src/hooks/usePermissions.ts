@@ -67,7 +67,7 @@ export function usePermissions() {
     } catch {
       // localStorage may be unavailable (e.g. private browsing) — fall back to no token
     }
-    const token = await await getStoredAuthToken() || storedToken
+    const token = await getStoredAuthToken() || storedToken
 
     // Skip if backend is unavailable or using demo token
     if (isBackendUnavailable() || !token || token === 'demo-token') {
@@ -194,8 +194,15 @@ export function useCanI() {
     setError(null)
     setResult(null)
 
+    let storedToken: string | null = null
     try {
-      const token = await await getStoredAuthToken() || localStorage.getItem(STORAGE_KEY_TOKEN)
+      storedToken = localStorage.getItem(STORAGE_KEY_TOKEN)
+    } catch {
+      // localStorage may be unavailable (e.g. private browsing) — fall back to no token
+    }
+    const token = await getStoredAuthToken() || storedToken
+
+    try {
       // #7993 Phase 6: SelfSubjectAccessReview must run under the caller's
       // kubeconfig, not the backend pod ServiceAccount — otherwise in-cluster
       // it answers "can the pod SA do X?" instead of "can the user do X?".
