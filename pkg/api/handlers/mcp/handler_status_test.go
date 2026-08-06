@@ -92,7 +92,7 @@ func TestMCPHandlers_GetStatus_WithBridge_ReportsBridgeStatus(t *testing.T) {
 	assert.Equal(t, false, available)
 	deploy, ok := bridgePayload["deployClient"].(map[string]any)
 	require.True(t, ok, "expected mcpBridge.deployClient object")
-	available, ok := deploy["available"]
+	available, ok = deploy["available"]
 	require.True(t, ok, "available key should be present")
 	assert.Equal(t, false, available)
 	// The nil-bridge fallback shape { available: false } must NOT be used
