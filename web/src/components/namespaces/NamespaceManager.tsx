@@ -190,7 +190,7 @@ function NamespaceManagerContent() {
         <div className="mb-4 p-3 rounded-lg bg-red-500/20 border border-red-500/50 text-red-400 flex items-center gap-2">
           <AlertTriangle className="w-4 h-4" />
           {error}
-          <Button variant="ghost" size="sm" aria-label={t('actions.dismiss')} onClick={() => setError(null)} icon={<X className="w-4 h-4" />} className="ml-auto" />
+          <Button variant="ghost" size="sm" aria-label={t('actions.dismiss')} onClick={() => setError(null)} icon={<X className="w-4 h-4" />} className="ml-auto min-h-11 min-w-11" />
         </div>
       )}
 
