@@ -123,8 +123,8 @@ export function CrioStatus() {
         <MetricTile
           label={t('crio.imagePullSuccess')}
           value={`${imagePullSuccessRate}%`}
-          colorClass={parseFloat(imagePullSuccessRate) >= 95 ? 'text-green-400' : 'text-orange-400'}
-          icon={<Image className="w-4 h-4 text-green-400" />}
+          colorClass={parseFloat(imagePullSuccessRate) >= 95 ? 'text-status-success' : 'text-orange-400'}
+          icon={<Image className="w-4 h-4 text-status-success" />}
         />
         <MetricTile
           label={t('crio.podSandboxReady')}
