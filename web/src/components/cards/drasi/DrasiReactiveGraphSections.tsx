@@ -1,3 +1,6 @@
+// Modal safety: All modals rendered here (SourceConfigModal, QueryConfigModal,
+// ConnectionsModal, ConfirmDialog) are defined in DrasiModals.tsx and already
+// handle Escape via ModalShell, with closeOnBackdrop={false} on form modals.
 import { useMemo, type RefObject } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { Code2, Plus, Rocket, Search, Server, Settings, Zap } from 'lucide-react'

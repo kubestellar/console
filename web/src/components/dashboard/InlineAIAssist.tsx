@@ -1,3 +1,6 @@
+// Modal safety: InlineAIAssist is an inline expandable panel, NOT a backdrop
+// modal. The only sub-modal used (ApiKeyPromptModal) already blocks backdrop
+// clicks and handles Escape — see shared.tsx. No closeOnBackdrop fix needed.
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Sparkles, Loader2, ChevronDown, ChevronUp, CheckCircle, AlertTriangle } from 'lucide-react'

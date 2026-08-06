@@ -1,3 +1,7 @@
+// Modal safety: AiGenerationPanel is an inline panel rendered inside parent
+// modals (e.g. DashboardCustomizer), NOT a standalone backdrop modal. The
+// only sub-modal used (ApiKeyPromptModal) already blocks backdrop clicks and
+// handles Escape — see shared.tsx. No closeOnBackdrop fix needed.
 import { useState, useEffect, startTransition, useRef, type ReactNode } from 'react'
 import { Sparkles, Loader2, CheckCircle, AlertTriangle, RotateCw, Save } from 'lucide-react'
 import { useMissions } from '../../hooks/useMissions'
