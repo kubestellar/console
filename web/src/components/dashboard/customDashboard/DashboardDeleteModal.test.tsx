@@ -11,13 +11,17 @@ vi.mock('react-i18next', async (importOriginal) => {
   }
 })
 
-vi.mock('../../../lib/modals', () => ({
-  BaseModal: {
-    Header: () => null,
-    Content: () => null,
-    Footer: () => null,
-  },
-}))
+vi.mock('../../../lib/modals', () => {
+  const BaseModal = Object.assign(
+    ({ children }: { children?: React.ReactNode }) => React.createElement('div', null, children),
+    {
+      Header: () => null,
+      Content: ({ children }: { children?: React.ReactNode }) => React.createElement('div', null, children),
+      Footer: ({ children }: { children?: React.ReactNode }) => React.createElement('div', null, children),
+    }
+  )
+  return { BaseModal }
+})
 
 import { DashboardDeleteModal } from './DashboardDeleteModal'
 

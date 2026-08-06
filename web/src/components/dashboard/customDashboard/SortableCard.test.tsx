@@ -12,9 +12,23 @@ vi.mock('@dnd-kit/sortable', () => ({
   }),
 }))
 
-vi.mock('../../../lib/cards/cardHooks', () => ({
-  useCardCollapse: () => ({ isExpanded: false }),
+vi.mock('../../cards/CardWrapper', () => ({
+  CardWrapper: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
 }))
+
+vi.mock('../../cards/cardRegistry', () => ({
+  CARD_COMPONENTS: {},
+  DEMO_DATA_CARDS: new Set<string>(),
+  LIVE_DATA_CARDS: new Set<string>(),
+}))
+
+vi.mock('../../../lib/cards/cardHooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../lib/cards/cardHooks')>()
+  return {
+    ...actual,
+    useCardCollapse: () => ({ isExpanded: false }),
+  }
+})
 
 vi.mock('react-i18next', async (importOriginal) => {
   const actual = await importOriginal<typeof import('react-i18next')>()
