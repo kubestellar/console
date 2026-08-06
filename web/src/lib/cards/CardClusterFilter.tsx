@@ -73,6 +73,7 @@ export function CardClusterFilter({
     <div ref={containerRef} className="relative">
       <button
         ref={buttonRef}
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
         onKeyDown={(event) => {
           if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
@@ -88,8 +89,8 @@ export function CardClusterFilter({
           }`}
         title="Filter by cluster"
       >
-        <Filter className="w-3 h-3" />
-        <ChevronDown className="w-3 h-3" />
+        <Filter className="w-3 h-3" aria-hidden="true" />
+        <ChevronDown className="w-3 h-3" aria-hidden="true" />
       </button>
 
       {isOpen && dropdownPos && createPortal(
@@ -112,7 +113,9 @@ export function CardClusterFilter({
         >
           <div className="p-1">
             <button
+              type="button"
               aria-pressed={selectedClusters.length === 0}
+              aria-label="All clusters"
               onClick={() => { onClear(); emitCardClusterFilterChanged(0, availableClusters.length, cardType) }}
               className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${selectedClusters.length === 0
                 ? 'bg-purple-500/20 text-purple-400'
@@ -148,7 +151,9 @@ export function CardClusterFilter({
               return (
                 <button
                   key={cluster.name}
+                  type="button"
                   aria-pressed={selectedClusters.includes(cluster.name)}
+                  aria-label={stateLabel ? `${cluster.name} (${stateLabel})` : cluster.name}
                   onClick={() => {
                     if (!isUnreachable) {
                       onToggle(cluster.name)
