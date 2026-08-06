@@ -30,6 +30,7 @@ vi.mock('../cards/console-missions/shared', () => ({
     showKeyPrompt: false,
     checkKeyAndRun: vi.fn(),
   }),
+  ApiKeyPromptModal: () => null,
 }))
 
 import { InlineAIAssist } from './InlineAIAssist'

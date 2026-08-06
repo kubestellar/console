@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest"
 import { render } from "@testing-library/react"
+import { MemoryRouter } from "react-router-dom"
 
 vi.mock('../../lib/dynamic-cards', () => ({
   saveDynamicCard: vi.fn(),
@@ -28,6 +29,10 @@ describe('AiCardTab Component', () => {
   })
 
   it('renders with onCardCreated callback', () => {
-    expect(() => render(<AiCardTab {...{ onCardCreated: vi.fn() }} />)).not.toThrow()
+    expect(() => render(
+      <MemoryRouter>
+        <AiCardTab {...{ onCardCreated: vi.fn() }} />
+      </MemoryRouter>
+    )).not.toThrow()
   })
 })
