@@ -9,11 +9,11 @@ vi.mock('react-i18next', async (importOriginal) => {
     useTranslation: () => ({ t: (key: string) => key }),
     initReactI18next: { type: '3rdParty', init: () => {} },
   }
-})
+}))
 
 vi.mock('../../hooks/useMarketplace', () => ({
   useMarketplace: () => ({ items: [] }),
-})
+}))
 
 import { MarketplaceCard } from './MarketplaceCard'
 
@@ -36,4 +36,4 @@ describe('MarketplaceCard Component', () => {
 
     expect(() => render(<MarketplaceCard {...{ item, onInstall, onRemove, isInstalled: false }} />)).not.toThrow()
   })
-})
+}))

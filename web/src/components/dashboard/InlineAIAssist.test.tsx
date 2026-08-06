@@ -8,7 +8,7 @@ vi.mock('react-i18next', async (importOriginal) => {
     useTranslation: () => ({ t: (key: string) => key }),
     initReactI18next: { type: '3rdParty', init: () => {} },
   }
-})
+}))
 
 vi.mock('../../hooks/useMissions', () => ({
   useMissions: () => ({
@@ -16,21 +16,21 @@ vi.mock('../../hooks/useMissions', () => ({
     missions: [],
     closeSidebar: vi.fn(),
   }),
-})
+}))
 
 vi.mock('../../hooks/useAIMode', () => ({
   useAIMode: () => ({
     mode: 'high',
     isFeatureEnabled: () => true,
   }),
-})
+}))
 
 vi.mock('../cards/console-missions/shared', () => ({
   useApiKeyCheck: () => ({
     showKeyPrompt: false,
     checkKeyAndRun: vi.fn(),
   }),
-})
+}))
 
 import { InlineAIAssist } from './InlineAIAssist'
 
@@ -47,4 +47,4 @@ describe('InlineAIAssist Component', () => {
         onResult: vi.fn(),
       }} />)).not.toThrow()
   })
-})
+}))
