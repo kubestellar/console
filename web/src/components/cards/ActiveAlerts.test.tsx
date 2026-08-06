@@ -77,6 +77,7 @@ vi.mock('../../lib/cards/cardHooks', () => ({
   commonComparators: {
     string: () => () => 0,
   }
+}))
 
 vi.mock('../../lib/alerts/groupAlertsForDisplay', () => ({
   groupAlertsForDisplay: (alerts: Alert[]) =>

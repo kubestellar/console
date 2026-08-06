@@ -44,6 +44,7 @@ vi.mock('@dnd-kit/utilities', () => ({
       toString: () => undefined,
     },
   }
+}))
 
 vi.mock('../../../ui/FlashingValue', () => ({
   FlashingValue: ({ value }: { value: string | number }) => <span>{value}</span>,

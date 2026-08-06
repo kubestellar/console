@@ -9,8 +9,7 @@ vi.mock('@dnd-kit/sortable', () => ({
     setNodeRef: vi.fn(),
     transform: null,
     transition: null,
-  }),
-}))
+  })
 
 vi.mock('../../../lib/cards/cardHooks', () => ({
   useCardCollapse: () => ({ isExpanded: false }),

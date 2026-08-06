@@ -43,6 +43,7 @@ vi.mock('../../hooks/useGlobalFilters', () => ({
 vi.mock('./CardDataContext', () => ({
   useCardLoadingState: () => ({}),
   useReportCardDataState: () => {}
+}))
 
 vi.mock('./DynamicCardErrorBoundary', () => ({
   DynamicCardErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,

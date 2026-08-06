@@ -53,6 +53,7 @@ const mockUseCardData = vi.fn()
 vi.mock('../../lib/cards/cardHooks', () => ({
   useCardData: (...args: unknown[]) => mockUseCardData(...args),
   commonComparators: { string: () => () => 0 }
+}))
 
 vi.mock('../ui/Skeleton', () => ({
   Skeleton: (props: Record<string, unknown>) => (
