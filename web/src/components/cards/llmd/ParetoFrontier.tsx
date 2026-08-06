@@ -462,7 +462,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
         nameTextStyle: { color: '#94a3b8', fontSize: 11, fontWeight: 500 },
         axisLine: { lineStyle: { color: '#334155' } },
         splitLine: { lineStyle: { color: '#1e293b', type: 'dashed' } },
-        axisLabel: { color: '#64748b', fontSize: CHART_AXIS_FONT_SIZE } },
+        axisLabel: { color: '#94a3b8', fontSize: CHART_AXIS_FONT_SIZE } },
       yAxis: {
         type: 'value',
         name: `${preset.yAxis.label} (${preset.yAxis.unit})`,
@@ -472,7 +472,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
         axisLine: { lineStyle: { color: '#334155' } },
         splitLine: { lineStyle: { color: '#1e293b', type: 'dashed' } },
         axisLabel: {
-          color: '#64748b',
+          color: '#94a3b8',
           fontSize: CHART_AXIS_FONT_SIZE,
           formatter: preset.yAxis.formatter ?? ((v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)) } },
       dataZoom: [
