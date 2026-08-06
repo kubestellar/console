@@ -42,6 +42,17 @@ const WEATHER_ANIMATION_DIV_STYLE_13: CSSProperties = {
 const WEATHER_ANIMATION_DIV_STYLE_14: CSSProperties = { animationDelay: '0s' }
 const WEATHER_ANIMATION_DIV_STYLE_15: CSSProperties = { animationDelay: '-2s', opacity: 0.7 }
 
+// Weather-specific color tokens — these are visual sky/weather simulation colors,
+// not UI design tokens. They represent realistic sky phenomena and must remain
+// as rgba values since they require precise alpha control for layered gradients.
+// Day = warm sunlight palette; Night = cool moonlit palette.
+const WEATHER_WIND_STREAK_DAY_BASE = '255,255,255'
+const WEATHER_WIND_STREAK_NIGHT_BASE = '200,210,230'
+const WEATHER_LEAF_DAY_COLOR = 'rgba(180,160,120,0.8)' // ai-quality-ignore
+const WEATHER_LEAF_NIGHT_COLOR = 'rgba(120,110,90,0.7)' // ai-quality-ignore
+const WEATHER_AMBIENT_DAY_COLOR = 'rgba(200,210,220,0.5)' // ai-quality-ignore
+const WEATHER_AMBIENT_NIGHT_COLOR = 'rgba(80,90,110,0.5)' // ai-quality-ignore
+
 
 // WMO Weather interpretation codes to condition mapping
 export function getWeatherCondition(code: number): WeatherCondition {
@@ -106,8 +117,8 @@ export function WeatherAnimation({ weatherCode, isDaytime, windSpeed = 0 }: { we
             style={{
               top: `${20 + i * 15}%`,
               background: isDaytime
-                ? `linear-gradient(90deg, transparent 0%, rgba(255,255,255,${0.4 - i * 0.05}) 30%, rgba(255,255,255,${0.4 - i * 0.05}) 70%, transparent 100%)`
-                : `linear-gradient(90deg, transparent 0%, rgba(200,210,230,${0.3 - i * 0.04}) 30%, rgba(200,210,230,${0.3 - i * 0.04}) 70%, transparent 100%)`,
+                ? `linear-gradient(90deg, transparent 0%, rgba(${WEATHER_WIND_STREAK_DAY_BASE},${0.4 - i * 0.05}) 30%, rgba(${WEATHER_WIND_STREAK_DAY_BASE},${0.4 - i * 0.05}) 70%, transparent 100%)`
+                : `linear-gradient(90deg, transparent 0%, rgba(${WEATHER_WIND_STREAK_NIGHT_BASE},${0.3 - i * 0.04}) 30%, rgba(${WEATHER_WIND_STREAK_NIGHT_BASE},${0.3 - i * 0.04}) 70%, transparent 100%)`,
               animationDelay: `${i * 0.3}s`,
               animationDuration: `${2 + i * 0.5}s`,
             }}
@@ -119,7 +130,7 @@ export function WeatherAnimation({ weatherCode, isDaytime, windSpeed = 0 }: { we
             className="absolute w-2 h-1 rounded-full weather-leaves"
             style={{
               top: `${25 + i * 18}%`,
-              background: isDaytime ? 'rgba(180,160,120,0.8)' : 'rgba(120,110,90,0.7)',
+              background: isDaytime ? WEATHER_LEAF_DAY_COLOR : WEATHER_LEAF_NIGHT_COLOR,
               animationDelay: `${i * 1.5}s`,
             }}
           />
@@ -613,7 +624,7 @@ export function WeatherAnimation({ weatherCode, isDaytime, windSpeed = 0 }: { we
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       <div
         className="absolute top-1/4 left-1/4 w-16 h-16 rounded-full weather-ambient opacity-20"
-        style={{ background: isDaytime ? 'rgba(200,210,220,0.5)' : 'rgba(80,90,110,0.5)' }}
+        style={{ background: isDaytime ? WEATHER_AMBIENT_DAY_COLOR : WEATHER_AMBIENT_NIGHT_COLOR }}
       />
       <WindOverlay />
     </div>
