@@ -153,8 +153,19 @@ test.describe('OAuth flow - frontend (mocked backend)', () => {
       }
     }
 
-    // Wait for the client-side redirect to complete
-    await page.waitForURL(/\/auth\/callback/, { timeout: NAV_INTERCEPT_TIMEOUT_MS })
+    // Wait for the client-side redirect to complete. The mocked callback HTML
+    // triggers the redirect via both a meta-refresh and a script tag, so the
+    // navigation watch itself can be aborted mid-flight — expected in CI
+    // (#20328, #20325, #22238). Fall back to polling the URL via toHaveURL,
+    // which retries instead of failing on a single aborted watch.
+    try {
+      await page.waitForURL(/\/auth\/callback/, { timeout: NAV_INTERCEPT_TIMEOUT_MS })
+    } catch (e: unknown) {
+      if (!(e instanceof Error) || !e.message.includes('ERR_ABORTED')) {
+        throw e
+      }
+    }
+    await expect(page).toHaveURL(/\/auth\/callback/, { timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
     await expect(page.getByTestId('dashboard-page')).toBeVisible({
       timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
