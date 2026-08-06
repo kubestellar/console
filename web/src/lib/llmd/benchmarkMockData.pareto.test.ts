@@ -92,17 +92,15 @@ function makeReport(overrides: FakeReportOverrides = {}): BenchmarkReport {
         aggregate: {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           requests: {} as any,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           latency: {
             time_to_first_token: { p50: ttft },
             time_per_output_token: { p50: tpot },
             request_latency: { p99 },
-          } as any,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          } as BenchmarkReport['results']['request_performance']['aggregate']['latency'],
           throughput: {
             output_token_rate: { mean: outputRate },
             request_rate: { mean: requestRate },
-          } as any,
+          } as BenchmarkReport['results']['request_performance']['aggregate']['throughput'],
         },
       },
     },
