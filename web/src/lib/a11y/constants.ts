@@ -43,6 +43,13 @@ export const FOCUS_INDICATOR_MIN_AREA_PX = 2
 // Standard focus outline style matching the project's design system
 export const FOCUS_OUTLINE_STYLE = `${FOCUS_OUTLINE_WIDTH_PX}px solid` as const
 
+// Skip link spacing tokens (WCAG 2.4.1) — shared between the inline style object
+// and the injected CSS text so both representations stay in sync
+export const SKIP_LINK_HIDDEN_SIZE_PX = 1
+export const SKIP_LINK_FOCUSED_TOP_PX = 8
+export const SKIP_LINK_PADDING_Y_PX = 8
+export const SKIP_LINK_PADDING_X_PX = 16
+
 // Required ARIA landmark roles for page-level structure (WCAG 2.4.1, 1.3.1)
 export const REQUIRED_LANDMARKS = [
   'banner',

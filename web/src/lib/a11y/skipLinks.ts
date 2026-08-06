@@ -1,4 +1,11 @@
-import { FOCUS_OUTLINE_WIDTH_PX, FOCUS_OUTLINE_OFFSET_PX } from './constants'
+import {
+  FOCUS_OUTLINE_WIDTH_PX,
+  FOCUS_OUTLINE_OFFSET_PX,
+  SKIP_LINK_HIDDEN_SIZE_PX,
+  SKIP_LINK_FOCUSED_TOP_PX,
+  SKIP_LINK_PADDING_Y_PX,
+  SKIP_LINK_PADDING_X_PX,
+} from './constants'
 
 const OVERLAY_Z_INDEX = 9_999
 
@@ -35,21 +42,21 @@ export const SKIP_LINK_STYLES = {
     position: 'absolute' as const,
     left: '-9999px',
     top: 'auto',
-    width: '1px',
-    height: '1px',
+    width: `${SKIP_LINK_HIDDEN_SIZE_PX}px`,
+    height: `${SKIP_LINK_HIDDEN_SIZE_PX}px`,
     overflow: 'hidden',
     zIndex: -1,
   },
   focused: {
     position: 'fixed' as const,
     left: '50%',
-    top: '8px',
+    top: `${SKIP_LINK_FOCUSED_TOP_PX}px`,
     transform: 'translateX(-50%)',
     width: 'auto',
     height: 'auto',
     overflow: 'visible',
     zIndex: OVERLAY_Z_INDEX,
-    padding: '8px 16px',
+    padding: `${SKIP_LINK_PADDING_Y_PX}px ${SKIP_LINK_PADDING_X_PX}px`,
     backgroundColor: '#1e293b',
     color: '#f8fafc',
     borderRadius: '6px',
@@ -81,21 +88,21 @@ export function injectSkipLinkStyles(): void {
       position: absolute;
       left: -9999px;
       top: auto;
-      width: 1px;
-      height: 1px;
+      width: ${SKIP_LINK_HIDDEN_SIZE_PX}px;
+      height: ${SKIP_LINK_HIDDEN_SIZE_PX}px;
       overflow: hidden;
       z-index: -1;
     }
     .skip-link:focus {
       position: fixed;
       left: 50%;
-      top: 8px;
+      top: ${SKIP_LINK_FOCUSED_TOP_PX}px;
       transform: translateX(-50%);
       width: auto;
       height: auto;
       overflow: visible;
       z-index: ${OVERLAY_Z_INDEX};
-      padding: 8px 16px;
+      padding: ${SKIP_LINK_PADDING_Y_PX}px ${SKIP_LINK_PADDING_X_PX}px;
       background-color: #1e293b;
       color: #f8fafc;
       border-radius: 6px;
