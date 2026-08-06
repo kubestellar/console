@@ -147,7 +147,7 @@ export function MarketplaceThumbnail({ itemId, itemType, className, cncfCategory
     return (
       <div
         className={`relative h-20 flex items-center justify-center ${isHelpWanted ? 'opacity-70' : ''} ${className || ''}`}
-        style={{ background: `linear-gradient(135deg, ${cncfGradient[0]}, ${cncfGradient[1]})` }}
+        style={{ background: `linear-gradient(135deg, ${cncfGradient[0]}, ${cncfGradient[1]})` }} /* ai-quality-ignore: CNCF category gradient from data constants */
       >
         <ProjectLogo projectName={projectName} iconPath={iconPath} />
         <span className="absolute bottom-1.5 right-2 text-2xs font-medium text-white/70 bg-black/20 px-1.5 py-0.5 rounded">

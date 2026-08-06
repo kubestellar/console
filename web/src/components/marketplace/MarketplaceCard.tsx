@@ -149,7 +149,7 @@ export function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
                 {item.type === 'theme' && item.themeColors ? (
                   <div className="flex gap-0.5">
                     {(item.themeColors || []).slice(0, MAX_THEME_COLORS).map((color, i) => (
-                      <div key={i} className="w-3 h-3 rounded-full border border-border/50" style={{ backgroundColor: color }} />
+                      <div key={i} className="w-3 h-3 rounded-full border border-border/50" style={{ backgroundColor: color }} /> {/* ai-quality-ignore: theme preview swatch from user-defined palette */}
                     ))}
                   </div>
                 ) : item.type === 'card-preset' ? (
