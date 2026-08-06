@@ -134,7 +134,7 @@ describe('useUpgradeStateMachine — Not connected / no clusters', () => {
   })
 
   it('does not fetch when allClusters is empty', () => {
-    const emptyClusters: any[] = []
+    const emptyClusters: ClusterInfo[] = []
     const { result } = renderHook(() => useUpgradeStateMachine({
       allClusters: emptyClusters,
       agentConnected: true,
