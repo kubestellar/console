@@ -2,6 +2,7 @@ import React from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { useUpgradeStateMachine } from '../useUpgradeStateMachine'
+import type { ClusterInfo } from '../mcp/types'
 
 // ---------------------------------------------------------------------------
 // Named local constants for private hook configurations (avoiding magic numbers)
@@ -67,7 +68,7 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 describe('useUpgradeStateMachine — Initial state', () => {
   it('returns empty clusterVersions and fetchCompleted=false on initial render when loading', () => {
-    const clusters = [{ name: 'cluster-1', healthy: true, nodeCount: 1 }] as any[]
+    const clusters = [{ name: 'cluster-1', healthy: true, nodeCount: 1 }] as ClusterInfo[]
     // Mock fetchClusterVersion to return a pending promise so fetchCompleted remains false (loading)
     mockVersionWsHandle.fetchClusterVersion.mockReturnValue(new Promise(() => {}))
 
@@ -89,7 +90,7 @@ describe('useUpgradeStateMachine — Demo mode', () => {
     const allClusters = [
       { name: 'cluster-1', healthy: true, nodeCount: 3 },
       { name: 'cluster-2', healthy: true, nodeCount: 1 },
-    ] as any[]
+    ] as ClusterInfo[]
 
     mockGetDemoVersionForCluster.mockImplementation((name) => `${name}-demo-ver`)
 
@@ -119,7 +120,7 @@ describe('useUpgradeStateMachine — Demo mode', () => {
 
 describe('useUpgradeStateMachine — Not connected / no clusters', () => {
   it('sets fetchCompleted=true (not loading) when agentConnected=false', () => {
-    const clusters = [{ name: 'cluster-1', healthy: true, nodeCount: 2 }] as any[]
+    const clusters = [{ name: 'cluster-1', healthy: true, nodeCount: 2 }] as ClusterInfo[]
     const { result } = renderHook(() => useUpgradeStateMachine({
       allClusters: clusters,
       agentConnected: false,
@@ -148,7 +149,7 @@ describe('useUpgradeStateMachine — Not connected / no clusters', () => {
 
   it('does not fetch when allClusters is null — array safety guard tested', () => {
     const { result } = renderHook(() => useUpgradeStateMachine({
-      allClusters: null as any,
+      allClusters: null as unknown as ClusterInfo[],
       agentConnected: true,
       isDemoMode: false,
       openTrackedWs: vi.fn(),
@@ -165,7 +166,7 @@ describe('useUpgradeStateMachine — Live fetching', () => {
     const allClusters = [
       { name: 'cluster-1', healthy: true, nodeCount: 3 },
       { name: 'cluster-2', healthy: true, nodeCount: 1 },
-    ] as any[]
+    ] as ClusterInfo[]
 
     mockVersionWsHandle.fetchClusterVersion.mockResolvedValue('v1.27.0')
 
@@ -193,7 +194,7 @@ describe('useUpgradeStateMachine — Live fetching', () => {
       { name: 'healthy-cluster', healthy: true, nodeCount: 2 },
       { name: 'unhealthy-cluster', healthy: false, nodeCount: 3 },
       { name: 'zero-nodes-cluster', healthy: true, nodeCount: 0 },
-    ] as any[]
+    ] as ClusterInfo[]
 
     mockVersionWsHandle.fetchClusterVersion.mockResolvedValue('v1.27.0')
 
@@ -223,7 +224,7 @@ describe('useUpgradeStateMachine — Retry logic', () => {
     const allClusters = [
       { name: 'success-cluster', healthy: true, nodeCount: 1 },
       { name: 'failed-cluster', healthy: true, nodeCount: 2 },
-    ] as any[]
+    ] as ClusterInfo[]
 
     // Use deterministic mockImplementation keyed by cluster name to prevent parallel promise race hazards
     mockVersionWsHandle.fetchClusterVersion.mockImplementation(async (name) => {
@@ -273,7 +274,7 @@ describe('useUpgradeStateMachine — Retry logic', () => {
     vi.useFakeTimers()
     const allClusters = [
       { name: 'failed-cluster', healthy: true, nodeCount: 2 },
-    ] as any[]
+    ] as ClusterInfo[]
 
     mockVersionWsHandle.fetchClusterVersion.mockResolvedValue(null) // first try fails
 
@@ -312,7 +313,7 @@ describe('useUpgradeStateMachine — TTL refresh', () => {
     const allClusters = [
       { name: 'cluster-1', healthy: true, nodeCount: 1 },
       { name: 'cluster-2', healthy: true, nodeCount: 2 },
-    ] as any[]
+    ] as ClusterInfo[]
 
     mockVersionWsHandle.fetchClusterVersion.mockResolvedValue('v1.27.0')
 
@@ -361,7 +362,7 @@ describe('useUpgradeStateMachine — Agent reconnect', () => {
     vi.useFakeTimers()
     const allClusters = [
       { name: 'cluster-1', healthy: true, nodeCount: 1 },
-    ] as any[]
+    ] as ClusterInfo[]
 
     mockVersionWsHandle.fetchClusterVersion.mockResolvedValue('v1.27.0')
 
@@ -417,7 +418,7 @@ describe('useUpgradeStateMachine — Cleanup', () => {
     const spyClearInterval = vi.spyOn(globalThis, 'clearInterval')
     mockVersionWsHandle.destroy.mockClear()
 
-    const clusters = [{ name: 'cluster-1', healthy: true, nodeCount: 1 }] as any[]
+    const clusters = [{ name: 'cluster-1', healthy: true, nodeCount: 1 }] as ClusterInfo[]
     const { unmount } = renderHook(() => useUpgradeStateMachine({
       allClusters: clusters,
       agentConnected: true,
