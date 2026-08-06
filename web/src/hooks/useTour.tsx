@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useState, useEffect, useMemo, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useReducer, useEffect, useMemo, useCallback, ReactNode } from 'react'
 import { useMobile } from './useMobile'
 import { SETTINGS_CHANGED_EVENT, SETTINGS_RESTORED_EVENT } from '../lib/settingsSync'
 import { emitTourStarted, emitTourCompleted, emitTourSkipped } from '../lib/analytics'
@@ -89,40 +89,41 @@ interface TourContextValue {
 
 const TourContext = createContext<TourContextValue | null>(null)
 
-// Combine isActive + currentStepIndex into a single reducer to prevent
-// consecutive setState calls in startTour, nextStep, and skipTour.
-type TourNavState = { isActive: boolean; currentStepIndex: number }
+// Combine isActive + currentStepIndex + hasCompletedTour into a single reducer
+// to prevent consecutive setState calls in nextStep, skipTour, and resetTour.
+type TourNavState = { isActive: boolean; currentStepIndex: number; hasCompletedTour: boolean }
 type TourNavAction =
   | { type: 'start' }
   | { type: 'next' }
   | { type: 'complete' }
-  | { type: 'deactivate' }
+  | { type: 'deactivate'; completed?: boolean }
   | { type: 'goTo'; index: number }
+  | { type: 'setCompleted'; completed: boolean }
 
 function tourNavReducer(state: TourNavState, action: TourNavAction): TourNavState {
   switch (action.type) {
-    case 'start': return { isActive: true, currentStepIndex: 0 }
+    case 'start': return { ...state, isActive: true, currentStepIndex: 0 }
     case 'next': return { ...state, currentStepIndex: state.currentStepIndex + 1 }
-    case 'complete': return { ...state, isActive: false }
-    case 'deactivate': return { ...state, isActive: false }
+    case 'complete': return { ...state, isActive: false, hasCompletedTour: true }
+    case 'deactivate': return { ...state, isActive: false, hasCompletedTour: action.completed ?? state.hasCompletedTour }
     case 'goTo': return { ...state, currentStepIndex: action.index }
+    case 'setCompleted': return { ...state, hasCompletedTour: action.completed }
     default: return state
   }
 }
 
 export function TourProvider({ children }: { children: ReactNode }) {
-  const [{ isActive, currentStepIndex }, dispatchTourNav] = useReducer(
+  const [{ isActive, currentStepIndex, hasCompletedTour }, dispatchTourNav] = useReducer(
     tourNavReducer,
-    { isActive: false, currentStepIndex: 0 }
+    { isActive: false, currentStepIndex: 0, hasCompletedTour: true }
   )
-  const [hasCompletedTour, setHasCompletedTour] = useState(true) // Default to true until we check
   const { isMobile } = useMobile()
 
   // Check localStorage on mount and when settings are restored from file
   useEffect(() => {
     const readFromStorage = () => {
       const completed = localStorage.getItem(STORAGE_KEY_TOUR_COMPLETED)
-      setHasCompletedTour(completed === 'true')
+      dispatchTourNav({ type: 'setCompleted', completed: completed === 'true' })
     }
     readFromStorage()
     window.addEventListener(SETTINGS_RESTORED_EVENT, readFromStorage)
@@ -151,9 +152,8 @@ export function TourProvider({ children }: { children: ReactNode }) {
     if (currentStepIndex < TOUR_STEPS.length - 1) {
       dispatchTourNav({ type: 'next' })
     } else {
-      // Tour complete
+      // Tour complete — single dispatch batches isActive + hasCompletedTour
       dispatchTourNav({ type: 'complete' })
-      setHasCompletedTour(true)
       localStorage.setItem(STORAGE_KEY_TOUR_COMPLETED, 'true')
       window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT))
       emitTourCompleted(TOUR_STEPS.length)
@@ -168,15 +168,15 @@ export function TourProvider({ children }: { children: ReactNode }) {
 
   const skipTour = useCallback(() => {
     emitTourSkipped(currentStepIndex)
-    dispatchTourNav({ type: 'deactivate' })
-    setHasCompletedTour(true)
+    // Single dispatch batches isActive + hasCompletedTour
+    dispatchTourNav({ type: 'deactivate', completed: true })
     localStorage.setItem(STORAGE_KEY_TOUR_COMPLETED, 'true')
     window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT))
   }, [currentStepIndex])
 
   const resetTour = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY_TOUR_COMPLETED)
-    setHasCompletedTour(false)
+    dispatchTourNav({ type: 'setCompleted', completed: false })
     window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT))
   }, [])
 
