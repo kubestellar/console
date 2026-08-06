@@ -1,5 +1,8 @@
 /**
  * AISuggestionsSection — AI-powered card suggestion tab extracted from AddCardModal.
+ *
+ * Modal safety: This is a sub-panel rendered inside DashboardCustomizer, which
+ * uses BaseModal with closeOnBackdrop={false}. No standalone modal here.
  */
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'

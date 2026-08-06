@@ -26,7 +26,7 @@ export function DeleteConfirmModal({ namespace, onClose, onConfirm }: DeleteConf
     // closeOnBackdrop is disabled because this modal contains a destructive
     // confirmation form (typed namespace name) that shouldn't be discarded
     // by an accidental backdrop click — see Auto-QA #21564.
-    <BaseModal isOpen={true} onClose={onClose} size="md" closeOnBackdrop={false}>
+    <BaseModal isOpen={true} onClose={onClose} size="md" closeOnBackdrop={false} closeOnEscape={true}>
       <BaseModal.Header
         title="Delete Namespace"
         description="This action cannot be undone"
