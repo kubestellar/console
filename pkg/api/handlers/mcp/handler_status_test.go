@@ -35,7 +35,8 @@ func TestMCPHandlers_GetStatus_NoBridge_NoK8s(t *testing.T) {
 	app := fiber.New()
 	app.Get("/status", h.GetStatus)
 
-	req, _ := http.NewRequest(http.MethodGet, "/status", nil)
+	req, reqErr := http.NewRequest(http.MethodGet, "/status", nil)
+	require.NoError(t, reqErr)
 	req.Host = "localhost"
 	resp, err := app.Test(req)
 	require.NoError(t, err)
@@ -66,7 +67,8 @@ func TestMCPHandlers_GetStatus_WithBridge_ReportsBridgeStatus(t *testing.T) {
 	app := fiber.New()
 	app.Get("/status", h.GetStatus)
 
-	req, _ := http.NewRequest(http.MethodGet, "/status", nil)
+	req, reqErr := http.NewRequest(http.MethodGet, "/status", nil)
+	require.NoError(t, reqErr)
 	req.Host = "localhost"
 	resp, err := app.Test(req)
 	require.NoError(t, err)
@@ -111,7 +113,8 @@ func TestMCPHandlers_GetOpsTools_NoBridge_Returns503(t *testing.T) {
 	app := fiber.New()
 	app.Get("/ops", h.GetOpsTools)
 
-	req, _ := http.NewRequest(http.MethodGet, "/ops", nil)
+	req, reqErr := http.NewRequest(http.MethodGet, "/ops", nil)
+	require.NoError(t, reqErr)
 	req.Host = "localhost"
 	resp, err := app.Test(req)
 	require.NoError(t, err)
@@ -136,7 +139,8 @@ func TestMCPHandlers_GetOpsTools_EmptyBridge_ReturnsEmptyList(t *testing.T) {
 	app := fiber.New()
 	app.Get("/ops", h.GetOpsTools)
 
-	req, _ := http.NewRequest(http.MethodGet, "/ops", nil)
+	req, reqErr := http.NewRequest(http.MethodGet, "/ops", nil)
+	require.NoError(t, reqErr)
 	req.Host = "localhost"
 	resp, err := app.Test(req)
 	require.NoError(t, err)
@@ -159,7 +163,8 @@ func TestMCPHandlers_GetDeployTools_NoBridge_Returns503(t *testing.T) {
 	app := fiber.New()
 	app.Get("/deploy", h.GetDeployTools)
 
-	req, _ := http.NewRequest(http.MethodGet, "/deploy", nil)
+	req, reqErr := http.NewRequest(http.MethodGet, "/deploy", nil)
+	require.NoError(t, reqErr)
 	req.Host = "localhost"
 	resp, err := app.Test(req)
 	require.NoError(t, err)
@@ -181,7 +186,8 @@ func TestMCPHandlers_GetDeployTools_EmptyBridge_ReturnsEmptyList(t *testing.T) {
 	app := fiber.New()
 	app.Get("/deploy", h.GetDeployTools)
 
-	req, _ := http.NewRequest(http.MethodGet, "/deploy", nil)
+	req, reqErr := http.NewRequest(http.MethodGet, "/deploy", nil)
+	require.NoError(t, reqErr)
 	req.Host = "localhost"
 	resp, err := app.Test(req)
 	require.NoError(t, err)
@@ -223,7 +229,8 @@ func TestHandleK8sError_NoClusterConfigured_Returns503(t *testing.T) {
 		return HandleK8sError(c, k8s.ErrNoClusterConfigured)
 	})
 
-	req, _ := http.NewRequest(http.MethodGet, "/x", nil)
+	req, reqErr := http.NewRequest(http.MethodGet, "/x", nil)
+	require.NoError(t, reqErr)
 	req.Host = "localhost"
 	resp, err := app.Test(req)
 	require.NoError(t, err)
@@ -240,7 +247,8 @@ func TestHandleK8sError_NetworkError_Returns503WithSanitizedMessage(t *testing.T
 		return HandleK8sError(c, errors.New("dial tcp 10.0.0.1:6443: connect: connection refused"))
 	})
 
-	req, _ := http.NewRequest(http.MethodGet, "/x", nil)
+	req, reqErr := http.NewRequest(http.MethodGet, "/x", nil)
+	require.NoError(t, reqErr)
 	req.Host = "localhost"
 	resp, err := app.Test(req)
 	require.NoError(t, err)
@@ -272,7 +280,8 @@ func TestHandleK8sError_UnknownError_Returns500Generic(t *testing.T) {
 		return HandleK8sError(c, errors.New("something completely opaque happened"))
 	})
 
-	req, _ := http.NewRequest(http.MethodGet, "/x", nil)
+	req, reqErr := http.NewRequest(http.MethodGet, "/x", nil)
+	require.NoError(t, reqErr)
 	req.Host = "localhost"
 	resp, err := app.Test(req)
 	require.NoError(t, err)
