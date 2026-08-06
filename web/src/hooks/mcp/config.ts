@@ -94,6 +94,7 @@ export function useConfigMaps(cluster?: string, namespace?: string) {
           }
         } catch (err) {
           console.error('[configmaps] Backend fetch failed:', err)
+          // Error propagated via hook error state; log here for debugging
           setError(err instanceof Error ? err.message : 'Failed to fetch config maps')
         }
         setIsLoading(false)

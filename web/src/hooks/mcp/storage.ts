@@ -322,6 +322,7 @@ export function usePVCs(cluster?: string, namespace?: string) {
       setLastRefresh(now)
     } catch (err: unknown) {
       if (!isMountedRef.current) return
+      // Error propagated via hook error state; log here for debugging
       const message = err instanceof Error ? err.message : 'Failed to fetch PVCs'
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
