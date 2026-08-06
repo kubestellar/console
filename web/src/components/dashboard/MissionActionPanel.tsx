@@ -53,12 +53,15 @@ export function MissionActionPanel({
       className="absolute top-full left-0 mt-1 z-dropdown w-72 rounded-lg border border-border/50 bg-card shadow-xl"
       style={MISSION_ACTION_PANEL_STYLE}
       onKeyDown={(e) => {
-        if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+        if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return
         e.preventDefault()
-        const items = e.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled])')
-        const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
+        const items = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled])'))
+        if (items.length === 0) return
+        const idx = items.indexOf(document.activeElement as HTMLElement)
         if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
-        else items[Math.max(idx - 1, 0)]?.focus()
+        else if (e.key === 'ArrowUp') items[Math.max(idx - 1, 0)]?.focus()
+        else if (e.key === 'Home') items[0]?.focus()
+        else items[items.length - 1]?.focus()
       }}
     >
       <div className="p-3">
@@ -85,6 +88,7 @@ export function MissionActionPanel({
         <div className="flex flex-wrap gap-1.5">
           <button
             ref={firstButtonRef}
+            role="menuitem"
             onClick={(e) => onAction(e, suggestion)}
             disabled={isProcessing}
             className="flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors flex items-center justify-center gap-1 bg-primary hover:bg-primary/80 text-white disabled:opacity-50"
@@ -93,6 +97,7 @@ export function MissionActionPanel({
             {suggestion.action.label}
           </button>
           <button
+            role="menuitem"
             onClick={(e) => onRepair(e, suggestion)}
             disabled={isProcessing}
             className="px-2 py-1.5 rounded text-xs font-medium bg-secondary/50 hover:bg-secondary text-foreground transition-colors flex items-center gap-1"
@@ -102,18 +107,22 @@ export function MissionActionPanel({
             {t('dashboard.missions.repair')}
           </button>
           <button
+            role="menuitem"
             onClick={(e) => onSnooze(e, suggestion)}
             disabled={isProcessing}
             className="px-2 py-1.5 rounded text-xs font-medium bg-secondary hover:bg-secondary/80 transition-colors disabled:opacity-50"
             title={t('dashboard.missions.snoozeTitle')}
+            aria-label={t('dashboard.missions.snoozeTitle')}
           >
             <Clock className="w-3 h-3" />
           </button>
           <button
+            role="menuitem"
             onClick={(e) => onDismiss(e, suggestion)}
             disabled={isProcessing}
             className="px-2 py-1.5 rounded text-xs font-medium bg-secondary hover:bg-secondary/80 transition-colors disabled:opacity-50"
             title={t('dashboard.missions.dismiss')}
+            aria-label={t('dashboard.missions.dismiss')}
           >
             <X className="w-3 h-3" />
           </button>
