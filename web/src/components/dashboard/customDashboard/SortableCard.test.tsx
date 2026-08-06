@@ -13,7 +13,13 @@ vi.mock('@dnd-kit/sortable', () => ({
 }))
 
 vi.mock('../../../lib/cards/cardHooks', () => ({
-  useCardCollapse: () => ({ isExpanded: false }),
+  useCardCollapse: () => ({ isCollapsed: false }),
+  commonComparators: {
+    string: () => () => 0,
+    number: () => () => 0,
+    statusOrder: () => () => 0,
+    date: () => () => 0,
+  },
 }))
 
 vi.mock('react-i18next', async (importOriginal) => {

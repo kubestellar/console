@@ -13,6 +13,7 @@ vi.mock('react-i18next', async (importOriginal) => {
 
 vi.mock('../../hooks/useMarketplace', () => ({
   useMarketplace: () => ({ items: [] }),
+  useAuthorProfile: () => ({ loading: false, coins: 0, consolePRs: 0, marketplacePRs: 0 }),
 }))
 
 import { MarketplaceCard } from './MarketplaceCard'
