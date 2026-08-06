@@ -74,7 +74,7 @@ vi.mock('../../../lib/api', () => ({
   api: {
     get: vi.fn().mockResolvedValue({ data: [] }),
     post: vi.fn(),
-  },
+  }
 }))
 
 vi.mock('../../../lib/analytics', async (importOriginal) => ({
@@ -210,7 +210,7 @@ vi.mock('../MissionBrowserSidebar', () => ({
         {renderNodes(treeNodes)}
       </div>
     )
-  },
+  }
 }))
 
 vi.mock('../ScanProgressOverlay', () => ({

@@ -43,7 +43,7 @@ vi.mock('@dnd-kit/utilities', () => ({
     Transform: {
       toString: () => undefined,
     },
-  },
+  }
 }))
 
 vi.mock('../../../ui/FlashingValue', () => ({

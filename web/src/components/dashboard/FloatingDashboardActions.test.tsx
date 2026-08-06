@@ -1,4 +1,3 @@
-import React from 'react'
 import { describe, it, expect } from 'vitest'
 import { FloatingDashboardActions } from './FloatingDashboardActions'
 import { DashboardHealthIndicator } from './DashboardHealthIndicator'

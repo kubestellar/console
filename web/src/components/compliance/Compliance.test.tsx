@@ -65,7 +65,7 @@ vi.mock('../../hooks/useUniversalStats', () => ({
       const val = primary(id)
       // If primary returns a value, use it; otherwise fall back
       return val !== undefined ? val : fallback(id)
-    },
+    }
 }))
 
 vi.mock('../../hooks/useDrillDown', () => ({
