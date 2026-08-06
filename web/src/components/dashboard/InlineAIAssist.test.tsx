@@ -8,7 +8,7 @@ vi.mock('react-i18next', async (importOriginal) => {
     useTranslation: () => ({ t: (key: string) => key }),
     initReactI18next: { type: '3rdParty', init: () => {} },
   }
-}))
+})
 
 vi.mock('../../hooks/useMissions', () => ({
   useMissions: () => ({
@@ -47,4 +47,4 @@ describe('InlineAIAssist Component', () => {
         onResult: vi.fn(),
       }} />)).not.toThrow()
   })
-}))
+})
