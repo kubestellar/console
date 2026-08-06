@@ -244,6 +244,10 @@ export function useFeedbackDraft({ isOpen, onClose, initialType = 'feature' }: F
         screenshotsUploaded: result.screenshots_uploaded,
         screenshotsFailed: result.screenshots_failed,
       })
+      showToast(
+        type === 'bug' ? 'Bug report submitted — thank you!' : 'Feature request submitted — thank you!',
+        'success',
+      )
     } catch (err: unknown) {
       console.error('[Screenshot] Failed to submit feedback:', err)
       const message = err instanceof Error ? err.message : 'Failed to submit feedback'
