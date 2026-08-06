@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import type { IntotoClusterStatus } from '../types'
 
 vi.mock('../../../lib/kubectlProxy', () => ({
   kubectlProxy: {
@@ -109,7 +109,7 @@ describe('saveToCache', () => {
     const statuses = {
       'cluster-a': { cluster: 'cluster-a', installed: true, loading: false, layouts: [], totalLayouts: 0, totalSteps: 0, verifiedSteps: 0, failedSteps: 0, missingSteps: 0 },
     }
-    saveToCache(statuses as any)
+    saveToCache(statuses as unknown as Record<string, IntotoClusterStatus>)
 
     const stored = localStorage.getItem(CACHE_KEY)
     expect(stored).not.toBeNull()
@@ -122,7 +122,7 @@ describe('saveToCache', () => {
       'loading-cluster': { cluster: 'loading-cluster', installed: true, loading: true, layouts: [] },
       'ready-cluster': { cluster: 'ready-cluster', installed: true, loading: false, layouts: [] },
     }
-    saveToCache(statuses as any)
+    saveToCache(statuses as unknown as Record<string, IntotoClusterStatus>)
 
     const stored = JSON.parse(localStorage.getItem(CACHE_KEY)!)
     expect(stored['loading-cluster']).toBeUndefined()
@@ -134,7 +134,7 @@ describe('saveToCache', () => {
       'error-cluster': { cluster: 'error-cluster', installed: true, loading: false, error: 'timeout', layouts: [] },
       'ok-cluster': { cluster: 'ok-cluster', installed: true, loading: false, layouts: [] },
     }
-    saveToCache(statuses as any)
+    saveToCache(statuses as unknown as Record<string, IntotoClusterStatus>)
 
     const stored = JSON.parse(localStorage.getItem(CACHE_KEY)!)
     expect(stored['error-cluster']).toBeUndefined()
@@ -145,7 +145,7 @@ describe('saveToCache', () => {
     const statuses = {
       'err': { cluster: 'err', installed: true, loading: false, error: 'fail', layouts: [] },
     }
-    saveToCache(statuses as any)
+    saveToCache(statuses as unknown as Record<string, IntotoClusterStatus>)
 
     expect(localStorage.getItem(CACHE_KEY)).toBeNull()
   })
@@ -157,7 +157,7 @@ describe('saveToCache', () => {
       throw new DOMException('QuotaExceededError', 'QuotaExceededError')
     })
 
-    expect(() => saveToCache({ 'c': { cluster: 'c', installed: true, loading: false, layouts: [] } } as any)).not.toThrow()
+    expect(() => saveToCache({ 'c': { cluster: 'c', installed: true, loading: false, layouts: [] } } as unknown as Record<string, IntotoClusterStatus>)).not.toThrow()
 
     vi.mocked(localStorage.setItem).mockRestore()
   })
