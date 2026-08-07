@@ -19,7 +19,6 @@ import { createMissionMessageHandler } from './useMissions.messages'
 import { createMissionActions } from './useMissions.actions'
 import {
   loadMissions,
-  mergeMissions,
   saveMissions,
   saveUnreadMissionIds,
 } from './useMissionStorage'
@@ -79,9 +78,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       if (e.newValue === null) {
         try {
           state.suppressNextSaveRef.current = true
-          state.setMissions([])
-          state.setUnreadMissionIds(new Set<string>())
-          state.setActiveMissionId(null)
+          state.clearMissionListState()
           for (const timeout of state.cancelTimeouts.current.values()) {
             clearTimeout(timeout)
           }
@@ -110,13 +107,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       try {
         const reloaded = loadMissions()
         state.suppressNextSaveRef.current = true
-        state.setMissions(prev => mergeMissions(prev, reloaded))
-        const reloadedIds = new Set(reloaded.map(mission => mission.id))
-        state.setActiveMissionId(prev => (prev && !reloadedIds.has(prev) ? null : prev))
-        state.setUnreadMissionIds(prev => {
-          const next = new Set([...prev].filter(id => reloadedIds.has(id)))
-          return next.size === prev.size ? prev : next
-        })
+        state.reloadMissionListState(reloaded)
       } catch (error: unknown) {
         logger.warn('[Missions] issue 6668 — failed to reload from cross-tab write:', error)
       }

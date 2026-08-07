@@ -16,6 +16,7 @@ import {
   Server,
   Blocks,
   ShieldAlert,
+  Loader2,
 } from 'lucide-react'
 import { BaseModal } from '../../lib/modals/BaseModal'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -31,7 +32,7 @@ import { wrapAbbreviations } from '../shared/TechnicalAcronym'
 interface DeployConfirmDialogProps {
   isOpen: boolean
   onClose: () => void
-  onConfirm: () => void
+  onConfirm: () => void | Promise<void>
   workloadName: string
   namespace: string
   sourceCluster: string
@@ -104,6 +105,16 @@ export function DeployConfirmDialog({
   const { t } = useTranslation()
   const { data, isLoading, error, progressMessage, resolve, reset } = useResolveDependencies()
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+  const [isConfirming, setIsConfirming] = useState(false)
+
+  const handleConfirm = async () => {
+    setIsConfirming(true)
+    try {
+      await onConfirm()
+    } finally {
+      setIsConfirming(false)
+    }
+  }
 
   // Resolve dependencies when dialog opens
   useEffect(() => {
@@ -288,16 +299,20 @@ export function DeployConfirmDialog({
             {t('common.cancel')}
           </button>
           <button
-            onClick={onConfirm}
-            disabled={isLoading}
+            onClick={() => { void handleConfirm() }}
+            disabled={isLoading || isConfirming}
             className={cn(
               'px-4 py-2 text-sm rounded-lg transition-colors flex items-center gap-2',
-              isLoading
+              isLoading || isConfirming
                 ? 'bg-blue-500/10 text-blue-400/60 cursor-not-allowed'
                 : 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-400',
             )}
           >
-            <Rocket className="w-4 h-4" />
+            {isConfirming ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Rocket className="w-4 h-4" />
+            )}
             {t('deploy.deployToCluster', { count: targetClusters.length })}
           </button>
         </div>

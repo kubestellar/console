@@ -62,7 +62,9 @@ export function CardEmptyState({
         )}
         {action && (
           <button
+            type="button"
             onClick={action.onClick}
+            aria-label={action.label}
             className="mt-3 px-3 py-1.5 text-sm rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors"
           >
             {action.label}
@@ -96,8 +98,10 @@ export function CardErrorState({ error, onRetry, isRetrying }: CardErrorStatePro
       <p className="text-sm text-muted-foreground mt-1 max-w-xs">{error}</p>
       {onRetry && (
         <button
+          type="button"
           onClick={onRetry}
           disabled={isRetrying}
+          aria-label={isRetrying ? 'Retrying' : 'Try again'}
           className="mt-3 px-3 py-1.5 text-sm rounded-lg bg-secondary text-foreground hover:bg-secondary/80 transition-colors disabled:opacity-50"
         >
           {isRetrying ? 'Retrying...' : 'Try again'}

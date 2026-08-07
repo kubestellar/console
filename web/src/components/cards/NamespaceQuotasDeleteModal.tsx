@@ -19,7 +19,7 @@ export function NamespaceQuotasDeleteModal({
   isLoading,
 }: NamespaceQuotasDeleteModalProps) {
   return (
-    <BaseModal isOpen={!!deleteConfirm} onClose={onClose} size="md">
+    <BaseModal isOpen={!!deleteConfirm} onClose={onClose} size="md" closeOnBackdrop={false} closeOnEscape={true}>
       <BaseModal.Header
         title="Delete ResourceQuota?"
         icon={Trash2}

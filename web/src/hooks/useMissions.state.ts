@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { AgentInfo } from '../types/agent'
 import { useLocalAgent } from './useLocalAgent'
 import type {
@@ -12,6 +12,7 @@ import {
   SELECTED_AGENT_KEY,
   loadMissions,
   loadUnreadMissionIds,
+  mergeMissions,
 } from './useMissionStorage'
 import {
   WAITING_INPUT_TIMEOUT_MS,
@@ -122,6 +123,24 @@ export function useMissionProviderState() {
     defaultAgentRef.current = defaultAgent
   }, [defaultAgent])
 
+  /** Batch-reset missions, activeMissionId, and unreadMissionIds in one update. */
+  const clearMissionListState = useCallback(() => {
+    setMissions([])
+    setActiveMissionId(null)
+    setUnreadMissionIds(new Set<string>())
+  }, [])
+
+  /** Batch-reload missions, activeMissionId, and unreadMissionIds from storage. */
+  const reloadMissionListState = useCallback((reloaded: Mission[]) => {
+    const reloadedIds = new Set(reloaded.map(m => m.id))
+    setMissions(prev => mergeMissions(prev, reloaded))
+    setActiveMissionId(prev => (prev && !reloadedIds.has(prev) ? null : prev))
+    setUnreadMissionIds(prev => {
+      const next = new Set([...prev].filter(id => reloadedIds.has(id)))
+      return next.size === prev.size ? prev : next
+    })
+  }, [])
+
   return {
     missions,
     setMissions,
@@ -174,6 +193,8 @@ export function useMissionProviderState() {
     missionToolLocks,
     executingMissions,
     selectAgentPending,
+    clearMissionListState,
+    reloadMissionListState,
   }
 }
 

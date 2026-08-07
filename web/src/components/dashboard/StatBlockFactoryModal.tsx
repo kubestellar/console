@@ -61,6 +61,28 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
 
   // Icon picker state
   const [editingBlockIcon, setEditingBlockIcon] = useState<number | null>(null)
+  const iconTriggerRefs = useRef<Map<number, HTMLButtonElement>>(new Map())
+
+  // Arrow/Home/End roving focus inside the open icon picker grid so it is
+  // usable without a mouse (the grid is 8 columns wide).
+  const handleIconPickerKeyDown = (e: React.KeyboardEvent) => {
+    const NAV_KEYS = ['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Home', 'End']
+    if (!NAV_KEYS.includes(e.key)) return
+    e.preventDefault()
+    const items = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('button'))
+    if (items.length === 0) return
+    const current = items.indexOf(document.activeElement as HTMLElement)
+    const idx = current === -1 ? 0 : current
+    const COLS = 8
+    let next = idx
+    if (e.key === 'ArrowRight') next = Math.min(idx + 1, items.length - 1)
+    else if (e.key === 'ArrowLeft') next = Math.max(idx - 1, 0)
+    else if (e.key === 'ArrowDown') next = Math.min(idx + COLS, items.length - 1)
+    else if (e.key === 'ArrowUp') next = Math.max(idx - COLS, 0)
+    else if (e.key === 'Home') next = 0
+    else if (e.key === 'End') next = items.length - 1
+    items[next]?.focus()
+  }
 
   // Track timeouts for cleanup
   const timeoutsRef = useRef<number[]>([])
@@ -162,6 +184,20 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
     { id: 'ai' as Tab, label: t('dashboard.statFactory.aiGenerateTab'), icon: Sparkles },
     { id: 'manage' as Tab, label: t('dashboard.statFactory.manageTab'), icon: Activity },
   ]
+
+  // Roving arrow/Home/End navigation for the embedded-mode tab strip, matching
+  // the behaviour of BaseModal.Tabs used in standard modal mode.
+  const handleTabKeyDown = (e: React.KeyboardEvent) => {
+    const idx = tabs.findIndex(tb => tb.id === tab)
+    let next: Tab | null = null
+    if (e.key === 'ArrowRight') next = tabs[Math.min(idx + 1, tabs.length - 1)].id
+    else if (e.key === 'ArrowLeft') next = tabs[Math.max(idx - 1, 0)].id
+    else if (e.key === 'Home') next = tabs[0].id
+    else if (e.key === 'End') next = tabs[tabs.length - 1].id
+    if (!next) return
+    e.preventDefault()
+    handleTabChange(next)
+  }
 
   const statContent = (
     <>
@@ -268,9 +304,25 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
                           </div>
 
                           {/* Icon picker */}
-                          <div className="relative">
+                          <div
+                            className="relative"
+                            onKeyDown={(e) => {
+                              if (e.key !== 'Escape' || editingBlockIcon !== idx) return
+                              e.preventDefault()
+                              e.stopPropagation()
+                              setEditingBlockIcon(null)
+                              iconTriggerRefs.current.get(idx)?.focus()
+                            }}
+                          >
                             <button
+                              ref={(el) => {
+                                if (el) iconTriggerRefs.current.set(idx, el)
+                                else iconTriggerRefs.current.delete(idx)
+                              }}
                               onClick={() => setEditingBlockIcon(editingBlockIcon === idx ? null : idx)}
+                              aria-expanded={editingBlockIcon === idx}
+                              aria-haspopup="menu"
+                              aria-controls={`stat-icon-picker-${idx}`}
                               className={cn(
                                 'p-1.5 min-h-11 min-w-11 rounded-lg border transition-colors',
                                 editingBlockIcon === idx
@@ -283,22 +335,32 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
                               <IconComponent className={cn('w-4 h-4', COLOR_CLASSES[block.color])} />
                             </button>
                             {editingBlockIcon === idx && (
-                              <div className="absolute z-dropdown top-full mt-1 left-0 bg-card border border-border rounded-lg shadow-lg p-2 w-64 max-h-40 overflow-y-auto">
+                              <div
+                                id={`stat-icon-picker-${idx}`}
+                                role="menu"
+                                aria-label={t('dashboard.statFactory.changeIcon')}
+                                onKeyDown={handleIconPickerKeyDown}
+                                className="absolute z-dropdown top-full mt-1 left-0 bg-card border border-border rounded-lg shadow-lg p-2 w-64 max-h-40 overflow-y-auto"
+                              >
                                 <div className="grid grid-cols-8 gap-1">
                                   {POPULAR_ICONS.map(iconName => {
                                     const Ic = getIcon(iconName)
                                     return (
                                       <button
                                         key={iconName}
+                                        role="menuitemradio"
+                                        aria-checked={block.icon === iconName}
                                         onClick={() => {
                                           updateBlock(idx, 'icon', iconName)
                                           setEditingBlockIcon(null)
+                                          iconTriggerRefs.current.get(idx)?.focus()
                                         }}
                                         className={cn(
                                           'p-1.5 rounded hover:bg-secondary transition-colors',
                                           block.icon === iconName && 'bg-purple-500/20',
                                         )}
                                         title={iconName}
+                                        aria-label={iconName}
                                       >
                                         <Ic className="w-3.5 h-3.5 text-foreground" />
                                       </button>
@@ -535,9 +597,17 @@ export function StatBlockFactoryModal({ isOpen, onClose, onStatsCreated, embedde
       <div className="h-full flex flex-col overflow-hidden">
         <div className="flex-1 overflow-y-auto p-4">
           {/* Tabs inside scrollable content — matches Card Factory layout */}
-          <div className="flex items-center gap-1 border-b border-border pb-2 mb-4">
+          <div
+            role="tablist"
+            aria-label={t('dashboard.statFactory.title')}
+            onKeyDown={handleTabKeyDown}
+            className="flex items-center gap-1 border-b border-border pb-2 mb-4"
+          >
             {tabs.map(tb => (
               <button key={tb.id} onClick={() => handleTabChange(tb.id)}
+                role="tab"
+                aria-selected={tab === tb.id}
+                tabIndex={tab === tb.id ? 0 : -1}
                 className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${tab === tb.id ? 'bg-purple-500/20 text-purple-400' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}>
                 {tb.label}
               </button>

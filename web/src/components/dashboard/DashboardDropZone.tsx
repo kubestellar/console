@@ -77,9 +77,19 @@ function DroppableCreateDashboard({ onClick }: { onClick?: () => void }) {
   return (
     <div
       ref={setNodeRef}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-label={onClick ? t('dashboard.dropZone.createNewDashboard') : undefined}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (!onClick) return
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onClick()
+        }
+      }}
       className={cn(
-        'flex items-center gap-2 w-full px-3 py-2 rounded-lg border border-dashed text-sm transition-all cursor-pointer',
+        'flex items-center gap-2 w-full px-3 py-2 rounded-lg border border-dashed text-sm transition-all cursor-pointer focus:outline-hidden focus-visible:ring-2 focus-visible:ring-purple-400',
         isOver
           ? 'bg-green-500/20 border-green-500 text-green-400 scale-105'
           : 'border-border/50 text-muted-foreground hover:text-foreground hover:border-purple-500/50'

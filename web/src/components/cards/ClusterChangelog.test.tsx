@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import React from 'react'
 import type { ReactNode } from 'react'
 import { ClusterChangelog } from './ClusterChangelog'
 

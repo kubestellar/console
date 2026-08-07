@@ -1,4 +1,3 @@
-import React from 'react'
 /**
  * Unit tests for the ComplianceScore card and ComplianceScoreBreakdownModal.
  *

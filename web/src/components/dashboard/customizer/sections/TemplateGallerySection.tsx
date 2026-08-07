@@ -2,6 +2,9 @@
  * TemplateGallerySection — template gallery within Dashboard Studio.
  *
  * Reuses the existing TemplatesModal content inline.
+ *
+ * Modal safety: This is a sub-panel rendered inside DashboardCustomizer, which
+ * uses BaseModal with closeOnBackdrop={false}. No standalone modal here.
  */
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'

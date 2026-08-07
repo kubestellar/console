@@ -400,7 +400,7 @@ export const SBOMDashboardContent = memo(function SBOMDashboardContent() {
             <div className="space-y-2">
               {licensePieData.map(d => (
                 <div key={d.label} className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: d.color }} />
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: d.color }} /> {/* ai-quality-ignore: chart legend dot color from recharts data */}
                   <span className="text-sm text-muted-foreground">{d.label}: <span className="text-foreground font-medium">{d.count}</span></span>
                 </div>
               ))}

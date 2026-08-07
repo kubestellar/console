@@ -142,9 +142,9 @@ export const RiskRegisterDashboardContent = memo(function RiskRegisterDashboardC
   }, [risks, categoryFilter, statusFilter, severityFilter])
 
   if (loading) return (
-    <div className="flex items-center justify-center h-64">
+    <div className="flex items-center justify-center h-64 bg-gray-900 rounded-lg">
       <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
-      <span className="ml-3 text-gray-300">Loading risk register…</span>
+      <span className="ml-3 text-gray-100">Loading risk register…</span>
     </div>
   )
 
@@ -228,21 +228,21 @@ export const RiskRegisterDashboardContent = memo(function RiskRegisterDashboardC
         <select
           value={categoryFilter}
           onChange={e => setCategoryFilter(e.target.value)}
-          className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-300"
+          className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-200"
         >
           {RISK_CATEGORIES.map(c => <option key={c} value={c}>{c === 'All' ? 'All Categories' : c}</option>)}
         </select>
         <select
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
-          className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-300"
+          className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-200"
         >
           {RISK_STATUSES.map(s => <option key={s} value={s}>{s === 'All' ? 'All Statuses' : s}</option>)}
         </select>
         <select
           value={severityFilter}
           onChange={e => setSeverityFilter(e.target.value)}
-          className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-300"
+          className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-200"
         >
           {SEVERITY_FILTERS.map(s => <option key={s} value={s}>{s === 'All' ? 'All Severities' : s}</option>)}
         </select>
@@ -271,13 +271,13 @@ export const RiskRegisterDashboardContent = memo(function RiskRegisterDashboardC
               <tr key={r.id} className="border-b border-gray-700/50 hover:bg-gray-700/30 cursor-pointer" tabIndex={0} onClick={() => setSelectedRisk(r)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedRisk(r) } }}>
                 <td className="p-3 font-mono text-blue-300">{r.id}</td>
                 <td className="p-3 text-white">{r.name}</td>
-                <td className="p-3"><span className="px-2 py-0.5 rounded bg-gray-700 text-gray-300 text-xs">{r.category}</span></td>
-                <td className="p-3 text-center text-gray-300">{r.likelihood}</td>
-                <td className="p-3 text-center text-gray-300">{r.impact}</td>
+                <td className="p-3"><span className="px-2 py-0.5 rounded bg-gray-700 text-gray-200 text-xs">{r.category}</span></td>
+                <td className="p-3 text-center text-gray-200">{r.likelihood}</td>
+                <td className="p-3 text-center text-gray-200">{r.impact}</td>
                 <td className="p-3 text-center">
                   <span className={`font-bold ${severityColor(severityFromScore(r.score))}`}>{r.score}</span>
                 </td>
-                <td className="p-3 text-gray-300">{r.owner}</td>
+                <td className="p-3 text-gray-200">{r.owner}</td>
                 <td className="p-3"><span className={`text-xs font-medium ${statusColor(r.status)}`}>{r.status}</span></td>
                 <td className="p-3 text-xs text-gray-400">{new Date(r.last_review).toLocaleDateString()}</td>
                 <td className="p-3"><ChevronRight className="w-4 h-4 text-gray-500" /></td>
@@ -300,7 +300,7 @@ export const RiskRegisterDashboardContent = memo(function RiskRegisterDashboardC
             </button>
           </div>
 
-          <p className="text-sm text-gray-300 mb-4">{selectedRisk.description}</p>
+          <p className="text-sm text-gray-200 mb-4">{selectedRisk.description}</p>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             <div>
@@ -324,13 +324,13 @@ export const RiskRegisterDashboardContent = memo(function RiskRegisterDashboardC
           <div className="space-y-3">
             <div>
               <p className="text-xs text-gray-400 mb-1">Mitigation Plan</p>
-              <p className="text-sm text-gray-300 bg-gray-900/50 rounded p-3">{selectedRisk.mitigation_plan}</p>
+              <p className="text-sm text-gray-200 bg-gray-900/50 rounded p-3">{selectedRisk.mitigation_plan}</p>
             </div>
             <div>
               <p className="text-xs text-gray-400 mb-1">Controls</p>
               <div className="flex gap-2 flex-wrap">
                 {selectedRisk.controls.map(c => (
-                  <span key={c} className="px-2 py-1 rounded bg-gray-700 text-gray-300 text-xs flex items-center gap-1">
+                  <span key={c} className="px-2 py-1 rounded bg-gray-700 text-gray-200 text-xs flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3 text-green-400" />{c}
                   </span>
                 ))}

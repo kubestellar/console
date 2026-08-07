@@ -237,6 +237,7 @@ function ModalHeader({
           {/* Back button */}
           {showBack && onBack && (
             <button
+              type="button"
               onClick={onBack}
               className="p-2 rounded-lg hover:bg-card/50 text-muted-foreground hover:text-foreground transition-colors shrink-0"
               title="Go back (Backspace)"
@@ -281,6 +282,7 @@ function ModalHeader({
           {/* Close button */}
           {onClose && (
             <button
+              type="button"
               onClick={onClose}
               className="p-2 rounded-lg hover:bg-card/50 text-muted-foreground hover:text-foreground transition-colors"
               title={closeTitle}
@@ -395,6 +397,7 @@ function ModalTabs({
         return (
           <button
             key={tab.id}
+            type="button"
             role="tab"
             aria-selected={isActive}
             tabIndex={isActive ? 0 : -1}
@@ -405,7 +408,7 @@ function ModalTabs({
                 : 'text-muted-foreground hover:text-foreground border-transparent'
             }`}
           >
-            {Icon && <Icon className="w-4 h-4" />}
+            {Icon && <Icon className="w-4 h-4" aria-hidden="true" />}
             <span>{tab.label}</span>
             {tab.badge !== undefined && (
               <span

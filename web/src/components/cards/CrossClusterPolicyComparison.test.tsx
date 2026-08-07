@@ -42,7 +42,7 @@ vi.mock('../../hooks/useGlobalFilters', () => ({
 
 vi.mock('./CardDataContext', () => ({
   useCardLoadingState: () => ({}),
-  useReportCardDataState: () => {},
+  useReportCardDataState: () => {}
 }))
 
 vi.mock('./DynamicCardErrorBoundary', () => ({

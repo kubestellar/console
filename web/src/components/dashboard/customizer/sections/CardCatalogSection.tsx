@@ -3,6 +3,10 @@
  *
  * Renders the card catalog with search, recommended cards, categorized
  * listing, batch selection, and "Add X Cards" footer.
+ *
+ * Modal safety: This is a sub-panel rendered inside DashboardCustomizer, which
+ * uses BaseModal with closeOnBackdrop={false}. Sub-modals (CardFactoryModal,
+ * StatBlockFactoryModal) also use closeOnBackdrop={false}.
  */
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'

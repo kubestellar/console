@@ -17,7 +17,7 @@ export interface CardFilterChipsProps {
 export function CardFilterChips({ chips, activeChip, onChipClick }: CardFilterChipsProps) {
   return (
     <div className="flex items-center gap-1 flex-wrap">
-      <Filter className="w-3.5 h-3.5 text-muted-foreground mr-1" />
+      <Filter className="w-3.5 h-3.5 text-muted-foreground mr-1" aria-hidden="true" />
       {chips.map((chip) => {
         const isActive = activeChip === chip.id
         const Icon = chip.icon
@@ -25,6 +25,7 @@ export function CardFilterChips({ chips, activeChip, onChipClick }: CardFilterCh
         return (
           <button
             key={chip.id}
+            type="button"
             onClick={() => onChipClick(chip.id)}
             aria-pressed={isActive}
             aria-label={`Filter by ${chip.label}${chip.count !== undefined ? ` (${chip.count})` : ''}`}
@@ -33,7 +34,7 @@ export function CardFilterChips({ chips, activeChip, onChipClick }: CardFilterCh
               : 'bg-secondary/50 border-border text-muted-foreground hover:text-foreground hover:bg-secondary'
               }`}
           >
-            {Icon && <Icon className={`w-3 h-3 ${isActive && chip.color ? chip.color : ''}`} />}
+            {Icon && <Icon className={`w-3 h-3 ${isActive && chip.color ? chip.color : ''}`} aria-hidden="true" />}
             <span className="capitalize">{chip.label}</span>
             {chip.count !== undefined && (
               <span

@@ -294,17 +294,18 @@ export function StatsRuntime({
         <div className="flex items-center gap-3">
           {collapsible ? (
             <button
+              type="button"
               onClick={toggleExpanded}
               aria-expanded={isExpanded}
               aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${title}`}
               className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
-              <Activity className="w-4 h-4" />
+              <Activity className="w-4 h-4" aria-hidden="true" />
               <span>{title}</span>
               {isExpanded ? (
-                <ChevronDown className="w-4 h-4" />
+                <ChevronDown className="w-4 h-4" aria-hidden="true" />
               ) : (
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="w-4 h-4" aria-hidden="true" />
               )}
             </button>
           ) : (
@@ -318,10 +319,11 @@ export function StatsRuntime({
         <div className="flex items-center gap-2">
           {showConfigButton && isExpanded && (
             <button
+              type="button"
               className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors"
               aria-label="Configure stats"
             >
-              <Settings className="w-4 h-4" />
+              <Settings className="w-4 h-4" aria-hidden="true" />
             </button>
           )}
         </div>
