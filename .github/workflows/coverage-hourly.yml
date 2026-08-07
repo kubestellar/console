@@ -167,6 +167,23 @@ jobs:
           pattern: coverage-shard-*
           path: /tmp/shards
 
+      - name: Verify shard artifact completeness
+        run: |
+          # Each shard uploads coverage under `web/coverage/coverage-final.json` with
+          # `if-no-files-found: ignore`, so a crashed/timed-out/OOM-killed shard simply
+          # produces no artifact instead of failing the download step. Because
+          # `test.coverage.all` is false in web/vite.config.ts, each shard only reports
+          # coverage for files its own tests import — the merge step unions whatever
+          # artifacts are present, so silently merging fewer than TOTAL_SHARDS artifacts
+          # produces an artificial coverage drop instead of a build failure (#22273).
+          # Fail loudly here instead of letting that reach the merge/badge step.
+          FOUND=$(find /tmp/shards -maxdepth 1 -type d -name 'coverage-shard-*' | wc -l | tr -d ' ')
+          echo "Found ${FOUND}/${TOTAL_SHARDS} shard coverage artifacts"
+          if [ "$FOUND" -lt "$TOTAL_SHARDS" ]; then
+            echo "::error::Only ${FOUND}/${TOTAL_SHARDS} coverage shard artifacts were downloaded. One or more shards likely failed, timed out, or was OOM-killed before uploading coverage. Refusing to merge an incomplete coverage set — check the test-shard job runs above for the missing shard(s)."
+            exit 1
+          fi
+
       - name: Download failed test artifacts
         if: always()
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
