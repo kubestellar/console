@@ -4,7 +4,6 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ComplianceScoreCard } from '../ComplianceScoreCard'
 import type { KubescapeClusterStatus } from '../../../../hooks/useKubescape'
-import type { KyvernoClusterStatus } from '../../../../hooks/useKyverno'
 
 type TranslationOptions = {
   checked?: number
@@ -82,21 +81,6 @@ function makeKubescapeStatus(overrides: Partial<KubescapeClusterStatus> = {}): K
     passedControls: 8,
     failedControls: 2,
     controls: [],
-    ...overrides,
-  }
-}
-
-function makeKyvernoStatus(overrides: Partial<KyvernoClusterStatus> = {}): KyvernoClusterStatus {
-  return {
-    cluster: 'prod',
-    installed: true,
-    loading: false,
-    policies: [],
-    reports: [],
-    totalPolicies: 1,
-    totalViolations: 0,
-    enforcingCount: 0,
-    auditCount: 0,
     ...overrides,
   }
 }
