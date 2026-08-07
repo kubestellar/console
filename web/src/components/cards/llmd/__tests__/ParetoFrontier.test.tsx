@@ -21,16 +21,16 @@ vi.mock('../../CardDataContext', () => ({
   useCardLoadingState: vi.fn(),
 }))
 
-vi.mock('recharts', () => ({
-  ResponsiveContainer: ({ children }: any) => <div>{children}</div>,
-  ComposedChart: ({ children }: any) => <div>{children}</div>,
-  Line: () => null,
-  Bar: () => null,
-  XAxis: () => null,
-  YAxis: () => null,
-  CartesianGrid: () => null,
-  Tooltip: () => null,
-  Legend: () => null,
+vi.mock('../../../charts/LazyEChart', () => ({
+  LazyEChart: () => <div data-testid="lazy-echart" />,
+}))
+
+vi.mock('../../../../hooks/useBenchmarkData', () => ({
+  useCachedBenchmarkReports: () => ({ data: [], isLoading: false, error: null }),
+}))
+
+vi.mock('../DynamicCardErrorBoundary', () => ({
+  DynamicCardErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
 import ParetoFrontier from '../ParetoFrontier'
@@ -38,6 +38,11 @@ import ParetoFrontier from '../ParetoFrontier'
 describe('ParetoFrontier', () => {
   it('renders without crashing', () => {
     const { container } = render(<ParetoFrontier />)
+    expect(container).toBeTruthy()
+  })
+
+  it('renders with a specific chart config', () => {
+    const { container } = render(<ParetoFrontier config={{ chartType: 'throughput' }} />)
     expect(container).toBeTruthy()
   })
 })
