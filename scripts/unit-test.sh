@@ -41,6 +41,16 @@ echo "Running Vitest unit tests..."
 # 4 shards when a single shard accumulates too many heavy test files in one
 # batch. Increasing to 8 shards halves per-shard test count and peak memory
 # while keeping the sequential run within the 180m nightly timeout (#21083).
+#
+# The suite has since grown to 2600+ test files (~325/shard at 8 shards),
+# which again pushed several shards' worker heaps past 3584 MB ("Reached heap
+# limit Allocation failed - JavaScript heap out of memory" / "Worker exited
+# unexpectedly" in shards 4, 6, and 7 of the 2026-08-06 nightly run) — the
+# same OOM failure mode as #21083, just recurring at a larger file count.
+# Increasing to 32 shards brings per-shard test count back down to ~80,
+# close to the ~70/shard ratio that was stable after the #21083 fix, while
+# only adding a few minutes of fixed per-shard startup overhead — still well
+# within the 180m nightly timeout (#22004).
 if [ -n "${CI:-}" ]; then
   export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=3584"
 fi
@@ -56,18 +66,20 @@ fi
 # In CI, run tests in shards to reduce parent process memory footprint. With
 # 560+ test files, the Vitest parent process accumulates results in memory
 # for final reporting, causing OOM on 7GB runners even with 1 worker (#20007).
-# Running 8 shards sequentially reduces peak memory by ~87.5% vs single run.
+# Running 32 shards sequentially (up from 8, see #22004) keeps peak per-shard
+# memory in check as the suite has grown to 2600+ test files.
 OUTPUT_FILE="vitest-output.log"
 EXIT_CODE=0
+SHARD_COUNT=32
 
 if [ -n "${CI:-}" ]; then
-  # CI: run in 8 shards sequentially, combining output
-  echo "Running tests in 8 shards to prevent OOM..."
+  # CI: run in $SHARD_COUNT shards sequentially, combining output
+  echo "Running tests in $SHARD_COUNT shards to prevent OOM..."
   > "$OUTPUT_FILE"  # Clear file
-  for shard in 1 2 3 4 5 6 7 8; do
+  for shard in $(seq 1 "$SHARD_COUNT"); do
     echo ""
-    echo "=== Shard $shard/8 ==="
-    npx vitest run $EXTRA_ARGS --pool=forks --testTimeout=30000 --reporter=verbose --shard=$shard/8 2>&1 | tee -a "$OUTPUT_FILE" || EXIT_CODE=$?
+    echo "=== Shard $shard/$SHARD_COUNT ==="
+    npx vitest run $EXTRA_ARGS --pool=forks --testTimeout=30000 --reporter=verbose --shard=$shard/$SHARD_COUNT 2>&1 | tee -a "$OUTPUT_FILE" || EXIT_CODE=$?
   done
 else
   # Local: run all tests at once
