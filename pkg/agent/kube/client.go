@@ -300,6 +300,11 @@ func ValidateKubectlArgs(args []string) bool {
 			return false // Need at least "delete <resource>"
 		}
 		resourceType := strings.ToLower(args[1])
+		// Handle "delete pod/mypod" slash format — extract the resource type prefix.
+		if strings.Contains(resourceType, "/") {
+			parts := strings.SplitN(resourceType, "/", 2)
+			resourceType = parts[0]
+		}
 		if !allowedDeleteResources[resourceType] {
 			return false
 		}
