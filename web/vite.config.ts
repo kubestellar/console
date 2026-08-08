@@ -103,6 +103,8 @@ export default defineConfig(({ mode }) => ({
             // Specific card registry files first (most specific matches first)
             ['card-registry', ['/src/components/cards/cardRegistry.ts']],
             ['card-registry-data', ['/src/config/cards/', '/src/components/cards/cardMetadata.ts', '/src/components/cards/cardDescriptors.registry.ts']],
+            // Auth components (Login/AuthCallback eagerly imported in lazyRoutes)
+            ['auth-components', ['/src/components/auth/']],
             // Split page components into separate chunks by feature area (before general dashboard/layout)
             ['pages-admin', ['/src/components/cluster-admin/', '/src/components/settings/', '/src/components/namespaces/']],
             ['pages-workloads', ['/src/components/workloads/', '/src/components/pods/', '/src/components/deployments/', '/src/components/compute/', '/src/components/nodes/']],
@@ -132,6 +134,9 @@ export default defineConfig(({ mode }) => ({
             // Split cards-platform-extra (632K) into separate chunks by library
             // Split the 3 heaviest Drasi files (~1.6K of 3.4K lines) out to reduce the 564KB chunk
             ['cards-drasi-graph', ['/src/components/cards/drasi/DrasiReactiveGraph.tsx', '/src/components/cards/drasi/DrasiReactiveGraphSections.tsx', '/src/components/cards/drasi/DrasiModals.tsx']],
+            // Further split drasi to reduce remaining 564KB chunk
+            ['cards-drasi-topology', ['/src/components/cards/DrasiTopology', '/src/components/cards/drasi/DrasiTopology']],
+            ['cards-drasi-pipelines', ['/src/components/cards/DrasiPipelineHealth', '/src/components/cards/DrasiPipelines', '/src/components/cards/drasi/DrasiPipelineHealth', '/src/components/cards/drasi/DrasiPipelines']],
             ['cards-drasi', ['/src/components/cards/drasi/', '/src/components/cards/DrasiPipelineHealth', '/src/components/cards/DrasiPipelines', '/src/components/cards/DrasiTopology']],
             ['cards-karmada', ['/src/components/cards/karmada_status/', '/src/components/cards/openyurt_status/']],
             ['cards-multitenancy', ['/src/components/cards/multi-tenancy/']],
@@ -168,6 +173,9 @@ export default defineConfig(({ mode }) => ({
             ['layout-sidebar-customizer', ['/src/components/layout/SidebarCustomizer', '/src/components/layout/sidebar-customizer/']],
             ['layout-navbar', ['/src/components/layout/navbar/']],
             ['layout-mission-chat', ['/src/components/layout/mission-sidebar/mission-chat/']],
+            // Further split mission-sidebar to reduce 320KB chunk
+            ['layout-mission-sidebar-dialogs', ['/src/components/layout/mission-sidebar/MissionSidebarDialogs', '/src/components/layout/mission-sidebar/MissionSidebarContainer.dialogs']],
+            ['layout-mission-sidebar-expanded', ['/src/components/layout/mission-sidebar/MissionSidebarExpanded', '/src/components/layout/mission-sidebar/MissionSidebarContainer.parts', '/src/components/layout/mission-sidebar/MissionSidebarDashboard']],
             ['layout-mission-sidebar', ['/src/components/layout/mission-sidebar/']],
             ['layout-components', ['/src/components/layout/']],
             ['auth-core', ['/src/lib/auth']],
@@ -207,6 +215,14 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('/@react-three/drei/') && id.includes('/core/controls/')) return 'drei-controls-vendor'
           if (id.includes('/@react-three/drei/') && id.includes('/core/loaders/')) return 'drei-loaders-vendor'
           if (id.includes('/@react-three/drei/') && id.includes('/core/misc/')) return 'drei-misc-vendor'
+          // Further split drei-core by additional subdirectories to reduce the 1012KB chunk
+          if (id.includes('/@react-three/drei/') && id.includes('/core/materials/')) return 'drei-materials-vendor'
+          if (id.includes('/@react-three/drei/') && id.includes('/core/abstractions/')) return 'drei-abstractions-vendor'
+          if (id.includes('/@react-three/drei/') && id.includes('/core/gizmos/')) return 'drei-gizmos-vendor'
+          if (id.includes('/@react-three/drei/') && id.includes('/core/shapes/')) return 'drei-shapes-vendor'
+          if (id.includes('/@react-three/drei/') && id.includes('/core/cameras/')) return 'drei-cameras-vendor'
+          if (id.includes('/@react-three/drei/') && id.includes('/core/helpers/')) return 'drei-helpers-core-vendor'
+          if (id.includes('/@react-three/drei/') && id.includes('/core/portals/')) return 'drei-portals-vendor'
           if (id.includes('/@react-three/drei/') && id.includes('/core/')) return 'drei-core-vendor'
           if (id.includes('/@react-three/drei/') && id.includes('/web/')) return 'drei-web-vendor'
           if (id.includes('/@react-three/drei/')) return 'drei-helpers-vendor'
@@ -304,6 +320,9 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('/@opentelemetry/')) return 'otel-vendor'
           // Split @mswjs/interceptors out of msw-vendor to reduce the 408KB chunk
           if (id.includes('/@mswjs/interceptors/')) return 'msw-interceptors-vendor'
+          // Further split msw-vendor (384KB) by browser vs node entry points
+          if (id.includes('/msw/') && id.includes('/browser')) return 'msw-browser-vendor'
+          if (id.includes('/msw/') && id.includes('/node')) return 'msw-node-vendor'
           if (id.includes('/msw/') || id.includes('/mswjs/')) return 'msw-vendor'
           if (id.includes('/@babel/') || id.includes('/babel-')) return 'babel-vendor'
           return 'vendor'
