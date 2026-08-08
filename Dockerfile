@@ -58,32 +58,30 @@ WORKDIR /app
 ARG APP_VERSION=0.0.0
 ARG COMMIT_HASH=unknown
 
-# Cache npm dependencies independently of source changes.
-# Install dependencies first so that the npm ci layer is reused whenever
-# package.json / package-lock.json are unchanged, even if other source files
-# differ. This is especially valuable for QEMU arm64 builds.
-COPY web/package.json web/package-lock.json ./
-RUN for attempt in 1 2 3; do \
-      npm ci --legacy-peer-deps && exit 0; \
-      echo "npm ci failed on attempt ${attempt}; retrying..." >&2; \
-      sleep $((attempt * 5)); \
-    done; \
-    echo "npm ci failed after 3 attempts" >&2; \
-    exit 1
-
-# Copy the rest of the frontend source.
+# Copy all frontend source first so we can detect a pre-built dist/.
 # WARNING (local builds): if web/dist/ is present in your working tree from a
 # previous build it will be copied here and the conditional below will skip
-# Vite, silently shipping stale assets. Remove web/dist/ before building
-# locally if you want a fresh frontend build.
-# In CI this is not a risk: the checkout is clean and dist/ is only present
-# here when the build-frontend job explicitly downloaded the artifact.
+# npm ci + Vite, silently shipping stale assets. Remove web/dist/ before
+# building locally if you want a fresh frontend build.
+# In CI this is intentional: the build-frontend job pre-builds on amd64 and
+# uploads the artifact; the docker-build job downloads it into web/dist/ so
+# that QEMU arm64 never needs to run Node at all, avoiding the
+# "Illegal instruction" crash caused by Node 22 using ARMv8.2+ instructions
+# not supported by the default QEMU cpu model.
 COPY web/ ./
 
-# Build only if dist/ was not pre-built by CI
+# If dist/ is already present (CI pre-built path), skip npm ci and Vite
+# entirely — no Node execution under QEMU arm64. Otherwise install
+# dependencies and build from source (local / amd64 scratch builds).
 RUN if [ -d dist ] && [ -n "$(ls -A dist 2>/dev/null)" ]; then \
-      echo "Using pre-built frontend dist/"; \
+      echo "Using pre-built frontend dist/ — skipping npm ci and build"; \
     else \
+      for attempt in 1 2 3; do \
+        npm ci --legacy-peer-deps && break; \
+        echo "npm ci failed on attempt ${attempt}; retrying..." >&2; \
+        sleep $((attempt * 5)); \
+        [ "${attempt}" = "3" ] && { echo "npm ci failed after 3 attempts" >&2; exit 1; }; \
+      done; \
       VITE_APP_VERSION=${APP_VERSION} VITE_COMMIT_HASH=${COMMIT_HASH} npm run build; \
     fi
 
