@@ -75,7 +75,7 @@ const GATEWAY_STATUS_CONFIG: Record<
   pending: {
     label: 'Pending',
     color: 'text-yellow-400',
-    icon: <RefreshCw className="w-3 h-3 text-yellow-400" />,
+    icon: <RefreshCw className="w-3 h-3 text-yellow-400 animate-spin" />,
   },
 }
 
