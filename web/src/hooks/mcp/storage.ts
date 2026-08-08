@@ -257,8 +257,8 @@ export function usePVCs(cluster?: string, namespace?: string) {
             return
           }
         }
-      } catch {
-        console.error(`[usePVCs] kubectl proxy failed, trying API`)
+      } catch (err) {
+        console.warn(`[usePVCs] kubectl proxy failed, trying API`, err)
         // Continue to next fetch tier
       }
     }
@@ -297,7 +297,7 @@ export function usePVCs(cluster?: string, namespace?: string) {
             return
           }
         } catch (err) {
-          console.error('[pvcs] Backend fetch failed:', err)
+          console.warn('[pvcs] Backend fetch failed:', err)
           setError(err instanceof Error ? err.message : 'Failed to fetch PVCs')
         }
         if (!isMountedRef.current) return
@@ -481,7 +481,7 @@ export function usePVs(cluster?: string) {
                 return { success: true, pvs: mappedPVs }
               }
             } catch (err) {
-              console.error('[pvs] Backend fetch failed:', err)
+              console.warn('[pvs] Backend fetch failed:', err)
               // Caller handles fallback to agent fetch
             }
             return { success: false, pvs: [] }
