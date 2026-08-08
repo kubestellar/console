@@ -112,8 +112,12 @@ vi.mock('../../hooks/useCardGridNavigation', () => ({
 }))
 
 const mockUseModalState = vi.fn()
+let __modalStateCallIdx = 0
 vi.mock('../../lib/modals', () => ({
-  useModalState: () => mockUseModalState(),
+  useModalState: () => {
+    const idx = __modalStateCallIdx++ % 2
+    return mockUseModalState(idx)
+  },
 }))
 
 const mockUseGlobalFilters = vi.fn()
@@ -171,7 +175,8 @@ vi.mock('./dashboardState.selectors', () => ({
     totalNodes: 0,
   }),
   resolveStatValue: (_id: string, _deps: unknown) => ({ value: 0 }),
-  computeCurrentCardTypes: (cards: Array<{ card_type: string }>) => cards.map((c) => c.card_type),
+  computeCurrentCardTypes: (cards: Array<{ card_type: string } | undefined | null>) =>
+    (cards ?? []).filter(Boolean).map((c) => (c as { card_type: string }).card_type),
 }))
 
 vi.mock('react-i18next', () => ({
@@ -271,9 +276,11 @@ function buildDefaultMocks() {
     handleGridKeyDown: vi.fn(),
   })
 
-  mockUseModalState
-    .mockReturnValueOnce({ isOpen: false, open: vi.fn(), close: vi.fn() }) // isConfigureCardOpen
-    .mockReturnValueOnce({ isOpen: false, open: vi.fn(), close: vi.fn() }) // isWidgetExportOpen
+  mockUseModalState.mockImplementation(() => ({
+    isOpen: false,
+    open: vi.fn(),
+    close: vi.fn(),
+  }))
 
   mockUseGlobalFilters.mockReturnValue({
     selectedClusters: [],
@@ -286,6 +293,7 @@ function buildDefaultMocks() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  __modalStateCallIdx = 0
   buildDefaultMocks()
 })
 
@@ -646,9 +654,11 @@ describe('useDashboardState — close handlers', () => {
 
   it('handleCloseConfigureCard clears selectedCard and calls close', () => {
     const mockClose = vi.fn()
-    mockUseModalState
-      .mockReturnValueOnce({ isOpen: true, open: vi.fn(), close: mockClose }) // configureCard modal
-      .mockReturnValueOnce({ isOpen: false, open: vi.fn(), close: vi.fn() }) // widgetExport modal
+    mockUseModalState.mockImplementation((idx: number) =>
+      idx === 0
+        ? { isOpen: true, open: vi.fn(), close: mockClose }
+        : { isOpen: false, open: vi.fn(), close: vi.fn() },
+    )
     const { result } = renderHook(() => useDashboardState())
     act(() => {
       result.current.handleCloseConfigureCard()
