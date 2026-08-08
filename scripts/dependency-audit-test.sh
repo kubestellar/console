@@ -57,6 +57,7 @@ ARTIFACTS_DIR="$PROJECT_ROOT/.artifacts/dependency-audit"
 REPORT_JSON="$ARTIFACTS_DIR/dependency-audit-report.json"
 REPORT_MD="$ARTIFACTS_DIR/dependency-audit-summary.md"
 SBOM_JSON="$ARTIFACTS_DIR/sbom.json"
+WAIVERS_FILE="$PROJECT_ROOT/scripts/dependency-audit-waivers.json"
 TMPDIR_AUDIT="$ARTIFACTS_DIR/work"
 mkdir -p "$ARTIFACTS_DIR"
 rm -rf "$TMPDIR_AUDIT"
@@ -160,6 +161,64 @@ print(0, 0, 0, 0, 0)
 " > "$NPM_PARSE_RESULT" 2>"$NPM_PARSE_ERR"
 
     if read -r NPM_CRITICAL NPM_HIGH NPM_MODERATE NPM_LOW NPM_TOTAL < "$NPM_PARSE_RESULT"; then
+      # Subtract findings covered by an active (non-expired) entry in
+      # dependency-audit-waivers.json — packages with no upstream fix available
+      # (npm audit fixAvailable: false) that have been reviewed and are known
+      # not to be reachable at runtime. Anything not explicitly waived, or past
+      # its review_by date, still counts toward NPM_STATUS below.
+      NPM_WAIVED_RESULT="$TMPDIR_AUDIT/npm-waived.txt"
+      python3 -c "
+import json
+from datetime import date, datetime
+
+with open('$NPM_OUTPUT') as f:
+    data = json.load(f)
+top_vulns = data.get('vulnerabilities', {})
+
+waivers = []
+try:
+    with open('$WAIVERS_FILE') as f:
+        waivers = json.load(f).get('waivers', [])
+except FileNotFoundError:
+    pass
+
+today = date.today()
+waived_pkgs = set()
+waived_lines = []
+for w in waivers:
+    try:
+        review_by = datetime.strptime(w['review_by'], '%Y-%m-%d').date()
+    except (KeyError, ValueError):
+        continue
+    if today > review_by:
+        continue  # waiver expired — treat as a live finding again
+    for pkg in [w['package'], *w.get('introduced_via', [])]:
+        waived_pkgs.add(pkg)
+    waived_lines.append(f\"{w['package']} ({', '.join(w.get('advisories', []))}) — waived until {w['review_by']}, see {w.get('tracking_issue', 'no tracking issue')}\")
+
+sev_delta = {'critical': 0, 'high': 0, 'moderate': 0, 'low': 0}
+for name, v in top_vulns.items():
+    if not isinstance(v, dict):
+        continue
+    if name in waived_pkgs and v.get('fixAvailable') is False:
+        sev = v.get('severity', '')
+        if sev in ('low', 'info'):
+            sev = 'low'
+        if sev in sev_delta:
+            sev_delta[sev] += 1
+
+print(sev_delta['critical'], sev_delta['high'], sev_delta['moderate'], sev_delta['low'])
+print('\n'.join(waived_lines))
+" > "$NPM_WAIVED_RESULT" 2>/dev/null || echo "0 0 0 0" > "$NPM_WAIVED_RESULT"
+
+      read -r NPM_WAIVED_CRITICAL NPM_WAIVED_HIGH NPM_WAIVED_MODERATE NPM_WAIVED_LOW < "$NPM_WAIVED_RESULT"
+      NPM_WAIVED_LINES="$(tail -n +2 "$NPM_WAIVED_RESULT")"
+
+      NPM_CRITICAL=$((NPM_CRITICAL - NPM_WAIVED_CRITICAL))
+      NPM_HIGH=$((NPM_HIGH - NPM_WAIVED_HIGH))
+      NPM_MODERATE=$((NPM_MODERATE - NPM_WAIVED_MODERATE))
+      NPM_LOW=$((NPM_LOW - NPM_WAIVED_LOW))
+
       if [ "$NPM_TOTAL" -eq 0 ]; then
         echo -e "  ${GREEN}✓ No vulnerabilities found${NC}"
       else
@@ -167,6 +226,12 @@ print(0, 0, 0, 0, 0)
         [ "$NPM_HIGH" -gt 0 ] && echo -e "  ${RED}❌ HIGH:     ${NPM_HIGH}${NC}"
         [ "$NPM_MODERATE" -gt 0 ] && echo -e "  ${YELLOW}⚠️  MODERATE: ${NPM_MODERATE}${NC}"
         [ "$NPM_LOW" -gt 0 ] && echo -e "  ${DIM}ℹ  LOW:      ${NPM_LOW}${NC}"
+        if [ -n "$NPM_WAIVED_LINES" ]; then
+          echo -e "  ${DIM}ℹ  Waived (no upstream fix — see scripts/dependency-audit-waivers.json):${NC}"
+          while IFS= read -r line; do
+            [ -n "$line" ] && echo -e "    ${DIM}${line}${NC}"
+          done <<< "$NPM_WAIVED_LINES"
+        fi
       fi
 
       if [ "$NPM_CRITICAL" -gt 0 ] || [ "$NPM_HIGH" -gt 0 ]; then

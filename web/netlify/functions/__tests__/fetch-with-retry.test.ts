@@ -30,6 +30,28 @@ async function flushRetries() {
   await vi.runAllTimersAsync();
 }
 
+/**
+ * Attaches a no-op rejection handler immediately, then returns the same
+ * promise so callers can still assert on it later (e.g. via
+ * `expect(promise).rejects.toThrow(...)`).
+ *
+ * Needed because these tests call `flushRetries()` (which runs fake timers)
+ * *before* the real assertion attaches its `.rejects` handler. Node's
+ * unhandled-rejection tracking checks at each tick boundary, so a promise
+ * that rejects during `flushRetries()` but isn't "observed" until the
+ * assertion a line later gets flagged as an unhandled rejection (a false
+ * positive — the real assertion below always awaits it). Attaching this
+ * handler synchronously at creation time marks the promise as handled
+ * without affecting the later assertion (multiple `.catch`/`.then` handlers
+ * may be attached to the same promise). Same pattern as safeLazy.test.ts; see #22004.
+ */
+function expectEventualRejection<T>(promise: Promise<T>): Promise<T> {
+  promise.catch(() => {
+    /* observed above; real assertion happens later */
+  });
+  return promise;
+}
+
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -174,10 +196,12 @@ describe("fetchWithRetry — network errors", () => {
 
   it("throws after exhausting all retries on network error", async () => {
     mockFetch.mockRejectedValue(new Error("Network unreachable"));
-    const promise = fetchWithRetry("https://api.example.com", {
-      maxRetries: 2,
-      initialDelayMs: 10,
-    });
+    const promise = expectEventualRejection(
+      fetchWithRetry("https://api.example.com", {
+        maxRetries: 2,
+        initialDelayMs: 10,
+      }),
+    );
     await flushRetries();
     await expect(promise).rejects.toThrow("Network unreachable");
     // initial + 2 retries = 3 calls
@@ -186,10 +210,12 @@ describe("fetchWithRetry — network errors", () => {
 
   it("wraps non-Error thrown values", async () => {
     mockFetch.mockRejectedValue("string error");
-    const promise = fetchWithRetry("https://api.example.com", {
-      maxRetries: 0,
-      initialDelayMs: 10,
-    });
+    const promise = expectEventualRejection(
+      fetchWithRetry("https://api.example.com", {
+        maxRetries: 0,
+        initialDelayMs: 10,
+      }),
+    );
     await flushRetries();
     await expect(promise).rejects.toThrow("string error");
   });
@@ -211,10 +237,12 @@ describe("fetchWithRetry — options", () => {
 
   it("respects maxRetries: 0 (no retries)", async () => {
     mockFetch.mockRejectedValueOnce(new Error("fail"));
-    const promise = fetchWithRetry("https://api.example.com", {
-      maxRetries: 0,
-      initialDelayMs: 10,
-    });
+    const promise = expectEventualRejection(
+      fetchWithRetry("https://api.example.com", {
+        maxRetries: 0,
+        initialDelayMs: 10,
+      }),
+    );
     await flushRetries();
     await expect(promise).rejects.toThrow("fail");
     expect(mockFetch).toHaveBeenCalledTimes(1);
