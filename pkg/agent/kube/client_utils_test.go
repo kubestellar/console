@@ -182,3 +182,21 @@ func TestValidateKubectlArgs_CaseInsensitive(t *testing.T) {
 	assert.True(t, ValidateKubectlArgs([]string{"GET", "pods"}))
 	assert.True(t, ValidateKubectlArgs([]string{"Describe", "node"}))
 }
+
+func TestValidateKubectlArgs_DeleteSlashFormat(t *testing.T) {
+	// "delete pod/mypod" uses the resource/name slash format — the resource
+	// type prefix must be extracted and checked against the allowlist (#22194).
+	assert.True(t, ValidateKubectlArgs([]string{"delete", "pod/my-pod"}))
+	assert.True(t, ValidateKubectlArgs([]string{"delete", "pods/my-pod"}))
+	assert.True(t, ValidateKubectlArgs([]string{"delete", "po/my-pod"}))
+	// Blocked resource types in slash format must still be rejected.
+	assert.False(t, ValidateKubectlArgs([]string{"delete", "namespace/production"}))
+	assert.False(t, ValidateKubectlArgs([]string{"delete", "node/worker-1"}))
+	assert.False(t, ValidateKubectlArgs([]string{"delete", "secret/my-secret"}))
+}
+
+func TestValidateKubectlArgs_ScaleSlashBlockedResource(t *testing.T) {
+	// Blocked resource types in slash format must be rejected for scale too.
+	assert.False(t, ValidateKubectlArgs([]string{"scale", "secret/my-secret", "--replicas=0"}))
+	assert.False(t, ValidateKubectlArgs([]string{"scale", "namespace/production", "--replicas=0"}))
+}
