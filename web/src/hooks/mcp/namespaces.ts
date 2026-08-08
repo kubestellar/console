@@ -177,8 +177,9 @@ export function useNamespaces(cluster?: string, forceLive = false) {
         for (const pod of (data.pods || [])) {
           if (pod.namespace) podNs.push(pod.namespace)
         }
-      } catch {
+      } catch (err: unknown) {
         // Non-fatal: cluster-cache namespaces may still surface below
+        console.warn(`[useNamespaces] Pod-based discovery failed for ${cluster}:`, err)
       }
 
       const merged = mergeWithClusterCache(podNs, cluster)
@@ -189,7 +190,9 @@ export function useNamespaces(cluster?: string, forceLive = false) {
         setNamespaces(['default', 'kube-system'])
         setError(null)
       }
-    } catch {
+    } catch (err: unknown) {
+      // All tiers exhausted — fall back to safe defaults, but log for debugging.
+      console.error(`[useNamespaces] All namespace fetch tiers failed for ${cluster}:`, err)
       setNamespaces(['default', 'kube-system'])
       setError(null)
     } finally {
