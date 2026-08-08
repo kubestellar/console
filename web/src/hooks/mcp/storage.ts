@@ -257,8 +257,8 @@ export function usePVCs(cluster?: string, namespace?: string) {
             return
           }
         }
-      } catch {
-        console.error(`[usePVCs] kubectl proxy failed, trying API`)
+      } catch (err) {
+        console.warn(`[usePVCs] kubectl proxy failed, trying API`, err)
         // Continue to next fetch tier
       }
     }
