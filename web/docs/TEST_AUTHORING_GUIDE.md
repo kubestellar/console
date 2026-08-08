@@ -404,6 +404,38 @@ await act(async () => {
 })
 ```
 
+### Fake timers + rejection assertions — use `expectEventualRejection`
+
+When a test uses `vi.useFakeTimers()` and advances timers **before** attaching
+an `await expect(promise).rejects.toThrow(...)` assertion, Node's
+unhandled-rejection tracker will flag the (already-settled) promise as
+unhandled — even though the assertion further down does await it. This
+produces spurious flake in nightly runs.
+
+Wrap the promise in `expectEventualRejection` from `src/test-utils/`:
+
+```ts
+import { expectEventualRejection } from '@/test-utils/expectEventualRejection'
+
+it('rejects after all retries', async () => {
+  const resultPromise = expectEventualRejection(loader())
+  await vi.runAllTimersAsync()               // advances timers before assertion
+  await expect(resultPromise).rejects.toThrow('boom')
+})
+```
+
+Do **not** re-implement the `.catch(() => {})` guard inline in individual
+test files — the helper exists so the pattern is discoverable and
+consistent. This was rediscovered independently twice (see #22004, #22320,
+#22327) before extraction.
+
+For netlify function tests (outside the `@/` alias root), import via
+relative path:
+
+```ts
+import { expectEventualRejection } from '../../../src/test-utils/expectEventualRejection'
+```
+
 ---
 
 ## 8. Checklist before opening a PR
