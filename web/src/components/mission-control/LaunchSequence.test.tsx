@@ -19,7 +19,6 @@ vi.mock('../../hooks/useMissions', () => ({
   }),
 }))
 
-const mockLoadMissionPrompt = vi.fn().mockResolvedValue('mock prompt')
 vi.mock('../cards/multi-tenancy/missionLoader', () => ({
   loadMissionPrompt: vi.fn().mockResolvedValue('mock prompt'),
 }))
