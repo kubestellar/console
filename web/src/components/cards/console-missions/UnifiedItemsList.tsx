@@ -371,7 +371,7 @@ function PredictionRow({
 
 function PredictionTypeIcon({ type }: { type: string }) {
   if (type === 'pod-crash') {
-    return <RefreshCw className="w-3 h-3 shrink-0 text-blue-400" />
+    return <RefreshCw className="w-3 h-3 shrink-0 text-blue-400 animate-spin" />
   }
   if (type === 'resource-exhaustion') {
     return <Cpu className="w-3 h-3 shrink-0 text-blue-400" />

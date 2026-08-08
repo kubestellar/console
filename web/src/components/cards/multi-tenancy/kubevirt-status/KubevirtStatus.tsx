@@ -224,7 +224,7 @@ export function KubevirtStatus() {
             label={t('kubevirtStatus.migratingVMs')}
             value={migratingVMs}
             colorClass="text-blue-400"
-            icon={<RefreshCw className="w-4 h-4 text-blue-400" />}
+            icon={<RefreshCw className="w-4 h-4 text-blue-400 animate-spin" />}
           />
         )}
         {errorVMs > 0 && (

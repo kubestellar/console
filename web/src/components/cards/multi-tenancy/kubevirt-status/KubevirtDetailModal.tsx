@@ -256,7 +256,7 @@ export function KubevirtDetailModal({ isOpen, onClose, data, isDemoData }: Kubev
                 </div>
                 <div className="p-2 rounded bg-blue-500/10 text-center">
                   <div className="flex items-center justify-center gap-1 mb-0.5">
-                    <RefreshCw className="w-3 h-3 text-blue-400" />
+                    <RefreshCw className="w-3 h-3 text-blue-400 animate-spin" />
                   </div>
                   <p className="text-sm font-bold text-blue-400">{stateCounts['migrating'] || 0}</p>
                   <p className="text-xs text-muted-foreground">{t('kubevirtStatus.migratingVMs', 'Migrating')}</p>
