@@ -785,6 +785,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
               drillToNode={drillToNode}
               drillToCluster={drillToCluster}
               startMission={startMission as (config: { title: string; description: string; type: string; initialPrompt: string; context: Record<string, unknown> }) => void}
+              isDemoData={gpuDemoFallback || podsDemoFallback || shouldUseDemoData || isDemoMode}
             />
           ) : (
             <UnifiedItemsList
@@ -796,6 +797,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
               drillToCluster={drillToCluster}
               getFeedback={getFeedback}
               submitFeedback={submitFeedback as (id: string, feedback: string, type: string, provider?: string) => void}
+              isDemoData={gpuDemoFallback || podsDemoFallback || shouldUseDemoData || isDemoMode}
             />
           )}
         </DynamicCardErrorBoundary>
@@ -820,6 +822,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
         isFiltered={isFiltered}
         runningMission={!!runningMission}
         onStartAnalysis={handleStartAnalysis}
+        isDemoData={gpuDemoFallback || podsDemoFallback || shouldUseDemoData || isDemoMode}
       />
     </div>
   )

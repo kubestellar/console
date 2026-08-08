@@ -3,7 +3,7 @@
  * Renders offline nodes, GPU issues, and predictions as individual rows.
  *
  * Pure UI component — renders mission items based on props; no data fetching.
- * Demo data support provided by parent mission cards.
+ * Accepts isDemoData prop to indicate when showing demo/fallback data.
  */
 import { ChevronRight, RefreshCw, Cpu, HardDrive, Sparkles, Zap, ThumbsUp, ThumbsDown, CheckCircle, AlertCircle } from 'lucide-react'
 import { cn } from '../../../lib/cn'
@@ -27,6 +27,7 @@ type UnifiedItemsListProps = {
   submitFeedback: (id: string, feedback: string, type: string, provider?: string) => void
   dataLoading?: boolean
   dataError?: string | null
+  isDemoData?: boolean
 }
 
 export function UnifiedItemsList({
@@ -40,6 +41,7 @@ export function UnifiedItemsList({
   submitFeedback,
   dataLoading,
   dataError,
+  isDemoData: _isDemoData,
 }: UnifiedItemsListProps) {
   const { t } = useTranslation(['cards', 'common'])
 

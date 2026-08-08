@@ -3,7 +3,7 @@
  * Displays current issue/prediction counts and launches the analysis mission.
  *
  * Pure UI component — renders analysis panel based on props; no data fetching.
- * Demo data support provided by parent mission cards.
+ * Accepts isDemoData prop to indicate when showing demo/fallback data.
  */
 import { AlertCircle, CheckCircle, Clock, TrendingUp, Sparkles } from 'lucide-react'
 import { cn } from '../../../lib/cn'
@@ -20,6 +20,7 @@ type AIAnalysisPanelProps = {
   onStartAnalysis: () => void
   dataLoading?: boolean
   dataError?: string | null
+  isDemoData?: boolean
 }
 
 export function AIAnalysisPanel({
@@ -32,6 +33,7 @@ export function AIAnalysisPanel({
   onStartAnalysis,
   dataLoading,
   dataError,
+  isDemoData: _isDemoData,
 }: AIAnalysisPanelProps) {
   const { t } = useTranslation(['cards', 'common'])
 
