@@ -51,8 +51,17 @@ echo "Running Vitest unit tests..."
 # close to the ~70/shard ratio that was stable after the #21083 fix, while
 # only adding a few minutes of fixed per-shard startup overhead — still well
 # within the 180m nightly timeout (#22004).
+#
+# Even at 32 shards, one shard still OOM'd on 2026-08-08 (heap climbed to
+# 3581 MB — right at the 3584 MB ceiling — partway through a shard, not
+# because of any single heavy file, just cumulative per-shard growth). The
+# 7 GB figure the previous limit was sized against is outdated: ubuntu-latest
+# on a public repo actually provides 16 GB RAM, so raising the single-worker
+# heap ceiling to 6144 MB (6 GB) leaves ~10 GB of headroom for the OS, the
+# forked process overhead, and other CI steps, comfortably absorbing this
+# kind of per-shard variance without needing yet more shards (#22004).
 if [ -n "${CI:-}" ]; then
-  export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=3584"
+  export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=6144"
 fi
 
 # Vitest may exit non-zero due to pool worker termination timeout on CI

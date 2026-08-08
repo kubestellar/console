@@ -1,0 +1,20 @@
+{
+  "//": "Time-boxed waivers for npm advisories with no upstream fix available yet (npm audit reports fixAvailable: false). Each waiver is re-evaluated by dependency-audit-test.sh against review_by; once that date passes the finding fails the build again until a maintainer confirms it's still unfixable and bumps review_by, or the dependency is updated/removed.",
+  "waivers": [
+    {
+      "package": "image-size",
+      "advisories": [
+        "GHSA-w3rx-r6r6-pgpr",
+        "GHSA-5p2g-fcmc-qvqq"
+      ],
+      "introduced_via": [
+        "@netlify/dev-utils",
+        "@netlify/blobs"
+      ],
+      "reason": "All published versions of image-size, including the latest (2.0.2), are within the vulnerable range — no patched release exists upstream yet. The vulnerable ICNS/JXL/HEIF parsers belong to @netlify/dev-utils' local-dev image tooling and are never invoked by any KubeStellar Console serverless function at runtime.",
+      "tracking_issue": "https://github.com/kubestellar/console/issues/22317",
+      "added": "2026-08-08",
+      "review_by": "2026-11-08"
+    }
+  ]
+}
