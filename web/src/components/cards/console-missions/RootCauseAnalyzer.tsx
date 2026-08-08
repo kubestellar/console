@@ -3,7 +3,7 @@
  * highlighting which single fixes can resolve multiple issues at once.
  *
  * Pure UI component — renders root cause groups based on props; no data fetching.
- * Demo data support provided by parent mission cards.
+ * Accepts isDemoData prop to indicate when showing demo/fallback data.
  */
 import { ChevronRight, CheckCircle, AlertCircle } from 'lucide-react'
 import { cn } from '../../../lib/cn'
@@ -31,6 +31,7 @@ type RootCauseAnalyzerProps = {
   }) => void
   dataLoading?: boolean
   dataError?: string | null
+  isDemoData?: boolean
 }
 
 const SEVERITY_RGB: Record<string, string> = {
@@ -62,6 +63,7 @@ export function RootCauseAnalyzer({
   startMission,
   dataLoading,
   dataError,
+  isDemoData: _isDemoData,
 }: RootCauseAnalyzerProps) {
   const { t } = useTranslation(['cards', 'common'])
 
