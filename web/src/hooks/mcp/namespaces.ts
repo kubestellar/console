@@ -115,7 +115,7 @@ export function useNamespaces(cluster?: string, forceLive = false) {
           }
         }
       } catch (err: unknown) {
-        console.warn(`[useNamespaces] Local agent failed for ${cluster}:`, err)
+        console.error(`[useNamespaces] Local agent failed for ${cluster}:`, err)
       }
     }
 
@@ -141,7 +141,7 @@ export function useNamespaces(cluster?: string, forceLive = false) {
         }
       } catch (err: unknown) {
         if (timerId !== null) clearTimeout(timerId)
-        console.warn(`[useNamespaces] kubectl proxy failed for ${cluster}:`, err)
+        console.error(`[useNamespaces] kubectl proxy failed for ${cluster}:`, err)
       }
     }
 
@@ -163,7 +163,7 @@ export function useNamespaces(cluster?: string, forceLive = false) {
         }
       }
     } catch (err: unknown) {
-      console.warn(`[useNamespaces] Backend API failed for ${cluster}:`, err)
+      console.error(`[useNamespaces] Backend API failed for ${cluster}:`, err)
     }
 
     // Tier 4: REST API — pod-based discovery, then union with the
@@ -179,7 +179,7 @@ export function useNamespaces(cluster?: string, forceLive = false) {
         }
       } catch (err: unknown) {
         // Non-fatal: cluster-cache namespaces may still surface below
-        console.warn(`[useNamespaces] Pod-based discovery failed for ${cluster}:`, err)
+        console.error(`[useNamespaces] Pod-based discovery failed for ${cluster}:`, err)
       }
 
       const merged = mergeWithClusterCache(podNs, cluster)
