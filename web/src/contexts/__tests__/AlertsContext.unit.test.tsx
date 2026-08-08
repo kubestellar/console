@@ -150,14 +150,14 @@ describe('AlertsContext — alert lifecycle (single + bulk)', () => {
     })
 
     const updated = result.current.alerts.find((a) => a.id === 'a1')
-    expect(updated?.status).toBe('acknowledged')
+    expect(updated?.acknowledgedAt).toBeDefined()
     expect(result.current.acknowledgedAlerts.some((a) => a.id === 'a1')).toBe(true)
     expect(result.current.activeAlerts.some((a) => a.id === 'a1')).toBe(false)
   })
 
   it('acknowledgeAlerts marks multiple alerts as acknowledged in one call', () => {
-    const a1 = makeAlert({ id: 'b1' })
-    const a2 = makeAlert({ id: 'b2' })
+    const a1 = makeAlert({ id: 'b1', ruleId: 'rule-b1' })
+    const a2 = makeAlert({ id: 'b2', ruleId: 'rule-b2' })
     localStorage.setItem('kc_alerts', JSON.stringify([a1, a2]))
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
@@ -166,8 +166,8 @@ describe('AlertsContext — alert lifecycle (single + bulk)', () => {
       result.current.acknowledgeAlerts(['b1', 'b2'], 'bulk-tester')
     })
 
-    expect(result.current.alerts.find((a) => a.id === 'b1')?.status).toBe('acknowledged')
-    expect(result.current.alerts.find((a) => a.id === 'b2')?.status).toBe('acknowledged')
+    expect(result.current.alerts.find((a) => a.id === 'b1')?.acknowledgedAt).toBeDefined()
+    expect(result.current.alerts.find((a) => a.id === 'b2')?.acknowledgedAt).toBeDefined()
   })
 
   it('resolveAlert marks an alert as resolved', () => {
@@ -201,7 +201,7 @@ describe('AlertsContext — alert lifecycle (single + bulk)', () => {
 
 describe('AlertsContext — deduplication', () => {
   it('deduplicatedAlerts matches the initial seeded alerts count', () => {
-    const alerts = [makeAlert({ id: 'e1' }), makeAlert({ id: 'e2' })]
+    const alerts = [makeAlert({ id: 'e1', ruleId: 'rule-e1' }), makeAlert({ id: 'e2', ruleId: 'rule-e2' })]
     localStorage.setItem('kc_alerts', JSON.stringify(alerts))
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
@@ -211,7 +211,7 @@ describe('AlertsContext — deduplication', () => {
   })
 
   it('deduplicatedAlerts is updated after deleteAlert', () => {
-    const alerts = [makeAlert({ id: 'f1' }), makeAlert({ id: 'f2' })]
+    const alerts = [makeAlert({ id: 'f1', ruleId: 'rule-f1' }), makeAlert({ id: 'f2', ruleId: 'rule-f2' })]
     localStorage.setItem('kc_alerts', JSON.stringify(alerts))
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
@@ -241,8 +241,8 @@ describe('AlertsContext — subscription / consumer re-render', () => {
 
   it('stats reflect current alert counts', () => {
     const alerts = [
-      makeAlert({ id: 'h1', severity: 'critical' }),
-      makeAlert({ id: 'h2', severity: 'warning' }),
+      makeAlert({ id: 'h1', severity: 'critical', ruleId: 'rule-h1' }),
+      makeAlert({ id: 'h2', severity: 'warning', ruleId: 'rule-h2' }),
     ]
     localStorage.setItem('kc_alerts', JSON.stringify(alerts))
 
