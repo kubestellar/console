@@ -115,7 +115,7 @@ export function useNamespaces(cluster?: string, forceLive = false) {
           }
         }
       } catch (err: unknown) {
-        console.error(`[useNamespaces] Local agent failed for ${cluster}:`, err)
+        console.warn(`[useNamespaces] Local agent failed for ${cluster}:`, err)
       }
     }
 
@@ -141,7 +141,7 @@ export function useNamespaces(cluster?: string, forceLive = false) {
         }
       } catch (err: unknown) {
         if (timerId !== null) clearTimeout(timerId)
-        console.error(`[useNamespaces] kubectl proxy failed for ${cluster}:`, err)
+        console.warn(`[useNamespaces] kubectl proxy failed for ${cluster}:`, err)
       }
     }
 
@@ -163,7 +163,7 @@ export function useNamespaces(cluster?: string, forceLive = false) {
         }
       }
     } catch (err: unknown) {
-      console.error(`[useNamespaces] Backend API failed for ${cluster}:`, err)
+      console.warn(`[useNamespaces] Backend API failed for ${cluster}:`, err)
     }
 
     // Tier 4: REST API — pod-based discovery, then union with the
