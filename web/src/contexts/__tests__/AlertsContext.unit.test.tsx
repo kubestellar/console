@@ -14,7 +14,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import React from 'react'
+import React, { useEffect } from 'react'
 
 // ── Mocks (must be declared before importing the module under test) ───────────
 
@@ -61,8 +61,7 @@ vi.mock('../../lib/utils/concurrency', () => ({
 // Stub AlertsDataFetcher so it immediately calls onData with empty data
 vi.mock('../AlertsDataFetcher', () => ({
   __esModule: true,
-  default: ({ onData }: { onData: (d: unknown) => void }) => {
-    const { useEffect } = require('react')
+  default: function AlertsDataFetcherStub({ onData }: { onData: (d: unknown) => void }) {
     useEffect(() => {
       onData({ gpuNodes: [], podIssues: [], clusters: [], isLoading: false, error: null })
     }, [onData])
