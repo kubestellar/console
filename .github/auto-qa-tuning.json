@@ -345,6 +345,15 @@
       ]
     },
     {
+      "date": "2026-08-07",
+      "total_merged": 1773,
+      "total_closed": 578,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "sre"
+      ]
+    },
+    {
       "date": "2026-08-08",
       "total_merged": 1754,
       "total_closed": 578,
