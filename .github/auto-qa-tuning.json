@@ -61,17 +61,17 @@
     }
   },
   "weekly_insights": {
-    "best_pr_size": "M",
+    "best_pr_size": "XS",
     "size_acceptance": {},
     "type_acceptance": {},
     "common_rejection_reasons": [
-      "- PR #22059: <!-- auto-test-generator -->",
-      "## Auto Test Generator",
-      "- PR #22057: [APPROVALNOTIFIER] This PR is **NOT APPROVED**",
-      "This pull-request has been approved by:"
+      "- PR #22342: 👋 Hey @kubestellar-hive[bot] — thanks for opening this PR!",
+      "> **🤖 This project is developed exclusively using AI coding assistants.**",
+      "- PR #22201: ## ❌ Playwright Tests Failed",
+      "- PR #22192: [APPROVALNOTIFIER] This PR is **NOT APPROVED**"
     ],
     "best_change_type": "bug_fix",
-    "last_report_date": "2026-08-02"
+    "last_report_date": "2026-08-09"
   },
   "cncf_insights": {
     "last_scan_date": "2026-08-05",
