@@ -1,0 +1,19 @@
+version: 2
+paths-ignore:
+  - node_modules
+  - third_party
+
+runs:
+  - tools: codeql
+    init-options:
+      db-location: ${{ runner.temp }}/codeql_databases
+    queries: security-extended
+    post-analysis-script: .github/codeql/post-analysis.sh
+
+languages:
+  # Explicitly enable only Go and JavaScript/TypeScript
+  # Disables Python language analysis since the repository contains no Python source code
+  # GitHub's default CodeQL setup had Python enabled, causing spurious failures
+  # Reference: kubestellar/console#22337
+  - go
+  - javascript-typescript
