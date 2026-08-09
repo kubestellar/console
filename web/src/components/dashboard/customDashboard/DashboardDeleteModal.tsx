@@ -1,16 +1,46 @@
-import { AlertTriangle, Trash2 } from 'lucide-react'
+import { AlertTriangle, Trash2, CheckCircle, WifiOff, AlertCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { BaseModal } from '../../../lib/modals'
+import { cn } from '../../../lib/cn'
+
+type HealthStatus = 'healthy' | 'degraded' | 'offline'
 
 interface DashboardDeleteModalProps {
   isOpen: boolean
   onClose: () => void
   onConfirm: () => void
   dashboardName: string
+  /** Optional health status of the dashboard being deleted */
+  healthStatus?: HealthStatus
 }
 
-export function DashboardDeleteModal({ isOpen, onClose, onConfirm, dashboardName }: DashboardDeleteModalProps) {
+const HEALTH_CONFIG: Record<HealthStatus, {
+  icon: React.ComponentType<{ className?: string }>
+  color: string
+  label: string
+}> = {
+  healthy: {
+    icon: CheckCircle,
+    color: 'text-green-400',
+    label: 'dashboard.health.healthy',
+  },
+  degraded: {
+    icon: AlertCircle,
+    color: 'text-yellow-400',
+    label: 'dashboard.health.degraded',
+  },
+  offline: {
+    icon: WifiOff,
+    color: 'text-red-400',
+    label: 'dashboard.health.offline',
+  },
+}
+
+export function DashboardDeleteModal({ isOpen, onClose, onConfirm, dashboardName, healthStatus }: DashboardDeleteModalProps) {
   const { t } = useTranslation()
+
+  const healthConfig = healthStatus ? HEALTH_CONFIG[healthStatus] : null
+  const HealthIcon = healthConfig?.icon
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="md">
@@ -22,6 +52,18 @@ export function DashboardDeleteModal({ isOpen, onClose, onConfirm, dashboardName
         showBack={false}
       />
       <BaseModal.Content>
+        {healthConfig && HealthIcon && (
+          <div
+            className={cn(
+              'inline-flex items-center gap-1.5 mb-3 text-xs font-medium',
+              healthConfig.color,
+            )}
+            data-testid="dashboard-health-indicator"
+          >
+            <HealthIcon className="w-3.5 h-3.5" />
+            <span>{t(healthConfig.label)}</span>
+          </div>
+        )}
         <div className="flex items-start gap-3 p-4 rounded-lg bg-red-500/10 border border-red-500/20">
           <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
           <div>
