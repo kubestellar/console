@@ -85,3 +85,20 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.3 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
+
+// Force fixed versions of transitive dependencies pulled in via
+// k8s.io/apiextensions-apiserver to resolve known CVEs (issue #22339):
+//   - google.golang.org/grpc: GHSA-hrxh-6v49-42gf / GO-2026-6061
+//   - go.opentelemetry.io/otel: GO-2026-5158
+//   - go.opentelemetry.io/otel/sdk: GHSA-hfvc-g4fc-pqhx / GO-2026-5426
+//   - github.com/google/cel-go: GHSA-gcjh-h69q-9w9g
+// k8s.io/apiextensions-apiserver v0.36.3 is the latest stable release and
+// still pins the vulnerable versions, so `go mod tidy` alone will not pick
+// up the fixes. Remove these replace directives once a newer
+// k8s.io/apiextensions-apiserver release upgrades them transitively.
+replace (
+	github.com/google/cel-go => github.com/google/cel-go v0.29.2
+	go.opentelemetry.io/otel => go.opentelemetry.io/otel v1.44.0
+	go.opentelemetry.io/otel/sdk => go.opentelemetry.io/otel/sdk v1.43.0
+	google.golang.org/grpc => google.golang.org/grpc v1.82.1
+)
