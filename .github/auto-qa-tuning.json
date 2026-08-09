@@ -1,151 +1,102 @@
 {
   "schema_version": 1,
-  "last_updated": "2026-07-30T04:00:10Z",
+  "last_updated": "2026-08-07T03:57:11Z",
   "rolling_window_days": 30,
   "categories": {
     "performance": {
-      "merged": 17,
-      "closed": 10,
-      "acceptance_rate": 0.63,
+      "merged": 18,
+      "closed": 11,
+      "acceptance_rate": 0.62,
       "status": "normal",
-      "last_evaluated": "2026-07-19T04:08:33Z"
+      "last_evaluated": "2026-08-05T04:00:45Z"
     },
     "security": {
-      "merged": 116,
+      "merged": 118,
       "closed": 71,
       "acceptance_rate": 0.62,
       "status": "normal",
-      "last_evaluated": "2026-07-29T04:01:39Z"
+      "last_evaluated": "2026-08-07T03:57:11Z"
     },
     "a11y": {
-      "merged": 73,
+      "merged": 79,
       "closed": 29,
-      "acceptance_rate": 0.72,
+      "acceptance_rate": 0.73,
       "status": "normal",
-      "last_evaluated": "2026-07-30T04:00:10Z"
+      "last_evaluated": "2026-08-07T03:57:11Z"
     },
     "operator": {
-      "merged": 786,
+      "merged": 834,
       "closed": 269,
-      "acceptance_rate": 0.75,
+      "acceptance_rate": 0.76,
       "status": "normal",
-      "last_evaluated": "2026-07-30T04:00:10Z"
+      "last_evaluated": "2026-08-07T03:57:11Z"
     },
     "sre": {
-      "merged": 477,
-      "closed": 96,
-      "acceptance_rate": 0.83,
+      "merged": 548,
+      "closed": 101,
+      "acceptance_rate": 0.84,
       "status": "boosted",
-      "last_evaluated": "2026-07-30T04:00:10Z"
+      "last_evaluated": "2026-08-07T03:57:11Z"
     },
     "features": {
-      "merged": 39,
+      "merged": 41,
       "closed": 10,
       "acceptance_rate": 0.8,
       "status": "normal",
-      "last_evaluated": "2026-07-30T04:00:10Z"
+      "last_evaluated": "2026-08-07T03:57:11Z"
     },
     "resilience": {
-      "merged": 94,
+      "merged": 101,
       "closed": 66,
-      "acceptance_rate": 0.59,
-      "status": "normal",
-      "last_evaluated": "2026-07-30T04:00:10Z"
-    },
-    "consistency": {
-      "merged": 31,
-      "closed": 21,
       "acceptance_rate": 0.6,
       "status": "normal",
-      "last_evaluated": "2026-07-13T04:13:04Z"
+      "last_evaluated": "2026-08-07T03:57:11Z"
+    },
+    "consistency": {
+      "merged": 34,
+      "closed": 21,
+      "acceptance_rate": 0.62,
+      "status": "normal",
+      "last_evaluated": "2026-08-05T04:00:45Z"
     }
   },
   "weekly_insights": {
-    "best_pr_size": "S",
+    "best_pr_size": "XS",
     "size_acceptance": {},
     "type_acceptance": {},
     "common_rejection_reasons": [
-      "- PR #21465: <!-- a11y-audit-comment -->",
-      "## ♿ Accessibility Audit (WCAG 2.1 AA)",
-      "- PR #21460: Superseded by #21468 (merged), which fixed the same `ReservationFormModal.test.tsx` mock more comprehensively. Closing to avoid conflicts.",
-      "- PR #21459: [APPROVALNOTIFIER] This PR is **NOT APPROVED**"
+      "- PR #22342: 👋 Hey @kubestellar-hive[bot] — thanks for opening this PR!",
+      "> **🤖 This project is developed exclusively using AI coding assistants.**",
+      "- PR #22201: ## ❌ Playwright Tests Failed",
+      "- PR #22192: [APPROVALNOTIFIER] This PR is **NOT APPROVED**"
     ],
     "best_change_type": "bug_fix",
-    "last_report_date": "2026-07-26"
+    "last_report_date": "2026-08-09"
   },
   "cncf_insights": {
-    "last_scan_date": "2026-07-29",
+    "last_scan_date": "2026-08-05",
     "suggested_checks": [
       {
-        "pattern": "error_ux",
-        "count": 5,
-        "added": "2026-07-29",
+        "pattern": "navigation_ux",
+        "count": 13,
+        "added": "2026-08-05",
         "priority": "medium"
       },
       {
-        "pattern": "navigation_ux",
-        "count": 9,
-        "added": "2026-07-29",
+        "pattern": "data_viz",
+        "count": 8,
+        "added": "2026-08-05",
         "priority": "medium"
       },
       {
         "pattern": "form_ux",
         "count": 11,
-        "added": "2026-07-29",
+        "added": "2026-08-05",
         "priority": "medium"
       }
     ]
   },
   "history": [
-    {
-      "date": "2026-06-13",
-      "total_merged": 992,
-      "total_closed": 531,
-      "categories_blocked": [],
-      "categories_boosted": []
-    },
-    {
-      "date": "2026-06-14",
-      "total_merged": 1031,
-      "total_closed": 532,
-      "categories_blocked": [],
-      "categories_boosted": []
-    },
-    {
-      "date": "2026-06-17",
-      "total_merged": 1081,
-      "total_closed": 536,
-      "categories_blocked": [],
-      "categories_boosted": []
-    },
-    {
-      "date": "2026-07-03",
-      "total_merged": 1101,
-      "total_closed": 546,
-      "categories_blocked": [],
-      "categories_boosted": []
-    },
-    {
-      "date": "2026-07-04",
-      "total_merged": 1108,
-      "total_closed": 549,
-      "categories_blocked": [],
-      "categories_boosted": []
-    },
-    {
-      "date": "2026-07-05",
-      "total_merged": 1121,
-      "total_closed": 550,
-      "categories_blocked": [],
-      "categories_boosted": []
-    },
-    {
-      "date": "2026-07-06",
-      "total_merged": 1132,
-      "total_closed": 551,
-      "categories_blocked": [],
-      "categories_boosted": []
-    },
     {
       "date": "2026-07-07",
       "total_merged": 1164,
@@ -338,20 +289,83 @@
       "categories_boosted": [
         "sre"
       ]
+    },
+    {
+      "date": "2026-07-31",
+      "total_merged": 1659,
+      "total_closed": 576,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "sre"
+      ]
+    },
+    {
+      "date": "2026-08-01",
+      "total_merged": 1692,
+      "total_closed": 576,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "sre"
+      ]
+    },
+    {
+      "date": "2026-08-03",
+      "total_merged": 1700,
+      "total_closed": 576,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "sre"
+      ]
+    },
+    {
+      "date": "2026-08-04",
+      "total_merged": 1719,
+      "total_closed": 576,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "sre"
+      ]
+    },
+    {
+      "date": "2026-08-05",
+      "total_merged": 1738,
+      "total_closed": 577,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "sre"
+      ]
+    },
+    {
+      "date": "2026-08-06",
+      "total_merged": 1750,
+      "total_closed": 578,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "sre"
+      ]
+    },
+    {
+      "date": "2026-08-07",
+      "total_merged": 1773,
+      "total_closed": 578,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "sre"
+      ]
     }
   ],
   "rotation_weights": {
-    "performance": 0.95,
+    "performance": 0.93,
     "security": 0.93,
-    "a11y": 1.08,
-    "operator": 1.13,
+    "a11y": 1.1,
+    "operator": 1.14,
     "sre": 2.0,
     "features": 1.2,
-    "resilience": 0.89,
-    "consistency": 0.9
+    "resilience": 0.9,
+    "consistency": 0.93
   },
   "max_issues_override": 5,
-  "pr_guidance": "Keep changes under 50 lines (size S) for best acceptance rate. Split larger fixes into multiple PRs.",
+  "pr_guidance": "Changes up to 200 lines (size M) are acceptable. Avoid PRs over 200 lines.",
   "regression_insights": {
     "focus_overrides": [],
     "repeat_issue_patterns": [],
