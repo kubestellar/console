@@ -12,7 +12,8 @@ import {
   CardSearchInput,
   CardControlsRow,
   CardPaginationFooter,
-  CardEmptyState } from '../../lib/cards/CardComponents'
+  CardEmptyState,
+  CardStatGrid } from '../../lib/cards/CardComponents'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
@@ -277,7 +278,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
       />
 
       {/* Stats */}
-      <div className="grid grid-cols-2 @md:grid-cols-4 gap-2 mb-3">
+      <CardStatGrid className="@md:grid-cols-4 gap-2 mb-3">
         <div className="text-center p-2 rounded-lg bg-green-500/10 cursor-pointer hover:bg-green-500/20"
              role="button" tabIndex={0}
              aria-label={`Show all applications (${stats.synced} synced)`}
@@ -310,7 +311,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
           <p className="text-lg font-bold text-red-400">{stats.unhealthy}</p>
           <p className="text-xs text-muted-foreground">{t('argoCDApplications.unhealthy')}</p>
         </div>
-      </div>
+      </CardStatGrid>
 
       {/* Filter indicator */}
       {selectedFilter !== 'all' && (
