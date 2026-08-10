@@ -79,6 +79,7 @@ vi.mock('../../../lib/cards/CardComponents', () => ({
   CardSearchInput: () => <input data-testid="search" />,
   CardControlsRow: () => <div data-testid="controls-row" />,
   CardPaginationFooter: () => <div data-testid="pagination" />,
+  CardStatGrid: ({ children }: { children: React.ReactNode }) => <div data-testid="stat-grid">{children}</div>,
 }))
 
 vi.mock('../../ui/Skeleton', () => ({
