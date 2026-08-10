@@ -10,6 +10,7 @@ import { useCardDemoState, useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { Button } from '../ui/Button'
+import { CardStatGrid } from '../../lib/cards/CardComponents'
 
 /** Maximum number of clusters that can be compared side-by-side */
 const MAX_COMPARED_CLUSTERS = 4
@@ -117,11 +118,11 @@ function ClusterComparisonInternal({ config }: ClusterComparisonProps) {
           <Skeleton variant="text" width={150} height={20} />
           <Skeleton variant="rounded" width={80} height={28} />
         </div>
-        <div className="grid grid-cols-2 @md:grid-cols-3 gap-2">
+        <CardStatGrid className="@md:grid-cols-3 gap-2">
           <Skeleton variant="rounded" height={150} />
           <Skeleton variant="rounded" height={150} />
           <Skeleton variant="rounded" height={150} />
-        </div>
+        </CardStatGrid>
       </div>
     )
   }
