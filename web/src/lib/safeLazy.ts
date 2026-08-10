@@ -61,7 +61,14 @@ export function safeLazy<TModule extends LazyComponentModule>(
           )
         }, LAZY_IMPORT_ATTEMPT_TIMEOUT_MS)
       })
-      return Promise.race([importFn(), timeoutPromise]).finally(() => {
+      const importPromise = importFn()
+      // Swallow any late rejection that occurs after the race settles with the timeout.
+      // If the timeout fires first, importPromise is still pending; if it later rejects,
+      // this catch prevents an unhandled rejection warning.
+      importPromise.catch(() => {
+        /* ignore */
+      })
+      return Promise.race([importPromise, timeoutPromise]).finally(() => {
         if (timeoutId !== undefined) clearTimeout(timeoutId)
       })
     }
