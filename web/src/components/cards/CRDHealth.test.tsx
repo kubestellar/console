@@ -23,6 +23,9 @@ vi.mock('../../lib/cards/CardComponents', () => ({
   CardBody: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   CardBodyLoaded: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   CardBodyEmpty: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  CardStatGrid: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div data-testid="card-stat-grid" className={className}>{children}</div>
+  ),
 }))
 
 vi.mock('../../lib/cards/cardHooks', () => ({

@@ -133,6 +133,9 @@ vi.mock('../../lib/cards/CardComponents', () => ({
       <p>{message}</p>
     </div>
   ),
+  CardStatGrid: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div data-testid="card-stat-grid" className={className}>{children}</div>
+  ),
 }))
 
 // ---------------------------------------------------------------------------
