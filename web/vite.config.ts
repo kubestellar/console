@@ -445,6 +445,9 @@ export default defineConfig(({ mode }) => ({
       // every file matching `include` is imported for coverage measurement — if a
       // test mocks lib/api without all exports, the force-import of a file that
       // uses authFetch throws "No export is defined on the mock". (#20382)
+      // Note: Because all:false is set, sharded CI runs (coverage-hourly.yml) rely on
+      // all 12 shards completing. If a shard fails or times out, missing shard artifacts
+      // will cause an artificial drop in merged project coverage (#22273).
       all: false,
       reporter: ['text', 'json', 'json-summary', 'html'],
       include: [
