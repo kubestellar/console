@@ -415,10 +415,13 @@ export default defineConfig(({ mode }) => ({
     retry: process.env.CI ? 2 : 0,
     teardownTimeout: process.env.CI ? 120_000 : 10_000, // CI: increased from 60s to 120s for worker cleanup stability (#10436)
     // CI runners (2-core, 7GB) OOM with 600+ test files at full concurrency.
+    // Use forks pool in CI so each test file runs in its own Node.js process;
+    // heap is fully reclaimed between files, preventing the incremental V8
+    // heap growth that caused OOM kills under the threads pool (#22354, #21169).
     // maxWorkers/minWorkers cap threads pool concurrency; poolOptions.forks.maxForks
-    // caps forks pool concurrency (used when unit-test.sh passes --pool=forks). Both
-    // must be set to 1 so that neither a CLI --pool=forks override nor the default
-    // threads pool exceeds the single-worker budget in CI (#20007).
+    // caps forks pool concurrency. Both must be set to 1 so that neither pool
+    // exceeds the single-worker budget in CI (#20007).
+    pool: process.env.CI ? 'forks' : undefined,
     maxWorkers: process.env.CI ? 1 : undefined,
     minWorkers: process.env.CI ? 1 : undefined,
     poolOptions: process.env.CI ? {
