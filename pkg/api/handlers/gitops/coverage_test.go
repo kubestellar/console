@@ -288,16 +288,30 @@ func TestWaitWithDeadline(t *testing.T) {
 		cancelled := false
 		cancel := func() { cancelled = true }
 
-		// goroutine that finishes after the deadline; test does NOT call
-		// wg.Done() itself to avoid a double-done panic.
+		// goroutine that completes after cancel is called; the test
+		// will exit before this goroutine finishes, so we ensure it's
+		// properly handled by the waitWithDeadline cancel mechanism.
 		go func() {
-			time.Sleep(2 * time.Second)
-			wg.Done()
+			defer wg.Done()
+			time.Sleep(500 * time.Millisecond)
 		}()
 
 		hit := waitWithDeadline(&wg, cancel, 50*time.Millisecond)
 		assert.True(t, hit, "deadline should have been hit")
 		assert.True(t, cancelled)
+
+		// Wait for the goroutine to finish to avoid test cleanup issues.
+		// Use a reasonable timeout to prevent hanging.
+		done := make(chan struct{})
+		go func() {
+			wg.Wait()
+			close(done)
+		}()
+		select {
+		case <-done:
+		case <-time.After(1 * time.Second):
+			t.Fatal("goroutine cleanup timeout")
+		}
 	})
 }
 
