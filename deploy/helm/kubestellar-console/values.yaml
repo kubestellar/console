@@ -16,6 +16,14 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
+# Image used by the pre-upgrade PVC migration Job.
+# Pinned to a stable minor version to avoid deploy failures caused by
+# unpinned :latest pulling a broken or rate-limited image from Docker Hub.
+migration:
+  image:
+    repository: bitnami/kubectl
+    tag: "1.36"
+
 serviceAccount:
   create: true
   # Security: set to false if using kc-agent for all K8s operations (reduces attack surface)
