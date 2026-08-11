@@ -39,12 +39,14 @@ func githubRepo() string {
 }
 
 // githubMainRefURL builds the GitHub API URL for the main branch ref.
-func githubMainRefURL() string {
+// It is a package variable so tests can point HTTP paths at an httptest server.
+var githubMainRefURL = func() string {
 	return fmt.Sprintf("https://api.github.com/repos/%s/git/ref/heads/main", githubRepo())
 }
 
 // githubReleasesURL builds the GitHub API URL for releases.
-func githubReleasesURL() string {
+// It is a package variable so tests can point HTTP paths at an httptest server.
+var githubReleasesURL = func() string {
 	return fmt.Sprintf("https://api.github.com/repos/%s/releases", githubRepo())
 }
 
