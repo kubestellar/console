@@ -17,13 +17,21 @@ nameOverride: ""
 fullnameOverride: ""
 
 # Image used by the pre-upgrade PVC migration Job.
-# Use the official Kubernetes kubectl image from registry.k8s.io.
 # bitnami/kubectl no longer publishes versioned tags on Docker Hub
-# (manifest unknown for 1.36+), so we switched to the upstream image.
+# (manifest unknown for 1.36+), so we moved to registry.k8s.io/kubectl.
+# That image is distroless (go-runner + a single static `kubectl` binary,
+# entrypoint /bin/kubectl) and ships NO shell at all — not bash, not even
+# /bin/sh — so the Job's `/bin/bash -c "<script>"` command failed instantly
+# on every attempt (failed: 1/1, backoffLimit exhausted) with no useful
+# logs. alpine/k8s bundles kubectl on top of a normal Alpine root
+# filesystem, so /bin/sh (busybox ash) is present; the migration script is
+# POSIX-sh compatible (see command in pre-upgrade-pvc-migration.yaml), and
+# Alpine has no fixed non-root user baked in, so it still honors the Job's
+# runAsNonRoot/allowPrivilegeEscalation=false securityContext.
 migration:
   image:
-    repository: registry.k8s.io/kubectl
-    tag: "v1.32.4"
+    repository: alpine/k8s
+    tag: "1.32.4"
 
 serviceAccount:
   create: true

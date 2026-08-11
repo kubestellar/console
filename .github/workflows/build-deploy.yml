@@ -608,6 +608,31 @@ jobs:
               --timeout 10m
           }
 
+          # Dumps the pre-upgrade PVC-migration hook Job's diagnostics.
+          # helm.sh/hook-delete-policy on that Job includes hook-failed, so a
+          # failed Job (and its pod/logs) is deleted by Helm shortly after
+          # `helm upgrade` returns — and deleted again by
+          # before-hook-creation on the NEXT retry attempt. This must run
+          # immediately after each failed deploy_helm call, before any retry
+          # or recovery step touches the release, or the logs are gone for
+          # good. Every command is best-effort (|| true) so a diagnostics
+          # failure never masks or replaces the real deploy failure.
+          dump_migration_hook_diagnostics() {
+            local job_name="${{ env.HELM_RELEASE_NAME }}-kubestellar-console-pvc-migration"
+            echo "::group::PVC migration hook Job/Pod status"
+            kubectl -n kc get jobs,pods -l app.kubernetes.io/component=pvc-migration -o wide || true
+            echo "::endgroup::"
+            echo "::group::PVC migration hook Job describe (events, failure reason)"
+            kubectl -n kc describe job "$job_name" || true
+            echo "::endgroup::"
+            echo "::group::PVC migration hook Job logs"
+            kubectl -n kc logs "job/$job_name" --all-containers --tail=200 --prefix || true
+            echo "::endgroup::"
+            echo "::group::Recent namespace events"
+            kubectl -n kc get events --sort-by=.lastTimestamp | tail -40 || true
+            echo "::endgroup::"
+          }
+
           MAX_ATTEMPTS=2
           for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
             echo "Deploy attempt $attempt of $MAX_ATTEMPTS..."
@@ -616,8 +641,11 @@ jobs:
               exit 0
             fi
 
+            echo "::warning::Deploy attempt $attempt failed"
+            dump_migration_hook_diagnostics
+
             if [ "$attempt" -lt "$MAX_ATTEMPTS" ]; then
-              echo "::warning::Deploy attempt $attempt failed, recovering and retrying..."
+              echo "::warning::Recovering and retrying..."
               sleep 30
               recover_release
               cleanup_stuck_pods

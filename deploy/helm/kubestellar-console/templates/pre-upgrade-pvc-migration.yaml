@@ -101,11 +101,26 @@ spec:
             capabilities:
               drop:
                 - ALL
+          env:
+            # alpine/k8s has no non-root user baked in, so under an
+            # OpenShift-assigned arbitrary UID (runAsNonRoot with no fixed
+            # runAsUser) the default $HOME (/root) is not writable by that
+            # UID. kubectl and any tool cache/config writes would fail.
+            # /tmp is world-writable (sticky bit) regardless of UID, so
+            # pointing HOME there avoids the failure without needing a
+            # fixed UID or an extra writable volume.
+            - name: HOME
+              value: /tmp
           command:
-            - /bin/bash
+            # alpine/k8s ships /bin/sh (busybox ash), not bash. The script
+            # below is POSIX-sh compatible (no [[, <<<, arrays, or other
+            # bashisms) so it runs unmodified under sh. `set -o pipefail`
+            # is not POSIX; omitted since the script uses no pipelines
+            # whose exit status matters.
+            - /bin/sh
             - -c
             - |
-              set -euo pipefail
+              set -eu
 
               NAMESPACE="{{ .Release.Namespace }}"
               MAIN_PVC="{{ include "kubestellar-console.fullname" . }}"
@@ -121,7 +136,7 @@ spec:
                 local pvc_name=$1
                 echo "Checking PVC: $pvc_name"
 
-                if ! kubectl get pvc "$pvc_name" -n "$NAMESPACE" &>/dev/null; then
+                if ! kubectl get pvc "$pvc_name" -n "$NAMESPACE" >/dev/null 2>&1; then
                   echo "  PVC does not exist (new install). Skipping."
                   return 0
                 fi
