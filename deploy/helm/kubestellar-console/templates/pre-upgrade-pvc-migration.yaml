@@ -60,10 +60,15 @@ metadata:
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
 spec:
   backoffLimit: 3
-  # Extended deadline to handle PVCs stuck in Terminating state.
-  # Each PVC now gets 180s delete timeout; 600s allows for two PVCs,
-  # retries, and status checks while staying within Helm's 10m window.
-  activeDeadlineSeconds: 600
+  # Deadline is intentionally well inside Helm's --timeout (10m/600s, see
+  # deploy_helm in .github/workflows/build-deploy.yml). Each PVC delete
+  # gets a 180s timeout (see --timeout=180s below); 360s covers two PVCs plus
+  # retries/status checks with margin. Keeping this shorter than Helm's
+  # timeout is deliberate: it lets the Job hit its own deadline and fail
+  # with clear logs, instead of racing Helm's clock and surfacing only as
+  # "pre-upgrade hooks failed ... context deadline exceeded" with no
+  # actionable signal (the intermittent failure this fixes).
+  activeDeadlineSeconds: 360
   template:
     metadata:
       labels:
