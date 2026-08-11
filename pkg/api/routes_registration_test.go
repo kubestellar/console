@@ -193,3 +193,142 @@ func TestSetupRoutes_ProtectedEndpointsKeepAuthAndCSRFGuards(t *testing.T) {
 			"expected 403 or 503 (viewer must not reach the handler), got %d", resp.StatusCode)
 	})
 }
+
+func TestSetupRoutes_RegistersGovernanceRoutes(t *testing.T) {
+	server, _ := newRouteRegistrationServer(t)
+	routes := routeTable(server.app)
+
+	expected := []struct {
+		method string
+		path   string
+	}{
+		{http.MethodGet, "/api/teams"},
+		{http.MethodPost, "/api/teams"},
+		{http.MethodGet, "/api/teams/mine"},
+		{http.MethodGet, "/api/teams/:id"},
+		{http.MethodPut, "/api/teams/:id"},
+		{http.MethodDelete, "/api/teams/:id"},
+		{http.MethodGet, "/api/teams/:id/members"},
+		{http.MethodPost, "/api/teams/:id/members"},
+		{http.MethodDelete, "/api/teams/:id/members/:userId"},
+		{http.MethodPut, "/api/teams/:id/members/:userId/role"},
+		{http.MethodGet, "/api/users"},
+		{http.MethodPut, "/api/users/:id/role"},
+		{http.MethodDelete, "/api/users/:id"},
+		{http.MethodGet, "/api/users/summary"},
+		{http.MethodGet, "/api/admin/audit-log"},
+		{http.MethodGet, "/api/namespaces"},
+		{http.MethodGet, "/api/namespaces/:name/access"},
+		{http.MethodGet, "/api/admin/rate-limit-status"},
+	}
+
+	for _, tc := range expected {
+		assertRegisteredRoute(t, routes, tc.method, tc.path, 1)
+	}
+}
+
+func TestSetupRoutes_RegistersFeedbackRoutes(t *testing.T) {
+	server, _ := newRouteRegistrationServer(t)
+	routes := routeTable(server.app)
+
+	expected := []struct {
+		method string
+		path   string
+	}{
+		{http.MethodGet, "/api/feedback/requests"},
+		{http.MethodPost, "/api/feedback/requests"},
+		{http.MethodGet, "/api/feedback/requests/:id"},
+		{http.MethodPost, "/api/feedback/requests/:id/feedback"},
+		{http.MethodGet, "/api/notifications"},
+		{http.MethodGet, "/api/notifications/unread-count"},
+		{http.MethodPost, "/api/notifications/:id/read"},
+		{http.MethodPost, "/api/notifications/read-all"},
+	}
+
+	for _, tc := range expected {
+		assertRegisteredRoute(t, routes, tc.method, tc.path, 1)
+	}
+}
+
+func TestSetupRoutes_RegistersStellarRoutes(t *testing.T) {
+	server, _ := newRouteRegistrationServer(t)
+	routes := routeTable(server.app)
+
+	expected := []struct {
+		method string
+		path   string
+	}{
+		{http.MethodGet, "/api/stellar/preferences"},
+		{http.MethodPut, "/api/stellar/preferences"},
+		{http.MethodGet, "/api/stellar/state"},
+		{http.MethodGet, "/api/stellar/digest"},
+		{http.MethodGet, "/api/stellar/stream"},
+		{http.MethodPost, "/api/stellar/ask"},
+		{http.MethodGet, "/api/stellar/notifications"},
+		{http.MethodPost, "/api/stellar/notifications/:id/read"},
+		{http.MethodGet, "/api/stellar/missions"},
+		{http.MethodPost, "/api/stellar/missions"},
+		{http.MethodGet, "/api/stellar/missions/:id"},
+		{http.MethodPut, "/api/stellar/missions/:id"},
+		{http.MethodDelete, "/api/stellar/missions/:id"},
+		{http.MethodGet, "/api/stellar/actions"},
+		{http.MethodPost, "/api/stellar/actions"},
+		{http.MethodGet, "/api/stellar/actions/:id"},
+		{http.MethodPost, "/api/stellar/providers"},
+		{http.MethodDelete, "/api/stellar/providers/:id"},
+		{http.MethodGet, "/api/stellar/health"},
+	}
+
+	for _, tc := range expected {
+		assertRegisteredRoute(t, routes, tc.method, tc.path, 1)
+	}
+}
+
+func TestSetupRoutes_RegistersPublicRoutes(t *testing.T) {
+	server, _ := newRouteRegistrationServer(t)
+	routes := routeTable(server.app)
+
+	expected := []struct {
+		method string
+		path   string
+	}{
+		{http.MethodGet, "/api/active-users"},
+		{http.MethodPost, "/api/active-users"},
+		{http.MethodGet, "/api/medium/blog"},
+		{http.MethodGet, "/api/youtube/playlist"},
+	}
+
+	for _, tc := range expected {
+		assertRegisteredRoute(t, routes, tc.method, tc.path, 1)
+	}
+}
+
+func TestSetupRoutes_RegistersAPICoreRoutes(t *testing.T) {
+	server, _ := newRouteRegistrationServer(t)
+	routes := routeTable(server.app)
+
+	expected := []struct {
+		method string
+		path   string
+	}{
+		{http.MethodGet, "/api/settings"},
+		{http.MethodPut, "/api/settings"},
+		{http.MethodGet, "/api/dashboards"},
+		{http.MethodPost, "/api/dashboards"},
+		{http.MethodGet, "/api/dashboards/:id"},
+		{http.MethodPut, "/api/dashboards/:id"},
+		{http.MethodDelete, "/api/dashboards/:id"},
+		{http.MethodGet, "/api/dashboards/:id/cards"},
+		{http.MethodPost, "/api/dashboards/:id/cards"},
+		{http.MethodPut, "/api/cards/:id"},
+		{http.MethodDelete, "/api/cards/:id"},
+		{http.MethodGet, "/api/card-types"},
+		{http.MethodGet, "/api/github/token/status"},
+		{http.MethodPost, "/api/github/token"},
+		{http.MethodDelete, "/api/github/token"},
+	}
+
+	for _, tc := range expected {
+		assertRegisteredRoute(t, routes, tc.method, tc.path, 1)
+	}
+}
