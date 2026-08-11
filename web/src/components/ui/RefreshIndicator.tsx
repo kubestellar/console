@@ -66,8 +66,16 @@ export const RefreshIndicator = memo(function RefreshIndicator({
     }
   }, [isRefreshing])
 
-  const isStale = lastUpdated &&
-    (Date.now() - lastUpdated.getTime()) > staleThresholdMinutes * MS_PER_MINUTE
+  // #22403: isStale must be a plain boolean. The previous expression
+  // `lastUpdated && (...)` returned a Date|boolean — truthiness of a Date
+  // object is always true, masking the threshold check.  When lastUpdated is
+  // null the data has never loaded; suppress stale styling while a refresh is
+  // in-flight (isVisuallySpinning) but surface it once the spin stops.
+  const isStale: boolean = !isVisuallySpinning && (
+    lastUpdated
+      ? (Date.now() - lastUpdated.getTime()) > staleThresholdMinutes * MS_PER_MINUTE
+      : false
+  )
 
   const iconSize = size === 'xs' ? 'w-2.5 h-2.5' : size === 'sm' ? 'w-3 h-3' : 'w-4 h-4'
   const textSize = size === 'xs' ? 'text-2xs' : size === 'sm' ? 'text-2xs' : 'text-xs'
