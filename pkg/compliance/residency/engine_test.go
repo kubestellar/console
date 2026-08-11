@@ -123,6 +123,91 @@ func TestRegionLabel(t *testing.T) {
 	}
 }
 
+func TestEngineRules(t *testing.T) {
+	engine := NewEngine()
+	rules := engine.Rules()
+	if len(rules) != 5 {
+		t.Fatalf("expected 5 built-in rules, got %d", len(rules))
+	}
+
+	byID := make(map[string]Rule, len(rules))
+	for _, r := range rules {
+		byID[r.ID] = r
+	}
+	for _, id := range []string{"rule-eu-personal", "rule-pci-cardholder", "rule-hipaa-phi", "rule-federal-cui", "rule-public"} {
+		if _, ok := byID[id]; !ok {
+			t.Errorf("missing built-in rule %q", id)
+		}
+	}
+}
+
+func TestEngineClusterRegions(t *testing.T) {
+	engine := NewEngine()
+	regions := engine.ClusterRegions()
+	if len(regions) != 6 {
+		t.Fatalf("expected 6 demo clusters, got %d", len(regions))
+	}
+
+	seen := make(map[string]Region, len(regions))
+	for _, cr := range regions {
+		if cr.ClusterName == "" {
+			t.Error("cluster name should not be empty")
+		}
+		seen[cr.ClusterName] = cr.Region
+	}
+	if seen["prod-us-east"] != RegionUS {
+		t.Errorf("expected prod-us-east to be RegionUS, got %q", seen["prod-us-east"])
+	}
+	if seen["prod-eu-west"] != RegionEU {
+		t.Errorf("expected prod-eu-west to be RegionEU, got %q", seen["prod-eu-west"])
+	}
+}
+
+func TestEngineSetClusterRegion(t *testing.T) {
+	engine := NewEngine()
+
+	// Add a new cluster.
+	engine.SetClusterRegion("prod-new-region", RegionCanada, "PIPEDA")
+	regions := engine.ClusterRegions()
+	if len(regions) != 7 {
+		t.Fatalf("expected 7 clusters after add, got %d", len(regions))
+	}
+
+	var found *ClusterRegion
+	for i, cr := range regions {
+		if cr.ClusterName == "prod-new-region" {
+			found = &regions[i]
+			break
+		}
+	}
+	if found == nil {
+		t.Fatal("added cluster not found in ClusterRegions()")
+	}
+	if found.Region != RegionCanada {
+		t.Errorf("expected RegionCanada, got %q", found.Region)
+	}
+	if found.Jurisdiction != "PIPEDA" {
+		t.Errorf("expected jurisdiction PIPEDA, got %q", found.Jurisdiction)
+	}
+
+	// Overwrite an existing cluster's region.
+	engine.SetClusterRegion("prod-us-east", RegionEU, "GDPR")
+	regions = engine.ClusterRegions()
+	if len(regions) != 7 {
+		t.Fatalf("expected 7 clusters after overwrite, got %d", len(regions))
+	}
+	for _, cr := range regions {
+		if cr.ClusterName == "prod-us-east" {
+			if cr.Region != RegionEU {
+				t.Errorf("expected overwritten region RegionEU, got %q", cr.Region)
+			}
+			if cr.Jurisdiction != "GDPR" {
+				t.Errorf("expected overwritten jurisdiction GDPR, got %q", cr.Jurisdiction)
+			}
+		}
+	}
+}
+
 func TestClassificationSeverity(t *testing.T) {
 	if classificationSeverity(ClassEUPersonal) != SeverityCritical {
 		t.Error("EU personal data should be critical")
@@ -132,5 +217,14 @@ func TestClassificationSeverity(t *testing.T) {
 	}
 	if classificationSeverity(ClassPublic) != SeverityLow {
 		t.Error("public should be low")
+	}
+	if classificationSeverity(ClassConfidential) != SeverityMedium {
+		t.Error("confidential should be medium")
+	}
+	if classificationSeverity(ClassHIPAA) != SeverityCritical {
+		t.Error("HIPAA should be critical")
+	}
+	if classificationSeverity(ClassFederal) != SeverityCritical {
+		t.Error("federal CUI should be critical")
 	}
 }

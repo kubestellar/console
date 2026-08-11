@@ -23,6 +23,23 @@ func TestRules(t *testing.T) {
 	}
 }
 
+func TestPrincipals(t *testing.T) {
+	e := NewEngine()
+	principals := e.Principals()
+	if len(principals) == 0 {
+		t.Fatal("expected demo principals to be seeded")
+	}
+
+	// Verify Principals() returns a copy — mutating the returned slice
+	// must not affect the engine's internal state.
+	original := principals[0].Name
+	principals[0].Name = "mutated"
+	again := e.Principals()
+	if again[0].Name != original {
+		t.Errorf("Principals() should return a copy; internal state was mutated")
+	}
+}
+
 func TestDeployerApproverConflict(t *testing.T) {
 	e := NewEngine()
 	// bob has both deployer and approver roles
