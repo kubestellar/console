@@ -1,11 +1,14 @@
 import type { TFunction } from 'i18next'
-import { RefreshCw, GitBranch, FolderGit, Box, Loader2 } from 'lucide-react'
+import { RefreshCw, GitBranch, FolderGit, Box, Loader2, ExternalLink } from 'lucide-react'
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { PortalTooltip } from '../cards/llmd/shared/PortalTooltip'
 import { STATUS_TOOLTIPS } from '../shared/TechnicalAcronym'
 import { StatusBadge } from '../ui/StatusBadge'
 import { Select } from '../ui/Select'
 import type { GitOpsApp } from './GitOps.types'
+
+const ARGOCD_DOCS_URL = 'https://argo-cd.readthedocs.io/en/stable/getting_started/'
+const FLUX_DOCS_URL = 'https://fluxcd.io/flux/get-started/'
 
 interface GitOpsFiltersProps {
   clusters: Array<{ name: string; context?: string }>
@@ -234,12 +237,19 @@ export function GitOpsIntegrationInfo({ t }: GitOpsIntegrationInfoProps) {
       </p>
       <div className="flex gap-2">
         {([
-          { key: 'argocd', label: t('gitops.configureArgoCD') },
-          { key: 'flux', label: t('gitops.configureFlux') },
-        ] as const).map(({ key, label }) => (
-          <button key={key} className="px-4 py-2 rounded-lg bg-card/50 border border-border text-sm text-foreground hover:bg-card transition-colors">
+          { key: 'argocd', label: t('gitops.configureArgoCD'), href: ARGOCD_DOCS_URL },
+          { key: 'flux', label: t('gitops.configureFlux'), href: FLUX_DOCS_URL },
+        ] as const).map(({ key, label, href }) => (
+          <a
+            key={key}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-card/50 border border-border text-sm text-foreground hover:bg-card transition-colors"
+          >
             {label}
-          </button>
+            <ExternalLink className="w-3.5 h-3.5 opacity-70" aria-hidden="true" />
+          </a>
         ))}
       </div>
     </div>
