@@ -97,7 +97,10 @@ fi
 
 if [ "$EXIT_CODE" -ne 0 ]; then
   # Check if all tests actually passed despite the non-zero exit
-  if grep -q "Tests.*passed" "$OUTPUT_FILE" && ! grep -q "Tests.*failed" "$OUTPUT_FILE"; then
+  # Also guard against Vitest reporting "Errors N errors" (unhandled rejections)
+  # even when no test cases failed — those errors caused the nightly regression in
+  # #22004 and must not be silently swallowed. (#22004)
+  if grep -q "Tests.*passed" "$OUTPUT_FILE" && ! grep -q "Tests.*failed" "$OUTPUT_FILE" && ! grep -qE "Errors +[1-9][0-9]* errors" "$OUTPUT_FILE"; then
     # All tests passed — exit was likely a pool worker termination timeout
     echo ""
     echo "All tests passed (exit code $EXIT_CODE was a non-test error, e.g. worker cleanup timeout)"
