@@ -12,7 +12,11 @@
       "properties": {
         "pullPolicy": {
           "type": "string",
-          "enum": ["Always", "IfNotPresent", "Never"],
+          "enum": [
+            "Always",
+            "IfNotPresent",
+            "Never"
+          ],
           "description": "Image pull policy"
         }
       }
@@ -22,7 +26,11 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["ClusterIP", "NodePort", "LoadBalancer"],
+          "enum": [
+            "ClusterIP",
+            "NodePort",
+            "LoadBalancer"
+          ],
           "description": "Service type"
         },
         "port": {
@@ -41,12 +49,20 @@
           "properties": {
             "termination": {
               "type": "string",
-              "enum": ["edge", "passthrough", "reencrypt"],
+              "enum": [
+                "edge",
+                "passthrough",
+                "reencrypt"
+              ],
               "description": "TLS termination type"
             },
             "insecureEdgeTerminationPolicy": {
               "type": "string",
-              "enum": ["Redirect", "Allow", "None"],
+              "enum": [
+                "Redirect",
+                "Allow",
+                "None"
+              ],
               "description": "Insecure edge termination policy"
             }
           }
@@ -108,6 +124,25 @@
         "fileName": {
           "type": "string",
           "description": "Filename used for the mounted kubeconfig"
+        }
+      }
+    },
+    "migration": {
+      "type": "object",
+      "description": "Image configuration for the pre-upgrade PVC migration Job",
+      "properties": {
+        "image": {
+          "type": "object",
+          "properties": {
+            "repository": {
+              "type": "string",
+              "description": "kubectl image repository"
+            },
+            "tag": {
+              "type": "string",
+              "description": "kubectl image tag"
+            }
+          }
         }
       }
     }
