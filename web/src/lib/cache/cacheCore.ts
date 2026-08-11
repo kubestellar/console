@@ -382,7 +382,10 @@ export class CacheStore<T> {
       this.saveMeta({
         consecutiveFailures: newFailures,
         lastError: errorMessage,
-        lastSuccessfulRefresh: hasData ? Date.now() : (this.state.lastRefresh ?? undefined),
+        // #22403: preserve the real last-successful-refresh timestamp on failure —
+        // writing Date.now() here would make the freshness indicator think data
+        // was just refreshed even though the fetch failed.
+        lastSuccessfulRefresh: this.state.lastRefresh ?? undefined,
       })
 
       this.setState({
