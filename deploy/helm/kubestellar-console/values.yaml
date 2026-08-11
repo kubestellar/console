@@ -17,12 +17,13 @@ nameOverride: ""
 fullnameOverride: ""
 
 # Image used by the pre-upgrade PVC migration Job.
-# Pinned to a stable minor version to avoid deploy failures caused by
-# unpinned :latest pulling a broken or rate-limited image from Docker Hub.
+# Use the official Kubernetes kubectl image from registry.k8s.io.
+# bitnami/kubectl no longer publishes versioned tags on Docker Hub
+# (manifest unknown for 1.36+), so we switched to the upstream image.
 migration:
   image:
-    repository: bitnami/kubectl
-    tag: "1.36"
+    repository: registry.k8s.io/kubectl
+    tag: "v1.32.4"
 
 serviceAccount:
   create: true

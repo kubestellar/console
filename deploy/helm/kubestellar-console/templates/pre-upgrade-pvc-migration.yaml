@@ -86,10 +86,10 @@ spec:
         - name: migrate-pvcs
           image: "{{ .Values.migration.image.repository }}:{{ .Values.migration.image.tag }}"
           imagePullPolicy: IfNotPresent
-          # Use a lighter securityContext for the migration job: bitnami/kubectl
-          # runs as uid 1001 by default but needs a writable home dir. The app's
-          # securityContext (readOnlyRootFilesystem=true) breaks kubectl's cache
-          # writes on some OpenShift clusters, causing the pod to fail immediately.
+          # Use a lighter securityContext for the migration job: the kubectl
+          # image needs a writable home dir. The app's securityContext
+          # (readOnlyRootFilesystem=true) breaks kubectl's cache writes on
+          # some OpenShift clusters, causing the pod to fail immediately.
           securityContext:
             runAsNonRoot: true
             allowPrivilegeEscalation: false
