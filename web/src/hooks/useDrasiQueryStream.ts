@@ -22,6 +22,14 @@
  */
 import { useState, useEffect, useRef } from 'react'
 
+// Retry/backoff constants for the SSE connection
+const INITIAL_RETRY_MS = 1000
+const MAX_RETRY_MS = 30000
+const BACKOFF_FACTOR = 2
+const JITTER_MS = 300
+const PREFLIGHT_ABORT_TIMEOUT_MS = 10000
+const UNRECOVERABLE_STATUSES = new Set([401, 403, 404])
+
 /** A single row in a result set — Drasi rows are arbitrary key/value maps. */
 type LiveResultRow = Record<string, string | number | boolean | null>
 
@@ -111,14 +119,6 @@ export function useDrasiQueryStream(args: Args): UseDrasiQueryStreamResult {
     const proxyUrl =
       `/api/drasi/proxy${upstreamPath}` +
       `?target=server&url=${encodeURIComponent(drasiServerUrl)}`
-
-    // Retry/backoff constants (no magic numbers inline)
-    const INITIAL_RETRY_MS = 1000
-    const MAX_RETRY_MS = 30000
-    const BACKOFF_FACTOR = 2
-    const JITTER_MS = 300
-    const PREFLIGHT_ABORT_TIMEOUT_MS = 10000
-    const UNRECOVERABLE_STATUSES = new Set([401, 403, 404])
 
     const retryCountRef = { current: 0 }
     const lastErrorRef = { current: null as string | null }
