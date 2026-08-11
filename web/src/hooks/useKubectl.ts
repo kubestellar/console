@@ -12,8 +12,8 @@ import { getDemoMode } from './useDemoMode'
 import { isInClusterMode } from './useBackendHealth'
 import { LOCAL_AGENT_WS_URL } from '../lib/constants'
 import { getWsAuthParams } from '../lib/utils/wsAuth'
-const RECONNECT_DELAY = 1000
-const REQUEST_TIMEOUT = 30000
+const RECONNECT_DELAY_MS = 1000
+const REQUEST_TIMEOUT_MS = 30000
 
 interface PendingRequest {
   resolve: (output: string) => void
@@ -142,10 +142,10 @@ class KubectlService {
       if (this.subscribers > 0) {
         this.connect()
       }
-    }, RECONNECT_DELAY)
+    }, RECONNECT_DELAY_MS)
   }
 
-  async execute(context: string, args: string[], timeout = REQUEST_TIMEOUT): Promise<string> {
+  async execute(context: string, args: string[], timeout = REQUEST_TIMEOUT_MS): Promise<string> {
     const requestId = `kubectl-${Date.now()}-${Math.random().toString(36).slice(2)}`
     const message = {
       id: requestId,
