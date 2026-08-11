@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -574,9 +573,6 @@ func TestBridge_GetPods(t *testing.T) {
 }
 
 func TestBridge_FindPodIssues(t *testing.T) {
-	if os.Getenv("KC_INTEGRATION_TESTS") != "1" {
-		t.Skip("skipping — requires live k8s cluster; set KC_INTEGRATION_TESTS=1")
-	}
 	tests := []struct {
 		name          string
 		cluster       string
@@ -667,9 +663,6 @@ func TestBridge_FindPodIssues(t *testing.T) {
 }
 
 func TestBridge_GetEvents(t *testing.T) {
-	if os.Getenv("KC_INTEGRATION_TESTS") != "1" {
-		t.Skip("skipping — requires live k8s cluster; set KC_INTEGRATION_TESTS=1")
-	}
 	tests := []struct {
 		name          string
 		cluster       string
@@ -753,9 +746,6 @@ func TestBridge_GetEvents(t *testing.T) {
 }
 
 func TestBridge_GetWarningEvents(t *testing.T) {
-	if os.Getenv("KC_INTEGRATION_TESTS") != "1" {
-		t.Skip("skipping — requires live k8s cluster; set KC_INTEGRATION_TESTS=1")
-	}
 	tests := []struct {
 		name          string
 		cluster       string
@@ -838,9 +828,6 @@ func TestBridge_GetWarningEvents(t *testing.T) {
 }
 
 func TestBridge_GetClusterHealth(t *testing.T) {
-	if os.Getenv("KC_INTEGRATION_TESTS") != "1" {
-		t.Skip("skipping — requires live k8s cluster; set KC_INTEGRATION_TESTS=1")
-	}
 	tests := []struct {
 		name          string
 		cluster       string
