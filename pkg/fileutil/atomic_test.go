@@ -199,4 +199,116 @@ func TestAtomicWriteFile(t *testing.T) {
 			t.Errorf("temp files not cleaned up: before=%d, after=%d", len(beforeFiles), len(afterFiles))
 		}
 	})
+
+	t.Run("LargeFileWrite", func(t *testing.T) {
+		// Test with a larger file to exercise the Write path more thoroughly
+		path := filepath.Join(tmpDir, "large.bin")
+		// 10MB of data
+		data := make([]byte, 10*1024*1024)
+		for i := range data {
+			data[i] = byte(i % 256)
+		}
+
+		if err := AtomicWriteFile(path, data, 0644); err != nil {
+			t.Fatalf("expected no error for large file, got %v", err)
+		}
+
+		got, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("failed to read file: %v", err)
+		}
+		if !bytes.Equal(got, data) {
+			t.Errorf("data mismatch: expected %d bytes, got %d bytes", len(data), len(got))
+		}
+	})
+
+	t.Run("VariousPermissions", func(t *testing.T) {
+		// Test with different permission modes to exercise Chmod
+		perms := []os.FileMode{0600, 0640, 0644, 0755, 0700, 0400}
+		for i, perm := range perms {
+			t.Run(string(rune('0'+i)), func(t *testing.T) {
+				path := filepath.Join(tmpDir, string(rune('a'+i))+".txt")
+				data := []byte("test")
+
+				if err := AtomicWriteFile(path, data, perm); err != nil {
+					t.Fatalf("perm %o: %v", perm, err)
+				}
+
+				info, err := os.Stat(path)
+				if err != nil {
+					t.Fatalf("stat: %v", err)
+				}
+				if info.Mode().Perm() != perm {
+					t.Errorf("expected perm %o, got %o", perm, info.Mode().Perm())
+				}
+			})
+		}
+	})
+
+	t.Run("ConcurrentWrites", func(t *testing.T) {
+		// Test concurrent writes to different files to stress the atomic write mechanism
+		path1 := filepath.Join(tmpDir, "concurrent1.txt")
+		path2 := filepath.Join(tmpDir, "concurrent2.txt")
+
+		done := make(chan error, 2)
+		go func() {
+			done <- AtomicWriteFile(path1, []byte("file1"), 0644)
+		}()
+		go func() {
+			done <- AtomicWriteFile(path2, []byte("file2"), 0644)
+		}()
+
+		for i := 0; i < 2; i++ {
+			if err := <-done; err != nil {
+				t.Errorf("concurrent write failed: %v", err)
+			}
+		}
+
+		data1, _ := os.ReadFile(path1)
+		data2, _ := os.ReadFile(path2)
+		if string(data1) != "file1" || string(data2) != "file2" {
+			t.Error("concurrent writes produced incorrect data")
+		}
+	})
+
+	t.Run("NestedDirectoryPath", func(t *testing.T) {
+		// Test writing to a file in a nested directory
+		nestedDir := filepath.Join(tmpDir, "level1", "level2", "level3")
+		if err := os.MkdirAll(nestedDir, 0755); err != nil {
+			t.Fatalf("mkdir: %v", err)
+		}
+
+		path := filepath.Join(nestedDir, "nested.txt")
+		data := []byte("nested data")
+
+		if err := AtomicWriteFile(path, data, 0644); err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		got, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read: %v", err)
+		}
+		if !bytes.Equal(got, data) {
+			t.Errorf("expected %q, got %q", string(data), string(got))
+		}
+	})
+
+	t.Run("SpecialCharactersInData", func(t *testing.T) {
+		// Test with binary data including null bytes and special characters
+		path := filepath.Join(tmpDir, "binary.dat")
+		data := []byte{0x00, 0x01, 0xFF, 0xFE, 0x7F, 0x80, '\n', '\r', '\t', 0x00}
+
+		if err := AtomicWriteFile(path, data, 0644); err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		got, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read: %v", err)
+		}
+		if !bytes.Equal(got, data) {
+			t.Errorf("binary data mismatch")
+		}
+	})
 }
