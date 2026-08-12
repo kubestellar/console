@@ -147,8 +147,11 @@ describe('NamespaceAccessPanel', () => {
   })
 
   it('shows loading spinner while fetching access', async () => {
+    let timeoutId: NodeJS.Timeout | undefined
     vi.mocked(api.get).mockImplementation(
-      () => new Promise(resolve => setTimeout(() => resolve({ data: { bindings: [] } }), 100))
+      () => new Promise(resolve => {
+        timeoutId = setTimeout(() => resolve({ data: { bindings: [] } }), 100)
+      })
     )
 
     render(
@@ -164,6 +167,8 @@ describe('NamespaceAccessPanel', () => {
     await waitFor(() => {
       expect(document.querySelector('.spinner')).toBeNull()
     })
+
+    if (timeoutId) clearTimeout(timeoutId)
   })
 
   it('shows "no role bindings" message when entries are empty', async () => {
