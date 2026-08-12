@@ -214,6 +214,7 @@ describe('GPUReservations Component', () => {
   afterEach(() => {
     cleanup()
     vi.clearAllTimers()
+    vi.useRealTimers()
   })
 
   const renderGPU = () =>
