@@ -123,29 +123,71 @@ jobs:
             }
             
             // 3. Require all checks passing (no --admin bypass)
+            //
+            // This job is triggered by `pull_request: [opened, synchronize, ready_for_review]`,
+            // which fires the moment a PR is opened/pushed -- typically seconds after the
+            // required CI checks (build-gate, Analyze Go, Lint warning regression check) start,
+            // long before those checks have actually reported a result. Treating "hasn't
+            // reported yet" the same as "failed" produced a spurious `failure` conclusion on
+            // every PR, with no real violation and no useful summary (issue: enforce-guardrails
+            // stale-fail blocking Forge App self-merge). Only a check-run that has *actually*
+            // concluded failure/timed_out/cancelled is a guardrail violation; a check that is
+            // still queued/in_progress, or hasn't posted a check-run at all yet, is simply not
+            // ready to evaluate -- this job will re-run on the next synchronize/check_suite
+            // event once it has.
             if (config.scanner.pre_merge_checks.require_all_checks_passing) {
               const prChecks = await github.rest.checks.listForRef({
                 owner,
                 repo,
                 ref: pr.head.sha
               });
-              
+
               const requiredChecks = config.scanner.pre_merge_checks.required_checks;
-              const failingChecks = prChecks.data.check_runs.filter(check => 
-                requiredChecks.includes(check.name) && 
-                check.conclusion !== 'success'
-              );
-              
-              if (failingChecks.length > 0) {
-                core.setFailed(`🚫 Required checks not passing: ${failingChecks.map(c => c.name).join(', ')}`);
-                
+              // Conclusions that represent a genuine, terminal guardrail violation.
+              const FAILING_CONCLUSIONS = ['failure', 'timed_out', 'cancelled', 'action_required'];
+
+              const checksByName = new Map(prChecks.data.check_runs.map(check => [check.name, check]));
+
+              const genuinelyFailingChecks = requiredChecks
+                .map(name => checksByName.get(name))
+                .filter(check => check && FAILING_CONCLUSIONS.includes(check.conclusion));
+
+              const pendingChecks = requiredChecks.filter(name => {
+                const check = checksByName.get(name);
+                // Not yet posted, or posted but not completed -- neither is a violation.
+                return !check || check.status !== 'completed';
+              });
+
+              if (genuinelyFailingChecks.length > 0) {
+                const summary = genuinelyFailingChecks
+                  .map(c => `- ❌ **${c.name}**: concluded \`${c.conclusion}\` (${c.html_url})`)
+                  .join('\n');
+
+                core.setFailed(`🚫 Required checks failed: ${genuinelyFailingChecks.map(c => c.name).join(', ')}`);
+                core.summary
+                  .addHeading('Scanner Merge Guardrails: Required Checks Failed')
+                  .addRaw(summary, true)
+                  .write();
+
                 await github.rest.issues.addLabels({
                   owner,
                   repo,
                   issue_number: pr.number,
                   labels: ['scanner-checks-failing']
                 });
-                
+
+                return;
+              }
+
+              if (pendingChecks.length > 0) {
+                // Required checks are still running -- nothing to enforce yet. Conclude
+                // neutral (not failure) so this doesn't block merge; the workflow re-runs
+                // on the next `synchronize`/`check_suite: completed` event once checks land.
+                core.info(`⏳ Required checks still pending: ${pendingChecks.join(', ')}. Deferring guardrail evaluation.`);
+                core.summary
+                  .addHeading('Scanner Merge Guardrails: Waiting on Required Checks')
+                  .addRaw(`Pending: ${pendingChecks.join(', ')}. No violation -- re-evaluating once these complete.`, true)
+                  .write();
                 return;
               }
             }
@@ -180,6 +222,10 @@ jobs:
             }
             
             core.info('✅ All scanner merge guardrails passed');
+            core.summary
+              .addHeading('Scanner Merge Guardrails: Passed')
+              .addRaw('No guardrail violations detected for this PR.', true)
+              .write();
             
       - name: Update Status
         if: always()
