@@ -65,7 +65,7 @@ export function NamespaceField({
           onChange={e => {
             if (e.target.value === '__new__' || e.target.value === '__new_bottom__') {
               onToggleNew(true)
-              setTimeout(() => document.getElementById('new-ns-input')?.focus(), 0)
+              queueMicrotask(() => document.getElementById('new-ns-input')?.focus())
             } else {
               onNamespaceChange(e.target.value)
             }

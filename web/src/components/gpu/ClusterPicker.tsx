@@ -73,7 +73,7 @@ export function ClusterPicker({
             onChange={e => {
               if (e.target.value === '__new__' || e.target.value === '__new_bottom__') {
                 setNsField({ value: '', isNew: true })
-                setTimeout(() => document.getElementById('new-ns-input')?.focus(), 0)
+                queueMicrotask(() => document.getElementById('new-ns-input')?.focus())
               } else {
                 setNsField(prev => ({ ...prev, value: e.target.value }))
               }
