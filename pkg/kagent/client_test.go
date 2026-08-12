@@ -381,3 +381,67 @@ func TestKagentClientDetectWithContext(t *testing.T) {
 		})
 	}
 }
+
+// TestKagentClientDetect exercises the Detect() wrapper which delegates to
+// DetectWithContext using context.Background(). Covers the previously-untested
+// no-context convenience path.
+func TestKagentClientDetect(t *testing.T) {
+	tests := []struct {
+		name      string
+		transport http.RoundTripper
+		want      string
+	}{
+		{
+			name: "returns first healthy candidate",
+			transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader("ok")),
+					Header:     make(http.Header),
+				}, nil
+			}),
+			want: "http://kagent-controller.kagent.svc:8083",
+		},
+		{
+			name: "returns empty when all candidates unhealthy",
+			transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusInternalServerError,
+					Body:       io.NopCloser(strings.NewReader("nope")),
+					Header:     make(http.Header),
+				}, nil
+			}),
+			want: "",
+		},
+		{
+			name: "returns empty when transport errors on every candidate",
+			transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return nil, errors.New("dial tcp: connection refused")
+			}),
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client := newTestClient(t, "http://unused", tt.transport)
+			assert.Equal(t, tt.want, client.Detect())
+		})
+	}
+}
+
+// TestNewKagentClientFromEnvReturnsNilWhenNoURLAndDetectFails verifies the
+// fallback path where KAGENT_CONTROLLER_URL is unset and in-cluster detection
+// yields no reachable candidate. The function must return nil so callers can
+// treat kagent as unavailable rather than dereferencing a bogus client.
+func TestNewKagentClientFromEnvReturnsNilWhenNoURLAndDetectFails(t *testing.T) {
+	// Ensure no override URL is present.
+	t.Setenv("KAGENT_CONTROLLER_URL", "")
+
+	// Detection will attempt real in-cluster hostnames which do not resolve
+	// in the test environment; each request fails fast via DNS lookup error.
+	// We assert the fallback returns nil rather than panicking or returning
+	// a client with an empty baseURL.
+	client := NewKagentClientFromEnv()
+	assert.Nil(t, client, "expected nil client when detection fails")
+}

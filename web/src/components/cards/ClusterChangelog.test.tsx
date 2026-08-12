@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { ClusterChangelog } from './ClusterChangelog'
@@ -62,6 +62,11 @@ describe('ClusterChangelog', () => {
     vi.clearAllMocks()
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-01-01T12:00:00.000Z'))
+  })
+
+  afterEach(() => {
+    vi.clearAllTimers()
+    vi.useRealTimers()
   })
 
   it('renders skeleton state when showSkeleton is true', () => {

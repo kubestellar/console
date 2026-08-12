@@ -1,10 +1,14 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterAll } from 'vitest';
 import * as derive from './derive';
 
 const { describePhase, workloadFromPodName } = derive.__testables;
 const now = Date.now();
 vi.useFakeTimers();
 vi.setSystemTime(now);
+
+afterAll(() => {
+  vi.useRealTimers();
+});
 
 describe('derivePhase', () => {
   it('returns correct label/color/percent/phase for known steps', () => {
