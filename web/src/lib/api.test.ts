@@ -59,6 +59,7 @@ describe('api.ts - HTTP client layer', () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
+    vi.useRealTimers()
   })
 
   describe('Error classes', () => {
