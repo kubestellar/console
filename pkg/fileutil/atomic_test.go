@@ -2,6 +2,7 @@ package fileutil
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -199,4 +200,169 @@ func TestAtomicWriteFile(t *testing.T) {
 			t.Errorf("temp files not cleaned up: before=%d, after=%d", len(beforeFiles), len(afterFiles))
 		}
 	})
+}
+
+// fakeTempFile is a tempFile whose Write/Chmod/Sync/Close methods can be
+// programmed to return errors. It backs the fault-injection tests below.
+type fakeTempFile struct {
+	name       string
+	writeErr   error
+	chmodErr   error
+	syncErr    error
+	closeErr   error
+	closed     bool
+	closeCount int
+}
+
+func (f *fakeTempFile) Name() string { return f.name }
+func (f *fakeTempFile) Write(p []byte) (int, error) {
+	if f.writeErr != nil {
+		return 0, f.writeErr
+	}
+	return len(p), nil
+}
+func (f *fakeTempFile) Chmod(mode os.FileMode) error { return f.chmodErr }
+func (f *fakeTempFile) Sync() error                  { return f.syncErr }
+func (f *fakeTempFile) Close() error {
+	f.closeCount++
+	f.closed = true
+	return f.closeErr
+}
+
+// withFakeTempFile installs a fakeTempFile-backed newTempFile for the duration
+// of the test. The temp file "name" is created on disk in tmpDir so the
+// cleanup-path os.Remove call has a real path to unlink; the test then asserts
+// the file is gone.
+func withFakeTempFile(t *testing.T, tmpDir string, fake *fakeTempFile) string {
+	t.Helper()
+	realPath := filepath.Join(tmpDir, ".atomic-fake.tmp")
+	if err := os.WriteFile(realPath, []byte("stub"), 0600); err != nil {
+		t.Fatalf("seed temp: %v", err)
+	}
+	fake.name = realPath
+
+	orig := newTempFile
+	newTempFile = func(dir, pattern string) (tempFile, error) {
+		return fake, nil
+	}
+	t.Cleanup(func() { newTempFile = orig })
+	return realPath
+}
+
+func TestAtomicWriteFile_CreateTempError_Injected(t *testing.T) {
+	tmpDir := t.TempDir()
+	injected := errors.New("boom-create")
+
+	orig := newTempFile
+	newTempFile = func(dir, pattern string) (tempFile, error) {
+		return nil, injected
+	}
+	t.Cleanup(func() { newTempFile = orig })
+
+	err := AtomicWriteFile(filepath.Join(tmpDir, "out.txt"), []byte("x"), 0644)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, injected) {
+		t.Errorf("expected wrapped %v, got %v", injected, err)
+	}
+	if !strings.Contains(err.Error(), "create temp") {
+		t.Errorf("expected 'create temp' prefix, got %v", err)
+	}
+}
+
+func TestAtomicWriteFile_WriteError(t *testing.T) {
+	tmpDir := t.TempDir()
+	injected := errors.New("boom-write")
+	fake := &fakeTempFile{writeErr: injected}
+	tmpPath := withFakeTempFile(t, tmpDir, fake)
+
+	err := AtomicWriteFile(filepath.Join(tmpDir, "out.txt"), []byte("data"), 0644)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, injected) {
+		t.Errorf("expected wrapped %v, got %v", injected, err)
+	}
+	if !strings.Contains(err.Error(), "write temp") {
+		t.Errorf("expected 'write temp' prefix, got %v", err)
+	}
+	if !fake.closed {
+		t.Error("expected temp file to be closed on write error")
+	}
+	if _, err := os.Stat(tmpPath); !os.IsNotExist(err) {
+		t.Errorf("expected temp file removed, stat err=%v", err)
+	}
+}
+
+func TestAtomicWriteFile_ChmodError(t *testing.T) {
+	tmpDir := t.TempDir()
+	injected := errors.New("boom-chmod")
+	fake := &fakeTempFile{chmodErr: injected}
+	tmpPath := withFakeTempFile(t, tmpDir, fake)
+
+	err := AtomicWriteFile(filepath.Join(tmpDir, "out.txt"), []byte("data"), 0644)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, injected) {
+		t.Errorf("expected wrapped %v, got %v", injected, err)
+	}
+	if !strings.Contains(err.Error(), "chmod temp") {
+		t.Errorf("expected 'chmod temp' prefix, got %v", err)
+	}
+	if !fake.closed {
+		t.Error("expected temp file to be closed on chmod error")
+	}
+	if _, err := os.Stat(tmpPath); !os.IsNotExist(err) {
+		t.Errorf("expected temp file removed, stat err=%v", err)
+	}
+}
+
+func TestAtomicWriteFile_SyncError(t *testing.T) {
+	tmpDir := t.TempDir()
+	injected := errors.New("boom-sync")
+	fake := &fakeTempFile{syncErr: injected}
+	tmpPath := withFakeTempFile(t, tmpDir, fake)
+
+	err := AtomicWriteFile(filepath.Join(tmpDir, "out.txt"), []byte("data"), 0644)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, injected) {
+		t.Errorf("expected wrapped %v, got %v", injected, err)
+	}
+	if !strings.Contains(err.Error(), "fsync temp") {
+		t.Errorf("expected 'fsync temp' prefix, got %v", err)
+	}
+	if !fake.closed {
+		t.Error("expected temp file to be closed on sync error")
+	}
+	if _, err := os.Stat(tmpPath); !os.IsNotExist(err) {
+		t.Errorf("expected temp file removed, stat err=%v", err)
+	}
+}
+
+func TestAtomicWriteFile_CloseError(t *testing.T) {
+	tmpDir := t.TempDir()
+	injected := errors.New("boom-close")
+	fake := &fakeTempFile{closeErr: injected}
+	tmpPath := withFakeTempFile(t, tmpDir, fake)
+
+	err := AtomicWriteFile(filepath.Join(tmpDir, "out.txt"), []byte("data"), 0644)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, injected) {
+		t.Errorf("expected wrapped %v, got %v", injected, err)
+	}
+	if !strings.Contains(err.Error(), "close temp") {
+		t.Errorf("expected 'close temp' prefix, got %v", err)
+	}
+	if fake.closeCount != 1 {
+		t.Errorf("expected Close called exactly once, got %d", fake.closeCount)
+	}
+	if _, err := os.Stat(tmpPath); !os.IsNotExist(err) {
+		t.Errorf("expected temp file removed, stat err=%v", err)
+	}
 }
