@@ -221,6 +221,26 @@ jobs:
               }
             }
             
+            // All guardrails passed -- clear any stale `scanner-checks-failing` label left
+            // over from a prior run that genuinely failed (or, before #22442, a false-fail
+            // on in-flight checks). removeLabel 404s if the label isn't currently on the
+            // PR; that's the expected/common case, not an error, so it's caught and ignored.
+            const STALE_FAILING_LABEL = 'scanner-checks-failing';
+            try {
+              await github.rest.issues.removeLabel({
+                owner,
+                repo,
+                issue_number: pr.number,
+                name: STALE_FAILING_LABEL
+              });
+              core.info(`🧹 Removed stale '${STALE_FAILING_LABEL}' label.`);
+            } catch (e) {
+              if (e.status !== 404) {
+                throw e;
+              }
+              // Label wasn't present -- nothing to clean up.
+            }
+
             core.info('✅ All scanner merge guardrails passed');
             core.summary
               .addHeading('Scanner Merge Guardrails: Passed')
