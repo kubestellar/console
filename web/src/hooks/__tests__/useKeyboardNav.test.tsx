@@ -6,16 +6,30 @@ import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { useKeyboardNav, useTabKeyboardNav } from '../useKeyboardNav'
 
+// Test harness string constants for i18n
+const TEST_STRINGS = {
+  trigger: 'Trigger',
+  first: 'First',
+  second: 'Second',
+  third: 'Third',
+  overview: 'Overview',
+  details: 'Details',
+  history: 'History',
+  overviewPanel: 'Overview panel',
+  detailsPanel: 'Details panel',
+  historyPanel: 'History panel',
+} as const
+
 function DropdownHarness({ onSelect }: { onSelect: (value: string) => void }) {
   const nav = useKeyboardNav({ selector: '[role="option"]:not([disabled])', orientation: 'vertical' })
 
   return (
     <div>
-      <button type="button">Trigger</button>
+      <button type="button">{TEST_STRINGS.trigger}</button>
       <div ref={nav.containerRef} role="listbox" onKeyDown={nav.handleKeyDown}>
-        <button role="option" type="button" onClick={() => onSelect('first')}>First</button>
-        <button role="option" type="button" onClick={() => onSelect('second')}>Second</button>
-        <button role="option" type="button" onClick={() => onSelect('third')}>Third</button>
+        <button role="option" type="button" onClick={() => onSelect('first')}>{TEST_STRINGS.first}</button>
+        <button role="option" type="button" onClick={() => onSelect('second')}>{TEST_STRINGS.second}</button>
+        <button role="option" type="button" onClick={() => onSelect('third')}>{TEST_STRINGS.third}</button>
       </div>
     </div>
   )
@@ -32,13 +46,13 @@ function TabsHarness() {
   return (
     <div>
       <div {...tabListProps}>
-        <button {...getTabProps('overview')}>Overview</button>
-        <button {...getTabProps('details')}>Details</button>
-        <button {...getTabProps('history')}>History</button>
+        <button {...getTabProps('overview')}>{TEST_STRINGS.overview}</button>
+        <button {...getTabProps('details')}>{TEST_STRINGS.details}</button>
+        <button {...getTabProps('history')}>{TEST_STRINGS.history}</button>
       </div>
-      {activeTab === 'overview' && <div {...getTabPanelProps('overview')}>Overview panel</div>}
-      {activeTab === 'details' && <div {...getTabPanelProps('details')}>Details panel</div>}
-      {activeTab === 'history' && <div {...getTabPanelProps('history')}>History panel</div>}
+      {activeTab === 'overview' && <div {...getTabPanelProps('overview')}>{TEST_STRINGS.overviewPanel}</div>}
+      {activeTab === 'details' && <div {...getTabPanelProps('details')}>{TEST_STRINGS.detailsPanel}</div>}
+      {activeTab === 'history' && <div {...getTabPanelProps('history')}>{TEST_STRINGS.historyPanel}</div>}
     </div>
   )
 }
