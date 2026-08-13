@@ -86,7 +86,8 @@ func (q *quantumWorkloadCache) isRunning(k8sClient *k8s.MultiClusterClient) bool
 		ctx, cancel := context.WithTimeout(context.Background(), quantumDetectionTimeout)
 		defer cancel()
 
-		clusters, err := k8sClient.ListClusters(ctx)
+		// Use DeduplicatedClusters to avoid duplicate physical clusters
+		clusters, err := k8sClient.DeduplicatedClusters(ctx)
 		if err == nil {
 			for _, cluster := range clusters {
 				deployments, err := k8sClient.GetDeployments(ctx, cluster.Context, quantumWorkloadNamespace)
