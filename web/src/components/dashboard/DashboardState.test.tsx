@@ -108,7 +108,7 @@ vi.mock('../../hooks/useWorkloads', () => ({
 
 const mockUseCardGridNavigation = vi.fn()
 vi.mock('../../hooks/useCardGridNavigation', () => ({
-  useCardGridNavigation: () => mockUseCardGridNavigation(),
+  useCardGridNavigation: (opts: unknown) => mockUseCardGridNavigation(opts),
 }))
 
 const mockUseModalState = vi.fn()
@@ -500,6 +500,20 @@ describe('useDashboardState — sensor/collision passthrough', () => {
     mockUseDashboardSensors.mockReturnValue(fakeSensors)
     const { result } = renderHook(() => useDashboardState())
     expect(result.current.sensors).toBe(fakeSensors)
+  })
+})
+
+describe('useDashboardState — card grid navigation', () => {
+  it('passes a stable onExpandCard callback to useCardGridNavigation across re-renders', () => {
+    mockUseCardGridNavigation.mockClear()
+    const { result } = renderHook(() => useDashboardState())
+    const firstOnExpandCard = mockUseCardGridNavigation.mock.calls[0][0].onExpandCard
+    act(() => {
+      result.current.setAutoRefresh(false)
+    })
+    const lastCallIndex = mockUseCardGridNavigation.mock.calls.length - 1
+    const secondOnExpandCard = mockUseCardGridNavigation.mock.calls[lastCallIndex][0].onExpandCard
+    expect(secondOnExpandCard).toBe(firstOnExpandCard)
   })
 })
 
