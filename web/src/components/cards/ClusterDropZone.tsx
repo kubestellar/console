@@ -88,15 +88,15 @@ export function ClusterDropZone({
       <div className={cn(
         'glass rounded-xl border p-4 w-72 shadow-2xl backdrop-blur-xs',
         isDemo
-          ? 'border-yellow-500/50 bg-yellow-50/95 dark:bg-yellow-900/20'
-          : 'border-border/50 bg-white/95 dark:bg-gray-900/95'
+          ? 'border-yellow-500/50 bg-yellow-500/10'
+          : 'border-border/50'
       )}>
         <div className="flex items-center gap-2 mb-3">
           <Server className="w-5 h-5 text-blue-500" />
           <div>
-            <div className="text-sm font-medium text-gray-900 dark:text-foreground">
+            <div className="text-sm font-medium text-foreground">
               Deploy Workload
-              {isDemo && <span className="ml-2 text-xs text-yellow-600 dark:text-yellow-400">(Demo)</span>}
+              {isDemo && <span className="ml-2 text-xs text-yellow-400">(Demo)</span>}
             </div>
             <div className="text-xs text-muted-foreground">
               {draggedWorkload.name} ({draggedWorkload.type})
@@ -128,7 +128,7 @@ export function ClusterDropZone({
           </div>
         )}
 
-        <div className="mt-3 pt-3 border-t border-gray-200 dark:border-border">
+        <div className="mt-3 pt-3 border-t border-border">
           <p className="text-xs text-muted-foreground text-center">
             {isDemo ? 'Connect clusters to enable real deployments' : 'Drop workload on a cluster to deploy'}
           </p>
@@ -169,8 +169,8 @@ function DroppableCluster({ cluster, workload, onDeploy }: DroppableClusterProps
       className={cn(
         'flex items-start gap-3 px-3 py-3 rounded-lg border transition-all cursor-pointer',
         isOver
-          ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-500 scale-[1.02] shadow-lg'
-          : 'bg-gray-50 dark:bg-secondary/50 border-gray-200 dark:border-border hover:border-blue-300 dark:hover:border-blue-600'
+          ? 'bg-blue-500/20 border-blue-500 scale-[1.02] shadow-lg'
+          : 'bg-secondary/30 border-border/50 hover:border-blue-500/50'
       )}
       onClick={handleClick}
       onKeyDown={(e) => {

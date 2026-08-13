@@ -12,13 +12,13 @@ describe('Button Component', () => {
   it('applies the primary variant', () => {
     render(<Button variant="primary">Primary</Button>)
     const btn = screen.getByRole('button')
-    expect(btn.className).toContain('bg-blue-600')
+    expect(btn.className).toContain('bg-primary')
   })
 
   it('applies the danger variant', () => {
     render(<Button variant="danger">Delete</Button>)
     const btn = screen.getByRole('button')
-    expect(btn.className).toContain('bg-red-600')
+    expect(btn.className).toContain('bg-destructive')
   })
 
   it('applies the small size', () => {
