@@ -27,7 +27,8 @@ func (h *ConsolePersistenceHandlers) evaluateClusterGroup(ctx context.Context, g
 
 	// Apply dynamic filters
 	if h.k8sClient != nil && len(group.Spec.DynamicFilters) > 0 {
-		clusters, err := h.k8sClient.ListClusters(ctx)
+		// Use DeduplicatedClusters to avoid duplicate physical clusters
+		clusters, err := h.k8sClient.DeduplicatedClusters(ctx)
 		if err == nil {
 			// Get cached health data (no extra network calls).
 			// GetCachedHealth always returns a non-nil map; individual entries
