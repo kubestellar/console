@@ -140,10 +140,10 @@ export function MissionBrowserRecommendedTab({
                 <li>
                   Add it to your{' '}
                   <code className="px-1 py-0.5 bg-gray-200 dark:bg-white/10 rounded text-xs font-mono">.env</code>{' '}
-                  file:
-                  <pre className="mt-1 px-3 py-2 bg-black/40 rounded text-xs font-mono text-purple-300 select-all">
+                  file:<br />
+                  <code className="block mt-1 px-3 py-2 bg-black/40 rounded text-xs font-mono text-purple-300 select-all">
                     GITHUB_TOKEN=ghp_your_token_here
-                  </pre>
+                  </code>
                 </li>
                 <li>{tWithFallback('restartConsole', 'Restart the console')}</li>
               </ol>
