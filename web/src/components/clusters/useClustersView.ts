@@ -24,7 +24,6 @@ import type { GPUNode, NVIDIAOperatorStatus } from '../../hooks/useMCP'
 import type { ClusterLayoutMode } from './components'
 import type { ClusterGroup } from '../../hooks/useGlobalFilters'
 import type { StartMissionParams } from '../../hooks/useMissions.types'
-import type { NavigateFunction } from 'react-router-dom'
 
 const MIN_CLUSTER_PROGRESS_TOTAL = 1
 
@@ -98,8 +97,6 @@ export interface ClustersViewState {
   // Dashboard stat integration
   getStatValue: (blockId: string) => StatBlockValue
   clusterGroundtruthFields: Record<string, number>
-  // Navigation
-  navigate: NavigateFunction
 }
 
 /**
@@ -264,6 +261,5 @@ export function useClustersView(): ClustersViewState {
     stats,
     getStatValue,
     clusterGroundtruthFields,
-    navigate,
   }
 }
