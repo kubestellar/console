@@ -78,8 +78,9 @@ export function OrbitStatusTracker({
           {/* Cadence selector */}
           <div className="relative">
             <button
+              type="button"
               onClick={() => setShowCadenceMenu(!showCadenceMenu)}
-              className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-muted-foreground hover:text-foreground bg-secondary/50 hover:bg-secondary rounded-md transition-colors"
+              className="flex items-center gap-1 min-h-11 min-w-11 px-2 py-1 text-[10px] font-medium text-muted-foreground hover:text-foreground bg-secondary/50 hover:bg-secondary rounded-md transition-colors"
             >
               <Clock className="w-3 h-3" />
               {t(`orbit.cadence${cadence.charAt(0).toUpperCase() + cadence.slice(1)}` as 'orbit.cadenceDaily')}
@@ -90,9 +91,10 @@ export function OrbitStatusTracker({
                 {CADENCE_OPTIONS.map(option => (
                   <button
                     key={option}
+                    type="button"
                     onClick={() => { onChangeCadence(option); setShowCadenceMenu(false) }}
                     className={cn(
-                      'w-full px-3 py-1 text-[10px] text-left hover:bg-secondary/50 transition-colors',
+                      'w-full min-h-11 px-3 py-1 text-[10px] text-left hover:bg-secondary/50 transition-colors',
                       cadence === option ? 'text-primary font-medium' : 'text-foreground',
                     )}
                   >
