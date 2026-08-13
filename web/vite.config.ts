@@ -465,6 +465,12 @@ export default defineConfig(({ mode }) => ({
         'src/test/',
         '**/*.test.{ts,tsx}',
         '**/*.spec.{ts,tsx}',
+        // Dev/QA harness pages: not user-facing production code; exclude from
+        // coverage denominators so they don't skew the pages coverage ratio.
+        'src/pages/*PerfTest.tsx',
+        'src/pages/UnifiedCardTest.tsx',
+        'src/pages/UnifiedDashboardTest.tsx',
+        'src/pages/UnifiedStatsTest.tsx',
         '**/*.d.ts',
         '**/*.md',
         '**/demo*Data*.{ts,tsx}',
