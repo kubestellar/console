@@ -210,9 +210,9 @@ export function useDashboardState() {
   // ── Card grid navigation ─────────────────────────────────────────────────
 
   const expandTriggersRef = useRef<Map<string, () => void>>(new Map())
-  const handleExpandCard = (cardId: string) => {
+  const handleExpandCard = useCallback((cardId: string) => {
     expandTriggersRef.current.get(cardId)?.()
-  }
+  }, [])
   const { registerCardRef, handleGridKeyDown } = useCardGridNavigation({
     cards: localCards,
     onExpandCard: handleExpandCard,
