@@ -134,4 +134,123 @@ describe('Welcome', () => {
     renderWelcome()
     expect(screen.getByText('Ready to try it?')).toBeInTheDocument()
   })
+
+  // sanitizeRef normalization is exercised through the analytics ref parameter
+  // that emitWelcomeViewed / emitWelcomeActioned receive on mount.
+  describe('ref query param normalization (sanitizeRef)', () => {
+    it('passes through a known ref (cncf)', async () => {
+      await act(async () => {
+        renderWelcome('?ref=cncf')
+      })
+      expect(analyticsMocks.emitWelcomeViewed).toHaveBeenCalledWith('cncf')
+    })
+
+    it('lowercases and passes through a known ref with mixed case (KubeCon)', async () => {
+      await act(async () => {
+        renderWelcome('?ref=KubeCon')
+      })
+      expect(analyticsMocks.emitWelcomeViewed).toHaveBeenCalledWith('kubecon')
+    })
+
+    it('accepts an intern-NN utm_term pattern', async () => {
+      await act(async () => {
+        renderWelcome('?ref=intern-42')
+      })
+      expect(analyticsMocks.emitWelcomeViewed).toHaveBeenCalledWith('intern-42')
+    })
+
+    it('maps an unknown ref to "other"', async () => {
+      await act(async () => {
+        renderWelcome('?ref=some-random-source')
+      })
+      expect(analyticsMocks.emitWelcomeViewed).toHaveBeenCalledWith('other')
+    })
+
+    it('strips disallowed characters before matching', async () => {
+      await act(async () => {
+        renderWelcome('?ref=cncf!!!')
+      })
+      expect(analyticsMocks.emitWelcomeViewed).toHaveBeenCalledWith('cncf')
+    })
+
+    it('returns "direct" when ref is empty after sanitization', async () => {
+      await act(async () => {
+        renderWelcome('?ref=%21%21%21')
+      })
+      expect(analyticsMocks.emitWelcomeViewed).toHaveBeenCalledWith('direct')
+    })
+  })
+
+  // Meta description lifecycle (#7423 / #7553):
+  //   - on mount: set meta description to the Welcome copy
+  //   - on unmount: if a meta[name=description] existed before, restore its
+  //     previous content; if we created it, remove it entirely
+  describe('meta description lifecycle', () => {
+    it('sets meta[name=description] content on mount', async () => {
+      await act(async () => {
+        renderWelcome()
+      })
+      const meta = document.querySelector('meta[name="description"]')
+      expect(meta).not.toBeNull()
+      expect(meta?.getAttribute('content')).toMatch(/kubernetes/i)
+    })
+
+    it('restores the previous meta description content on unmount (#7423)', async () => {
+      const existing = document.createElement('meta')
+      existing.setAttribute('name', 'description')
+      existing.setAttribute('content', 'previous description')
+      document.head.appendChild(existing)
+
+      let unmount: () => void = () => {}
+      await act(async () => {
+        const result = renderWelcome()
+        unmount = result.unmount
+      })
+      expect(
+        document.querySelector('meta[name="description"]')?.getAttribute('content'),
+      ).toMatch(/kubernetes/i)
+
+      await act(async () => {
+        unmount()
+      })
+      expect(
+        document.querySelector('meta[name="description"]')?.getAttribute('content'),
+      ).toBe('previous description')
+
+      existing.remove()
+    })
+
+    it('removes the meta description tag on unmount when it was created by Welcome (#7553)', async () => {
+      // Ensure no pre-existing description tag
+      document.querySelectorAll('meta[name="description"]').forEach((n) => n.remove())
+
+      let unmount: () => void = () => {}
+      await act(async () => {
+        const result = renderWelcome()
+        unmount = result.unmount
+      })
+      expect(document.querySelector('meta[name="description"]')).not.toBeNull()
+
+      await act(async () => {
+        unmount()
+      })
+      expect(document.querySelector('meta[name="description"]')).toBeNull()
+    })
+
+    it('restores the previous document.title on unmount', async () => {
+      document.title = 'previous title'
+
+      let unmount: () => void = () => {}
+      await act(async () => {
+        const result = renderWelcome()
+        unmount = result.unmount
+      })
+      expect(document.title).toBe('KubeStellar Console — Open Source Kubernetes Dashboard')
+
+      await act(async () => {
+        unmount()
+      })
+      expect(document.title).toBe('previous title')
+    })
+  })
 })
