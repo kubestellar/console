@@ -170,7 +170,7 @@ function EPPHealthInternal() {
         <div className="h-1.5 rounded-full bg-muted/30 overflow-hidden">
           <div
             className={`h-full rounded-full transition-all ${
-              metrics.errorRate > 0.05 ? 'bg-red-500/70' : metrics.errorRate > 0.01 ? 'bg-yellow-500/70' : 'bg-green-500/70'
+              metrics.errorRate > 0.05 ? 'bg-status-error/70' : metrics.errorRate > 0.01 ? 'bg-status-warning/70' : 'bg-status-success/70'
             }`}
             style={{ width: `${Math.min(100, metrics.errorRate * 100 * 10)}%` }}
           />

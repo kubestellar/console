@@ -67,7 +67,7 @@ export const ClusterCardList = memo(function ClusterCardList({
                 <WifiOff className="w-3 h-3 text-yellow-400" />
               </div>
             ) : !isClusterHealthy(cluster) ? (
-              <div className="w-6 h-6 rounded-full bg-orange-500/20 flex items-center justify-center" title="Unhealthy">
+              <div className="w-6 h-6 rounded-full bg-status-error/20 flex items-center justify-center" title="Unhealthy">
                 <AlertCircle className="w-3 h-3 text-orange-400" />
               </div>
             ) : (

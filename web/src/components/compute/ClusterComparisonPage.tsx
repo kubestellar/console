@@ -171,7 +171,7 @@ export function ClusterComparisonPage() {
             {/* Cluster name and status */}
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-2">
-                <div className={`w-2 h-2 rounded-full ${cluster.healthy ? 'bg-green-400' : 'bg-red-400'}`} />
+                <div className={`w-2 h-2 rounded-full ${cluster.healthy ? 'bg-status-success' : 'bg-status-error'}`} />
                 <h3 className="text-lg font-semibold text-foreground truncate" title={cluster.name}>
                   {cluster.context || cluster.name}
                 </h3>

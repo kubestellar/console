@@ -74,7 +74,7 @@ export function UpdateIndicator({ showLabel = false }: UpdateIndicatorProps) {
     isUpgradeError && 'bg-red-500/10 text-status-error hover:bg-red-500/20',
     isUpgradeComplete && 'bg-green-500/10 text-status-success hover:bg-green-500/20',
     isUpgrading && 'bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20',
-    !isUpgrading && !isUpgradeComplete && !isUpgradeError && 'bg-green-500/10 text-status-success hover:bg-green-500/20',
+    !isUpgrading && !isUpgradeComplete && !isUpgradeError && 'bg-status-success/10 text-status-success hover:bg-status-success/20',
   )
 
   /** Resolve the tooltip title based on upgrade phase */

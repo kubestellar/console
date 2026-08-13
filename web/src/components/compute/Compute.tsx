@@ -280,7 +280,7 @@ export function Compute() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <div className={`w-2 h-2 rounded-full shrink-0 ${cluster.healthy ? 'bg-green-400' : 'bg-red-400'}`} />
+                      <div className={`w-2 h-2 rounded-full shrink-0 ${cluster.healthy ? 'bg-status-success' : 'bg-status-error'}`} />
                       <h4 className="font-medium text-foreground truncate" title={cluster.name}>
                         {cluster.context || cluster.name}
                       </h4>

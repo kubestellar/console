@@ -59,7 +59,7 @@ const VALUE_COLORS: Record<string, string> = {
   deployed: 'text-green-400',
   bound: 'text-green-400',
   normal: 'text-blue-400',
-  unhealthy: 'text-red-400',
+  unhealthy: 'text-status-error',
   warning: 'text-yellow-400',
   pending: 'text-yellow-400',
   unreachable: 'text-yellow-400',

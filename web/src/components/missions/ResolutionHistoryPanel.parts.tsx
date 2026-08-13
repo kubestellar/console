@@ -105,7 +105,7 @@ export function ResolutionCard({
               <span className={cn(
                 "text-2xs",
                 successRate >= 80 ? "text-green-400" :
-                successRate >= 50 ? "text-yellow-400" : "text-muted-foreground"
+                successRate >= 50 ? "text-status-warning" : "text-muted-foreground"
               )}>
                 {effectiveness.timesSuccessful}/{effectiveness.timesUsed}
               </span>

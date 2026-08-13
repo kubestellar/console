@@ -142,7 +142,7 @@ export const HardwareHealthCardHeader = memo(function HardwareHealthCardHeader({
       </div>
 
       <div className="grid grid-cols-2 @md:grid-cols-3 gap-1.5 @md:gap-2 mb-4">
-        <div className={cn('p-2 rounded-lg border', criticalCount > 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-green-500/10 border-green-500/20')}>
+        <div className={cn('p-2 rounded-lg border', criticalCount > 0 ? 'bg-status-error/10 border-status-error/20' : 'bg-status-success/10 border-status-success/20')}>
           <div className="text-xl font-bold text-foreground">{criticalCount}</div>
           <div className={cn('text-2xs', criticalCount > 0 ? 'text-status-error' : 'text-status-success')}>{t('common:common.critical', 'Critical')}</div>
         </div>
