@@ -90,7 +90,8 @@ export const stellarApi = {
       if (isAuthError(err)) {
         console.debug('stellar: getState skipped (no auth token)')
       } else {
-        console.error('stellar: getState failed:', err)
+        const errorMsg = err instanceof Error ? err.message : String(err)
+        console.error('[stellar] getState failed:', errorMsg, err)
       }
       if (!fallbackOnError) {
         throw err
@@ -118,7 +119,8 @@ export const stellarApi = {
       if (isAuthError(err)) {
         console.debug('stellar: getNotifications skipped (no auth token)')
       } else {
-        console.error('stellar: getNotifications failed:', err)
+        const errorMsg = err instanceof Error ? err.message : String(err)
+        console.error('[stellar] getNotifications failed:', errorMsg, err)
       }
       return []
     }
@@ -132,7 +134,8 @@ export const stellarApi = {
       if (isAuthError(err)) {
         console.debug('stellar: getMissions skipped (no auth token)')
       } else {
-        console.error('stellar: getMissions failed:', err)
+        const errorMsg = err instanceof Error ? err.message : String(err)
+        console.error('[stellar] getMissions failed:', errorMsg, err)
       }
       return []
     }
@@ -149,7 +152,8 @@ export const stellarApi = {
       if (isAuthError(err)) {
         console.debug('stellar: getActions skipped (no auth token)')
       } else {
-        console.error('stellar: getActions failed:', err)
+        const errorMsg = err instanceof Error ? err.message : String(err)
+        console.error('[stellar] getActions failed:', errorMsg, err)
       }
       return []
     }
@@ -197,7 +201,8 @@ export const stellarApi = {
       if (isAuthError(err)) {
         console.debug('stellar: getTasks skipped (no auth token)')
       } else {
-        console.error('stellar: getTasks failed:', err)
+        const errorMsg = err instanceof Error ? err.message : String(err)
+        console.error('[stellar] getTasks failed:', errorMsg, err)
       }
       return []
     }
@@ -259,7 +264,8 @@ export const stellarApi = {
       if (isAuthError(err)) {
         console.debug('stellar: getDigest skipped (no auth token)')
       } else {
-        console.error('stellar: getDigest failed:', err)
+        const errorMsg = err instanceof Error ? err.message : String(err)
+        console.error('[stellar] getDigest failed:', errorMsg, err)
       }
       return { digest: '', model: '', provider: '' }
     }
@@ -274,7 +280,8 @@ export const stellarApi = {
       if (isAuthError(err)) {
         console.debug('stellar: getProviders skipped (no auth token)')
       } else {
-        console.error('stellar: getProviders failed:', err)
+        const errorMsg = err instanceof Error ? err.message : String(err)
+        console.error('[stellar] getProviders failed:', errorMsg, err)
       }
       if (!fallbackOnError) {
         throw err
@@ -309,7 +316,8 @@ export const stellarApi = {
       if (isAuthError(err)) {
         console.debug('stellar: getWatches skipped (no auth token)')
       } else {
-        console.error('stellar: getWatches failed:', err)
+        const errorMsg = err instanceof Error ? err.message : String(err)
+        console.error('[stellar] getWatches failed:', errorMsg, err)
       }
       return []
     }
@@ -338,7 +346,8 @@ export const stellarApi = {
       if (isAuthError(err)) {
         console.debug('stellar: getAuditLog skipped (no auth token)')
       } else {
-        console.error('stellar: getAuditLog failed:', err)
+        const errorMsg = err instanceof Error ? err.message : String(err)
+        console.error('[stellar] getAuditLog failed:', errorMsg, err)
       }
       return []
     }
@@ -356,7 +365,8 @@ export const stellarApi = {
       if (isAuthError(err)) {
         console.debug('stellar: listSolves skipped (no auth token)')
       } else {
-        console.error('stellar: listSolves failed:', err)
+        const errorMsg = err instanceof Error ? err.message : String(err)
+        console.error('[stellar] listSolves failed:', errorMsg, err)
       }
       return []
     }
@@ -369,7 +379,8 @@ export const stellarApi = {
       if (isAuthError(err)) {
         console.debug('stellar: listActivity skipped (no auth token)')
       } else {
-        console.error('stellar: listActivity failed:', err)
+        const errorMsg = err instanceof Error ? err.message : String(err)
+        console.error('[stellar] listActivity failed:', errorMsg, err)
       }
       return []
     }

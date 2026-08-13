@@ -178,9 +178,9 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
                 return { cluster: cluster.name, data: data.results as GPUHealthCheckResult[] }
               }
             }
-          } catch {
+          } catch (err) {
             // Silent — CronJob may not be installed on this cluster
-          }
+            console.debug('[alerts] cronjob results fetch failed (optional):', err instanceof Error ? err.message : String(err))
           return null
         })
       )
@@ -223,9 +223,9 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
             nightlyE2ERef.current = data
           }
         }
-      } catch {
+      } catch (err) {
         // Silent — nightly E2E data is optional
-      }
+        console.debug('[alerts] nightly E2E fetch failed (optional):', err instanceof Error ? err.message : String(err))
     }
 
     const timer = setTimeout(fetchNightlyE2E, SECONDARY_FETCH_DELAY_MS)
@@ -480,9 +480,9 @@ Details: ${JSON.stringify(alert.details, null, 2)}`
             runbookEvidence = `\n\n--- Runbook Evidence (${runbook.title}) ---\n${result.enrichedPrompt}`
             console.debug(`Runbook "${runbook.title}" gathered ${result.stepResults.length} evidence steps`)
           }
-        } catch {
+        } catch (err) {
           // Silent failure - runbook is best-effort enhancement
-        }
+          console.debug('[alerts] runbook execution failed (best-effort):', err instanceof Error ? err.message : String(err))
       }
 
       const initialPrompt = `${basePrompt}${runbookEvidence}

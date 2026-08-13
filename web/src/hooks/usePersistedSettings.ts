@@ -109,13 +109,19 @@ export function usePersistedSettings() {
           // rather than 'error' to stay consistent with the initial load behaviour.
           const isNetworkError = lastError instanceof TypeError
           setSyncStatus(isNetworkError ? 'offline' : 'error')
+          console.error('[settings] failed to persist after retries:', {
+            attempt: 'final',
+            isNetworkError,
+            error: lastError instanceof Error ? lastError.message : String(lastError),
+          })
         }
         console.debug('[settings] failed to persist to local agent')
-      } catch {
+      } catch (err) {
         // Unexpected error — set error state so UI shows sync failed
         if (mountedRef.current) {
           setSyncStatus('error')
         }
+        console.error('[settings] unexpected error during persist:', err instanceof Error ? err.message : String(err), err)
       }
     }, DEBOUNCE_MS)
   }, [])
@@ -138,7 +144,7 @@ export function usePersistedSettings() {
       document.body.removeChild(a)
       safeRevokeObjectURL(url)
     } catch (err: unknown) {
-      console.error('[settings] export failed:', err)
+      console.error('[settings] export failed:', err instanceof Error ? err.message : String(err), err)
       throw err
     }
   }
@@ -161,7 +167,7 @@ export function usePersistedSettings() {
         setLastSaved(new Date())
       }
     } catch (err: unknown) {
-      console.error('[settings] import failed:', err)
+      console.error('[settings] import failed:', err instanceof Error ? err.message : String(err), err)
       throw err
     }
   }
@@ -214,10 +220,10 @@ export function usePersistedSettings() {
         if (!scheduledSave) {
           setSyncStatus('saved')
         }
-      } catch {
+      } catch (err) {
         // Agent unavailable — localStorage is sole source
         setSyncStatus('offline')
-        console.debug('[settings] local agent unavailable, using localStorage only')
+        console.debug('[settings] local agent unavailable, using localStorage only:', err instanceof Error ? err.message : String(err))
       } finally {
         if (mountedRef.current) {
           setLoaded(true)
