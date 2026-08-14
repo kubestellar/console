@@ -2,6 +2,7 @@ import { Bot, ChevronDown, ExternalLink } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { KagentAgent } from '../../lib/kagentBackend'
+import { useDropdownKeyNav } from '../../hooks/useDropdownKeyNav'
 
 interface KagentAgentPickerProps {
   agents: KagentAgent[]
@@ -16,6 +17,7 @@ export function KagentAgentPicker({ agents, selectedAgent, onSelect }: KagentAge
   const { t } = useTranslation(['common', 'cards'])
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const handleMenuKeyDown = useDropdownKeyNav(() => setOpen(false))
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -62,7 +64,11 @@ export function KagentAgentPicker({ agents, selectedAgent, onSelect }: KagentAge
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 mt-1 w-72 rounded-lg border border-border bg-popover shadow-lg z-dropdown max-h-64 overflow-y-auto">
+        <div
+          role="listbox"
+          onKeyDown={handleMenuKeyDown}
+          className="absolute top-full left-0 mt-1 w-72 rounded-lg border border-border bg-popover shadow-lg z-dropdown max-h-64 overflow-y-auto"
+        >
           {(agents || []).map((agent) => {
             const key = `${agent.namespace}/${agent.name}`
             const isSelected = selectedAgent?.name === agent.name && selectedAgent?.namespace === agent.namespace
@@ -72,6 +78,8 @@ export function KagentAgentPicker({ agents, selectedAgent, onSelect }: KagentAge
             return (
               <button
                 key={key}
+                role="option"
+                aria-selected={isSelected}
                 onClick={() => {
                   onSelect(agent)
                   setOpen(false)

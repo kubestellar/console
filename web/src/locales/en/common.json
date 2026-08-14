@@ -5467,7 +5467,13 @@
     "savedCount_other": "{{count}} saved",
     "deleteTitle": "Delete saved resolution?",
     "deleteMessage": "This saved resolution will be removed from your history. This action cannot be undone.",
-    "deleteConfirmLabel": "Delete resolution"
+    "deleteConfirmLabel": "Delete resolution",
+    "deleteSelectedTitle": "Delete selected resolutions?",
+    "deleteSelectedMessage": "{{count}} selected resolutions will be removed from your history. This action cannot be undone.",
+    "deleteSelectedConfirmLabel": "Delete selected",
+    "clearAllTitle": "Clear all resolutions?",
+    "clearAllMessage": "All saved resolutions will be removed from your history. This action cannot be undone.",
+    "clearAllConfirmLabel": "Clear all"
   },
   "missionBrowser": {
     "repoAddedToast": "Repository \"{{value}}\" added",
