@@ -46,7 +46,8 @@ func (h *ConsolePersistenceHandlers) checkClusterHealth(ctx context.Context, clu
 	}
 
 	// Try to get cluster info
-	clusters, err := h.k8sClient.ListClusters(ctx)
+	// Use DeduplicatedClusters to avoid duplicate physical clusters
+	clusters, err := h.k8sClient.DeduplicatedClusters(ctx)
 	if err != nil {
 		return store.ClusterHealthUnknown
 	}
