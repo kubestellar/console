@@ -34,6 +34,8 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
   const [showPersonal, setShowPersonal] = useState(true)
   const [showShared, setShowShared] = useState(true)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false)
+  const [confirmClearAll, setConfirmClearAll] = useState(false)
   const [exportResolution, setExportResolution] = useState<Resolution | null>(null)
   const [submitKBResolution, setSubmitKBResolution] = useState<Resolution | null>(null)
   const [viewingResolution, setViewingResolution] = useState<Resolution | null>(null)
@@ -71,6 +73,7 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
   }
 
   const handleClearAll = () => {
+    setConfirmClearAll(false)
     for (const resolution of (resolutions || [])) {
       deleteResolution(resolution.id)
     }
@@ -82,6 +85,7 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
   }
 
   const handleDeleteSelected = () => {
+    setConfirmBulkDelete(false)
     for (const id of selectedIds) {
       deleteResolution(id)
     }
@@ -164,7 +168,7 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
                   <Button
                     variant="danger"
                     size="sm"
-                    onClick={handleDeleteSelected}
+                    onClick={() => setConfirmBulkDelete(true)}
                     icon={<Trash2 className="w-3.5 h-3.5" />}
                   >
                     {t('actions.deleteSelected')} ({selectedIds.size})
@@ -190,7 +194,7 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
                   <Button
                     variant="danger"
                     size="sm"
-                    onClick={handleClearAll}
+                    onClick={() => setConfirmClearAll(true)}
                     icon={<Trash2 className="w-3.5 h-3.5" />}
                   >
                     {t('actions.clearAll')}
@@ -278,6 +282,28 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
         title={t('resolutionHistoryPanel.deleteTitle')}
         message={t('resolutionHistoryPanel.deleteMessage')}
         confirmLabel={t('resolutionHistoryPanel.deleteConfirmLabel')}
+        cancelLabel={t('actions.cancel')}
+        variant="danger"
+      />
+
+      <ConfirmDialog
+        isOpen={confirmBulkDelete}
+        onClose={() => setConfirmBulkDelete(false)}
+        onConfirm={handleDeleteSelected}
+        title={t('resolutionHistoryPanel.deleteSelectedTitle')}
+        message={t('resolutionHistoryPanel.deleteSelectedMessage', { count: selectedIds.size })}
+        confirmLabel={t('resolutionHistoryPanel.deleteSelectedConfirmLabel')}
+        cancelLabel={t('actions.cancel')}
+        variant="danger"
+      />
+
+      <ConfirmDialog
+        isOpen={confirmClearAll}
+        onClose={() => setConfirmClearAll(false)}
+        onConfirm={handleClearAll}
+        title={t('resolutionHistoryPanel.clearAllTitle')}
+        message={t('resolutionHistoryPanel.clearAllMessage')}
+        confirmLabel={t('resolutionHistoryPanel.clearAllConfirmLabel')}
         cancelLabel={t('actions.cancel')}
         variant="danger"
       />

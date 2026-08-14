@@ -9,6 +9,7 @@ import { CheckCircle2, AlertTriangle, XCircle, Clock, Play, ChevronDown, Chevron
 import type { OrbitRunHistoryEntry, OrbitCadence } from '../../lib/missions/types'
 import { ORBIT_CADENCE_HOURS } from '../../lib/constants/orbit'
 import { cn } from '../../lib/cn'
+import { useDropdownKeyNav } from '../../hooks/useDropdownKeyNav'
 
 /** Maximum history entries shown before "Show more" */
 const VISIBLE_HISTORY_COUNT = 5
@@ -40,6 +41,7 @@ export function OrbitStatusTracker({
   const [showAll, setShowAll] = useState(false)
   const [showCadenceMenu, setShowCadenceMenu] = useState(false)
   const [isRunningNow, setIsRunningNow] = useState(false)
+  const cadenceMenuKeyNav = useDropdownKeyNav(() => setShowCadenceMenu(false))
 
   const handleRunNow = async () => {
     setIsRunningNow(true)
@@ -87,11 +89,17 @@ export function OrbitStatusTracker({
               <ChevronDown className="w-2.5 h-2.5" />
             </button>
             {showCadenceMenu && (
-              <div className="absolute right-0 top-full mt-1 z-50 bg-popover border border-border rounded-md shadow-lg py-1">
+              <div
+                role="listbox"
+                onKeyDown={cadenceMenuKeyNav}
+                className="absolute right-0 top-full mt-1 z-50 bg-popover border border-border rounded-md shadow-lg py-1"
+              >
                 {CADENCE_OPTIONS.map(option => (
                   <button
                     key={option}
                     type="button"
+                    role="option"
+                    aria-selected={cadence === option}
                     onClick={() => { onChangeCadence(option); setShowCadenceMenu(false) }}
                     className={cn(
                       'w-full min-h-11 px-3 py-1 text-[10px] text-left hover:bg-secondary/50 transition-colors',
