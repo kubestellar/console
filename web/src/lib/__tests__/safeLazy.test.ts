@@ -153,11 +153,9 @@ describe('safeLazy', () => {
 
     // Advance past timeout (5s) + retry delays for each attempt
     // Attempt 1: 5s timeout → reject → 500ms delay
-    await vi.advanceTimersByTimeAsync(5_000)
-    await vi.advanceTimersByTimeAsync(500)
+    await vi.advanceTimersByTimeAsync(5_500)
     // Attempt 2: 5s timeout → reject → 1000ms delay
-    await vi.advanceTimersByTimeAsync(5_000)
-    await vi.advanceTimersByTimeAsync(1_000)
+    await vi.advanceTimersByTimeAsync(6_000)
     // Attempt 3: 5s timeout → reject (no more retries)
     await vi.advanceTimersByTimeAsync(5_000)
 
