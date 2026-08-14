@@ -182,9 +182,9 @@ describe('OrbitStatusTracker', () => {
 
     await user.click(screen.getByRole('button', { name: 'orbit.cadenceWeekly' }))
 
-    expect(screen.getByRole('button', { name: 'orbit.cadenceDaily' })).toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: 'orbit.cadenceWeekly' })).toHaveLength(2)
-    expect(screen.getByRole('button', { name: 'orbit.cadenceMonthly' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'orbit.cadenceDaily' })).toBeInTheDocument()
+    expect(screen.getAllByRole('option', { name: 'orbit.cadenceWeekly' })).toHaveLength(1)
+    expect(screen.getByRole('option', { name: 'orbit.cadenceMonthly' })).toBeInTheDocument()
   })
 
   it('calls onChangeCadence and closes the cadence menu when an option is selected', async () => {
@@ -192,10 +192,10 @@ describe('OrbitStatusTracker', () => {
     const { onChangeCadence } = renderComponent({ cadence: 'weekly' })
 
     await user.click(screen.getByRole('button', { name: 'orbit.cadenceWeekly' }))
-    await user.click(screen.getByRole('button', { name: 'orbit.cadenceDaily' }))
+    await user.click(screen.getByRole('option', { name: 'orbit.cadenceDaily' }))
 
     expect(onChangeCadence).toHaveBeenCalledWith('daily')
-    expect(screen.queryByRole('button', { name: 'orbit.cadenceDaily' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: 'orbit.cadenceDaily' })).not.toBeInTheDocument()
   })
 
   it('calls onRunNow when the run-now action is pressed', async () => {
