@@ -56,9 +56,18 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
 
   if (!isOpen) return null
 
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Prevent backdrop click from closing the modal (form safety)
+    // Only allow explicit close via X button or form submission
+    if (e.target === e.currentTarget) {
+      e.stopPropagation()
+    }
+  }
+
   return createPortal(
     <div
       className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-xs"
+      onClick={handleBackdropClick}
     >
       <ConfirmDialog
         isOpen={showDiscardConfirm}
