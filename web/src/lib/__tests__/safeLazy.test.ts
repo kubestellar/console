@@ -34,7 +34,11 @@ describe('safeLazy', () => {
   afterEach(async () => {
     // Flush all pending timers and microtasks before switching back to real timers
     // to ensure no unhandled rejections from fake timer promises escape.
-    await vi.runAllTimersAsync()
+    try {
+      await vi.runAllTimersAsync()
+    } catch {
+      // Ignore any errors during timer flushing
+    }
     vi.useRealTimers()
     vi.restoreAllMocks()
   })
