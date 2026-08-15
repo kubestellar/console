@@ -1,5 +1,7 @@
 // Pricing-rates info panel for the ClusterCosts card.
 // Extracted from ClusterCosts.tsx (issue #21615) — markup unchanged.
+// Pure UI sub-component — renders props (pricing/costs) provided by the parent;
+// no data fetching. Demo data support provided by ClusterCosts.tsx.
 import { ExternalLink } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../ui/StatusBadge'
