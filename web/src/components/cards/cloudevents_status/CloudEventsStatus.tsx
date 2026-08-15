@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Activity, AlertTriangle, CheckCircle, CircleDashed, RadioTower, Send } from 'lucide-react'
+import { Activity, AlertTriangle, CheckCircle, CircleDashed, RadioTower, Send, RefreshCw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { CardSearchInput, MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCloudEventsStatus } from './useCloudEventsStatus'
 import type { CloudEventResourceState } from './demoData'
 import { getHealthBadgeClasses } from '../../../lib/cards/statusColors'
+import { cn } from '../../../lib/cn'
 
 const STATUS_STYLE: Record<CloudEventResourceState, { badge: string; icon: React.ReactNode }> = {
   ready: {
@@ -28,7 +29,7 @@ export function CloudEventsStatus() {
   const { t } = useTranslation('cards')
   // Demo mode subscription is handled in useCloudEventsStatus via useCache, which
   // uses useSyncExternalStore(subscribeDemoMode, ...) to re-render on toggles.
-  const { data, error, showSkeleton, showEmptyState } = useCloudEventsStatus()
+  const { data, error, showSkeleton, showEmptyState, isRefreshing, refetch } = useCloudEventsStatus()
   const [search, setSearch] = useState('')
 
   const isHealthy = data.health === 'healthy'
@@ -88,6 +89,16 @@ export function CloudEventsStatus() {
           {isHealthy ? <CheckCircle className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
           {isHealthy ? t('cloudevents.healthy') : t('cloudevents.degraded')}
         </div>
+        <button
+          type="button"
+          onClick={refetch}
+          disabled={isRefreshing}
+          className="p-1.5 rounded-lg hover:bg-secondary/50 transition-colors disabled:opacity-50"
+          title={t('common.refresh')}
+          aria-label={t('common.refresh')}
+        >
+          <RefreshCw className={cn('w-4 h-4 text-muted-foreground', isRefreshing && 'animate-spin')} />
+        </button>
       </div>
 
       <div className="grid grid-cols-2 @md:grid-cols-4 gap-2">
