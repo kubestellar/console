@@ -2,9 +2,11 @@ import React from 'react'
 /**
  * Unit tests for YAMLEditorPanel (KubectlYAMLEditorPanel).
  * Covers: YAML textarea renders, validate button, apply button, clear button,
- * dry-run toggle, recent manifests list, copy/download actions, and snapshot.
+ * dry-run toggle, recent manifests list, copy/download side effects
+ * (clipboard, blob download, disabled states, and export failure toast),
+ * and snapshot.
  *
- * Closes #21103
+ * Closes #21103, #22503
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -47,7 +49,7 @@ vi.mock('../ui/StatusBadge', () => ({
 }))
 
 vi.mock('../ui/Toast', () => ({
-  useToast: () => ({ showToast: vi.fn() }),
+  useToast: vi.fn(() => ({ showToast: vi.fn() })),
 }))
 
 vi.mock('../../lib/clipboard', () => ({
@@ -150,14 +152,59 @@ describe('YAMLEditorPanel', () => {
   })
 
   // 5. Dry-run toggle
-  it('calls onToggleDryRun when dry-run checkbox is toggled', async () => {
+  it('calls onToggleDryRun when the dry-run button is clicked', async () => {
     const user = userEvent.setup()
     render(<YAMLEditorPanel {...defaultProps} />)
-    const checkbox = screen.queryByRole('checkbox')
-    if (checkbox) {
-      await user.click(checkbox)
-      expect(defaultProps.onToggleDryRun).toHaveBeenCalled()
-    }
+    await user.click(screen.getByTitle('dryRunDisabled'))
+    expect(defaultProps.onToggleDryRun).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows the dry-run enabled title and highlights the button when isDryRun is true', () => {
+    render(<YAMLEditorPanel {...defaultProps} isDryRun={true} />)
+    expect(screen.getByTitle('dryRunEnabled')).toBeInTheDocument()
+  })
+
+  // 5b. Copy action
+  it('copies YAML content to clipboard and appends output when copy button is clicked', async () => {
+    const { copyToClipboard } = await import('../../lib/clipboard')
+    const user = userEvent.setup()
+    render(<YAMLEditorPanel {...defaultProps} />)
+    await user.click(screen.getByTitle('copyYaml'))
+    expect(copyToClipboard).toHaveBeenCalledWith(defaultProps.yamlContent)
+    expect(defaultProps.onAddOutput).toHaveBeenCalledWith('yamlCopied')
+  })
+
+  it('disables the copy button when there is no YAML content', () => {
+    render(<YAMLEditorPanel {...defaultProps} yamlContent="" />)
+    expect(screen.getByTitle('copyYaml')).toBeDisabled()
+  })
+
+  // 5c. Export/download action
+  it('downloads YAML content when the download button is clicked', async () => {
+    const { downloadText } = await import('../../lib/download')
+    const user = userEvent.setup()
+    render(<YAMLEditorPanel {...defaultProps} />)
+    await user.click(screen.getByTitle('downloadYaml'))
+    expect(downloadText).toHaveBeenCalledWith('manifest.yaml', defaultProps.yamlContent, 'text/yaml')
+  })
+
+  it('disables the download button when there is no YAML content', () => {
+    render(<YAMLEditorPanel {...defaultProps} yamlContent="   " />)
+    expect(screen.getByTitle('downloadYaml')).toBeDisabled()
+  })
+
+  it('shows an error toast when the download fails', async () => {
+    const { downloadText } = await import('../../lib/download')
+    const { useToast } = await import('../ui/Toast')
+    const showToast = vi.fn()
+    vi.mocked(useToast).mockReturnValueOnce({ showToast })
+    vi.mocked(downloadText).mockReturnValueOnce({ ok: false, error: new Error('disk full') })
+
+    const user = userEvent.setup()
+    render(<YAMLEditorPanel {...defaultProps} />)
+    await user.click(screen.getByTitle('downloadYaml'))
+
+    expect(showToast).toHaveBeenCalledWith('exportYamlFailed', 'error')
   })
 
   // 6. YAML error display

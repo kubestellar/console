@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next'
 
 /** CSS classes for severity badge color coding. */
 export function severityColor(severity: string) {
@@ -34,8 +35,7 @@ export function typeIcon(type: string) {
 }
 
 /** Human-readable label for a security issue type. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function getTypeLabel(type: string, t: (...args: any[]) => unknown): string {
+export function getTypeLabel(type: string, t: TFunction): string {
   const labels: Record<string, string> = {
     privileged: String(t('security.privilegedContainers')),
     root: String(t('security.runAsRoot')),

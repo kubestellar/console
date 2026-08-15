@@ -9,7 +9,7 @@ import React from 'react'
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { CardFailureBanner, type CardFailureBannerProps } from '../CardErrorFallback'
+import { CardErrorFallback, CardFailureBanner, type CardFailureBannerProps } from '../CardErrorFallback'
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
@@ -20,6 +20,32 @@ vi.mock('react-i18next', () => ({
     },
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
+}))
+
+vi.mock('../DynamicCardErrorBoundary', () => ({
+  DynamicCardErrorBoundary: vi.fn(
+    ({
+      children,
+      fallbackTitle,
+      fallbackMessage,
+      fallbackRetryLabel,
+      fallbackReloadMessage,
+    }: {
+      children: React.ReactNode
+      fallbackTitle?: string
+      fallbackMessage?: string
+      fallbackRetryLabel?: (retriesLeft: number) => string
+      fallbackReloadMessage?: string
+    }) => (
+      <div data-testid="dynamic-card-error-boundary">
+        <span data-testid="fallback-title">{fallbackTitle}</span>
+        <span data-testid="fallback-message">{fallbackMessage}</span>
+        <span data-testid="fallback-retry-label">{fallbackRetryLabel?.(2)}</span>
+        <span data-testid="fallback-reload-message">{fallbackReloadMessage}</span>
+        {children}
+      </div>
+    )
+  ),
 }))
 
 function renderBanner(overrides: Partial<CardFailureBannerProps> = {}) {
@@ -151,5 +177,37 @@ describe('CardFailureBanner', () => {
     )
     // Banner unmounts entirely when not failed, so logs must be gone.
     expect(screen.queryByTestId('card-failure-logs')).toBeNull()
+  })
+})
+
+describe('CardErrorFallback', () => {
+  it('renders children inside DynamicCardErrorBoundary', () => {
+    render(
+      <CardErrorFallback cardId="cluster_health">
+        <p>card content</p>
+      </CardErrorFallback>
+    )
+    expect(screen.getByTestId('dynamic-card-error-boundary')).toBeTruthy()
+    expect(screen.getByText('card content')).toBeTruthy()
+  })
+
+  it('passes translated fallback title, message, and reload message to the error boundary', () => {
+    render(
+      <CardErrorFallback cardId="cluster_health">
+        <p>card content</p>
+      </CardErrorFallback>
+    )
+    expect(screen.getByTestId('fallback-title').textContent).toBe('cardWrapper.renderErrorTitle')
+    expect(screen.getByTestId('fallback-message').textContent).toBe('cardWrapper.renderErrorMessage')
+    expect(screen.getByTestId('fallback-reload-message').textContent).toBe('cardWrapper.renderReloadMessage')
+  })
+
+  it('builds a retry label using the number of retries left', () => {
+    render(
+      <CardErrorFallback cardId="cluster_health">
+        <p>card content</p>
+      </CardErrorFallback>
+    )
+    expect(screen.getByTestId('fallback-retry-label').textContent).toBe('cardWrapper.renderRetryLeft:2')
   })
 })
