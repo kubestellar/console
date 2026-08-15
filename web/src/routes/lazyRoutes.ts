@@ -42,11 +42,14 @@ export const NotFound = safeLazy(() => import('../components/NotFound'), 'defaul
 
 // Lazy-load Welcome (363 lines) and WhiteLabel (629 lines) — these are
 // non-critical public pages that benefit from code-splitting.
+// WhiteLabel.sections.tsx (~638 lines) is transitively lazy via this chunk.
 export const Welcome = safeLazy(() => import('../pages/Welcome'), 'Welcome')
 export const WhiteLabel = safeLazy(() => import('../pages/WhiteLabel'), 'WhiteLabel')
 
 // Lazy-load DrillDownModal — the drilldown views (~64 KB) are only needed
 // when a user clicks into a card detail, not on initial page render.
+// All *.parts.tsx files under drilldown/views/ are transitively lazy via
+// DrillDownModal.views.tsx, which uses safeLazy() for each view component.
 export const DrillDownModal = safeLazy(() => import('../components/drilldown/DrillDownModal'), 'DrillDownModal')
 
 export const CustomDashboard = safeLazy(() => import('../components/dashboard/CustomDashboard'), 'CustomDashboard')
