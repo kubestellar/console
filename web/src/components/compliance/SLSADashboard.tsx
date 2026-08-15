@@ -276,19 +276,19 @@ export const SLSADashboardContent = memo(function SLSADashboardContent() {
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
-            <p className="text-xs text-gray-400 uppercase tracking-wider">Total Artifacts</p>
-            <p className="text-2xl font-bold text-white mt-1">{summary.total_artifacts}</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Total Artifacts</p>
+            <p className="text-2xl font-bold text-foreground mt-1">{summary.total_artifacts}</p>
           </div>
           <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
-            <p className="text-xs text-gray-400 uppercase tracking-wider">Attested</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Attested</p>
             <p className="text-2xl font-bold text-green-400 mt-1">{summary.attested_artifacts}</p>
           </div>
           <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
-            <p className="text-xs text-gray-400 uppercase tracking-wider">Verified</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Verified</p>
             <p className="text-2xl font-bold text-green-400 mt-1">{summary.verified_attestations}</p>
           </div>
           <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
-            <p className="text-xs text-gray-400 uppercase tracking-wider">Reproducible</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Reproducible</p>
             <p className="text-2xl font-bold text-blue-400 mt-1">{reprodPct}%</p>
           </div>
         </div>
@@ -297,7 +297,7 @@ export const SLSADashboardContent = memo(function SLSADashboardContent() {
       {/* SLSA Level distribution */}
       {summary && (
         <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
-          <h3 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
+          <h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
             <Shield className="w-4 h-4 text-emerald-400" />
             SLSA Level Distribution
           </h3>
@@ -310,7 +310,7 @@ export const SLSADashboardContent = memo(function SLSADashboardContent() {
                 <div key={level} className={`rounded-lg border p-3 ${LEVEL_BG[level]}`}>
                   <div className="flex items-center justify-between mb-2">
                     <span className={`text-lg font-bold ${LEVEL_COLORS[level]}`}>L{level}</span>
-                    <span className="text-xs text-gray-400">{count} artifacts</span>
+                    <span className="text-xs text-muted-foreground">{count} artifacts</span>
                   </div>
                   <div className="w-full bg-gray-700 rounded-full h-2">
                     <div
@@ -318,7 +318,7 @@ export const SLSADashboardContent = memo(function SLSADashboardContent() {
                       style={{ width: `${pct}%` }}
                     />
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">{pct}%</p>
+                  <p className="text-xs text-muted-foreground mt-1">{pct}%</p>
                 </div>
               )
             })}
@@ -329,22 +329,22 @@ export const SLSADashboardContent = memo(function SLSADashboardContent() {
       {/* Source integrity */}
       {summary && (
         <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
-          <h3 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
+          <h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
             <Lock className="w-4 h-4 text-blue-400" />
             Source Integrity
           </h3>
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-green-400" />
-              <span className="text-sm text-gray-200">Pass: <span className="text-white font-medium">{summary.source_integrity_pass}</span></span>
+              <span className="text-sm text-muted-foreground">Pass: <span className="text-foreground font-medium">{summary.source_integrity_pass}</span></span>
             </div>
             <div className="flex items-center gap-2">
               <XCircle className="w-5 h-5 text-red-400" />
-              <span className="text-sm text-gray-200">Fail: <span className="text-white font-medium">{summary.source_integrity_fail}</span></span>
+              <span className="text-sm text-muted-foreground">Fail: <span className="text-foreground font-medium">{summary.source_integrity_fail}</span></span>
             </div>
             <div className="flex items-center gap-2">
               <Shield className="w-5 h-5 text-blue-400" />
-              <span className="text-sm text-gray-200">Reproducible: <span className="text-white font-medium">{summary.reproducible_builds}/{summary.total_builds}</span></span>
+              <span className="text-sm text-muted-foreground">Reproducible: <span className="text-foreground font-medium">{summary.reproducible_builds}/{summary.total_builds}</span></span>
             </div>
           </div>
         </div>
@@ -376,24 +376,24 @@ export const SLSADashboardContent = memo(function SLSADashboardContent() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-700 text-left">
-                <th className="py-2 px-3 text-gray-400 font-medium">Artifact</th>
-                <th className="py-2 px-3 text-gray-400 font-medium">Builder</th>
-                <th className="py-2 px-3 text-gray-400 font-medium">Level</th>
-                <th className="py-2 px-3 text-gray-400 font-medium">Source</th>
-                <th className="py-2 px-3 text-gray-400 font-medium">Status</th>
+                <th className="py-2 px-3 text-muted-foreground font-medium">Artifact</th>
+                <th className="py-2 px-3 text-muted-foreground font-medium">Builder</th>
+                <th className="py-2 px-3 text-muted-foreground font-medium">Level</th>
+                <th className="py-2 px-3 text-muted-foreground font-medium">Source</th>
+                <th className="py-2 px-3 text-muted-foreground font-medium">Status</th>
               </tr>
             </thead>
             <tbody>
               {(attestations || []).map((a) => (
                 <tr key={a.id} className="border-b border-gray-800 hover:bg-gray-800/30">
-                  <td className="py-2 px-3 text-white font-mono text-xs max-w-xs truncate">{a.artifact}</td>
-                  <td className="py-2 px-3 text-gray-200 text-xs">{a.builder}</td>
+                  <td className="py-2 px-3 text-foreground font-mono text-xs max-w-xs truncate">{a.artifact}</td>
+                  <td className="py-2 px-3 text-foreground text-xs">{a.builder}</td>
                   <td className="py-2 px-3">
                     <span className={`px-2 py-0.5 rounded text-xs border font-bold ${LEVEL_BG[a.slsa_level]} ${LEVEL_COLORS[a.slsa_level]}`}>
                       L{a.slsa_level}
                     </span>
                   </td>
-                  <td className="py-2 px-3 text-gray-200 font-mono text-xs max-w-xs truncate">{a.source_repo}</td>
+                  <td className="py-2 px-3 text-foreground font-mono text-xs max-w-xs truncate">{a.source_repo}</td>
                   <td className="py-2 px-3">
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs border ${STATUS_BG[a.status]} ${STATUS_COLORS[a.status]}`}>
                       {STATUS_ICON[a.status]}
@@ -413,18 +413,18 @@ export const SLSADashboardContent = memo(function SLSADashboardContent() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-700 text-left">
-                <th className="py-2 px-3 text-gray-400 font-medium">Artifact</th>
-                <th className="py-2 px-3 text-gray-400 font-medium">Builder</th>
-                <th className="py-2 px-3 text-gray-400 font-medium">Level</th>
-                <th className="py-2 px-3 text-gray-400 font-medium">Reproducible</th>
-                <th className="py-2 px-3 text-gray-400 font-medium">Hermetic</th>
+                <th className="py-2 px-3 text-muted-foreground font-medium">Artifact</th>
+                <th className="py-2 px-3 text-muted-foreground font-medium">Builder</th>
+                <th className="py-2 px-3 text-muted-foreground font-medium">Level</th>
+                <th className="py-2 px-3 text-muted-foreground font-medium">Reproducible</th>
+                <th className="py-2 px-3 text-muted-foreground font-medium">Hermetic</th>
               </tr>
             </thead>
             <tbody>
               {(provenance || []).map((p) => (
                 <tr key={p.id} className="border-b border-gray-800 hover:bg-gray-800/30">
-                  <td className="py-2 px-3 text-white font-mono text-xs max-w-xs truncate">{p.artifact}</td>
-                  <td className="py-2 px-3 text-gray-200 text-xs">{p.builder_id}</td>
+                  <td className="py-2 px-3 text-foreground font-mono text-xs max-w-xs truncate">{p.artifact}</td>
+                  <td className="py-2 px-3 text-foreground text-xs">{p.builder_id}</td>
                   <td className="py-2 px-3">
                     <span className={`px-2 py-0.5 rounded text-xs border font-bold ${LEVEL_BG[p.build_level]} ${LEVEL_COLORS[p.build_level]}`}>
                       L{p.build_level}
