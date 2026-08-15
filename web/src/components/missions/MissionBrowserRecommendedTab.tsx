@@ -179,6 +179,7 @@ export function MissionBrowserRecommendedTab({
                 }}
                 className="p-0.5 rounded hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-colors"
                 title={tWithFallback('missions.recommended.refreshRecommendations', 'Refresh recommendations')}
+                aria-label={tWithFallback('missions.recommended.refreshRecommendations', 'Refresh recommendations')}
               >
                 <RefreshCw className={cn('w-3 h-3', loadingRecommendations && 'animate-spin')} />
               </button>
