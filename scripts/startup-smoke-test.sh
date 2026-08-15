@@ -92,8 +92,10 @@ assert_page_has_content() {
   local label="${3:-page}"
 
   local body http_code
-  http_code=$(curl -sL -o /tmp/smoke-body -w "%{http_code}" --max-time 10 "$url" 2>/dev/null) || http_code="000"
-  body=$(cat /tmp/smoke-body 2>/dev/null)
+  local smoke_body_file="$(pwd)/.smoke-body"
+  http_code=$(curl -sL -o "$smoke_body_file" -w "%{http_code}" --max-time 10 "$url" 2>/dev/null) || http_code="000"
+  body=$(cat "$smoke_body_file" 2>/dev/null)
+  rm -f "$smoke_body_file"
 
   if [ "$http_code" = "000" ]; then
     echo -e "${RED}  ✗ Failed to connect to ${url}${NC}"
