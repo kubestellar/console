@@ -234,10 +234,11 @@ export interface UseCloudEventsStatusResult {
   consecutiveFailures: number
   showSkeleton: boolean
   showEmptyState: boolean
+  refetch: () => Promise<void>
 }
 
 export function useCloudEventsStatus(): UseCloudEventsStatusResult {
-  const { data, isLoading, isRefreshing, isFailed, consecutiveFailures, isDemoFallback } =
+  const { data, isLoading, isRefreshing, isFailed, consecutiveFailures, isDemoFallback, refetch } =
     useCache<CloudEventsStatus>({
       key: CACHE_KEY,
       category: 'default',
@@ -269,5 +270,6 @@ export function useCloudEventsStatus(): UseCloudEventsStatusResult {
     consecutiveFailures,
     showSkeleton,
     showEmptyState,
+    refetch,
   }
 }

@@ -258,8 +258,9 @@ export function usePVCs(cluster?: string, namespace?: string) {
           }
         }
       } catch (err) {
-        console.warn(`[usePVCs] kubectl proxy failed, trying API`, err)
-        // Continue to next fetch tier
+        // Intentional tier fallback: kubectl proxy unavailable, continuing to direct API.
+        // User-facing error state is set by the outer catch if all tiers fail.
+        console.warn(`[usePVCs] kubectl proxy unavailable, falling back to direct API fetch`, err)
       }
     }
 
