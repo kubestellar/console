@@ -17,3 +17,4 @@ export const MIN_LABEL_GAP = 14
 export const NODE_RADIUS = 18
 /** Vertical offset (SVG units) to place the label above the edge midpoint */
 export const LABEL_OFFSET_Y = 12
+

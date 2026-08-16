@@ -20,6 +20,7 @@ import type {
   CurrentWeather,
   WeatherConfig,
   SavedLocation } from './types'
+import { INITIAL_WEATHER, DEFAULT_LOCATION, FORECAST_DEMO_WEATHER_CODES, HOURLY_DEMO_WEATHER_PATTERN, HOURLY_FORECAST_LENGTH, DEFAULT_FORECAST_LENGTH, type WeatherData } from './Weather.constants'
 
 // Demo weather data for demo mode (avoids external API calls)
 function getDemoWeatherData(units: 'F' | 'C'): {
@@ -32,23 +33,22 @@ function getDemoWeatherData(units: 'F' | 'C'): {
   const forecast: ForecastDay[] = Array.from({ length: 7 }, (_, i) => {
     const date = new Date(today)
     date.setDate(date.getDate() + i)
-    const codes = [0, 1, 2, 3, 61, 80, 95]
     return {
       date: date.toISOString().split('T')[0],
       dayOfWeek: i === 0 ? 'Today' : date.toLocaleDateString('en-US', { weekday: 'short' }),
-      weatherCode: codes[i % codes.length],
+      weatherCode: FORECAST_DEMO_WEATHER_CODES[i % FORECAST_DEMO_WEATHER_CODES.length],
       tempHigh: isF ? 72 + Math.round(Math.sin(i) * 8) : 22 + Math.round(Math.sin(i) * 4),
       tempLow: isF ? 55 + Math.round(Math.sin(i) * 5) : 13 + Math.round(Math.sin(i) * 3),
       precipitation: [10, 0, 20, 60, 40, 5, 15][i] }
   })
 
-  const hourly: HourlyForecast[] = Array.from({ length: 24 }, (_, i) => {
+  const hourly: HourlyForecast[] = Array.from({ length: HOURLY_FORECAST_LENGTH }, (_, i) => {
     const hour = (today.getHours() + i) % 24
     return {
       hour: hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`,
       time: hour,
       temperature: isF ? 62 + Math.round(Math.sin(i / 4) * 10) : 17 + Math.round(Math.sin(i / 4) * 5),
-      weatherCode: i < 6 ? 0 : i < 12 ? 2 : i < 18 ? 3 : 1,
+      weatherCode: HOURLY_DEMO_WEATHER_PATTERN[i],
       precipitation: i > 10 && i < 16 ? 30 + i * 2 : 5 }
   })
 
@@ -64,19 +64,11 @@ function getDemoWeatherData(units: 'F' | 'C'): {
     hourly }
 }
 
-interface WeatherData {
-  current: CurrentWeather | null
-  forecast: ForecastDay[]
-  hourly: HourlyForecast[]
-}
-
-const INITIAL_WEATHER: WeatherData = { current: null, forecast: [], hourly: [] }
-
 export function Weather({ config }: { config?: WeatherConfig }) {
   const { t } = useTranslation('common')
   const { showToast } = useToast()
   const [units, setUnits] = useState<'F' | 'C'>(config?.units || 'F')
-  const [forecastLength, setForecastLength] = useState<2 | 7 | 14>(config?.forecastLength || 7)
+  const [forecastLength, setForecastLength] = useState<2 | 7 | 14>(config?.forecastLength || DEFAULT_FORECAST_LENGTH)
   const [showSettings, setShowSettings] = useState(false)
   const [expandedDay, setExpandedDay] = useState<string | null>(null)
   const hourlyScrollRef = useRef<HTMLDivElement>(null)
@@ -93,11 +85,7 @@ export function Weather({ config }: { config?: WeatherConfig }) {
     } catch {
       // Fall through to default (private browsing or storage error)
     }
-    return {
-      id: 'default',
-      cityName: 'New York, NY',
-      latitude: 40.7128,
-      longitude: -74.006 }
+    return DEFAULT_LOCATION
   })
 
   // City search state

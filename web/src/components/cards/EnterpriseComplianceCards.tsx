@@ -10,14 +10,9 @@ import { authFetch, safeJson } from '../../lib/api'
 import { useCache } from '../../lib/cache'
 import { useCardLoadingState } from './CardDataContext'
 import { TechnicalAcronym } from '../shared/TechnicalAcronym'
+import { SCORE_GOOD, SCORE_WARN, SCORE_BAD, RING_BG, ENTERPRISE_SUMMARY_CACHE_PREFIX, SCORE_THRESHOLDS, DEFAULT_RING_SIZE } from './EnterpriseComplianceCards.constants'
 
 // ── Shared helpers ────────────────────────────────────────────────────────
-
-const SCORE_GOOD = 'hsl(var(--chart-success, 142 71% 45%))'
-const SCORE_WARN = 'hsl(var(--chart-warning, 45 93% 47%))'
-const SCORE_BAD = 'hsl(var(--chart-danger, 0 84% 60%))'
-const RING_BG = 'hsl(var(--muted) / 0.4)'
-const ENTERPRISE_SUMMARY_CACHE_PREFIX = 'enterprise-summary:'
 
 function useSummaryData<T extends Record<string, unknown>>(endpoint: string) {
   const {
@@ -52,11 +47,11 @@ function useSummaryData<T extends Record<string, unknown>>(endpoint: string) {
   }
 }
 
-export function ScoreRing({ score, size = 64 }: { score: number; size?: number }) {
+export function ScoreRing({ score, size = DEFAULT_RING_SIZE }: { score: number; size?: number }) {
   const r = (size - 8) / 2
   const circ = 2 * Math.PI * r
   const offset = circ - (score / 100) * circ
-  const color = score >= 80 ? SCORE_GOOD : score >= 60 ? SCORE_WARN : SCORE_BAD
+  const color = score >= SCORE_THRESHOLDS.GOOD ? SCORE_GOOD : score >= SCORE_THRESHOLDS.WARN ? SCORE_WARN : SCORE_BAD
   return (
     <svg width={size} height={size} className="shrink-0">
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={RING_BG} strokeWidth={6} />
