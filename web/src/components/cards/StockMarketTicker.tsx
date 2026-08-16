@@ -14,8 +14,8 @@ import { GREEN_500_BRIGHT, RED_500 } from '../../lib/theme/chartColors'
 import { useToast } from '../ui/Toast'
 import type { TFunction } from 'i18next'
 import { safeGetJSON, safeSetJSON } from '../../lib/utils/localStorage'
-import type { StockSearchResult, YahooSearchQuote, SavedStock, StockData, YahooQuoteResponse, StockMarketTickerConfig, StockMarketTickerProps, SortByOption } from './StockMarketTicker.types'
-import { SEARCH_DEBOUNCE_MS, SAVED_STOCKS_STORAGE_KEY, CORS_PROXY, SORT_OPTIONS, SORT_COMPARATORS, DEFAULT_SYMBOLS, ITEMS_PER_PAGE, DEFAULT_REFRESH_INTERVAL_SECONDS } from './StockMarketTicker.constants'
+import type { StockSearchResult, YahooSearchQuote, SavedStock, StockData, YahooQuoteResponse, StockMarketTickerProps, SortByOption } from './StockMarketTicker.types'
+import { SEARCH_DEBOUNCE_MS, SAVED_STOCKS_STORAGE_KEY, CORS_PROXY, SORT_OPTIONS, SORT_COMPARATORS, DEFAULT_SYMBOLS } from './StockMarketTicker.constants'
 
 // Fetch real stock data from Yahoo Finance API (via CORS proxy)
 async function fetchRealStockData(symbols: string[]): Promise<StockData[]> {

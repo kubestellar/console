@@ -26,6 +26,3 @@ export const SORT_COMPARATORS: Record<SortByOption, (a: StockData, b: StockData)
 }
 
 export const DEFAULT_SYMBOLS = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA', 'META', 'NVDA']
-
-export const ITEMS_PER_PAGE = 10
-export const DEFAULT_REFRESH_INTERVAL_SECONDS = 60

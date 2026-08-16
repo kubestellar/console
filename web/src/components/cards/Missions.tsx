@@ -25,7 +25,7 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
 import { useMissions } from '../../hooks/useMissions'
 import { useApiKeyCheck, ApiKeyPromptModal } from './console-missions/shared'
-import { DEMO_MISSIONS, STATUS_ORDER, CLUSTER_FILTER_STORAGE_KEY, TWO_MINUTES_MS, THREE_MINUTES_MS, FOUR_MINUTES_MS, FIVE_MINUTES_MS, type SortByOption } from './Missions.constants'
+import { DEMO_MISSIONS, STATUS_ORDER, CLUSTER_FILTER_STORAGE_KEY, type SortByOption } from './Missions.constants'
 
 interface MissionsProps {
   config?: Record<string, unknown>

@@ -65,7 +65,6 @@ import {
   INFO_PANEL_MIN, INFO_PANEL_MAX, INFO_PANEL_DEFAULT, INFO_PANEL_LS_KEY,
   ZOOM_MIN, ZOOM_MAX, ZOOM_STEP,
   MIN_LABEL_GAP, NODE_RADIUS, LABEL_OFFSET_Y,
-  OVERLAY_MODES, OVERLAY_LABELS,
 } from './FlightPlanBlueprint.constants'
 import { resolveKbPath } from './FlightPlanBlueprint.utils'
 
@@ -73,20 +72,13 @@ import { resolveKbPath } from './FlightPlanBlueprint.utils'
 // Overlay buttons
 // ---------------------------------------------------------------------------
 
-const OVERLAYS = OVERLAY_MODES.map(mode => ({
-  key: mode,
-  icon: (() => {
-    const icons: Record<string, React.ReactNode> = {
-      architecture: <Layout className="w-3.5 h-3.5" />,
-      compute: <Zap className="w-3.5 h-3.5" />,
-      storage: <HardDrive className="w-3.5 h-3.5" />,
-      network: <Network className="w-3.5 h-3.5" />,
-      security: <Shield className="w-3.5 h-3.5" />,
-    }
-    return icons[mode] || null
-  })(),
-  label: OVERLAY_LABELS[mode],
-}))
+const OVERLAYS: { key: OverlayMode; icon: React.ReactNode; label: string }[] = [
+  { key: 'architecture', icon: <Layout className="w-3.5 h-3.5" />, label: 'Architecture' },
+  { key: 'compute', icon: <Zap className="w-3.5 h-3.5" />, label: 'Compute' },
+  { key: 'storage', icon: <HardDrive className="w-3.5 h-3.5" />, label: 'Storage' },
+  { key: 'network', icon: <Network className="w-3.5 h-3.5" />, label: 'Network' },
+  { key: 'security', icon: <Shield className="w-3.5 h-3.5" />, label: 'Security' },
+]
 
 // ---------------------------------------------------------------------------
 // Component
