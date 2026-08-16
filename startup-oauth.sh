@@ -232,6 +232,7 @@ fi
 
 # Environment
 unset CLAUDECODE  # Allow AI Missions to spawn claude-code even when started from a Claude Code session
+export GOTOOLCHAIN=auto  # Allow Go to fetch the module-required toolchain when the runner is behind
 export SKIP_ONBOARDING=true
 if [ "$USE_DEV_SERVER" = true ]; then
     export DEV_MODE=true
