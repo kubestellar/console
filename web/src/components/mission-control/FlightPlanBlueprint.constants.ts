@@ -17,3 +17,13 @@ export const MIN_LABEL_GAP = 14
 export const NODE_RADIUS = 18
 /** Vertical offset (SVG units) to place the label above the edge midpoint */
 export const LABEL_OFFSET_Y = 12
+
+/** Overlay mode definitions */
+export const OVERLAY_MODES = ['architecture', 'compute', 'storage', 'network', 'security'] as const
+export const OVERLAY_LABELS: Record<string, string> = {
+  architecture: 'Architecture',
+  compute: 'Compute',
+  storage: 'Storage',
+  network: 'Network',
+  security: 'Security',
+}

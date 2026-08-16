@@ -5,7 +5,7 @@ import {
   Star, X, Loader2
 } from 'lucide-react'
 import { CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
-import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
+import { useCardData } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
 import { useCache } from '../../lib/cache'
 import { useTranslation } from 'react-i18next'
@@ -14,108 +14,8 @@ import { GREEN_500_BRIGHT, RED_500 } from '../../lib/theme/chartColors'
 import { useToast } from '../ui/Toast'
 import type { TFunction } from 'i18next'
 import { safeGetJSON, safeSetJSON } from '../../lib/utils/localStorage'
-
-const SEARCH_DEBOUNCE_MS = 300
-const SAVED_STOCKS_STORAGE_KEY = 'stock-ticker-saved-stocks'
-
-// Stock search result interface
-interface StockSearchResult {
-  symbol: string
-  name: string
-  type: string
-  region: string
-  currency: string
-}
-
-// Raw search result from Yahoo Finance API
-interface YahooSearchQuote {
-  symbol: string
-  longname?: string
-  shortname?: string
-  quoteType: string
-  exchDisp?: string
-  exchange?: string
-  currency?: string
-}
-
-// Saved stock interface
-interface SavedStock {
-  symbol: string
-  name: string
-  price: number
-  changePercent: number
-  favorite?: boolean
-}
-
-// Stock data interface
-interface StockData {
-  symbol: string
-  name: string
-  price: number
-  change: number
-  changePercent: number
-  dayOpen: number
-  dayHigh: number
-  dayLow: number
-  volume: number
-  marketCap: number
-  week52High: number
-  week52Low: number
-  sparklineData: number[]
-  lastUpdated: Date
-}
-
-// Raw stock data from Yahoo Finance API
-interface YahooQuoteResponse {
-  regularMarketPrice?: number
-  regularMarketChange?: number
-  regularMarketChangePercent?: number
-  regularMarketOpen?: number
-  regularMarketDayHigh?: number
-  regularMarketDayLow?: number
-  regularMarketVolume?: number
-  marketCap?: number
-  fiftyTwoWeekHigh?: number
-  fiftyTwoWeekLow?: number
-  displayName?: string
-  longName?: string
-  shortName?: string
-  symbol: string
-}
-
-// Config interface
-interface StockMarketTickerConfig {
-  symbols?: string[]
-  refreshInterval?: number // in seconds
-  dataSource?: string
-}
-
-interface StockMarketTickerProps {
-  config?: StockMarketTickerConfig
-}
-
-type SortByOption = 'symbol' | 'price' | 'change' | 'volume' | 'marketCap'
-
-const SORT_OPTIONS = [
-  { value: 'symbol' as const, label: 'Name' },
-  { value: 'price' as const, label: 'Price' },
-  { value: 'change' as const, label: 'Change %' },
-  { value: 'volume' as const, label: 'Volume' },
-  { value: 'marketCap' as const, label: 'Market Cap' },
-]
-
-const SORT_COMPARATORS: Record<SortByOption, (a: StockData, b: StockData) => number> = {
-  symbol: commonComparators.string<StockData>('symbol'),
-  price: commonComparators.number<StockData>('price'),
-  change: commonComparators.number<StockData>('changePercent'),
-  volume: commonComparators.number<StockData>('volume'),
-  marketCap: commonComparators.number<StockData>('marketCap') }
-
-// Default stock symbols to track
-const DEFAULT_SYMBOLS = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA', 'META', 'NVDA']
-
-// CORS proxy to bypass browser restrictions for Yahoo Finance API
-const CORS_PROXY = 'https://corsproxy.io/?'
+import type { StockSearchResult, YahooSearchQuote, SavedStock, StockData, YahooQuoteResponse, StockMarketTickerConfig, StockMarketTickerProps, SortByOption } from './StockMarketTicker.types'
+import { SEARCH_DEBOUNCE_MS, SAVED_STOCKS_STORAGE_KEY, CORS_PROXY, SORT_OPTIONS, SORT_COMPARATORS, DEFAULT_SYMBOLS, ITEMS_PER_PAGE, DEFAULT_REFRESH_INTERVAL_SECONDS } from './StockMarketTicker.constants'
 
 // Fetch real stock data from Yahoo Finance API (via CORS proxy)
 async function fetchRealStockData(symbols: string[]): Promise<StockData[]> {

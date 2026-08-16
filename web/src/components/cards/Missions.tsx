@@ -25,63 +25,11 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
 import { useMissions } from '../../hooks/useMissions'
 import { useApiKeyCheck, ApiKeyPromptModal } from './console-missions/shared'
-import { MS_PER_MINUTE } from '../../lib/constants/time'
-
-// Named time-offset constants for demo fixture data (CLAUDE.md: No Magic Numbers)
-const TWO_MINUTES_MS = 2 * MS_PER_MINUTE
-const THREE_MINUTES_MS = 3 * MS_PER_MINUTE
-const FOUR_MINUTES_MS = 4 * MS_PER_MINUTE
-const FIVE_MINUTES_MS = 5 * MS_PER_MINUTE
+import { DEMO_MISSIONS, STATUS_ORDER, CLUSTER_FILTER_STORAGE_KEY, TWO_MINUTES_MS, THREE_MINUTES_MS, FOUR_MINUTES_MS, FIVE_MINUTES_MS, type SortByOption } from './Missions.constants'
 
 interface MissionsProps {
   config?: Record<string, unknown>
 }
-
-const DEMO_MISSIONS: DeployMission[] = [
-  {
-    id: 'demo-1',
-    workload: 'nginx-frontend',
-    namespace: 'production',
-    sourceCluster: 'eks-prod-us-east-1',
-    targetClusters: ['openshift-prod', 'do-nyc1-prod'],
-    groupName: 'production',
-    status: 'orbit',
-    clusterStatuses: [
-      { cluster: 'openshift-prod', status: 'running', replicas: 3, readyReplicas: 3 },
-      { cluster: 'do-nyc1-prod', status: 'running', replicas: 3, readyReplicas: 3 },
-    ],
-    startedAt: Date.now() - FIVE_MINUTES_MS,
-    completedAt: Date.now() - FOUR_MINUTES_MS },
-  {
-    id: 'demo-2',
-    workload: 'api-gateway',
-    namespace: 'staging',
-    sourceCluster: 'gke-staging',
-    targetClusters: ['aks-dev-westeu', 'rancher-mgmt'],
-    groupName: 'staging',
-    status: 'orbit',
-    clusterStatuses: [
-      { cluster: 'aks-dev-westeu', status: 'running', replicas: 2, readyReplicas: 2 },
-      { cluster: 'rancher-mgmt', status: 'running', replicas: 2, readyReplicas: 2 },
-    ],
-    startedAt: Date.now() - THREE_MINUTES_MS,
-    completedAt: Date.now() - TWO_MINUTES_MS },
-]
-
-// Status priority for sorting (active first)
-const STATUS_ORDER: Record<string, number> = {
-  launching: 1,
-  deploying: 2,
-  partial: 3,
-  orbit: 4,
-  abort: 5 }
-
-type SortByOption = 'status' | 'workload' | 'time' | 'clusters'
-
-// Created at module level but will be recreated in Missions component with t()
-
-/** Storage key for persisted cluster filter selection */
-const CLUSTER_FILTER_STORAGE_KEY = 'kubestellar-card-filter:deployment-missions-clusters'
 
 export function Missions(_props: MissionsProps) {
   const { t } = useTranslation(['common', 'cards'])
