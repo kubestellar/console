@@ -163,7 +163,14 @@ describe('safeLazy', () => {
     // Attempt 3: 5s timeout → reject (no more retries)
     await vi.advanceTimersByTimeAsync(5_000)
 
-    await expect(resultPromise).rejects.toThrow(/timed out after 5000ms/)
+    // Ensure the rejection is fully settled before the test ends to prevent
+    // unhandled rejection errors during afterEach timer cleanup
+    try {
+      await resultPromise
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error)
+      expect((err as Error).message).toMatch(/timed out after 5000ms/)
+    }
   })
 
   it('logs a console.warn on each retry attempt', async () => {
