@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  GO_VERSION: '1.26.5'
+  GO_VERSION: '1.26.6'
 
 jobs:
   api-contract:
