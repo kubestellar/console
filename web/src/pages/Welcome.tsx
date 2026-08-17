@@ -234,9 +234,9 @@ export function Welcome() {
             built in — not bolted on.
           </div>
 
-          <p className="text-sm text-muted-foreground max-w-xl mx-auto mb-10">
+          <div className="text-sm text-muted-foreground max-w-xl mx-auto mb-10">
             No sign-up. No install. Explore the full demo right now.
-          </p>
+          </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
             <Link
@@ -294,9 +294,9 @@ export function Welcome() {
           See it in{' '}
           <span className="text-purple-400">action</span>
         </h2>
-        <p className="text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
+        <div className="text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
           Click any scenario to jump straight into the demo dashboard.
-        </p>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {SCENARIOS.map((scenario) => (
@@ -327,9 +327,9 @@ export function Welcome() {
       <section className="border-t border-border/50 bg-linear-to-b from-slate-900/50 to-slate-950">
         <div className="max-w-5xl mx-auto px-6 py-20 text-center">
           <h2 className="text-4xl font-bold mb-4">Ready to try it?</h2>
-          <p className="text-muted-foreground mb-10 text-lg">
+          <div className="text-muted-foreground mb-10 text-lg">
             The full demo runs in your browser. No cluster required.
-          </p>
+          </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link

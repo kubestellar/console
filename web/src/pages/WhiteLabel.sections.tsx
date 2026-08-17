@@ -248,9 +248,9 @@ export function HeroSection() {
           <span className="text-white font-medium">150+ cards, 30 dashboards, AI missions</span> — all rebranded to your project.
         </p>
 
-        <p className="text-base text-muted-foreground max-w-2xl mx-auto mb-4">
+        <div className="text-base text-muted-foreground max-w-2xl mx-auto mb-4">
           No fork needed. Set these variables and you&apos;re done.
-        </p>
+        </div>
 
         <div className="max-w-2xl mx-auto mb-10">
           <pre className="overflow-x-auto rounded-xl border border-border/50 bg-card/80 px-4 py-3">
@@ -299,9 +299,9 @@ export function HighlightsSection() {
         What you{' '}
         <span className="text-purple-400">get</span>
       </h2>
-      <p className="text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
+      <div className="text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
         A complete Kubernetes dashboard — branded as your project, deployable via Helm, Docker, or a single curl command.
-      </p>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {HIGHLIGHTS.map((item) => (
@@ -424,9 +424,9 @@ export function DeploymentSection() {
         Deploy with{' '}
         <span className="text-purple-400">your branding</span>
       </h2>
-      <p className="text-muted-foreground text-center mb-12">
+      <div className="text-muted-foreground text-center mb-12">
         All configuration is at runtime via env vars — no fork, no rebuild, no code changes.
-      </p>
+      </div>
 
       {/* Deployment mode tabs */}
       <div className="max-w-3xl mx-auto mb-8">
@@ -543,9 +543,9 @@ export function BrandingReference() {
         Branding{' '}
         <span className="text-purple-400">reference</span>
       </h2>
-      <p className="text-muted-foreground text-center mb-12">
+      <div className="text-muted-foreground text-center mb-12">
         Every field defaults to KubeStellar values. Override only what you need.
-      </p>
+      </div>
 
       <div className="-mx-6 overflow-x-auto px-6 sm:mx-0 sm:px-0">
         <div className="rounded-xl border border-border/50">

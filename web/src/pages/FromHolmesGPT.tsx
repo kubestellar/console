@@ -205,7 +205,7 @@ export function FromHolmesGPT() {
         <h2 className="text-3xl font-bold text-center mb-4">
           Migration path
         </h2>
-        <div className="text-muted-foreground text-center mb-12">
+      <div className="text-muted-foreground text-center mb-12">
           Your HolmesGPT concepts map directly to the console.
         </div>
         <div className="space-y-4">
@@ -249,10 +249,10 @@ export function FromHolmesGPT() {
         <h2 className="text-3xl font-bold mb-4">
           Ready to switch?
         </h2>
-        <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
+        <div className="text-muted-foreground mb-8 max-w-xl mx-auto">
           The console gives you everything HolmesGPT does for incident investigation,
           plus the multi-cluster dashboard, eBPF tracing, and 140+ monitoring cards you've been missing.
-        </p>
+        </div>
         <Link
           to={ROUTES.HOME}
           onClick={activatePublicDemoMode}
