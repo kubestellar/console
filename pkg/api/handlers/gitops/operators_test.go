@@ -1,13 +1,16 @@
 package gitops
 
 import (
+	"io"
 	"encoding/json"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -191,6 +194,60 @@ func TestGitOpsOperators_StreamHelmReleases_Validation(t *testing.T) {
 			resp, err := env.App.Test(req)
 			require.NoError(t, err)
 			assert.Equal(t, tc.status, resp.StatusCode)
+		})
+	}
+}
+
+func TestGitOpsOperators_StreamDemoMode(t *testing.T) {
+	cases := []struct {
+		name    string
+		path    string
+		setup   func(app *fiber.App, h *GitOpsHandlers)
+		demoKey string
+	}{
+		{
+			name:    "operators",
+			path:    "/api/gitops/operators/stream",
+			setup:   func(app *fiber.App, h *GitOpsHandlers) { app.Get("/api/gitops/operators/stream", h.StreamOperators) },
+			demoKey: "operators",
+		},
+		{
+			name:    "subscriptions",
+			path:    "/api/gitops/subscriptions/stream",
+			setup:   func(app *fiber.App, h *GitOpsHandlers) { app.Get("/api/gitops/subscriptions/stream", h.StreamOperatorSubscriptions) },
+			demoKey: "subscriptions",
+		},
+		{
+			name:    "helm releases",
+			path:    "/api/gitops/helm/stream",
+			setup:   func(app *fiber.App, h *GitOpsHandlers) { app.Get("/api/gitops/helm/stream", h.StreamHelmReleases) },
+			demoKey: "releases",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			app := fiber.New()
+			h := NewGitOpsHandlers(nil, nil, nil)
+			tc.setup(app, h)
+
+			req, err := http.NewRequest(http.MethodGet, tc.path, nil)
+			require.NoError(t, err)
+			req.Host = "localhost"
+			req.Header.Set("X-Demo-Mode", "true")
+
+			resp, err := app.Test(req)
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			text := string(body)
+			assert.Contains(t, text, "event: cluster_data")
+			assert.Contains(t, text, "event: done")
+			assert.Contains(t, text, tc.demoKey)
+			assert.Contains(t, text, "source")
+			assert.True(t, strings.Contains(text, "demo"), "demo mode response should include demo source")
 		})
 	}
 }
