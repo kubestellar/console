@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 )
 
@@ -77,9 +79,22 @@ func TestServer_HandleInsightsAI(t *testing.T) {
 }
 
 func TestServer_HandleVClusterCheck(t *testing.T) {
-	// Stub execCommand so CheckVClusterOnAllClusters does not invoke real
-	// kubectl binaries. The stub exits 0 with empty output so the handler
-	// returns an empty clusters list rather than a 500.
+	// #22615 — The prior test tried to stub `pkg/agent.execCommand`, but
+	// CheckVClusterOnAllClusters lives in the `pkg/agent/kube` package and
+	// uses its own unexported `execCommand`, so the stub was never in
+	// effect and the handler tried to exec real kubectl. Instead, install
+	// a fake `kubectl` on PATH that exits 0 with empty output so the
+	// handler returns an empty cluster list without needing a real cluster.
+	fakePath := t.TempDir()
+	kubectlScript := filepath.Join(fakePath, "kubectl")
+	if err := os.WriteFile(kubectlScript, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
+		t.Fatalf("failed to write fake kubectl: %v", err)
+	}
+	origPath := os.Getenv("PATH")
+	t.Setenv("PATH", fakePath+string(os.PathListSeparator)+origPath)
+
+	// Preserve the old stub-swap in case any other agent-package helper
+	// uses it — harmless when unused.
 	oldExecCommand := execCommand
 	defer func() { execCommand = oldExecCommand }()
 	execCommand = func(name string, args ...string) *exec.Cmd {
@@ -97,8 +112,8 @@ func TestServer_HandleVClusterCheck(t *testing.T) {
 
 	s.handleVClusterCheck(w, req)
 
-	// With stubbed exec and an empty LocalClusterManager the handler returns
-	// 200 with an empty clusters list.
+	// With a fake kubectl exiting 0 and an empty LocalClusterManager the
+	// handler returns 200 with an empty clusters list.
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected 200, got %d", w.Code)
 	}

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
@@ -11,7 +13,39 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// interceptTransport routes every request through a single httptest server,
+// regardless of the original URL. This lets tests exercise the code path
+// against api.github.com without touching the network.
+type interceptTransport struct {
+	baseURL string
+}
+
+func (i *interceptTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	// Preserve path + query so listRepoItems' /repos/{repo}/issues... lands
+	// on the mock server.
+	rewritten := i.baseURL + req.URL.RequestURI()
+	newReq, err := http.NewRequestWithContext(req.Context(), req.Method, rewritten, req.Body)
+	if err != nil {
+		return nil, err
+	}
+	newReq.Header = req.Header.Clone()
+	return http.DefaultTransport.RoundTrip(newReq)
+}
+
 func TestGetGitHubRewards(t *testing.T) {
+	// #22615 — the previous version of this test called the real
+	// api.github.com and timed out at 5s. Now we install a mock server that
+	// returns 500 so the handler's error path (503 "GitHub API unavailable")
+	// is exercised deterministically.
+	mockAPI := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "/issues") {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer mockAPI.Close()
+
 	env := setupTestEnv(t)
 
 	// Inject githubLogin into locals for testing
@@ -24,21 +58,20 @@ func TestGetGitHubRewards(t *testing.T) {
 		GitHubToken: "fake-token",
 		Orgs:        "repo:kubestellar/console",
 	})
+	// Redirect every outbound request to the mock server.
+	handler.httpClient = &http.Client{Transport: &interceptTransport{baseURL: mockAPI.URL}}
 
 	env.App.Get("/api/rewards/github", handler.GetGitHubRewards)
-
-	// Since we don't want to make real GitHub API calls, we'll check the error case
-	// or try to mock the httpClient if needed.
-	// For now, let's verify it returns 503 if GitHub is unreachable (default behavior with fake token).
 
 	req, err := http.NewRequest("GET", "/api/rewards/github", nil)
 	require.NoError(t, err)
 	req.Host = "localhost"
 
-	resp, err := env.App.Test(req, 5000)
+	resp, err := env.App.Test(req, 10000)
 	require.NoError(t, err)
 
-	// It should return 503 Service Unavailable because the fake token/API call fails
+	// The mock server 500s every request so fetchUserRewards fails and the
+	// handler surfaces the 503 error path.
 	assert.Equal(t, 503, resp.StatusCode)
 
 	var result map[string]interface{}
