@@ -184,6 +184,19 @@ export default defineConfig(({ mode }) => ({
             ['lib-cache', ['/src/lib/cache/']],
             ['lib-utils', ['/src/lib/utils', '/src/lib/cn.ts', '/src/lib/constants.ts']],
             ['theme-system', ['/src/hooks/useTheme', '/src/hooks/useBranding']],
+            // Source dirs with no rule fell through into app-routes (5.6M). Give the
+            // largest unmatched components/lib/config trees their own chunks.
+            ['feature-missions', ['/src/components/missions/', '/src/components/mission-control/', '/src/lib/missions/']],
+            ['feature-stellar', ['/src/components/stellar/']],
+            ['feature-agent', ['/src/components/agent/', '/src/components/widgets/', '/src/components/modals/', '/src/lib/widgets/', '/src/lib/modals/']],
+            ['feature-feedback', ['/src/components/feedback/', '/src/components/rewards/', '/src/components/updates/', '/src/components/teams/']],
+            ['feature-onboarding', ['/src/components/setup/', '/src/components/landing/', '/src/components/onboarding/', '/src/components/enterprise/', '/src/components/acmm/', '/src/components/rbac/', '/src/components/widget/']],
+            ['ui-primitives', ['/src/components/ui/', '/src/components/animations/', '/src/components/charts/']],
+            ['lib-cards', ['/src/lib/cards/', '/src/lib/dynamic-cards/']],
+            ['lib-demo', ['/src/lib/demo/']],
+            ['lib-themes', ['/src/lib/themes/']],
+            ['config-dashboards', ['/src/config/dashboards/']],
+            ['app-pages', ['/src/pages/']],
             // Split app shell to reduce massive 5.5M app-routes chunk
             ['app-router', ['/src/components/router/', '/src/lib/router/']],
             ['app-routes-lazy', ['/src/routes/lazyRoutes']],

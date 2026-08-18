@@ -56,33 +56,65 @@ spec:
                 stat -c%s "$1" 2>/dev/null || stat -f%z "$1" 2>/dev/null || wc -c < "$1" 2>/dev/null | tr -d ' ' || echo "0"
               }
 
+              is_valid_sqlite() {
+                [ -f "$1" ] || return 1
+                sqlite3 "$1" "PRAGMA quick_check;" 2>/dev/null | grep -qx "ok"
+              }
+
+              quarantine_corrupt_db() {
+                if [ -f "$DB_PATH" ]; then
+                  CORRUPT_PATH="${DB_PATH}.corrupt.$(date +%Y%m%d-%H%M%S)"
+                  echo "Database appears corrupt, moving it to: $CORRUPT_PATH"
+                  mv "$DB_PATH" "$CORRUPT_PATH"
+                fi
+              }
+
               if [ -f "$DB_PATH" ]; then
                 DB_SIZE=$(get_file_size "$DB_PATH")
-                if [ "$DB_SIZE" -gt "$MIN_DATA_SIZE" ]; then
+                if [ "$DB_SIZE" -gt "$MIN_DATA_SIZE" ] && is_valid_sqlite "$DB_PATH"; then
                   echo "Database exists with data (${DB_SIZE} bytes), skipping restore"
                   exit 0
                 fi
-                echo "Database exists but appears empty (${DB_SIZE} bytes)"
+                if [ "$DB_SIZE" -gt "$MIN_DATA_SIZE" ]; then
+                  echo "Database exists but failed SQLite integrity check (${DB_SIZE} bytes)"
+                  quarantine_corrupt_db
+                else
+                  echo "Database exists but appears empty (${DB_SIZE} bytes)"
+                fi
               else
                 echo "No database file found at $DB_PATH"
               fi
 
-              # Find the latest backup
-              LATEST=$(ls -1t "$BACKUP_DIR"/console-*.db 2>/dev/null | head -1)
-              if [ -z "$LATEST" ]; then
-                echo "No backups found in $BACKUP_DIR, starting fresh"
-                exit 0
-              fi
+              # Find the latest valid backup
+              LATEST=""
+              for candidate in $(ls -1t "$BACKUP_DIR"/console-*.db 2>/dev/null); do
+                CANDIDATE_SIZE=$(get_file_size "$candidate")
+                if [ "$CANDIDATE_SIZE" -le "$MIN_DATA_SIZE" ]; then
+                  echo "Skipping backup $candidate: empty/small (${CANDIDATE_SIZE} bytes)"
+                  continue
+                fi
+                if ! is_valid_sqlite "$candidate"; then
+                  echo "Skipping backup $candidate: failed SQLite integrity check"
+                  continue
+                fi
+                LATEST="$candidate"
+                BACKUP_SIZE="$CANDIDATE_SIZE"
+                break
+              done
 
-              BACKUP_SIZE=$(get_file_size "$LATEST")
-              if [ "$BACKUP_SIZE" -le "$MIN_DATA_SIZE" ]; then
-                echo "Latest backup $LATEST is also empty (${BACKUP_SIZE} bytes), skipping"
+              if [ -z "$LATEST" ]; then
+                echo "No valid backups found in $BACKUP_DIR, starting fresh"
+                rm -f "$DB_PATH"
                 exit 0
               fi
 
               echo "Restoring from backup: $LATEST (${BACKUP_SIZE} bytes)"
               mkdir -p "$(dirname "$DB_PATH")"
               cp "$LATEST" "${DB_PATH}.tmp" && mv "${DB_PATH}.tmp" "$DB_PATH"
+              if ! is_valid_sqlite "$DB_PATH"; then
+                echo "ERROR: Restored database failed SQLite integrity check"
+                exit 1
+              fi
               echo "Restore complete"
           volumeMounts:
             - name: data

@@ -2,6 +2,8 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: kubestellar-console-db-backup
+  labels:
+    team: kubestellar
 spec:
   schedule: "0 */6 * * *"
   concurrencyPolicy: Forbid
@@ -13,6 +15,7 @@ spec:
         metadata:
           labels:
             app.kubernetes.io/component: db-backup
+            team: kubestellar
         spec:
           restartPolicy: OnFailure
           serviceAccountName: kubestellar-console
@@ -53,9 +56,23 @@ spec:
 
                   mkdir -p "$BACKUP_DIR"
 
+                  is_valid_sqlite() {
+                    [ -f "$1" ] || return 1
+                    sqlite3 "$1" "PRAGMA quick_check;" 2>/dev/null | grep -qx "ok"
+                  }
+
                   # Use SQLite .backup for a consistent, WAL-safe snapshot
                   if [ -f "$DB_PATH" ]; then
+                    if ! is_valid_sqlite "$DB_PATH"; then
+                      echo "ERROR: Database file failed SQLite integrity check at $DB_PATH"
+                      exit 1
+                    fi
                     sqlite3 "$DB_PATH" ".backup '$BACKUP_DIR/console-$TIMESTAMP.db'"
+                    if ! is_valid_sqlite "$BACKUP_DIR/console-$TIMESTAMP.db"; then
+                      echo "ERROR: Generated backup failed SQLite integrity check"
+                      rm -f "$BACKUP_DIR/console-$TIMESTAMP.db"
+                      exit 1
+                    fi
                     echo "Backup created: $BACKUP_DIR/console-$TIMESTAMP.db"
                   else
                     echo "ERROR: Database file not found at $DB_PATH"

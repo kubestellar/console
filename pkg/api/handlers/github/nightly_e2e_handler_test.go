@@ -15,34 +15,56 @@ import (
 )
 
 func TestNightlyE2EHandler_GetRuns_DemoMode(t *testing.T) {
+	// Point at a mock server so the test never touches api.github.com. The
+	// handler doesn't (yet) shortcut on X-Demo-Mode, so without this stub
+	// the test hangs on the real GitHub API and app.Test times out with
+	// a nil response (#22615).
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"workflow_runs":[]}`))
+	}))
+	defer server.Close()
+	t.Setenv("GITHUB_URL", server.URL)
+
 	app, _ := setupNightlyE2EHandler("test-token")
 
 	req := httptest.NewRequest("GET", "/api/nightly-e2e/runs", nil)
 	req.Host = "localhost"
 	req.Header.Set("X-Demo-Mode", "true")
 
-	resp, _ := app.Test(req, 5000)
-	if resp == nil {
-		t.Fatal("expected non-nil response")
-	}
+	resp, err := app.Test(req, 10000)
+	require.NoError(t, err)
+	require.NotNil(t, resp, "expected non-nil response")
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
 	var result NightlyE2EResponse
-	err := json.NewDecoder(resp.Body).Decode(&result)
+	err = json.NewDecoder(resp.Body).Decode(&result)
 	require.NoError(t, err)
+	// The handler always enumerates the nightlyWorkflows guide list, even
+	// when the upstream returns no runs — so the guides slice is populated.
 	assert.NotEmpty(t, result.Guides)
 }
 
 func TestNightlyE2EHandler_GetRuns_NoToken(t *testing.T) {
+	// #22615 — same fix as GetRuns_DemoMode: mock the upstream so the test
+	// doesn't hang against the real GitHub API when no token is configured.
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"workflow_runs":[]}`))
+	}))
+	defer server.Close()
+	t.Setenv("GITHUB_URL", server.URL)
+
 	app, _ := setupNightlyE2EHandler("")
 
 	req := httptest.NewRequest("GET", "/api/nightly-e2e/runs", nil)
 	req.Host = "localhost"
-	resp, _ := app.Test(req, 5000)
+	resp, err := app.Test(req, 10000)
 
-	if resp == nil {
-		t.Fatal("expected non-nil response")
-	}
+	require.NoError(t, err)
+	require.NotNil(t, resp, "expected non-nil response")
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
