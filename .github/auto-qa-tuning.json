@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_updated": "2026-08-16T03:18:35Z",
+  "last_updated": "2026-08-18T03:16:41Z",
   "rolling_window_days": 30,
   "categories": {
     "performance": {
@@ -18,25 +18,25 @@
       "last_evaluated": "2026-08-14T03:43:45Z"
     },
     "a11y": {
-      "merged": 82,
+      "merged": 83,
       "closed": 29,
       "acceptance_rate": 0.74,
       "status": "normal",
-      "last_evaluated": "2026-08-16T03:18:35Z"
+      "last_evaluated": "2026-08-18T03:16:41Z"
     },
     "operator": {
-      "merged": 846,
+      "merged": 853,
       "closed": 269,
       "acceptance_rate": 0.76,
       "status": "normal",
-      "last_evaluated": "2026-08-16T03:18:35Z"
+      "last_evaluated": "2026-08-18T03:16:41Z"
     },
     "sre": {
-      "merged": 555,
+      "merged": 556,
       "closed": 101,
       "acceptance_rate": 0.85,
       "status": "boosted",
-      "last_evaluated": "2026-08-16T03:18:35Z"
+      "last_evaluated": "2026-08-18T03:16:41Z"
     },
     "features": {
       "merged": 42,
@@ -80,13 +80,6 @@
     ]
   },
   "history": [
-    {
-      "date": "2026-07-11",
-      "total_merged": 1267,
-      "total_closed": 560,
-      "categories_blocked": [],
-      "categories_boosted": []
-    },
     {
       "date": "2026-07-12",
       "total_merged": 1290,
@@ -344,6 +337,16 @@
         "sre",
         "features"
       ]
+    },
+    {
+      "date": "2026-08-18",
+      "total_merged": 1810,
+      "total_closed": 578,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "sre",
+        "features"
+      ]
     }
   ],
   "rotation_weights": {
@@ -357,7 +360,7 @@
     "consistency": 0.95
   },
   "max_issues_override": 5,
-  "pr_guidance": "Keep changes under 10 lines for best acceptance rate.",
+  "pr_guidance": "Keep PRs small and focused. Smaller PRs have higher acceptance rates.",
   "regression_insights": {
     "focus_overrides": [],
     "repeat_issue_patterns": [],
