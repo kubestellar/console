@@ -12,6 +12,7 @@ import { useApiKeyCheck, ApiKeyPromptModal } from '../../cards/console-missions/
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { useBackendHealth } from '../../../hooks/useBackendHealth'
 import { useAsyncData } from '../../../hooks/useAsyncData'
+import { RefreshIndicator } from '../../ui/RefreshIndicator'
 import { PodStatusSection } from './PodStatusSection'
 import { PodLogsSection } from './PodLogsSection'
 import { PodEventsSection } from './PodEventsSection'
@@ -235,7 +236,10 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
             <button type="button" onClick={() => drillToCluster(cluster)} onKeyDown={handleKeyDown} className={cn('group flex cursor-pointer items-center gap-2 rounded-lg border border-transparent px-3 py-2 transition-all hover:border-blue-500/30 hover:bg-blue-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background', TOUCH_TARGET_SIZE_CLASS)} aria-label={`View cluster ${cluster}`}><Server className="h-4 w-4 text-blue-400" aria-hidden="true" /><span className="text-muted-foreground">{t('drilldown.fields.cluster')}</span><ClusterBadge cluster={cluster.split('/').pop() || cluster} size="sm" /><svg className="h-3 w-3 text-blue-400/70 transition-colors group-hover:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg></button>
             {podData.restarts > 0 && <div className="flex items-center gap-2"><Box className="h-4 w-4 text-yellow-400" aria-hidden="true" /><span className="text-muted-foreground">{t('drilldown.fields.restarts')}</span><span className="font-mono text-yellow-400">{podData.restarts}</span></div>}
           </div>
-          {agentConnected && <button type="button" onClick={refreshAll} onKeyDown={handleKeyDown} disabled={isRefreshing} className={cn('flex items-center gap-2 rounded-lg bg-secondary/50 px-3 py-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50', TOUCH_TARGET_SIZE_CLASS)} title={t('drilldown.actions.refreshAllPodData')} aria-label={t('drilldown.actions.refreshAllPodData')}><RefreshCw className={cn('h-4 w-4', isRefreshing && 'animate-spin')} aria-hidden="true" /><span className="text-sm">{isRefreshing ? t('common.refreshing') : t('common.refresh')}</span></button>}
+          <div className="flex items-center gap-3">
+            {podData.cache.fetchedAt && <RefreshIndicator isRefreshing={isRefreshing} lastUpdated={new Date(podData.cache.fetchedAt)} size="xs" />}
+            {agentConnected && <button type="button" onClick={refreshAll} onKeyDown={handleKeyDown} disabled={isRefreshing} className={cn('flex items-center gap-2 rounded-lg bg-secondary/50 px-3 py-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50', TOUCH_TARGET_SIZE_CLASS)} title={t('drilldown.actions.refreshAllPodData')} aria-label={t('drilldown.actions.refreshAllPodData')}><RefreshCw className={cn('h-4 w-4', isRefreshing && 'animate-spin')} aria-hidden="true" /><span className="text-sm">{isRefreshing ? t('common.refreshing') : t('common.refresh')}</span></button>}
+          </div>
         </div>
       </div>
 
