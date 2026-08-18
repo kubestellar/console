@@ -12,6 +12,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"strings"
 	"sync"
@@ -21,6 +22,9 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/test"
 )
 
 // ---------------------------------------------------------------------------
@@ -218,6 +222,116 @@ func TestWriteSSEEvent(t *testing.T) {
 		out := buf.String()
 		assert.NotContains(t, out, "\r")
 	})
+}
+
+func TestStreamDemoSSE(t *testing.T) {
+	app := fiber.New()
+	app.Get("/test", func(c *fiber.Ctx) error {
+		return streamDemoSSE(c, "widgets", []string{"alpha", "beta"})
+	})
+
+	req, err := http.NewRequest(http.MethodGet, "/test", nil)
+	require.NoError(t, err)
+	req.Host = "localhost"
+
+	resp, err := app.Test(req, fiberTestTimeout)
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	text := string(body)
+	assert.Contains(t, text, "event: connected")
+	assert.Contains(t, text, "event: demo_data")
+	assert.Contains(t, text, "event: done")
+	assert.Contains(t, text, `"widgets":["alpha","beta"]`)
+	assert.Contains(t, text, `"source":"demo"`)
+}
+
+func TestRequireAdmin(t *testing.T) {
+	cases := []struct {
+		name       string
+		role       models.UserRole
+		wantStatus int
+	}{
+		{name: "admin", role: models.UserRoleAdmin, wantStatus: http.StatusOK},
+		{name: "viewer", role: models.UserRoleViewer, wantStatus: http.StatusForbidden},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockStore := new(test.MockStore)
+			mockStore.On("GetUser", gitopsRBACUserID).Return(&models.User{
+				ID:   gitopsRBACUserID,
+				Role: tc.role,
+			}, nil)
+
+			app := fiber.New()
+			app.Use(func(c *fiber.Ctx) error {
+				c.Locals("userID", gitopsRBACUserID)
+				return c.Next()
+			})
+			app.Get("/test", func(c *fiber.Ctx) error {
+				return requireAdmin(c, mockStore)
+			})
+
+			req, err := http.NewRequest(http.MethodGet, "/test", nil)
+			require.NoError(t, err)
+			req.Host = "localhost"
+
+			resp, err := app.Test(req, fiberTestTimeout)
+			require.NoError(t, err)
+			assert.Equal(t, tc.wantStatus, resp.StatusCode)
+		})
+	}
+}
+
+func TestListHelmReleases_FallbackToExec(t *testing.T) {
+	_, _ = writeFakeHelm(t, "#!/bin/sh\necho \"$@\" > /dev/null\necho '[{\"name\":\"api\",\"namespace\":\"default\",\"revision\":\"1\",\"updated\":\"now\",\"status\":\"deployed\",\"chart\":\"api-1.0.0\",\"app_version\":\"1.0.0\"}]'\n")
+
+	app, handler := setupGitOpsTest()
+	app.Get("/test", handler.ListHelmReleases)
+
+	req, err := http.NewRequest(http.MethodGet, "/test?cluster=prod-east", nil)
+	require.NoError(t, err)
+	req.Host = "localhost"
+
+	resp, err := app.Test(req, fiberTestTimeout)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	text := string(body)
+	assert.Contains(t, text, `"releases"`)
+	assert.Contains(t, text, `"api"`)
+	assert.Contains(t, text, `"prod-east"`)
+}
+
+func TestListKustomizations_FallbackToExec(t *testing.T) {
+	writeFakeKubectl(t, "#!/bin/sh\nfound_kustomizations=0\nfor arg in \"$@\"; do\n    if [ \"$arg\" = \"kustomizations.kustomize.toolkit.fluxcd.io\" ]; then\n        found_kustomizations=1\n    fi\ndone\nif [ \"$found_kustomizations\" -eq 1 ]; then\n    echo '{\"items\":[{\"metadata\":{\"name\":\"apps\",\"namespace\":\"flux-system\"},\"spec\":{\"path\":\"./apps\",\"sourceRef\":{\"kind\":\"GitRepository\",\"name\":\"platform\"}},\"status\":{\"conditions\":[{\"type\":\"Ready\",\"status\":\"True\",\"message\":\"ok\"}],\"lastAppliedRevision\":\"main/abc123\"}}]}'\nfi\n")
+
+	app, handler := setupGitOpsTest()
+	app.Get("/test", handler.ListKustomizations)
+
+	req, err := http.NewRequest(http.MethodGet, "/test?cluster=prod-east", nil)
+	require.NoError(t, err)
+	req.Host = "localhost"
+
+	resp, err := app.Test(req, fiberTestTimeout)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	text := string(body)
+	assert.Contains(t, text, `"kustomizations"`)
+	assert.Contains(t, text, `"apps"`)
+	assert.Contains(t, text, `"Ready"`)
+}
+
+func TestStopOperatorCacheEvictor(t *testing.T) {
+	StopOperatorCacheEvictor()
 }
 
 // ---------------------------------------------------------------------------
