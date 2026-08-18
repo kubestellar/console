@@ -31,14 +31,9 @@ describe('safeLazy', () => {
     vi.useFakeTimers()
   })
 
-  afterEach(async () => {
-    // Flush all pending timers and microtasks before switching back to real timers
-    // to ensure no unhandled rejections from fake timer promises escape.
-    try {
-      await vi.runAllTimersAsync()
-    } catch {
-      // Ignore any errors during timer flushing
-    }
+  afterEach(() => {
+    // Prevent fake-timer callbacks from spilling into subsequent tests.
+    vi.clearAllTimers()
     vi.useRealTimers()
     vi.restoreAllMocks()
   })
@@ -163,14 +158,7 @@ describe('safeLazy', () => {
     // Attempt 3: 5s timeout → reject (no more retries)
     await vi.advanceTimersByTimeAsync(5_000)
 
-    // Ensure the rejection is fully settled before the test ends to prevent
-    // unhandled rejection errors during afterEach timer cleanup
-    try {
-      await resultPromise
-    } catch (err) {
-      expect(err).toBeInstanceOf(Error)
-      expect((err as Error).message).toMatch(/timed out after 5000ms/)
-    }
+    await expect(resultPromise).rejects.toThrow(/timed out after 5000ms/)
   })
 
   it('logs a console.warn on each retry attempt', async () => {
