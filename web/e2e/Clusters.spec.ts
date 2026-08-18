@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
-import { mockApiFallback, mockLocalAgentUnavailable } from './helpers/setup'
+import { mockApiFallback, mockLocalAgentUnavailable, reloadPageSafely } from './helpers/setup'
 import { setupLiveMode } from './helpers/storage-setup'
 
 /**
@@ -161,7 +161,7 @@ test.describe('Clusters Page', () => {
         })
       )
 
-      await page.reload()
+      await reloadPageSafely(page)
       await page.waitForLoadState('domcontentloaded')
 
       // Page should still render (not crash)
@@ -174,7 +174,7 @@ test.describe('Clusters Page', () => {
       await page.setViewportSize({ width: 375, height: 667 })
       // Reload so the page initialises at the mobile viewport — addInitScript
       // re-runs on reload, and the layout picks up the correct breakpoint.
-      await page.reload()
+      await reloadPageSafely(page)
       await page.waitForLoadState('domcontentloaded')
 
       // Page should still render at mobile size
@@ -254,7 +254,7 @@ test.describe('Clusters Page', () => {
       // the component renders with the correct cluster set before we interact.
       await Promise.all([
         page.waitForResponse((resp) => resp.url().includes('/api/mcp/') && resp.url().includes('clusters')),
-        page.reload(),
+        reloadPageSafely(page),
       ])
       await page.waitForLoadState('domcontentloaded')
       await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 20_000 })
@@ -324,7 +324,7 @@ test.describe('Clusters Page', () => {
       // the component renders with the correct cluster set before we interact.
       await Promise.all([
         page.waitForResponse((resp) => resp.url().includes('/api/mcp/') && resp.url().includes('clusters')),
-        page.reload(),
+        reloadPageSafely(page),
       ])
       await page.waitForLoadState('domcontentloaded')
       await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 20_000 })
@@ -384,7 +384,7 @@ test.describe('Clusters Page', () => {
 
       await Promise.all([
         page.waitForResponse((resp) => resp.url().includes('/api/mcp/') && resp.url().includes('clusters')),
-        page.reload(),
+        reloadPageSafely(page),
       ])
       await page.waitForLoadState('domcontentloaded')
       await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 20_000 })
@@ -539,7 +539,7 @@ test.describe('Clusters Page', () => {
 
       await Promise.all([
         page.waitForResponse((resp) => resp.url().includes('/api/mcp/') && resp.url().includes('clusters')),
-        page.reload(),
+        reloadPageSafely(page),
       ])
       await page.waitForLoadState('domcontentloaded')
       await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 20_000 })
