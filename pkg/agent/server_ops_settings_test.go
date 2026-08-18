@@ -6,30 +6,21 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/kubestellar/console/pkg/settings"
 )
 
 func TestServer_HandleSettingsAll(t *testing.T) {
-	// Setup temporary settings and key files
-	tmpSettings, err := os.CreateTemp("", "settings-*.json")
-	if err != nil {
-		t.Fatalf("Failed to create temp settings file: %v", err)
-	}
-	defer tmpSettings.Close()
-	defer os.Remove(tmpSettings.Name())
-
-	tmpKey, err := os.CreateTemp("", ".keyfile")
-	if err != nil {
-		t.Fatalf("Failed to create temp key file: %v", err)
-	}
-	defer tmpKey.Close()
-	defer os.Remove(tmpKey.Name())
+	// Use fresh paths and let settings manager create files as needed.
+	tempDir := t.TempDir()
+	settingsPath := filepath.Join(tempDir, "settings.json")
+	keyPath := filepath.Join(tempDir, ".keyfile")
 
 	sm := settings.GetSettingsManager()
-	sm.SetSettingsPath(tmpSettings.Name())
-	sm.SetKeyPath(tmpKey.Name())
+	sm.SetSettingsPath(settingsPath)
+	sm.SetKeyPath(keyPath)
 
 	s := &Server{
 		allowedOrigins: []string{"*"},
