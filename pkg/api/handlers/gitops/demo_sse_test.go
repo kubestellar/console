@@ -427,7 +427,8 @@ fi
 	handler := NewGitOpsHandlers(nil, env.K8sClient, env.Store)
 	env.App.Get("/api/gitops/operators", handler.ListOperators)
 
-	req, _ := http.NewRequest(http.MethodGet, "/api/gitops/operators", nil)
+	req, err := http.NewRequest(http.MethodGet, "/api/gitops/operators", nil)
+	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := env.App.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -449,7 +450,8 @@ fi
 	handler := NewGitOpsHandlers(nil, env.K8sClient, env.Store)
 	env.App.Get("/api/gitops/subscriptions", handler.ListOperatorSubscriptions)
 
-	req, _ := http.NewRequest(http.MethodGet, "/api/gitops/subscriptions", nil)
+	req, err := http.NewRequest(http.MethodGet, "/api/gitops/subscriptions", nil)
+	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := env.App.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -467,7 +469,8 @@ echo '[]'
 	handler := NewGitOpsHandlers(nil, env.K8sClient, env.Store)
 	env.App.Get("/api/gitops/helm", handler.ListHelmReleases)
 
-	req, _ := http.NewRequest(http.MethodGet, "/api/gitops/helm", nil)
+	req, err := http.NewRequest(http.MethodGet, "/api/gitops/helm", nil)
+	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := env.App.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -482,7 +485,8 @@ echo '{"items":[]}'
 	handler := NewGitOpsHandlers(nil, env.K8sClient, env.Store)
 	env.App.Get("/api/gitops/kustomizations", handler.ListKustomizations)
 
-	req, _ := http.NewRequest(http.MethodGet, "/api/gitops/kustomizations", nil)
+	req, err := http.NewRequest(http.MethodGet, "/api/gitops/kustomizations", nil)
+	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := env.App.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -502,7 +506,8 @@ echo '{"items":[]}'
 	handler := NewGitOpsHandlers(nil, env.K8sClient, env.Store)
 	env.App.Get("/api/gitops/operators/stream", handler.StreamOperators)
 
-	req, _ := http.NewRequest(http.MethodGet, "/api/gitops/operators/stream", nil)
+	req, err := http.NewRequest(http.MethodGet, "/api/gitops/operators/stream", nil)
+	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := env.App.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -521,7 +526,8 @@ echo ''
 	handler := NewGitOpsHandlers(nil, env.K8sClient, env.Store)
 	env.App.Get("/api/gitops/subscriptions/stream", handler.StreamOperatorSubscriptions)
 
-	req, _ := http.NewRequest(http.MethodGet, "/api/gitops/subscriptions/stream", nil)
+	req, err := http.NewRequest(http.MethodGet, "/api/gitops/subscriptions/stream", nil)
+	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := env.App.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -543,7 +549,8 @@ echo '[]'
 	handler := NewGitOpsHandlers(nil, env.K8sClient, env.Store)
 	env.App.Get("/api/gitops/helm/stream", handler.StreamHelmReleases)
 
-	req, _ := http.NewRequest(http.MethodGet, "/api/gitops/helm/stream", nil)
+	req, err := http.NewRequest(http.MethodGet, "/api/gitops/helm/stream", nil)
+	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := env.App.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -567,7 +574,8 @@ echo '{"items":[]}'
 	handler := NewGitOpsHandlers(nil, env.K8sClient, env.Store)
 	env.App.Get("/api/gitops/operators/stream", handler.StreamOperators)
 
-	req, _ := http.NewRequest(http.MethodGet, "/api/gitops/operators/stream?cluster=test-cluster", nil)
+	req, err := http.NewRequest(http.MethodGet, "/api/gitops/operators/stream?cluster=test-cluster", nil)
+	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := env.App.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -589,7 +597,8 @@ echo '[]'
 	handler := NewGitOpsHandlers(nil, env.K8sClient, env.Store)
 	env.App.Get("/api/gitops/helm/stream", handler.StreamHelmReleases)
 
-	req, _ := http.NewRequest(http.MethodGet, "/api/gitops/helm/stream?cluster=test-cluster", nil)
+	req, err := http.NewRequest(http.MethodGet, "/api/gitops/helm/stream?cluster=test-cluster", nil)
+	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := env.App.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
@@ -610,7 +619,8 @@ func TestStreamDemoSSE_LocalHelper(t *testing.T) {
 		return streamDemoSSE(c, "widgets", []string{"a", "b"})
 	})
 
-	req, _ := http.NewRequest(http.MethodGet, "/demo", nil)
+	req, err := http.NewRequest(http.MethodGet, "/demo", nil)
+	require.NoError(t, err)
 	req.Host = "localhost"
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
