@@ -60,6 +60,12 @@ echo "Running Vitest unit tests..."
 # heap ceiling to 6144 MB (6 GB) leaves ~10 GB of headroom for the OS, the
 # forked process overhead, and other CI steps, comfortably absorbing this
 # kind of per-shard variance without needing yet more shards (#22004).
+#
+# The suite grew to 2648+ test files by 2026-08-19, pushing sequential 32-shard
+# runs past the 3600s (60 min) wall-clock cap in run-all-tests.sh (the cap was
+# sized for 1800 files and has not been raised proportionally). Increasing to 48
+# shards reduces per-shard file count from ~83 to ~55, cutting per-shard duration
+# by ~35% and bringing total sequential runtime back within the 5400s cap (#22004).
 if [ -n "${CI:-}" ]; then
   export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=6144"
 fi
@@ -75,11 +81,11 @@ fi
 # In CI, run tests in shards to reduce parent process memory footprint. With
 # 560+ test files, the Vitest parent process accumulates results in memory
 # for final reporting, causing OOM on 7GB runners even with 1 worker (#20007).
-# Running 32 shards sequentially (up from 8, see #22004) keeps peak per-shard
-# memory in check as the suite has grown to 2600+ test files.
+# Running 48 shards sequentially (up from 32, see #22004) keeps peak per-shard
+# memory in check as the suite has grown to 2648+ test files.
 OUTPUT_FILE="vitest-output.log"
 EXIT_CODE=0
-SHARD_COUNT=32
+SHARD_COUNT=48
 
 if [ -n "${CI:-}" ]; then
   # CI: run in $SHARD_COUNT shards sequentially, combining output
