@@ -40,7 +40,10 @@ export function AISuggestionsSection({
 
   useEffect(() => {
     return () => {
-      if (delayTimerRef.current) clearTimeout(delayTimerRef.current)
+      if (delayTimerRef.current) {
+        clearTimeout(delayTimerRef.current)
+        delayTimerRef.current = null
+      }
     }
   }, [])
 
@@ -51,8 +54,12 @@ export function AISuggestionsSection({
     setSuggestions([])
     setSelectedCards(new Set())
     await new Promise<void>((resolve) => {
+      if (delayTimerRef.current) {
+        clearTimeout(delayTimerRef.current)
+      }
       delayTimerRef.current = setTimeout(resolve, RETRY_DELAY_MS)
     })
+    delayTimerRef.current = null
     const results = generateCardSuggestions(q)
     setSuggestions(results)
     setSelectedCards(new Set(results.map((card, i) => existingCardTypes.includes(card.type) ? -1 : i).filter(i => i !== -1)))
