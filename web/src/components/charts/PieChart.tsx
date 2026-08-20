@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import ReactECharts from 'echarts-for-react'
-import { CHART_TOOLTIP_CONTENT_STYLE, CHART_TOOLTIP_TEXT_COLOR, CHART_TOOLTIP_LABEL_COLOR, CHART_BODY_FONT_SIZE } from '../../lib/constants'
+import { CHART_TOOLTIP_CONTENT_STYLE, CHART_TOOLTIP_TEXT_COLOR, CHART_TOOLTIP_LABEL_COLOR, CHART_BODY_FONT_SIZE, EMPHASIS_SHADOW_COLOR } from '../../lib/constants'
 
 interface DataItem {
   name: string
@@ -57,7 +57,7 @@ export function PieChart({
         })),
         label: { show: false },
         emphasis: {
-          itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' },
+          itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: EMPHASIS_SHADOW_COLOR },
         },
       }],
     }
