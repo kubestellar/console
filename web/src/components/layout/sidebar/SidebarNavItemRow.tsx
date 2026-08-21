@@ -235,7 +235,7 @@ export function SidebarNavItemRow({
               })()}
             </NavLink>
             {!isCollapsed && canDrag && (
-              <span className="absolute right-5 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-xs rounded px-1 z-10">
+              <span className="absolute right-5 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-100 pointer-events-auto md:opacity-0 md:pointer-events-none md:group-hover:opacity-100 md:group-hover:pointer-events-auto transition-opacity bg-background/80 backdrop-blur-xs rounded px-1 z-10">
                 {!PROTECTED_SIDEBAR_IDS.includes(item.id) && (
                   <button
                     type="button"
