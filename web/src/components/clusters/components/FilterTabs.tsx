@@ -176,6 +176,7 @@ export function FilterTabs({
                     : 'bg-card/50 text-muted-foreground hover:text-foreground hover:bg-secondary'
                 }`}
                 title={label}
+                aria-label={label}
               >
                 <Icon className="w-4 h-4" />
               </button>
