@@ -58,6 +58,13 @@ Every issue must be verified against actual code before fixing:
 
 Do NOT strip labels or dismiss issues just because they were AI-generated or filed in bulk. The key question is: **does the code pattern exist and is it actually a problem?** Verify each individually.
 
+### Hive advisory digest hygiene
+
+- Treat issue **#22495** as digest-only (living document). Do not close it.
+- Before repeating an "untested" finding in advisory output, verify current `main` still lacks a matching test.
+- Match test names flexibly: accept both exact and suffixed tests (e.g. `PodDrillDown.actions.test.tsx` for `PodDrillDown.tsx`) in either co-located or `__tests__/` directories.
+- If evidence is stale, suppress it from the digest and open a focused actionable issue only for currently reproducible gaps.
+
 ## PR Review Criteria
 
 ### Console PRs

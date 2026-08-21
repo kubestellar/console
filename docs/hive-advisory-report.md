@@ -2,7 +2,7 @@
 
 ## Overview
 
-[Issue #22335](https://github.com/kubestellar/console/issues/22335) is a **living document** maintained by the Hive governor agent. It collects advisory findings from Hive agents operating in advisory-only mode and should **never be closed**.
+[Issue #22495](https://github.com/kubestellar/console/issues/22495) is a **living document** maintained by the Hive governor agent. It collects advisory findings from Hive agents operating in advisory-only mode and should **never be closed**.
 
 ## How It Works
 
@@ -16,7 +16,7 @@ At lower ACMM (Autonomous Contributor Maturity Model) levels, some Hive agents o
 
 ### Governor Digests
 
-The `governor` agent periodically posts a digest comment to issue #22335 summarizing:
+The `governor` agent periodically posts a digest comment to issue #22495 summarizing:
 
 - Total finding count broken down by severity
 - New findings since the last digest
@@ -30,9 +30,17 @@ At higher ACMM levels, designated agents (e.g. `quality`, `scanner`) can open is
 
 ## For Contributors
 
-- **Do not close issue #22335.** It is a living document; the governor will continue posting to it.
+- **Do not close issue #22495.** It is a living document; the governor will continue posting to it.
 - When a finding is resolved, the agent that resolved it notes the merged PR in a follow-up comment.
 - If a finding is stale or already addressed, you can leave a comment on the issue — the governor will factor it into the next digest.
+
+## Stale-Finding Suppression
+
+To reduce stale false positives in digest updates:
+
+- Before reposting an "untested file" finding, re-check current `main` for matching tests in both co-located and `__tests__/` locations.
+- Treat suffixed test names as valid coverage (for example `PodDrillDown.actions.test.tsx` for `PodDrillDown.tsx`).
+- Drop findings from the next digest once matching tests exist, and prefer opening focused follow-up issues for actionable gaps.
 - Critical findings tagged `[bug]` or `[security]` should be addressed promptly via a separate PR.
 
 ## Finding Tags

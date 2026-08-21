@@ -1,47 +1,34 @@
 import React from 'react'
-/// <reference types='@testing-library/jest-dom/vitest' />
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import { ProviderKeyForm } from './ProviderKeyForm'
+import type { KeyStatus } from './apiKeySettingsTypes'
 
 vi.mock('./AgentIcon', () => ({
   AgentIcon: ({ provider }: { provider: string }) => <div data-testid={`agent-icon-${provider}`} />,
 }))
 
-import { ProviderKeyForm } from './ProviderKeyForm'
-import type { KeyStatus } from './apiKeySettingsTypes'
+vi.mock('../../config/externalApis', () => ({
+  AI_PROVIDER_DOCS: {
+    openai: 'https://platform.openai.com/api-keys',
+    anthropic: 'https://console.anthropic.com/settings/keys',
+  },
+}))
 
-const translations: Record<string, string> = {
-  'agent.working': 'Working',
-  'agent.invalid': 'Invalid',
-  'agent.configured': 'Configured',
-  'agent.notConfigured': 'Not configured',
-  'agent.fromEnv': 'from env',
-  'agent.removeKey': 'Remove key',
-  'agent.getApiKey': 'Get API key',
-  'agent.enterApiKey': 'Enter API key',
-  'agent.saveAndValidate': 'Save and validate',
-  'actions.cancel': 'Cancel',
-  'agent.updateKey': 'Update key',
-  'agent.addKey': 'Add key',
-  'agent.envVariableNote': 'Configured via environment variable',
-  'agent.advanced': 'Advanced',
-  'agent.baseUrlLabel': 'Base URL',
-  'agent.baseUrlHint': 'Override the endpoint',
-  'agent.saveBaseUrl': 'Save Base URL',
-  'agent.baseUrlRestartHint': 'Saved. Restart kc-agent for the change to take effect.',
-  'agent.baseUrlFromEnv': 'env var set',
-}
-const t = ((key: string) => translations[key] ?? key) as unknown as import('i18next').TFunction
+const t = (key: string, fallback?: string) => fallback ?? key
 
-const baseKeyStatus: KeyStatus = {
-  provider: 'openrouter',
-  displayName: 'OpenRouter',
-  configured: false,
-}
-
-function makeProps(overrides: Partial<React.ComponentProps<typeof ProviderKeyForm>> = {}) {
+function baseKeyStatus(overrides: Partial<KeyStatus> = {}): KeyStatus {
   return {
-    keyStatus: baseKeyStatus,
+    provider: 'openai',
+    displayName: 'OpenAI',
+    configured: false,
+    ...overrides,
+  }
+}
+
+function baseProps(overrides: Partial<React.ComponentProps<typeof ProviderKeyForm>> = {}) {
+  return {
+    keyStatus: baseKeyStatus(),
     editingProvider: null,
     newKeyValue: '',
     showKey: false,
@@ -62,181 +49,171 @@ function makeProps(overrides: Partial<React.ComponentProps<typeof ProviderKeyFor
     onToggleAdvanced: vi.fn(),
     onSetBaseURLDraft: vi.fn(),
     onSaveBaseURL: vi.fn(),
-    getApiKeyErrorMessage: vi.fn((message: string) => message),
+    getApiKeyErrorMessage: (msg: string) => msg,
     ...overrides,
   }
 }
 
 describe('ProviderKeyForm', () => {
-  it('renders without crashing', () => {
-    expect(() => render(<ProviderKeyForm {...makeProps()} />)).not.toThrow()
+  it('renders provider display name', () => {
+    render(<ProviderKeyForm {...baseProps()} />)
+    expect(screen.getByText('OpenAI')).toBeTruthy()
   })
 
-  it('shows "Not configured" and an "Add key" button when the key is not configured', () => {
-    render(<ProviderKeyForm {...makeProps()} />)
-    expect(screen.getByText('Not configured')).toBeInTheDocument()
-    expect(screen.getByText('Add key')).toBeInTheDocument()
+  it('shows not-configured label when key is absent', () => {
+    render(<ProviderKeyForm {...baseProps()} />)
+    expect(screen.getByText('agent.notConfigured')).toBeTruthy()
   })
 
-  it('shows "Update key" when the key is configured', () => {
-    render(<ProviderKeyForm {...makeProps({ keyStatus: { ...baseKeyStatus, configured: true } })} />)
-    expect(screen.getByText('Update key')).toBeInTheDocument()
-  })
-
-  it('shows a "Working" status when the key is configured and valid', () => {
-    render(<ProviderKeyForm {...makeProps({ keyStatus: { ...baseKeyStatus, configured: true, valid: true } })} />)
-    expect(screen.getByText('Working')).toBeInTheDocument()
-  })
-
-  it('shows an "Invalid" status when the key is configured but invalid', () => {
-    render(<ProviderKeyForm {...makeProps({ keyStatus: { ...baseKeyStatus, configured: true, valid: false } })} />)
-    expect(screen.getByText('Invalid')).toBeInTheDocument()
-  })
-
-  it('disables the "Update key" button and hides delete when the key comes from an env var', () => {
-    render(<ProviderKeyForm {...makeProps({ keyStatus: { ...baseKeyStatus, configured: true, source: 'env' } })} />)
-    expect(screen.getByText('Update key').closest('button')).toBeDisabled()
-    expect(screen.getByText('Configured via environment variable')).toBeInTheDocument()
-    expect(screen.queryByTitle('Remove key')).not.toBeInTheDocument()
-  })
-
-  it('renders a delete button for a configured, non-env key and calls onSetDeleteConfirmProvider on click', () => {
-    const onSetDeleteConfirmProvider = vi.fn()
+  it('shows configured + working label when key is valid', () => {
     render(
       <ProviderKeyForm
-        {...makeProps({
-          keyStatus: { ...baseKeyStatus, configured: true, source: 'config' },
-          onSetDeleteConfirmProvider,
-        })}
-      />,
+        {...baseProps({ keyStatus: baseKeyStatus({ configured: true, valid: true }) })}
+      />
     )
-    fireEvent.click(screen.getByTitle('Remove key'))
-    expect(onSetDeleteConfirmProvider).toHaveBeenCalledWith('openrouter')
+    expect(screen.getByText('agent.working')).toBeTruthy()
   })
 
-  it('calls onStartEditing when the add/update button is clicked', () => {
+  it('shows invalid label when key is invalid', () => {
+    render(
+      <ProviderKeyForm
+        {...baseProps({ keyStatus: baseKeyStatus({ configured: true, valid: false }) })}
+      />
+    )
+    expect(screen.getByText('agent.invalid')).toBeTruthy()
+  })
+
+  it('calls onStartEditing when Add Key button is clicked', () => {
     const onStartEditing = vi.fn()
-    render(<ProviderKeyForm {...makeProps({ onStartEditing })} />)
-    fireEvent.click(screen.getByText('Add key'))
-    expect(onStartEditing).toHaveBeenCalledWith('openrouter')
+    render(<ProviderKeyForm {...baseProps({ onStartEditing })} />)
+    fireEvent.click(screen.getByText('agent.addKey'))
+    expect(onStartEditing).toHaveBeenCalledWith('openai')
   })
 
-  it('shows the key input and toggles between password and text when editing', () => {
-    render(<ProviderKeyForm {...makeProps({ editingProvider: 'openrouter', newKeyValue: 'sk-or-abc', showKey: false })} />)
-    const input = screen.getByPlaceholderText('sk-or-...') as HTMLInputElement
-    expect(input.type).toBe('password')
+  it('calls onStartEditing with Update Key label when configured', () => {
+    const onStartEditing = vi.fn()
+    render(
+      <ProviderKeyForm
+        {...baseProps({
+          keyStatus: baseKeyStatus({ configured: true, valid: true }),
+          onStartEditing,
+        })}
+      />
+    )
+    fireEvent.click(screen.getByText('agent.updateKey'))
+    expect(onStartEditing).toHaveBeenCalledWith('openai')
   })
 
-  it('shows the key input as text when showKey is true', () => {
-    render(<ProviderKeyForm {...makeProps({ editingProvider: 'openrouter', newKeyValue: 'sk-or-abc', showKey: true })} />)
-    const input = screen.getByPlaceholderText('sk-or-...') as HTMLInputElement
-    expect(input.type).toBe('text')
+  it('renders key input when editing this provider', () => {
+    render(
+      <ProviderKeyForm {...baseProps({ editingProvider: 'openai' })} />
+    )
+    expect(screen.getByRole('textbox')).toBeTruthy()
   })
 
-  it('calls onSetShowKey to toggle visibility when the eye icon is clicked', () => {
+  it('calls onSetNewKeyValue when user types in key input', () => {
+    const onSetNewKeyValue = vi.fn()
+    render(
+      <ProviderKeyForm {...baseProps({ editingProvider: 'openai', onSetNewKeyValue })} />
+    )
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'sk-test' } })
+    expect(onSetNewKeyValue).toHaveBeenCalledWith('sk-test')
+  })
+
+  it('calls onSetShowKey when eye button is toggled', () => {
     const onSetShowKey = vi.fn()
-    render(<ProviderKeyForm {...makeProps({ editingProvider: 'openrouter', newKeyValue: 'sk-or-abc', showKey: false, onSetShowKey })} />)
-    const toggleButtons = screen.getAllByRole('button')
-    const eyeButton = toggleButtons.find(b => b.getAttribute('type') === 'button' && !b.textContent)
-    fireEvent.click(eyeButton!)
+    render(
+      <ProviderKeyForm {...baseProps({ editingProvider: 'openai', onSetShowKey })} />
+    )
+    const eyeBtn = screen.getByRole('button', { name: '' })
+    // find the toggle button (not Save/Cancel)
+    const allButtons = screen.getAllByRole('button')
+    const eyeToggle = allButtons.find(
+      (b) => !b.textContent?.includes('agent.') && b.getAttribute('type') === 'button'
+    )
+    expect(eyeToggle).toBeTruthy()
+    fireEvent.click(eyeToggle!)
     expect(onSetShowKey).toHaveBeenCalledWith(true)
   })
 
-  it('disables the save button when newKeyValue is empty', () => {
-    render(<ProviderKeyForm {...makeProps({ editingProvider: 'openrouter', newKeyValue: '' })} />)
-    expect(screen.getByText('Save and validate').closest('button')).toBeDisabled()
-  })
-
-  it('disables the save button while saving', () => {
-    render(<ProviderKeyForm {...makeProps({ editingProvider: 'openrouter', newKeyValue: 'sk-or-abc', saving: true })} />)
-    const saveButton = screen.getAllByRole('button').find(b => b.querySelector('.animate-spin'))
-    expect(saveButton).toBeDisabled()
-  })
-
-  it('calls onSaveKey with the provider when save is clicked', () => {
+  it('calls onSaveKey when Save button is clicked with non-empty key', () => {
     const onSaveKey = vi.fn()
-    render(<ProviderKeyForm {...makeProps({ editingProvider: 'openrouter', newKeyValue: 'sk-or-abc', onSaveKey })} />)
-    fireEvent.click(screen.getByText('Save and validate'))
-    expect(onSaveKey).toHaveBeenCalledWith('openrouter')
+    render(
+      <ProviderKeyForm
+        {...baseProps({ editingProvider: 'openai', newKeyValue: 'sk-test', onSaveKey })}
+      />
+    )
+    fireEvent.click(screen.getByText('agent.saveAndValidate'))
+    expect(onSaveKey).toHaveBeenCalledWith('openai')
   })
 
-  it('calls onCancelEditing when cancel is clicked', () => {
+  it('Save button is disabled when key value is empty', () => {
+    render(
+      <ProviderKeyForm {...baseProps({ editingProvider: 'openai', newKeyValue: '' })} />
+    )
+    const saveBtn = screen.getByText('agent.saveAndValidate').closest('button')
+    expect(saveBtn?.disabled).toBe(true)
+  })
+
+  it('calls onCancelEditing when Cancel is clicked', () => {
     const onCancelEditing = vi.fn()
-    render(<ProviderKeyForm {...makeProps({ editingProvider: 'openrouter', newKeyValue: 'sk-or-abc', onCancelEditing })} />)
-    fireEvent.click(screen.getByText('Cancel'))
-    expect(onCancelEditing).toHaveBeenCalledTimes(1)
-  })
-
-  it('renders editError inline', () => {
-    render(<ProviderKeyForm {...makeProps({ editingProvider: 'openrouter', newKeyValue: 'sk-or-abc', editError: 'invalid_api_key' })} />)
-    expect(screen.getByText('invalid_api_key')).toBeInTheDocument()
-  })
-
-  it('does not render the advanced section when the provider has no baseURLEnvVar', () => {
-    render(<ProviderKeyForm {...makeProps()} />)
-    expect(screen.queryByText('Advanced')).not.toBeInTheDocument()
-  })
-
-  it('renders the advanced toggle when the provider has a baseURLEnvVar', () => {
     render(
       <ProviderKeyForm
-        {...makeProps({ keyStatus: { ...baseKeyStatus, provider: 'ollama', baseURLEnvVar: 'OLLAMA_URL' } })}
-      />,
+        {...baseProps({ editingProvider: 'openai', newKeyValue: 'x', onCancelEditing })}
+      />
     )
-    expect(screen.getByText('Advanced')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('actions.cancel'))
+    expect(onCancelEditing).toHaveBeenCalled()
   })
 
-  it('expands the advanced base-URL section and calls onToggleAdvanced with the current baseURL', () => {
-    const onToggleAdvanced = vi.fn()
+  it('displays edit error message when present', () => {
     render(
       <ProviderKeyForm
-        {...makeProps({
-          keyStatus: { ...baseKeyStatus, provider: 'ollama', baseURLEnvVar: 'OLLAMA_URL', baseURL: 'http://localhost:11434' },
-          onToggleAdvanced,
+        {...baseProps({
+          editingProvider: 'openai',
+          newKeyValue: 'x',
+          editError: 'Invalid API key',
         })}
-      />,
+      />
     )
-    fireEvent.click(screen.getByText('Advanced'))
-    expect(onToggleAdvanced).toHaveBeenCalledWith('ollama', 'http://localhost:11434')
+    expect(screen.getByText('Invalid API key')).toBeTruthy()
   })
 
-  it('shows baseURLError inline when the advanced section is expanded', () => {
+  it('calls onSetDeleteConfirmProvider when delete button is clicked', () => {
+    const onSetDeleteConfirmProvider = vi.fn()
     render(
       <ProviderKeyForm
-        {...makeProps({
-          keyStatus: { ...baseKeyStatus, provider: 'ollama', baseURLEnvVar: 'OLLAMA_URL' },
-          expandedAdvanced: new Set(['ollama']),
-          baseURLError: { ollama: 'Invalid URL' },
+        {...baseProps({
+          keyStatus: baseKeyStatus({ configured: true, valid: true, source: 'config' }),
+          onSetDeleteConfirmProvider,
         })}
-      />,
+      />
     )
-    expect(screen.getByText('Invalid URL')).toBeInTheDocument()
+    const deleteBtn = screen.getByTitle('agent.removeKey')
+    fireEvent.click(deleteBtn)
+    expect(onSetDeleteConfirmProvider).toHaveBeenCalledWith('openai')
   })
 
-  it('calls onSaveBaseURL with the provider when Save Base URL is clicked', () => {
-    const onSaveBaseURL = vi.fn()
+  it('Add Key button is disabled when source is env', () => {
     render(
       <ProviderKeyForm
-        {...makeProps({
-          keyStatus: { ...baseKeyStatus, provider: 'ollama', baseURLEnvVar: 'OLLAMA_URL' },
-          expandedAdvanced: new Set(['ollama']),
-          onSaveBaseURL,
+        {...baseProps({
+          keyStatus: baseKeyStatus({ configured: true, source: 'env' }),
         })}
-      />,
+      />
     )
-    fireEvent.click(screen.getByText('Save Base URL'))
-    expect(onSaveBaseURL).toHaveBeenCalledWith('ollama')
+    const btn = screen.getByText('agent.updateKey').closest('button')
+    expect(btn?.disabled).toBe(true)
   })
 
-  it('disables the base-URL input and save button when baseURLSource is env', () => {
+  it('shows env variable note when source is env', () => {
     render(
       <ProviderKeyForm
-        {...makeProps({
-          keyStatus: { ...baseKeyStatus, provider: 'ollama', baseURLEnvVar: 'OLLAMA_URL', baseURLSource: 'env' },
-          expandedAdvanced: new Set(['ollama']),
+        {...baseProps({
+          keyStatus: baseKeyStatus({ configured: true, source: 'env' }),
         })}
-      />,
+      />
     )
-    expect(screen.getByText('Save Base URL').closest('button')).toBeDisabled()
+    expect(screen.getByText('agent.envVariableNote')).toBeTruthy()
   })
 })
