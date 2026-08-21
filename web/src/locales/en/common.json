@@ -5569,7 +5569,14 @@
     "selectNamespace": "Select a namespace",
     "applyToAllClusters": "Apply to all clusters",
     "teamDeleted": "Team deleted",
-    "teamDeleteError": "Failed to delete team"
+    "teamDeleteError": "Failed to delete team",
+    "teamCreated": "Team created",
+    "teamCreateError": "Failed to create team",
+    "memberAdded": "Member added",
+    "memberAddError": "Failed to add member",
+    "memberRemoved": "Member removed",
+    "memberRemoveError": "Failed to remove member",
+    "roleChangeUnavailable": "Changing member roles is not available yet"
   },
   "notFound": {
     "title": "Page not found",
