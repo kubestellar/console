@@ -342,6 +342,13 @@ if [ -z "$FAST_MODE" ]; then
         #     Playwright-level timeout (900_000ms) and fits within the 120m
         #     workflow backstop. perf-test bumped to 1200s — 29 dashboard
         #     variants all pass but exceed 900s wall-clock (#nightly-fix).
+        #   #22698 perf-test: DASHBOARDS grew to 27 entries (81 dashboard×mode
+        #     tests + 1 warmup = 82 total), so the suite now needs ~25s/test
+        #     (~2050s) to finish — the 1200s cap kills it after only 48/82
+        #     tests complete (all passing). Bumped to 2400s for headroom as
+        #     more dashboards/cards are added; still well inside the 180m
+        #     workflow backstop (timeout-minutes: 180 in
+        #     .github/workflows/nightly-test-suite.yml).
         #   deploy-test: 11 serial tests (workers=1) with build/preview startup.
         #     Suite killed after 300s wall-clock timeout — default cap too tight
         #     for the combined vite build + 11-test run. 600s gives headroom.
@@ -356,7 +363,7 @@ if [ -z "$FAST_MODE" ]; then
           ["deploy-test"]=900
           ["ai-ml-test"]=900
           ["nav-test"]=900
-          ["perf-test"]=1200
+          ["perf-test"]=2400
         )
 
         for script in "${PLAYWRIGHT_SCRIPTS[@]}"; do
