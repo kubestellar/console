@@ -14,7 +14,12 @@ export function TeamManagementPage() {
   const { team, addMember, removeMember } = useTeamDetail(selectedTeamId)
 
   const handleCreate = async (name: string, description: string) => {
-    await createTeam({ name, description })
+    const created = await createTeam({ name, description })
+    if (created) {
+      showToast(t('teams.teamCreated'), 'success')
+    } else {
+      showToast(t('teams.teamCreateError'), 'error')
+    }
   }
 
   const handleDelete = async () => {
@@ -29,7 +34,20 @@ export function TeamManagementPage() {
     }
   }
 
+  const handleAddMember = async (userId: string, role: TeamRole) => {
+    const success = await addMember(userId, role)
+    showToast(success ? t('teams.memberAdded') : t('teams.memberAddError'), success ? 'success' : 'error')
+    return success
+  }
+
+  const handleRemoveMember = async (userId: string) => {
+    const success = await removeMember(userId)
+    showToast(success ? t('teams.memberRemoved') : t('teams.memberRemoveError'), success ? 'success' : 'error')
+    return success
+  }
+
   const handleChangeRole = async (_userId: string, _role: TeamRole) => {
+    showToast(t('teams.roleChangeUnavailable'), 'error')
   }
 
   if (selectedTeamId && team) {
@@ -41,8 +59,8 @@ export function TeamManagementPage() {
             onBack={() => setSelectedTeamId(null)}
             onUpdateTeam={() => {}}
             onDeleteTeam={handleDelete}
-            onAddMember={addMember}
-            onRemoveMember={removeMember}
+            onAddMember={handleAddMember}
+            onRemoveMember={handleRemoveMember}
             onChangeRole={handleChangeRole}
           />
         </div>
