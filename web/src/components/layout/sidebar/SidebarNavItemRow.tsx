@@ -47,7 +47,7 @@ function isGroundControlItem(href: string): boolean {
 }
 
 function renderIcon(iconName: string, className?: string) {
-  const IconComponent = iconRegistry[iconName] as React.ComponentType<{ className?: string }> | undefined
+  const IconComponent = iconRegistry[iconName] as import('react').ComponentType<{ className?: string }> | undefined
   return IconComponent ? <IconComponent className={className} /> : null
 }
 
@@ -240,7 +240,7 @@ export function SidebarNavItemRow({
                   <button
                     type="button"
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRemove(item.id) }}
-                    className="p-1 rounded hover:bg-red-500/20 hover:text-red-400 text-muted-foreground/50 transition-colors"
+                    className="min-h-11 min-w-11 p-1 rounded hover:bg-red-500/20 hover:text-red-400 text-muted-foreground/50 transition-colors"
                     title={t('sidebar.removeFromSidebar')}
                     aria-label={t('sidebar.removeFromSidebar')}
                   >
@@ -248,7 +248,7 @@ export function SidebarNavItemRow({
                   </button>
                 )}
                 <span
-                  className="p-1 rounded hover:bg-secondary text-muted-foreground/50 hover:text-muted-foreground cursor-grab active:cursor-grabbing transition-colors"
+                  className="min-h-11 min-w-11 p-1 rounded hover:bg-secondary text-muted-foreground/50 hover:text-muted-foreground cursor-grab active:cursor-grabbing transition-colors"
                   aria-hidden="true"
                   onMouseDown={(e) => e.stopPropagation()}
                 >
