@@ -2,9 +2,10 @@
 // Extracted from ClusterCosts.tsx (issue #21615) — markup unchanged.
 // Pure UI sub-component — renders props (pricing/costs) provided by the parent;
 // no data fetching. Demo data support provided by ClusterCosts.tsx.
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, RefreshCcw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../ui/StatusBadge'
+import { cn } from '../../lib/cn'
 import { sanitizeUrl } from '../../lib/utils/sanitizeUrl'
 import {
   CLOUD_PRICING,
@@ -41,11 +42,21 @@ export function ClusterCostsRatesPanel({
 
   return (
     <div className="mb-3 p-3 rounded-lg bg-secondary/30 border border-border/50 text-xs">
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <span className="font-medium text-foreground">
+          {pricingMode === 'uniform'
+            ? t('cards:clusterCosts.pricingRates', { provider: pricing.name })
+            : t('cards:clusterCosts.perClusterPricingRates')}
+        </span>
+        <span className="text-muted-foreground flex items-center gap-1">
+          <RefreshCcw className={cn('w-3 h-3 animate-spin')} aria-hidden="true" />
+          {t('common:refreshing')}
+        </span>
+      </div>
       {pricingMode === 'uniform' ? (
         // Uniform mode - show single provider rates
         <>
-          <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
-            <span className="font-medium text-foreground">{t('cards:clusterCosts.pricingRates', { provider: pricing.name })}</span>
+          <div className="flex flex-wrap items-center justify-end gap-y-2 mb-2">
             {pricing.pricingUrl && (
               <a
                 href={sanitizeUrl(pricing.pricingUrl)}
@@ -80,8 +91,7 @@ export function ClusterCostsRatesPanel({
       ) : (
         // Per-cluster mode - show all providers' rates
         <>
-          <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
-            <span className="font-medium text-foreground">{t('cards:clusterCosts.perClusterPricingRates')}</span>
+          <div className="flex items-center justify-end mb-2">
             <span className="text-muted-foreground">{t('cards:clusterCosts.clickBadgesToChange')}</span>
           </div>
           <div className="space-y-2">
