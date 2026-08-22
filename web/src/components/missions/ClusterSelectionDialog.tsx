@@ -12,6 +12,7 @@ import { BaseModal } from '../../lib/modals/BaseModal'
 import { useClusters } from '../../hooks/mcp/clusters'
 import type { ClusterInfo } from '../../hooks/mcp/types'
 import { Button } from '../ui/Button'
+import { CompactErrorBoundary } from '../CompactErrorBoundary'
 
 /** Delay before auto-selecting a single online cluster (ms) */
 const AUTO_SELECT_DELAY_MS = 600
@@ -59,7 +60,17 @@ function matchesClusterSearch(cluster: ClusterOption, query: string): boolean {
   return cluster.name.toLowerCase().includes(normalizedQuery) || cluster.context.toLowerCase().includes(normalizedQuery)
 }
 
-export function ClusterSelectionDialog({ open, missionTitle, onSelect, onCancel }: ClusterSelectionDialogProps) {
+// Wrapped in a CompactErrorBoundary so a render error in this dialog can't
+// crash the whole page while the user is mid-install (#22721).
+export function ClusterSelectionDialog(props: ClusterSelectionDialogProps) {
+  return (
+    <CompactErrorBoundary context="ClusterSelectionDialog">
+      <ClusterSelectionDialogInner {...props} />
+    </CompactErrorBoundary>
+  )
+}
+
+function ClusterSelectionDialogInner({ open, missionTitle, onSelect, onCancel }: ClusterSelectionDialogProps) {
   const { t } = useTranslation()
   const { deduplicatedClusters: clusters, isLoading, error, refetch } = useClusters()
   const [selected, setSelected] = useState<Set<string>>(new Set())

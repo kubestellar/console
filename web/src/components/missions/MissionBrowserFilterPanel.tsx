@@ -12,6 +12,7 @@ import { X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import { CATEGORY_FILTERS } from './missionBrowserConstants'
+import { CompactErrorBoundary } from '../CompactErrorBoundary'
 
 interface FacetCounts {
   clusterMatched: number
@@ -59,7 +60,17 @@ interface MissionBrowserFilterPanelProps {
 
 const MATCH_PCT_OPTIONS = [0, 25, 50, 75] as const
 
-export function MissionBrowserFilterPanel({
+// Wrapped in a CompactErrorBoundary so a render error in this filter bar
+// can't crash the whole mission browser (#22721).
+export function MissionBrowserFilterPanel(props: MissionBrowserFilterPanelProps) {
+  return (
+    <CompactErrorBoundary context="MissionBrowserFilterPanel">
+      <MissionBrowserFilterPanelInner {...props} />
+    </CompactErrorBoundary>
+  )
+}
+
+function MissionBrowserFilterPanelInner({
   activeFilterCount,
   onClearAllFilters,
   minMatchPercent,

@@ -14,6 +14,7 @@ import { cn } from '../../lib/cn'
 import { emitFixerGitHubLink } from '../../lib/analytics'
 import { useTranslation } from 'react-i18next'
 import { CollapsibleSection } from '../ui/CollapsibleSection'
+import { CompactErrorBoundary } from '../CompactErrorBoundary'
 import {
   RecommendationCard,
   EmptyState,
@@ -69,7 +70,17 @@ function interpolateFallback(template: string, values?: TranslationValues) {
   }, template)
 }
 
-export function MissionBrowserRecommendedTab({
+// Wrapped in a CompactErrorBoundary so a render error in this complex tab
+// can't crash the whole mission browser (#22721).
+export function MissionBrowserRecommendedTab(props: MissionBrowserRecommendedTabProps) {
+  return (
+    <CompactErrorBoundary context="MissionBrowserRecommendedTab">
+      <MissionBrowserRecommendedTabInner {...props} />
+    </CompactErrorBoundary>
+  )
+}
+
+function MissionBrowserRecommendedTabInner({
   tokenError,
   missionFetchError,
   loadingRecommendations,

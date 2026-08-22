@@ -22,12 +22,23 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '../ui/Button'
 import { ConfirmDialog } from '../../lib/modals'
 import { ResolutionCard, ResolutionDetailPanel } from './ResolutionHistoryPanel.parts'
+import { CompactErrorBoundary } from '../CompactErrorBoundary'
 
 interface ResolutionHistoryPanelProps {
   onApplyResolution?: (resolution: Resolution) => void
 }
 
-export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryPanelProps) {
+// Wrapped in a CompactErrorBoundary so a render error in this complex panel
+// can't crash the whole mission sidebar (#22721).
+export function ResolutionHistoryPanel(props: ResolutionHistoryPanelProps) {
+  return (
+    <CompactErrorBoundary context="ResolutionHistoryPanel">
+      <ResolutionHistoryPanelInner {...props} />
+    </CompactErrorBoundary>
+  )
+}
+
+function ResolutionHistoryPanelInner({ onApplyResolution }: ResolutionHistoryPanelProps) {
   const { t } = useTranslation()
   const { resolutions, sharedResolutions, deleteResolution, shareResolution } = useResolutions()
   const [expandedId, setExpandedId] = useState<string | null>(null)

@@ -10,6 +10,7 @@ import type { OrbitRunHistoryEntry, OrbitCadence } from '../../lib/missions/type
 import { ORBIT_CADENCE_HOURS } from '../../lib/constants/orbit'
 import { cn } from '../../lib/cn'
 import { useDropdownKeyNav } from '../../hooks/useDropdownKeyNav'
+import { CompactErrorBoundary } from '../CompactErrorBoundary'
 
 /** Maximum history entries shown before "Show more" */
 const VISIBLE_HISTORY_COUNT = 5
@@ -30,7 +31,17 @@ interface OrbitStatusTrackerProps {
 
 const CADENCE_OPTIONS: OrbitCadence[] = ['daily', 'weekly', 'monthly']
 
-export function OrbitStatusTracker({
+// Wrapped in a CompactErrorBoundary so a render error in this history
+// timeline can't crash the whole mission detail view (#22721).
+export function OrbitStatusTracker(props: OrbitStatusTrackerProps) {
+  return (
+    <CompactErrorBoundary context="OrbitStatusTracker">
+      <OrbitStatusTrackerInner {...props} />
+    </CompactErrorBoundary>
+  )
+}
+
+function OrbitStatusTrackerInner({
   history,
   cadence,
   lastRunAt,

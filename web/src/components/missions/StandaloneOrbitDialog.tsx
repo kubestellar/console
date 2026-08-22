@@ -16,8 +16,19 @@ import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import { CADENCE_OPTIONS, type StandaloneOrbitDialogProps } from './StandaloneOrbitDialog.helpers'
 import { ClusterScopeSection } from './StandaloneOrbitDialog.parts'
 import { useStandaloneOrbit } from './useStandaloneOrbit'
+import { CompactErrorBoundary } from '../CompactErrorBoundary'
 
-export function StandaloneOrbitDialog({ onClose, prefill }: StandaloneOrbitDialogProps) {
+// Wrapped in a CompactErrorBoundary so a render error in this complex dialog
+// (many derived states + form sections) can't crash the whole page (#22721).
+export function StandaloneOrbitDialog(props: StandaloneOrbitDialogProps) {
+  return (
+    <CompactErrorBoundary context="StandaloneOrbitDialog">
+      <StandaloneOrbitDialogInner {...props} />
+    </CompactErrorBoundary>
+  )
+}
+
+function StandaloneOrbitDialogInner({ onClose, prefill }: StandaloneOrbitDialogProps) {
   const { t } = useTranslation()
   const {
     templates,
