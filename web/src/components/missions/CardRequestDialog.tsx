@@ -9,6 +9,7 @@ import { LayoutGrid, X, Send, Loader2, AlertTriangle } from 'lucide-react'
 import { api } from '../../lib/api'
 import { emitGroundControlCardRequestOpened } from '../../lib/analytics'
 import { useToast } from '../ui/Toast'
+import { CompactErrorBoundary } from '../CompactErrorBoundary'
 
 interface CardRequestDialogProps {
   /** Projects that have no direct monitoring card mapping */
@@ -16,7 +17,17 @@ interface CardRequestDialogProps {
   onClose: () => void
 }
 
-export function CardRequestDialog({ missingProjects, onClose }: CardRequestDialogProps) {
+// Wrapped in a CompactErrorBoundary so a render error in this dialog can't
+// crash the whole page (#22721).
+export function CardRequestDialog(props: CardRequestDialogProps) {
+  return (
+    <CompactErrorBoundary context="CardRequestDialog">
+      <CardRequestDialogInner {...props} />
+    </CompactErrorBoundary>
+  )
+}
+
+function CardRequestDialogInner({ missingProjects, onClose }: CardRequestDialogProps) {
   const { t } = useTranslation()
   const { showToast } = useToast()
   const [submittingProjects, setSubmittingProjects] = useState<Set<string>>(new Set())

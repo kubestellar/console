@@ -27,6 +27,7 @@ import type { MissionExport } from '../../lib/missions/types'
 import type { UnstructuredPreview } from '../../lib/missions/fileParser'
 import type { ApiGroupMapping } from '../../lib/missions/apiGroupMapping'
 import { copyToClipboard } from '../../lib/clipboard'
+import { CompactErrorBoundary } from '../CompactErrorBoundary'
 
 // ============================================================================
 // Constants
@@ -57,7 +58,17 @@ interface UnstructuredFilePreviewProps {
 // Component
 // ============================================================================
 
-export function UnstructuredFilePreview({
+// Wrapped in a CompactErrorBoundary so a render error in this complex preview
+// can't crash the whole page (#22721).
+export function UnstructuredFilePreview(props: UnstructuredFilePreviewProps) {
+  return (
+    <CompactErrorBoundary context="UnstructuredFilePreview">
+      <UnstructuredFilePreviewInner {...props} />
+    </CompactErrorBoundary>
+  )
+}
+
+function UnstructuredFilePreviewInner({
   content,
   format,
   preview,

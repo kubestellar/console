@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { KagentAgent } from '../../lib/kagentBackend'
 import { useDropdownKeyNav } from '../../hooks/useDropdownKeyNav'
+import { CompactErrorBoundary } from '../CompactErrorBoundary'
 
 interface KagentAgentPickerProps {
   agents: KagentAgent[]
@@ -13,7 +14,17 @@ interface KagentAgentPickerProps {
 const KAGENT_DOCS_URL = 'https://kagent.dev/docs'
 const MAX_VISIBLE_TOOLS = 3
 
-export function KagentAgentPicker({ agents, selectedAgent, onSelect }: KagentAgentPickerProps) {
+// Wrapped in a CompactErrorBoundary so a render error in this picker can't
+// crash the whole page (#22721).
+export function KagentAgentPicker(props: KagentAgentPickerProps) {
+  return (
+    <CompactErrorBoundary context="KagentAgentPicker">
+      <KagentAgentPickerInner {...props} />
+    </CompactErrorBoundary>
+  )
+}
+
+function KagentAgentPickerInner({ agents, selectedAgent, onSelect }: KagentAgentPickerProps) {
   const { t } = useTranslation(['common', 'cards'])
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
