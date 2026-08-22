@@ -1,4 +1,3 @@
-import type { TFunction } from 'i18next'
 import type { CSSProperties } from 'react'
 import type { LLMdStackComponent } from '../../../hooks/useStackDiscovery'
 import { generateKVCacheStats, type KVCacheStats } from '../../../lib/llmd/mockData'
@@ -91,6 +90,15 @@ interface AggregatedRoleConfig extends UtilizationConfig {
 interface DisaggregatedRoleConfig extends UtilizationConfig {
   components: LLMdStackComponent[]
   prefix: string
+}
+
+// Narrow structural type for i18next's `t()`, sufficient for the simple
+// `t(key)` / `t(key, fallback)` calls made here -- avoids needing
+// `TFunction<any>`. Modeled as two call signatures (rather than one with an
+// optional parameter) so real `TFunction` values remain assignable to it.
+type TranslateFn = {
+  (key: string): string
+  (key: string, fallback: string): string
 }
 
 function getPrometheusUtilization(
@@ -363,8 +371,7 @@ export function getHorseshoeSize(statsLength: number, isExpanded: boolean): numb
   return 120
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function translateAggregatePodName(t: TFunction<any>, podName: string): string {
+function translateAggregatePodName(t: TranslateFn, podName: string): string {
   if (podName.startsWith('Prefill (')) {
     return podName.replace('Prefill', t('llmd.prefill', 'Prefill'))
   }
@@ -380,8 +387,7 @@ function translateAggregatePodName(t: TFunction<any>, podName: string): string {
   return podName
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function getDisplayPodName(t: TFunction<any>, podName: string, maxLength?: number): string {
+export function getDisplayPodName(t: TranslateFn, podName: string, maxLength?: number): string {
   const translatedName = translateAggregatePodName(t, podName).replace('vllm-', '')
   return typeof maxLength === 'number' ? translatedName.slice(0, maxLength) : translatedName
 }

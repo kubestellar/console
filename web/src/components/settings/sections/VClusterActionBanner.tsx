@@ -4,21 +4,26 @@ import { useTranslation } from 'react-i18next'
 import { Check, AlertTriangle, Loader2, X } from 'lucide-react'
 import { CLUSTER_PROGRESS_AUTO_DISMISS_MS } from '../../../hooks/useClusterProgress'
 import { friendlyErrorMessage } from '../../../lib/clusterErrors'
-import type { VClusterActionFeedback } from '../../../hooks/useLocalClusterTools'
+import type { VClusterActionFeedback, VClusterActionKind } from '../../../hooks/useLocalClusterTools'
+
+// Finite union of the i18n keys that can actually be built from
+// `VClusterActionKind`/`VClusterActionState`, so the dynamic key can be
+// asserted to a real type instead of `any`.
+type VClusterFeedbackKey =
+  | `settings.localClusters.vclusterFeedback.${VClusterActionKind}.pending`
+  | `settings.localClusters.vclusterFeedback.${VClusterActionKind}.success`
+  | `settings.localClusters.vclusterFeedback.${VClusterActionKind}.errorFallback`
 
 function getVClusterActionMessage(feedback: VClusterActionFeedback, t: TFunction): string {
-  const keyBase = `settings.localClusters.vclusterFeedback.${feedback.action}.${feedback.state}`
-
   if (feedback.state === 'error') {
+    const key: VClusterFeedbackKey = `settings.localClusters.vclusterFeedback.${feedback.action}.errorFallback`
     return feedback.message
       ? friendlyErrorMessage(feedback.message)
-      // Dynamic i18n keys require type assertion — the key is built at runtime
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      : String(t(`${keyBase}Fallback` as any, { name: feedback.name, namespace: feedback.namespace }))
+      : String(t(key, { name: feedback.name, namespace: feedback.namespace }))
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return String(t(keyBase as any, { name: feedback.name, namespace: feedback.namespace }))
+  const key: VClusterFeedbackKey = `settings.localClusters.vclusterFeedback.${feedback.action}.${feedback.state}`
+  return String(t(key, { name: feedback.name, namespace: feedback.namespace }))
 }
 
 /** Inline feedback banner for vCluster create/connect/disconnect/delete operations. */
