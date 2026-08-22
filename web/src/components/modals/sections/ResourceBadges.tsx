@@ -222,7 +222,7 @@ export function NamespaceBadge({
 
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded border font-medium bg-blue-500/20 text-blue-400 border-blue-500/30 ${sizeClasses[size]} ${onClick ? 'cursor-pointer hover:opacity-80' : 'cursor-default'} ${className}`}
+      className={`inline-flex items-center justify-center gap-1 rounded border font-medium bg-blue-500/20 text-blue-400 border-blue-500/30 ${sizeClasses[size]} ${onClick ? 'cursor-pointer hover:opacity-80' : 'cursor-default'} ${className}`}
       title={`Namespace: ${namespace}`}
       onClick={onClick}
       {...(onClick ? {
@@ -271,7 +271,7 @@ export function ResourceKindBadge({
 
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded border font-medium ${colors.bg} ${colors.text} ${colors.border} ${sizeClasses[size]} ${onClick ? 'cursor-pointer hover:opacity-80' : 'cursor-default'} ${className}`}
+      className={`inline-flex items-center justify-center gap-1 rounded border font-medium ${colors.bg} ${colors.text} ${colors.border} ${sizeClasses[size]} ${onClick ? 'cursor-pointer hover:opacity-80' : 'cursor-default'} ${className}`}
       title={`Resource: ${kind}`}
       onClick={onClick}
       {...(onClick ? {

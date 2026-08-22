@@ -4,7 +4,7 @@
  * Lightweight summary cards for the Console Studio that link to full dashboards.
  * Each card fetches summary data and renders a compact view.
  */
-import { Shield, FileText, Activity, Lock, WifiOff, Award, CheckCircle2, XCircle, KeyRound, Clock, Package, Scale } from 'lucide-react'
+import { Shield, FileText, Activity, Lock, WifiOff, Award, CheckCircle2, XCircle, KeyRound, Clock, Package, Scale, RefreshCcw } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { authFetch, safeJson } from '../../lib/api'
 import { useCache } from '../../lib/cache'
@@ -70,12 +70,13 @@ function CardShell({ title, icon: Icon, children, onClick }: {
 }) {
   return (
     <div
-      className={`h-full flex flex-col ${onClick ? 'cursor-pointer hover:bg-secondary transition-colors min-h-11' : ''}`}
+      className={`h-full flex flex-col ${onClick ? 'cursor-pointer hover:bg-secondary transition-colors min-h-11 min-w-11' : ''}`}
       onClick={onClick}
     >
       <div className="flex items-center gap-2 mb-3">
         <Icon className="w-4 h-4 text-blue-400 shrink-0" />
         <span className="text-sm font-medium text-foreground truncate">{title}</span>
+        <RefreshCcw className="w-3 h-3 animate-spin text-muted-foreground ml-auto" aria-hidden="true" />
       </div>
       <div className="flex-1 min-h-0">{children}</div>
     </div>

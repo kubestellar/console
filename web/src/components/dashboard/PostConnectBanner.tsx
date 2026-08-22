@@ -134,7 +134,7 @@ export function PostConnectBanner({
           <button
             key={id}
             onClick={onClick}
-            className="flex items-center gap-3 p-3 rounded-lg bg-secondary/30 border border-border/50 hover:border-green-500/30 hover:bg-secondary/50 transition-all text-left group min-h-11"
+            className="flex min-h-11 min-w-11 items-center gap-3 rounded-lg border border-border/50 bg-secondary/30 p-3 text-left transition-all group hover:border-green-500/30 hover:bg-secondary/50"
           >
             <div className="p-2 rounded-lg bg-green-500/10 group-hover:bg-green-500/20 transition-colors shrink-0">
               <Icon className="w-4 h-4 text-green-400" />

@@ -207,6 +207,11 @@ test.describe('Smoke Tests', () => {
       await page.waitForTimeout(500)
       await settingsLink.waitFor({ state: 'visible', timeout: 10000 })
       await settingsLink.click({ force: true })
+      // Matches the pattern in Sidebar.spec.ts: after a forced click, wait for
+      // the SPA route change to actually commit before asserting on the URL.
+      // Without this, Firefox/WebKit nightly runs can race the toHaveURL()
+      // check against the in-flight navigation and observe the stale "/" URL.
+      await page.waitForLoadState('domcontentloaded')
 
       await expect(page).toHaveURL(/\/settings(?:[?#].*)?$/, { timeout: 10000 })
       // Settings.tsx renders settings-title twice: once in the desktop sidebar

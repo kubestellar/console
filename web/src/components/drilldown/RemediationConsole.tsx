@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FOCUS_DELAY_MS } from '../../lib/constants/network'
 import { PageErrorBoundary } from '../PageErrorBoundary'
@@ -56,6 +56,15 @@ function RemediationConsoleContent({
     copyLogs,
     downloadLogs,
   } = useRemediationRun({ resourceType, resourceName, namespace, cluster, issues })
+
+  useEffect(() => {
+    if (!isOpen) return
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [isOpen, onClose])
 
   if (!isOpen) return null
 
