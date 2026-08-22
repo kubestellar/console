@@ -352,6 +352,12 @@ if [ -z "$FAST_MODE" ]; then
         #   deploy-test: 11 serial tests (workers=1) with build/preview startup.
         #     Suite killed after 300s wall-clock timeout — default cap too tight
         #     for the combined vite build + 11-test run. 600s gives headroom.
+        #   #22715 interaction-test: uses compliance.config.ts, the same
+        #     `npm run build && vite preview` webServer topology as deploy-test
+        #     (~2m build + up to 3m preview startup), then runs 8 serial tests.
+        #     Default 300s cap killed the suite mid-run after only 5/8 tests
+        #     completed (all passing), the same failure mode deploy-test hit
+        #     before its override was added. 600s matches deploy-test's budget.
         declare -A PLAYWRIGHT_SUITE_TIMEOUT_OVERRIDES=(
           ["console-error-scan"]=600
           ["ui-compliance-test"]=600
@@ -364,6 +370,7 @@ if [ -z "$FAST_MODE" ]; then
           ["ai-ml-test"]=900
           ["nav-test"]=900
           ["perf-test"]=2400
+          ["interaction-test"]=600
         )
 
         for script in "${PLAYWRIGHT_SCRIPTS[@]}"; do
