@@ -171,6 +171,30 @@ Target: Keep components under 8 hooks
 4. `/web/src/components/layout/navbar/ClusterFilterPanel.tsx` (608 → ~300 lines, pending)
 5. `/web/src/components/auth/Login.tsx` (648 → ~300 lines, pending)
 
+### 6. FlightPlanBlueprint.tsx (904 lines → 95 lines + 4 siblings + hook)
+**Status**: COMPLETE — issue #22731 (batch 1)
+
+**Created**:
+- `useFlightPlanBlueprint.ts` (314 lines) — all stateful logic: hover/sticky panel, zoom, pan, panel resize, drag-and-drop, mission preview
+- `FlightPlanToolbar.tsx` (111 lines) — title, overlay toggles, phased/yolo switch
+- `FlightPlanCanvas.tsx` (354 lines) — SVG surface, zoom controls, cluster zones, dependency paths/labels, project nodes, drop zones
+- `FlightPlanSidePanel.tsx` (95 lines) — resizable right info panel
+- `FlightPlanMissionPreview.tsx` (60 lines) — KB mission preview modal
+
+**Moved into `FlightPlanBlueprint.utils.ts`** (pure, unit tested in
+`__tests__/FlightPlanBlueprint.helpers.test.ts`):
+`computeHealthyState`, `splitProjectKey`, `computeGlowEdges`,
+`computeGlowProjectKeys`, `readStoredInfoPanelWidth`, `clampInfoPanelWidth`,
+`clampZoom`, `resolveLabelY`.
+
+**Metrics**:
+- Main file: 95 lines, 1 hook (`useFlightPlanBlueprint`)
+- ✅ Behavior unchanged — existing `FlightPlanBlueprint.test.tsx` passes unmodified
+
+**Remaining in this batch (follow-ups on #22731)**: `Missions.tsx` (837),
+`GPUInventoryHistory.tsx` (826), `MissionControlDialog.tsx` (780),
+`KubeKong.tsx` (492, 32 hooks).
+
 ---
 
 ## Testing Strategy

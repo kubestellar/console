@@ -18,3 +18,10 @@ export const NODE_RADIUS = 18
 /** Vertical offset (SVG units) to place the label above the edge midpoint */
 export const LABEL_OFFSET_Y = 12
 
+
+/** Horizontal distance (SVG units) within which a label is considered to overlap a node */
+export const LABEL_NODE_CLEARANCE_X = 40
+/** Extra vertical clearance (SVG units) added to the node radius when pushing labels clear */
+export const LABEL_NODE_CLEARANCE_Y = 8
+/** Horizontal distance (SVG units) within which two labels are considered to overlap */
+export const LABEL_SLOT_CLEARANCE_X = 60
