@@ -211,9 +211,16 @@ test.describe('Smoke Tests', () => {
       // the SPA route change to actually commit before asserting on the URL.
       // Without this, Firefox/WebKit nightly runs can race the toHaveURL()
       // check against the in-flight navigation and observe the stale "/" URL.
+      // waitForLoadState('domcontentloaded') alone can resolve immediately
+      // against the *current* (pre-navigation) document on Firefox/WebKit
+      // nightly runners, so the subsequent toHaveURL() check races the
+      // in-flight SPA route change and observes the stale "/" URL. Wait for
+      // the URL to actually change first (client-side routers update the URL
+      // synchronously via history.pushState, ahead of any load event).
+      await page.waitForURL(/\/settings(?:[?#].*)?$/, { timeout: 15000 }).catch(() => {})
       await page.waitForLoadState('domcontentloaded')
 
-      await expect(page).toHaveURL(/\/settings(?:[?#].*)?$/, { timeout: 10000 })
+      await expect(page).toHaveURL(/\/settings(?:[?#].*)?$/, { timeout: 15000 })
       // Settings.tsx renders settings-title twice: once in the desktop sidebar
       // nav (hidden lg:block, display:none on mobile) and once in the mobile
       // header (block lg:hidden, visible on mobile). Using .first() picks the
