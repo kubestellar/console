@@ -39,7 +39,7 @@ function getProgressColor(status: string): string {
 function getStatusIcon(status: string) {
   if (status === 'complete') return <CheckCircle2 className="w-3 h-3 text-green-400" />
   if (status === 'failed') return <AlertTriangle className="w-3 h-3 text-red-400" />
-  if (status === 'pending') return <Clock className="w-3 h-3 text-gray-300" />
+  if (status === 'pending') return <Clock className="w-3 h-3 text-gray-200" />
   return <Rocket className="w-3 h-3 text-blue-400" />
 }
 

@@ -107,7 +107,7 @@ const QualityDashboard: React.FC = () => {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center space-x-2">
             <Search className="w-4 h-4 text-purple-400" />
-            <h4 className="text-sm font-semibold text-slate-200">{t('quality.bug_sweep')}</h4>
+            <h4 className="text-sm font-semibold text-slate-100">{t('quality.bug_sweep')}</h4>
           </div>
           <Zap className="w-4 h-4 text-amber-400 animate-pulse" />
         </div>
