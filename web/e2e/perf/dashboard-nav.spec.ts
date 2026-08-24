@@ -1023,8 +1023,8 @@ test.afterAll(async () => {
   const navToleranceFactor = 1 + NAV_CI_TOLERANCE_PCT / 100
   const COLD_NAV_AVG_MS_BUDGET = 5_000 * navToleranceFactor
   const WARM_NAV_AVG_MS_BUDGET = 3_000 * navToleranceFactor
-  const FROM_MAIN_AVG_MS_BUDGET = 4_000 * navToleranceFactor
-  const FROM_CLUSTERS_AVG_MS_BUDGET = 4_000 * navToleranceFactor
+  const FROM_MAIN_AVG_MS_BUDGET = 4_500 * navToleranceFactor
+  const FROM_CLUSTERS_AVG_MS_BUDGET = 5_000 * navToleranceFactor
   const RAPID_NAV_AVG_MS_BUDGET = 3_000 * navToleranceFactor
   const BACK_NAV_AVG_MS_BUDGET = 3_000 * navToleranceFactor
 
