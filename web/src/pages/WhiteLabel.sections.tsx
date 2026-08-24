@@ -23,6 +23,7 @@ import { emitWhiteLabelActioned, emitWhiteLabelTabSwitch, emitWhiteLabelCommandC
 import { ROUTES } from '../config/routes'
 import { copyToClipboard } from '../lib/clipboard'
 import { cn } from '@/lib/cn'
+import { useTabKeyboardNav } from '../hooks/useKeyboardNav'
 
 /* ------------------------------------------------------------------ */
 /*  Named constants — no magic numbers                                */
@@ -30,6 +31,9 @@ import { cn } from '@/lib/cn'
 
 /** Deployment option tab identifiers */
 type DeployTab = 'binary' | 'helm' | 'docker'
+
+/** Ordered list of deployment tabs, used for arrow-key roving-tabindex navigation */
+const DEPLOY_TABS: readonly DeployTab[] = ['binary', 'helm', 'docker']
 
 /* ------------------------------------------------------------------ */
 /*  What You Get — feature highlights for white-label                 */
@@ -397,6 +401,12 @@ export function DeploymentSection() {
     emitWhiteLabelTabSwitch(tab)
   }, [activeTab])
 
+  const { tabListProps, getTabProps } = useTabKeyboardNav<DeployTab>({
+    tabs: DEPLOY_TABS,
+    activeTab,
+    onChange: switchTab,
+  })
+
   const copyCommands = useCallback(async (commands: string[], step: number) => {
     const text = commands.filter(c => !c.startsWith('#') && c !== '').join('\n')
     const ok = await copyToClipboard(text)
@@ -430,10 +440,9 @@ export function DeploymentSection() {
 
       {/* Deployment mode tabs */}
       <div className="max-w-3xl mx-auto mb-8">
-        <div className="flex rounded-lg border border-border/50 overflow-hidden" role="tablist" aria-label="Deployment method">
+        <div className="flex rounded-lg border border-border/50 overflow-hidden" {...tabListProps} aria-label="Deployment method">
           <button
-            role="tab"
-            aria-selected={activeTab === 'binary'}
+            {...getTabProps('binary')}
             aria-label={t('whiteLabel.selectBinaryTab')}
             onClick={() => switchTab('binary')}
             className={cn(
@@ -448,8 +457,7 @@ export function DeploymentSection() {
             <span className="text-xs px-2 py-0.5 rounded-full bg-secondary/50 text-muted-foreground">curl | bash</span>
           </button>
           <button
-            role="tab"
-            aria-selected={activeTab === 'helm'}
+            {...getTabProps('helm')}
             aria-label={t('whiteLabel.selectHelmTab')}
             onClick={() => switchTab('helm')}
             className={cn(
@@ -464,8 +472,7 @@ export function DeploymentSection() {
             <span className="text-xs px-2 py-0.5 rounded-full bg-secondary/50 text-muted-foreground">recommended</span>
           </button>
           <button
-            role="tab"
-            aria-selected={activeTab === 'docker'}
+            {...getTabProps('docker')}
             aria-label={t('whiteLabel.selectDockerTab')}
             onClick={() => switchTab('docker')}
             className={cn(
