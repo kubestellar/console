@@ -206,7 +206,11 @@ test.describe('Smoke Tests', () => {
       // still mid-transition. Wait for DOM to fully settle after animation.
       await page.waitForTimeout(500)
       await settingsLink.waitFor({ state: 'visible', timeout: 10000 })
-      await settingsLink.click({ force: true })
+      // Use evaluate().click() instead of Playwright's force:true to fire a real
+      // DOM click event. force:true dispatches synthetic pointer events that can
+      // silently fail to trigger React Router's onClick handler in WebKit/Firefox.
+      // The hamburger button above uses the same evaluate pattern. (#22752)
+      await settingsLink.evaluate((el) => (el as HTMLElement).click())
       // Matches the pattern in Sidebar.spec.ts: after a forced click, wait for
       // the SPA route change to actually commit before asserting on the URL.
       // Without this, Firefox/WebKit nightly runs can race the toHaveURL()
