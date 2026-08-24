@@ -357,7 +357,10 @@ if [ -z "$FAST_MODE" ]; then
         #     (~2m build + up to 3m preview startup), then runs 8 serial tests.
         #     Default 300s cap killed the suite mid-run after only 5/8 tests
         #     completed (all passing), the same failure mode deploy-test hit
-        #     before its override was added. 600s matches deploy-test's budget.
+        #     before its override was added. Initial 600s budget was too tight —
+        #     nightly runs on 2026-08-24 showed the suite hitting 600s timeout
+        #     after only 5/8 tests (all passing), so bump to 900s to match
+        #     deploy-test and other serial Playwright suites.
         declare -A PLAYWRIGHT_SUITE_TIMEOUT_OVERRIDES=(
           ["console-error-scan"]=600
           ["ui-compliance-test"]=600
@@ -370,7 +373,7 @@ if [ -z "$FAST_MODE" ]; then
           ["ai-ml-test"]=900
           ["nav-test"]=900
           ["perf-test"]=2400
-          ["interaction-test"]=600
+          ["interaction-test"]=900
         )
 
         for script in "${PLAYWRIGHT_SCRIPTS[@]}"; do
