@@ -297,8 +297,8 @@ export const RiskAppetiteDashboardContent = memo(function RiskAppetiteDashboardC
                   <tr key={kri.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
                     <td className="p-3 font-mono text-blue-300">{kri.id}</td>
                     <td className="p-3 text-white">{kri.name}</td>
-                    <td className="p-3"><span className="px-2 py-0.5 rounded bg-gray-700 text-gray-200 text-xs">{kri.category}</span></td>
-                    <td className="p-3 text-center text-gray-200">{kri.threshold}</td>
+                    <td className="p-3"><span className="px-2 py-0.5 rounded bg-gray-700 text-white text-xs">{kri.category}</span></td>
+                    <td className="p-3 text-center text-gray-100">{kri.threshold}</td>
                     <td className="p-3 text-center">
                       <span className={`font-bold ${
                         kri.status === 'red' ? 'text-red-400' : kri.status === 'amber' ? 'text-yellow-400' : 'text-green-400'
