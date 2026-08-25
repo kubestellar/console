@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_updated": "2026-08-23T03:20:13Z",
+  "last_updated": "2026-08-25T03:18:07Z",
   "rolling_window_days": 30,
   "categories": {
     "performance": {
@@ -18,25 +18,25 @@
       "last_evaluated": "2026-08-14T03:43:45Z"
     },
     "a11y": {
-      "merged": 83,
+      "merged": 84,
       "closed": 29,
       "acceptance_rate": 0.74,
       "status": "normal",
-      "last_evaluated": "2026-08-18T03:16:41Z"
+      "last_evaluated": "2026-08-25T03:18:07Z"
     },
     "operator": {
-      "merged": 867,
+      "merged": 871,
       "closed": 269,
       "acceptance_rate": 0.76,
       "status": "normal",
-      "last_evaluated": "2026-08-23T03:20:13Z"
+      "last_evaluated": "2026-08-25T03:18:07Z"
     },
     "sre": {
-      "merged": 583,
-      "closed": 101,
+      "merged": 586,
+      "closed": 102,
       "acceptance_rate": 0.85,
       "status": "boosted",
-      "last_evaluated": "2026-08-23T03:20:13Z"
+      "last_evaluated": "2026-08-25T03:18:07Z"
     },
     "features": {
       "merged": 43,
@@ -76,15 +76,6 @@
     "suggested_checks": []
   },
   "history": [
-    {
-      "date": "2026-07-16",
-      "total_merged": 1406,
-      "total_closed": 568,
-      "categories_blocked": [],
-      "categories_boosted": [
-        "sre"
-      ]
-    },
     {
       "date": "2026-07-17",
       "total_merged": 1423,
@@ -351,6 +342,16 @@
         "sre",
         "features"
       ]
+    },
+    {
+      "date": "2026-08-25",
+      "total_merged": 1864,
+      "total_closed": 579,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "sre",
+        "features"
+      ]
     }
   ],
   "rotation_weights": {
@@ -364,7 +365,7 @@
     "consistency": 0.95
   },
   "max_issues_override": 5,
-  "pr_guidance": "Keep PRs small and focused. Smaller PRs have higher acceptance rates.",
+  "pr_guidance": "Keep changes under 50 lines (size S) for best acceptance rate. Split larger fixes into multiple PRs.",
   "regression_insights": {
     "focus_overrides": [],
     "repeat_issue_patterns": [],
