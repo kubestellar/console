@@ -135,6 +135,18 @@ func TestIsAllowedNetlifyHost_BypassPatterns(t *testing.T) {
 		{"uppercase production is rejected", "KUBESTELLAR-CONSOLE.NETLIFY.APP", false},
 		// Empty string
 		{"empty", "", false},
+		// #22796: an attacker-registered sitename like `evil--kubestellar-console`
+		// yields a hostname that satisfies the old
+		// `HasSuffix("--kubestellar-console.netlify.app")` check but is NOT a
+		// deploy preview of our site. Reject via the deploy-preview regex.
+		{"attacker sitename with -- suffix", "evil--kubestellar-console.netlify.app", false},
+		// Similar: a branch preview from an attacker-owned lookalike site.
+		{"attacker branch preview lookalike", "foo-bar--kubestellar-console.netlify.app", false},
+		// Non-numeric branch names on our own site: not a deploy preview shape
+		// (deploy previews are always `deploy-preview-<N>`). Reject.
+		{"non-numeric branch preview", "feature-x--kubestellar-console.netlify.app", false},
+		// Zero-prefixed / multi-digit numeric IDs remain valid.
+		{"small preview id", "deploy-preview-1--kubestellar-console.netlify.app", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
