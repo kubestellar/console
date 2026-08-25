@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -213,6 +214,15 @@ func ga4RealMeasurementID() string {
 	return id
 }
 
+// netlifyDeployPreviewRe matches the exact URL shape Netlify mints for a
+// deploy-preview of the `kubestellar-console` site, e.g.
+// `deploy-preview-1234--kubestellar-console.netlify.app`.
+// A plain `strings.HasSuffix("--kubestellar-console.netlify.app")` check is
+// too broad: Netlify allows `--` in sitenames, so an attacker who registers
+// a site called e.g. `evil--kubestellar-console` gets a hostname that would
+// pass the suffix check without being a real deploy preview (#22796).
+var netlifyDeployPreviewRe = regexp.MustCompile(`^deploy-preview-[0-9]+--kubestellar-console\.netlify\.app$`)
+
 // isAllowedNetlifyHost returns true if host is a KubeStellar Netlify preview
 // deployment. Only the project's own deploy-preview subdomains are accepted;
 // the blanket *.netlify.app wildcard is intentionally NOT used because any
@@ -223,10 +233,10 @@ func isAllowedNetlifyHost(host string) bool {
 		return true
 	}
 	// Deploy previews: deploy-preview-<N>--kubestellar-console.netlify.app
-	if strings.HasSuffix(host, "--kubestellar-console.netlify.app") {
-		return true
-	}
-	return false
+	// (#22796: match the exact numeric-preview shape — a bare
+	// `HasSuffix("--kubestellar-console.netlify.app")` accepts attacker-
+	// registered sitenames like `evil--kubestellar-console`.)
+	return netlifyDeployPreviewRe.MatchString(host)
 }
 
 // isAllowedOrigin checks if the request comes from an allowed hostname.
