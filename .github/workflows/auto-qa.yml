@@ -824,7 +824,7 @@ jobs:
           echo "Scanning for TODO, FIXME, HACK comments..."
           ISSUES=""
 
-          TODOS=$(grep -rn "TODO\|FIXME\|HACK\|XXX\|WORKAROUND" src/ --include="*.ts" --include="*.tsx" 2>/dev/null | grep -v node_modules | head -30 || true)
+          TODOS=$(grep -rnP "^\s*(//|/\*|\*|#)\s*\b(TODO|FIXME|HACK|WORKAROUND)\b\s*[:( ]" src/ --include="*.ts" --include="*.tsx" 2>/dev/null | grep -v node_modules | head -30 || true)
           if [ -n "$TODOS" ]; then
             COUNT=$(echo "$TODOS" | wc -l)
             echo "found=true" >> "$GITHUB_OUTPUT"
@@ -847,11 +847,12 @@ jobs:
           ISSUES=""
 
           # Components over 400 lines are candidates for splitting
-          for f in $(find src -name "*.tsx" 2>/dev/null | grep -v node_modules); do
+          for f in $(find src -name "*.tsx" 2>/dev/null | grep -v node_modules | grep -vE '\.(test|spec)\.tsx$' | grep -v '__tests__'); do
             LINES=$(wc -l < "$f")
             if [ "$LINES" -gt 400 ]; then
               # Count useState hooks as complexity indicator
-              HOOKS=$(grep -c "useState\|useEffect\|useCallback\|useMemo\|useRef" "$f" 2>/dev/null || echo "0")
+              HOOKS=$(grep -cE 'use(State|Effect|Callback|Memo|Ref)\(' "$f" 2>/dev/null || true)
+              HOOKS=${HOOKS:-0}
               ISSUES="${ISSUES}  - \`${f}\` — ${LINES} lines, ${HOOKS} hooks\n"
             fi
           done
@@ -903,9 +904,10 @@ jobs:
           ISSUES=""
 
           # Find explicit 'any' type annotations (excluding eslint comments)
-          ANY_TYPES=$(grep -rn ": any\|: any\[\]\|as any\|<any>" src/ --include="*.ts" --include="*.tsx" 2>/dev/null | \
+          ANY_TYPES=$(grep -rnP "(?<!\w)(:\s*any(?!\w)|\bas\s+any\b|<any>)" src/ --include="*.ts" --include="*.tsx" 2>/dev/null | \
             grep -v "node_modules" | \
             grep -v "eslint-disable" | \
+            grep -vP ":\d+:\s*(//|/\*|\*)" | \
             grep -v "\.d\.ts" | \
             head -25 || true)
 
