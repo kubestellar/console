@@ -11,5 +11,4 @@ permissions:
 
 jobs:
   label-helper:
-    uses: kubestellar/infra/.github/workflows/reusable-label-helper.yml@main
-    secrets: inherit
+    uses: kubestellar/infra/.github/workflows/reusable-label-helper.yml@220beeeb8dae67e2fd8e89338ada8144609fc6ef # pin to main 2026-08-24
