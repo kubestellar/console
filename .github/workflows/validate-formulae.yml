@@ -1,0 +1,35 @@
+name: Validate Formulae
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Formula/**'
+      - 'scripts/validate_formulae.py'
+      - 'scripts/test_validate_formulae.py'
+      - '.github/workflows/validate-formulae.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'Formula/**'
+      - 'scripts/validate_formulae.py'
+      - 'scripts/test_validate_formulae.py'
+      - '.github/workflows/validate-formulae.yml'
+
+permissions: read-all
+
+jobs:
+  validate-formulae:
+    name: unit tests + drift check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read  # needed: checkout repository
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Run validate_formulae.py unit tests
+        run: python3 -u scripts/test_validate_formulae.py
+
+      - name: Run Formula drift check
+        run: python3 -u scripts/validate_formulae.py Formula
