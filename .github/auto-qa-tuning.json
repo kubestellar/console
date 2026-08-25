@@ -61,12 +61,15 @@
     }
   },
   "weekly_insights": {
-    "best_pr_size": "L",
+    "best_pr_size": "S",
     "size_acceptance": {},
     "type_acceptance": {},
-    "common_rejection_reasons": [],
+    "common_rejection_reasons": [
+      "- PR #22540: Verified against `origin/main` — every file this PR touches already has equivalent (or superseding) test coverage merged via other PRs, and this branch is now stale (`CONFLICTING`/`DIRTY`/`BLOCKED` against current `main`):",
+      "| File | Test file on `main` | Lines / `it()` | Merged via |"
+    ],
     "best_change_type": "bug_fix",
-    "last_report_date": "2026-08-16"
+    "last_report_date": "2026-08-23"
   },
   "cncf_insights": {
     "last_scan_date": "2026-08-19",
