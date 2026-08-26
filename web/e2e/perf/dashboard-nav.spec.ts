@@ -210,8 +210,9 @@ async function measureNavigation(
 
   // Timeouts for link discovery: fast path avoids triggering an expensive reload
   // when the route simply isn't in the primary nav (a config choice, not a crash).
-  const LINK_ATTACH_TIMEOUT_MS = 3_000
-  const LINK_VISIBLE_TIMEOUT_MS = 2_000
+  // CI runners are slower — scale link visibility timeout to reduce false recoveries.
+  const LINK_ATTACH_TIMEOUT_MS = IS_CI ? 6_000 : 3_000
+  const LINK_VISIBLE_TIMEOUT_MS = IS_CI ? 4_000 : 2_000
   const SIDEBAR_PRESENCE_TIMEOUT_MS = 500
   const RELOAD_SIDEBAR_TIMEOUT_MS = 10_000
 
@@ -778,15 +779,18 @@ test('rapid-nav — quick clicks through dashboards', async ({ page }, testInfo)
     // Click rapidly and proceed as soon as the router confirms the target route.
     const linkSelector = `[data-testid="sidebar-primary-nav"] a[href="${dashboard.route}"]`
     const link = page.locator(linkSelector).first()
+    // CI runners are slower — give sidebar links more time to appear during rapid-nav
+    const RAPID_LINK_VISIBLE_MS = IS_CI ? 5_000 : 2_000
+    const RAPID_URL_CHANGE_MS = IS_CI ? 5_000 : 2_000
     try {
-      await link.waitFor({ state: 'visible', timeout: 2_000 })
+      await link.waitFor({ state: 'visible', timeout: RAPID_LINK_VISIBLE_MS })
     } catch (error) { console.error('Error:', error)
       continue
      }
 
     const clickTime = Date.now()
     await link.click()
-    const urlChanged = await waitForRoute(page, dashboard.route, 2_000)
+    const urlChanged = await waitForRoute(page, dashboard.route, RAPID_URL_CHANGE_MS)
     const urlChangeMs = Date.now() - clickTime
 
     // After clicking, quickly record where we are

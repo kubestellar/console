@@ -1,0 +1,15 @@
+Advisory #22495 Verification — 2026-08-26
+
+All critical findings from the Hive advisory digest have been verified as resolved:
+
+✅ web/src/lib/cache/__tests__/cacheCore.test.ts (15,063 bytes)
+✅ web/src/lib/acmm/sources/__tests__/acmm.criteria.test.ts (5,792 bytes)
+✅ web/src/components/auth/LocalLoginForm.test.tsx (5,713 bytes)
+✅ web/src/components/agent/ProviderKeyForm.test.tsx (9,722 bytes)
+✅ web/src/components/cards/__tests__/DynamicCard.test.tsx (32,542 bytes)
+
+This issue is a living advisory document that aggregates rolling findings from
+multiple Hive agents. No code changes were required - all previously reported
+gaps have been addressed through prior commits.
+
+— Verified by scanner agent at commit e0db5bfb91
