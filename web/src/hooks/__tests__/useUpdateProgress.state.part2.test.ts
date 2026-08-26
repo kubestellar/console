@@ -105,6 +105,18 @@ async function renderUpdateProgressHook() {
 }
 
 describe('useUpdateProgress', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    wsInstances = []
+    vi.stubGlobal('WebSocket', MockWebSocket)
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
+
   it('shows progressive messages during backend health polling', async () => {
     const WS_RECONNECT_MS = 5000
     const BACKEND_POLL_MS = 2000

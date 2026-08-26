@@ -1,10 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, act, render, screen, waitFor } from '@testing-library/react'
+import { renderHook, act } from '@testing-library/react'
 import React from 'react'
 import { MissionProvider, useMissions } from './useMissions'
 import { getDemoMode } from './useDemoMode'
 import { emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
-import { getTokenCategoryForMissionType } from '../lib/tokenUsageMissionCategory'
 
 // ── External module mocks ─────────────────────────────────────────────────────
 
@@ -147,6 +146,55 @@ const defaultParams = {
 }
 
 /** Start a mission and simulate the WebSocket opening so the mission moves to 'running'. */
+async function startMissionWithConnection(
+  result: { current: ReturnType<typeof useMissions> },
+): Promise<{ missionId: string; requestId: string }> {
+  let missionId = ''
+  act(() => {
+    missionId = result.current.startMission(defaultParams)
+  })
+  // Flush microtask queue so the preflight .then() chain resolves (#3742)
+  await act(async () => { await Promise.resolve() })
+  await act(async () => {
+    MockWebSocket.lastInstance?.simulateOpen()
+  })
+  // Find the chat send call (list_agents fires first, then chat)
+  const chatCall = MockWebSocket.lastInstance?.send.mock.calls.find(
+    (call: string[]) => JSON.parse(call[0]).type === 'chat',
+  )
+  const requestId = chatCall ? JSON.parse(chatCall[0]).id : ''
+  return { missionId, requestId }
+}
+
+beforeEach(() => {
+  localStorage.clear()
+  MockWebSocket.lastInstance = null
+  vi.clearAllMocks()
+  vi.mocked(getDemoMode).mockReturnValue(false)
+  // Suppress auto-reconnect noise: after onclose, ensureConnection is retried
+  // after 3 s. Tests complete before that fires, but mocking fetch avoids
+  // unhandled-rejection warnings from the HTTP fallback path.
+  globalThis.fetch = vi.fn().mockResolvedValue({ ok: true })
+})
+
+describe('progress updates', () => {
+  it('tracks progress step and percentage', async () => {
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    const { requestId } = await startMissionWithConnection(result)
+
+    act(() => {
+      MockWebSocket.lastInstance?.simulateMessage({
+        id: requestId,
+        type: 'progress',
+        payload: { step: 'Querying cluster...', progress: 50 },
+      })
+    })
+
+    const mission = result.current.missions[0]
+    expect(mission.currentStep).toBe('Querying cluster...')
+    expect(mission.progress).toBe(50)
+  })
+
   it('tracks token usage from progress payload', async () => {
     const { result } = renderHook(() => useMissions(), { wrapper })
     const { requestId } = await startMissionWithConnection(result)

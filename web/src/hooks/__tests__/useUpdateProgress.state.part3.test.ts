@@ -105,6 +105,18 @@ async function renderUpdateProgressHook() {
 }
 
 describe('useUpdateProgress', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    wsInstances = []
+    vi.stubGlobal('WebSocket', MockWebSocket)
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
+
   it('retries connection when WebSocket constructor throws', async () => {
     const WS_RECONNECT_MS = 5000
 

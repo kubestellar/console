@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, act, render, screen, waitFor } from '@testing-library/react'
+import { renderHook, act } from '@testing-library/react'
 import React from 'react'
 import { MissionProvider, useMissions } from './useMissions'
 import { getDemoMode } from './useDemoMode'
@@ -165,27 +165,6 @@ async function startMissionWithConnection(
   )
   const requestId = chatCall ? JSON.parse(chatCall[0]).id : ''
   return { missionId, requestId }
-}
-
-// ── Pre-seed a mission in localStorage without going through the WS flow ──────
-function seedMission(overrides: Partial<{
-  id: string
-  status: string
-  title: string
-  type: string
-}> = {}) {
-  const mission = {
-    id: overrides.id ?? 'seeded-mission-1',
-    title: overrides.title ?? 'Seeded Mission',
-    description: 'Pre-seeded',
-    type: overrides.type ?? 'troubleshoot',
-    status: overrides.status ?? 'pending',
-    messages: [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  }
-  localStorage.setItem('kc_missions', JSON.stringify([mission]))
-  return mission.id
 }
 
 beforeEach(() => {
@@ -450,7 +429,4 @@ describe('sidebar controls', () => {
     expect(result.current.isSidebarOpen).toBe(false)
   })
 
-  it('openSidebar sets isSidebarOpen to true', () => {
-    const { result } = renderHook(() => useMissions(), { wrapper })
-    act(() => { result.current.openSidebar() })
 })

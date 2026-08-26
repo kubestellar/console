@@ -1,4 +1,3 @@
-import React from 'react'
 /**
  * Tests for agent connectivity detection and loopback failure paths.
  *
@@ -90,12 +89,6 @@ vi.mock('../../contexts/alertRunbooks', () => ({
 
 // Dynamically imported after each module reset
 let useLocalAgent: typeof import('../useLocalAgent').useLocalAgent
-let reportAgentDataError: typeof import('../useLocalAgent').reportAgentDataError
-let reportAgentDataSuccess: typeof import('../useLocalAgent').reportAgentDataSuccess
-let isAgentConnected: typeof import('../useLocalAgent').isAgentConnected
-let isAgentUnavailable: typeof import('../useLocalAgent').isAgentUnavailable
-let wasAgentEverConnected: typeof import('../useLocalAgent').wasAgentEverConnected
-let triggerAggressiveDetection: typeof import('../useLocalAgent').triggerAggressiveDetection
 
 const POLL_INTERVAL = 5_000
 const DISCONNECTED_POLL_INTERVAL = 60_000
@@ -118,7 +111,7 @@ async function flushMicrotasks() {
   })
 }
 
-async function advanceUntilDisconnected(currentStatus: () => string, maxAttempts = 4) {
+async function _advanceUntilDisconnected(currentStatus: () => string, maxAttempts = 4) {
   for (let i = 0; i < maxAttempts; i++) {
     if (currentStatus() === 'disconnected') {
       return
@@ -153,7 +146,7 @@ function mockFetchStatus(status: number) {
   })
 }
 
-function mockFetchAuthError(status = UNAUTHORIZED_STATUS, data = healthData) {
+function _mockFetchAuthError(status = UNAUTHORIZED_STATUS, data = healthData) {
   ;(global.fetch as ReturnType<typeof vi.fn>)
     .mockResolvedValueOnce({
       ok: true,
@@ -178,6 +171,26 @@ async function driveToDisconnected() {
 }
 
 describe('Agent Connectivity Failure Paths (#11591)', () => {
+  beforeEach(async () => {
+    vi.useFakeTimers()
+    vi.resetModules()
+    mockEmitAgentConnected.mockClear()
+    mockEmitAgentDisconnected.mockClear()
+    mockEmitAgentProvidersDetected.mockClear()
+    mockEmitConversionStep.mockClear()
+
+    vi.stubGlobal('fetch', vi.fn())
+
+    const mod = await import('../useLocalAgent')
+    useLocalAgent = mod.useLocalAgent
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
+
   describe('interleaved failure types', () => {
     it('mixed connection refused and HTTP errors accumulate toward threshold', async () => {
       const { result } = renderHook(() => useLocalAgent())

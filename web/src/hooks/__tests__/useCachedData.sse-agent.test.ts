@@ -6,7 +6,6 @@
  * useCached* hook by mocking the underlying cache layer and network.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook } from '@testing-library/react'
 
 // ---------------------------------------------------------------------------
 // Mocks — must be declared BEFORE importing the module under test

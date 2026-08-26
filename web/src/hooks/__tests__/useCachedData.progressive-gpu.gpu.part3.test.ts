@@ -161,6 +161,37 @@ function makeCacheResult<T>(data: T, overrides?: Record<string, unknown>) {
 // ---------------------------------------------------------------------------
 
 describe('useCachedData', () => {
+  let mod: typeof import('../useCachedData')
+
+  beforeEach(() => {
+    vi.resetModules()
+    vi.clearAllMocks()
+    localStorage.clear()
+    // Set a valid token so fetchAPI doesn't throw
+    localStorage.setItem('kc_token', 'test-jwt-token')
+    // Reset the shared cluster cache so tests start with a clean slate
+    mockClusterCacheRef.clusters = []
+    mockIsDemoMode.mockReturnValue(false)
+    // Default useCache implementation
+    mockUseCache.mockImplementation((opts: { initialData: unknown }) =>
+      makeCacheResult(opts.initialData)
+    )
+    // Default settledWithConcurrency: run tasks and return settled results
+    mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {
+      return Promise.allSettled(tasks.map(t => t()))
+    })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  // Lazy-load module after mocks are set up
+  async function loadModule() {
+    mod = await import('../useCachedData')
+    return mod
+  }
+
   describe('GitOps and RBAC hook fetcher paths', () => {
     function setupClusterFetcher() {
       let capturedOpts: Record<string, unknown> = {}

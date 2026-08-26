@@ -1,4 +1,3 @@
-import React from 'react'
 /**
  * Tests for agent connectivity detection and loopback failure paths.
  *
@@ -90,12 +89,9 @@ vi.mock('../../contexts/alertRunbooks', () => ({
 
 // Dynamically imported after each module reset
 let useLocalAgent: typeof import('../useLocalAgent').useLocalAgent
-let reportAgentDataError: typeof import('../useLocalAgent').reportAgentDataError
-let reportAgentDataSuccess: typeof import('../useLocalAgent').reportAgentDataSuccess
 let isAgentConnected: typeof import('../useLocalAgent').isAgentConnected
 let isAgentUnavailable: typeof import('../useLocalAgent').isAgentUnavailable
 let wasAgentEverConnected: typeof import('../useLocalAgent').wasAgentEverConnected
-let triggerAggressiveDetection: typeof import('../useLocalAgent').triggerAggressiveDetection
 
 const POLL_INTERVAL = 5_000
 const DISCONNECTED_POLL_INTERVAL = 60_000
@@ -190,12 +186,9 @@ describe('Agent Connectivity Failure Paths (#11591)', () => {
 
     const mod = await import('../useLocalAgent')
     useLocalAgent = mod.useLocalAgent
-    reportAgentDataError = mod.reportAgentDataError
-    reportAgentDataSuccess = mod.reportAgentDataSuccess
     isAgentConnected = mod.isAgentConnected
     isAgentUnavailable = mod.isAgentUnavailable
     wasAgentEverConnected = mod.wasAgentEverConnected
-    triggerAggressiveDetection = mod.triggerAggressiveDetection
   })
 
   afterEach(() => {

@@ -161,6 +161,20 @@ describe('useCachedData', () => {
     )
     // Default settledWithConcurrency: run tasks and return settled results
     mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {
+      return Promise.allSettled(tasks.map(t => t()))
+    })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  // Lazy-load module after mocks are set up
+  async function loadModule() {
+    mod = await import('../useCachedData')
+    return mod
+  }
+
   describe('progressive fetcher patterns', () => {
     it('provides progressiveFetcher for services when no cluster', async () => {
       let capturedOpts: Record<string, unknown> = {}

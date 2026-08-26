@@ -105,6 +105,13 @@ function kubectlError(msg = 'error') {
 // ---------------------------------------------------------------------------
 
 describe('useCachedISO27001Audit', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockClusterCacheRef.clusters = []
+    mockIsAgentUnavailable.mockReturnValue(false)
+    mockUseCache.mockReturnValue(defaultCacheReturn())
+  })
+
   it('fetcher produces img-4 warning for :latest images', async () => {
     mockClusterCacheRef.clusters = [{ name: 'c1', reachable: true }]
     mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {

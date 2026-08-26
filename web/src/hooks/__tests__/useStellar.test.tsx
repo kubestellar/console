@@ -9,7 +9,7 @@
  *         notification ack/dismiss, task CRUD, fallback outside provider
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, act, renderHook, waitFor } from '@testing-library/react'
+import { render, screen, act, renderHook } from '@testing-library/react'
 import React from 'react'
 
 // ---------------------------------------------------------------------------
@@ -164,9 +164,6 @@ afterEach(() => {
 
 import {
   StellarProvider,
-  STELLAR_MISSION_TRIGGER_EVENT,
-  STELLAR_TOKEN_POLL_INTERVAL_MS,
-  STELLAR_TOKEN_POLL_MAX_ATTEMPTS,
   useStellar,
 } from '../useStellar'
 import {

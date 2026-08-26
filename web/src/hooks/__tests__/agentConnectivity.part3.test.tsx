@@ -1,4 +1,3 @@
-import React from 'react'
 /**
  * Tests for agent connectivity detection and loopback failure paths.
  *
@@ -94,11 +93,9 @@ let reportAgentDataError: typeof import('../useLocalAgent').reportAgentDataError
 let reportAgentDataSuccess: typeof import('../useLocalAgent').reportAgentDataSuccess
 let isAgentConnected: typeof import('../useLocalAgent').isAgentConnected
 let isAgentUnavailable: typeof import('../useLocalAgent').isAgentUnavailable
-let wasAgentEverConnected: typeof import('../useLocalAgent').wasAgentEverConnected
 let triggerAggressiveDetection: typeof import('../useLocalAgent').triggerAggressiveDetection
 
 const POLL_INTERVAL = 5_000
-const DISCONNECTED_POLL_INTERVAL = 60_000
 const FAILURE_THRESHOLD = 2
 const UNAUTHORIZED_STATUS = 401
 
@@ -118,7 +115,7 @@ async function flushMicrotasks() {
   })
 }
 
-async function advanceUntilDisconnected(currentStatus: () => string, maxAttempts = 4) {
+async function _advanceUntilDisconnected(currentStatus: () => string, maxAttempts = 4) {
   for (let i = 0; i < maxAttempts; i++) {
     if (currentStatus() === 'disconnected') {
       return
@@ -145,7 +142,7 @@ function mockFetchHang() {
   )
 }
 
-function mockFetchStatus(status: number) {
+function _mockFetchStatus(status: number) {
   ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
     ok: false,
     status,
@@ -153,7 +150,7 @@ function mockFetchStatus(status: number) {
   })
 }
 
-function mockFetchAuthError(status = UNAUTHORIZED_STATUS, data = healthData) {
+function _mockFetchAuthError(status = UNAUTHORIZED_STATUS, data = healthData) {
   ;(global.fetch as ReturnType<typeof vi.fn>)
     .mockResolvedValueOnce({
       ok: true,
@@ -178,6 +175,31 @@ async function driveToDisconnected() {
 }
 
 describe('Agent Connectivity Failure Paths (#11591)', () => {
+  beforeEach(async () => {
+    vi.useFakeTimers()
+    vi.resetModules()
+    mockEmitAgentConnected.mockClear()
+    mockEmitAgentDisconnected.mockClear()
+    mockEmitAgentProvidersDetected.mockClear()
+    mockEmitConversionStep.mockClear()
+
+    vi.stubGlobal('fetch', vi.fn())
+
+    const mod = await import('../useLocalAgent')
+    useLocalAgent = mod.useLocalAgent
+    reportAgentDataError = mod.reportAgentDataError
+    reportAgentDataSuccess = mod.reportAgentDataSuccess
+    isAgentConnected = mod.isAgentConnected
+    isAgentUnavailable = mod.isAgentUnavailable
+    triggerAggressiveDetection = mod.triggerAggressiveDetection
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
+
   describe('degraded mode (health ok, data endpoints failing)', () => {
     it('3 data errors within 60s → degraded status', async () => {
       mockFetchOk()
@@ -290,7 +312,7 @@ describe('Agent Connectivity Failure Paths (#11591)', () => {
     })
 
     it('aggressive detection fires immediate health check', async () => {
-      const { result } = renderHook(() => useLocalAgent())
+      renderHook(() => useLocalAgent())
       await driveToDisconnected()
       const callsBefore = (global.fetch as ReturnType<typeof vi.fn>).mock.calls.length
 
@@ -309,7 +331,7 @@ describe('Agent Connectivity Failure Paths (#11591)', () => {
       await driveToDisconnected()
 
       mockFetchReject()
-      const callsAtStart = (global.fetch as ReturnType<typeof vi.fn>).mock.calls.length
+      const _callsAtStart = (global.fetch as ReturnType<typeof vi.fn>).mock.calls.length
 
       await act(async () => {
         triggerAggressiveDetection()

@@ -9,7 +9,7 @@
  *         notification ack/dismiss, task CRUD, fallback outside provider
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, act, renderHook, waitFor } from '@testing-library/react'
+import { render, act, waitFor } from '@testing-library/react'
 import React from 'react'
 
 // ---------------------------------------------------------------------------
@@ -164,17 +164,8 @@ afterEach(() => {
 
 import {
   StellarProvider,
-  STELLAR_MISSION_TRIGGER_EVENT,
-  STELLAR_TOKEN_POLL_INTERVAL_MS,
-  STELLAR_TOKEN_POLL_MAX_ATTEMPTS,
   useStellar,
 } from '../useStellar'
-import {
-  STELLAR_BATCH_INTERVAL_FIFTEEN_MINUTES_MS,
-  STELLAR_BATCH_INTERVAL_TWO_HOURS_MS,
-  STELLAR_DEFAULT_BATCH_INTERVAL_MS,
-} from '../../components/stellar/lib/time'
-import { STORAGE_KEY_STELLAR_BATCH_INTERVAL_MS } from '../../lib/constants/storage'
 
 // ---------------------------------------------------------------------------
 // Helper: render a consumer inside StellarProvider

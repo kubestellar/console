@@ -6,7 +6,6 @@
  * useCached* hook by mocking the underlying cache layer and network.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook } from '@testing-library/react'
 
 // ---------------------------------------------------------------------------
 // Mocks — must be declared BEFORE importing the module under test
@@ -155,6 +154,35 @@ function makeCacheResult<T>(data: T, overrides?: Record<string, unknown>) {
 // ---------------------------------------------------------------------------
 
 describe('useCachedData', () => {
+  let mod: typeof import('../useCachedData')
+
+  beforeEach(() => {
+    vi.resetModules()
+    vi.clearAllMocks()
+    localStorage.clear()
+    // Set a valid token so fetchAPI doesn't throw
+    localStorage.setItem('kc_token', 'test-jwt-token')
+    mockClusterCacheRef.clusters = []
+    // Default useCache implementation
+    mockUseCache.mockImplementation((opts: { initialData: unknown }) =>
+      makeCacheResult(opts.initialData)
+    )
+    // Default settledWithConcurrency: run tasks and return settled results
+    mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {
+      return Promise.allSettled(tasks.map(t => t()))
+    })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  // Lazy-load module after mocks are set up
+  async function loadModule() {
+    mod = await import('../useCachedData')
+    return mod
+  }
+
   describe('local agent fetcher paths', () => {
     it('useCachedPodIssues fetcher uses agent when clusters available', async () => {
       let capturedOpts: Record<string, unknown> = {}

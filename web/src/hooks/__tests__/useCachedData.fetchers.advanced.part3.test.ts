@@ -6,7 +6,6 @@
  * useCached* hook by mocking the underlying cache layer and network.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook } from '@testing-library/react'
 
 // ---------------------------------------------------------------------------
 // Mocks — must be declared BEFORE importing the module under test
@@ -161,6 +160,20 @@ describe('useCachedData', () => {
     )
     // Default settledWithConcurrency: run tasks and return settled results
     mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {
+      return Promise.allSettled(tasks.map(t => t()))
+    })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  // Lazy-load module after mocks are set up
+  async function loadModule() {
+    mod = await import('../useCachedData')
+    return mod
+  }
+
   describe('cache key construction', () => {
     it('useCachedWarningEvents includes limit in key', async () => {
       mockUseCache.mockReturnValue(makeCacheResult([]))
