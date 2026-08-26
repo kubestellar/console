@@ -1,7 +1,7 @@
 // Modal safety: the filter/settings panels here are inline flyouts, not portal
 // modals — no backdrop to click. Any form state lives in local React state and
 // is only written on explicit save. Treat as closeOnBackdropClick={false}.
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { RefreshCw, Settings, Filter } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
@@ -10,20 +10,16 @@ import { useCardLoadingState } from '../CardDataContext'
 import { useDemoMode } from '../../../hooks/useDemoMode'
 import type { FeedItem, FeedConfig, FeedFilter, RSSFeedProps } from './types'
 import { PRESET_FEEDS } from './constants'
-import { loadSavedFeeds, saveFeeds, getCachedFeed, cacheFeed } from './storage'
 import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
-import { fetchSingleFeed } from './feedFetcher'
 import { formatTimeAgo } from '../../../lib/formatters'
 import { useTranslation } from 'react-i18next'
-import { TOAST_DISMISS_MS } from '../../../lib/constants/network'
 import { hostnameEndsWith } from '../../../lib/utils/urlHostname'
 import { FeedSelector, FeedPills } from './FeedSelector'
 import { FeedFilterEditor } from './FeedFilterEditor'
 import { FeedSettingsPanel } from './FeedSettingsPanel'
 import { FeedItemsList } from './FeedItemsList'
 import { SourceFilterDropdown } from './SourceFilterDropdown'
-import { RSS_DEMO_FEEDS, getDemoRSSItems } from './demoData'
-import { RSS_UI_STRINGS } from './strings'
+import { useRSSFeedManagement } from './hooks/useRSSFeedManagement'
 
 type SortByOption = 'date' | 'title'
 
@@ -38,61 +34,27 @@ const SORT_COMPARATORS: Record<SortByOption, (a: FeedItem, b: FeedItem) => numbe
 function RSSFeedInternal({ config }: RSSFeedProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { isDemoMode } = useDemoMode()
-  const getInitialFeeds = () => {
-    if (config?.feedUrl) {
-      return [{ url: config.feedUrl, name: config.feedName || RSS_UI_STRINGS.defaultFeedName }]
-    }
-    const savedFeeds = loadSavedFeeds()
-    return savedFeeds.length > 0 ? savedFeeds : (isDemoMode ? RSS_DEMO_FEEDS : [])
-  }
-  const [feeds, setFeeds] = useState<FeedConfig[]>(() => getInitialFeeds())
-  const [activeFeedIndex, setActiveFeedIndex] = useState(0)
 
-  // Initialize with cached items immediately on mount
-  const [items, setItems] = useState<FeedItem[]>(() => {
-    const initialFeeds = getInitialFeeds()
-    const firstFeed = initialFeeds[0]
-    if (firstFeed) {
-      const cacheKey = firstFeed.isAggregate
-        ? `aggregate:${(firstFeed.sourceUrls ?? []).join(',')}:${firstFeed.name}`
-        : firstFeed.url
-      const cached = getCachedFeed(cacheKey, true)
-      if (cached && cached.items.length > 0) {
-        return cached.items
-      }
-    }
-    return []
-  })
-  const [itemsSourceUrl, setItemsSourceUrl] = useState<string | null>(() => {
-    const initialFeeds = getInitialFeeds()
-    const firstFeed = initialFeeds[0]
-    if (firstFeed) {
-      return firstFeed.isAggregate
-        ? `aggregate:${(firstFeed.sourceUrls ?? []).join(',')}:${firstFeed.name}`
-        : firstFeed.url
-    }
-    return null
-  })
-  const [isLoading, setIsLoading] = useState(() => {
-    const initialFeeds = getInitialFeeds()
-    const firstFeed = initialFeeds[0]
-    if (firstFeed) {
-      const cacheKey = firstFeed.isAggregate
-        ? `aggregate:${(firstFeed.sourceUrls ?? []).join(',')}:${firstFeed.name}`
-        : firstFeed.url
-      const cached = getCachedFeed(cacheKey, true)
-      return !cached || cached.items.length === 0
-    }
-    return true
-  })
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const {
+    feeds,
+    setFeeds,
+    activeFeedIndex,
+    setActiveFeedIndex,
+    items,
+    isLoading,
+    isRefreshing,
+    error,
+    lastRefresh,
+    fetchSuccess,
+    activeFeed,
+    itemsMatchActiveFeed,
+    handleRefresh,
+  } = useRSSFeedManagement({ isDemoMode, config })
+
   const [showSettings, setShowSettings] = useState(false)
   const [showFeedSelector, setShowFeedSelector] = useState(false)
   const [newFeedUrl, setNewFeedUrl] = useState('')
   const [newFeedName, setNewFeedName] = useState('')
-  const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
-  const [fetchSuccess, setFetchSuccess] = useState<string | null>(null)
   const [showFilterEditor, setShowFilterEditor] = useState(false)
   const [tempIncludeTerms, setTempIncludeTerms] = useState('')
   const [tempExcludeTerms, setTempExcludeTerms] = useState('')
@@ -128,15 +90,11 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [showSettings, showFeedSelector, showFilterEditor, showSourceFilter, showAggregateCreator])
 
-  const activeFeed = feeds[activeFeedIndex] || feeds[0]
-
-  // Get cache key for current feed
-  const currentCacheKey = activeFeed?.isAggregate
-    ? `aggregate:${(activeFeed.sourceUrls ?? []).join(',')}:${activeFeed.name}`
-    : activeFeed?.url
-
-  // Check if displayed items match the active feed
-  const itemsMatchActiveFeed = itemsSourceUrl === currentCacheKey
+  // Reset source filter when feed changes
+  useEffect(() => {
+    setSourceFilter([])
+    setShowSourceFilter(false)
+  }, [activeFeedIndex])
 
   // Get unique sources from items (for aggregate feed source filter)
   const availableSources = useMemo(() => {
@@ -210,176 +168,12 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
       comparators: SORT_COMPARATORS },
     defaultLimit: 10 })
 
-
-  // Fetch RSS feed (or aggregate) — uses demo data in demo mode
-  const fetchFeed = useCallback(async (isManualRefresh = false) => {
-    if (isDemoMode) {
-      const demoItems = getDemoRSSItems()
-      setItems(demoItems)
-      setItemsSourceUrl('demo')
-      setIsLoading(false)
-      setIsRefreshing(false)
-      setLastRefresh(new Date())
-      setError(null)
-      const cacheKey = activeFeed?.isAggregate
-        ? `aggregate:${(activeFeed.sourceUrls ?? []).join(',')}:${activeFeed.name}`
-        : activeFeed?.url
-      if (cacheKey) cacheFeed(cacheKey, demoItems)
-      return
-    }
-
-    if (!activeFeed?.url && !activeFeed?.isAggregate) return
-
-    const cacheKey = activeFeed.isAggregate
-      ? `aggregate:${(activeFeed.sourceUrls ?? []).join(',')}:${activeFeed.name}`
-      : activeFeed.url
-
-    const cached = getCachedFeed(cacheKey, true)
-    if (cached && cached.items.length > 0) {
-      setItems(cached.items)
-      setItemsSourceUrl(cacheKey)
-      setLastRefresh(new Date(cached.timestamp))
-      setError(null)
-      setIsLoading(false)
-
-      if (!cached.isStale && !isManualRefresh) {
-        setIsRefreshing(false)
-        return
-      }
-      setIsRefreshing(true)
-    } else {
-      if (isManualRefresh) {
-        setIsRefreshing(true)
-      } else {
-        setIsLoading(true)
-      }
-    }
-    setError(null)
-
-    try {
-      let feedItems: FeedItem[] = []
-
-      if (activeFeed.isAggregate && activeFeed.sourceUrls) {
-        const results = await Promise.all(
-          activeFeed.sourceUrls.map(async (url) => {
-            const items = await fetchSingleFeed(url)
-            const sourceFeed = feeds.find(f => f.url === url) || PRESET_FEEDS.find(p => p.url === url)
-            let sourceName: string
-            try {
-              sourceName = sourceFeed?.name || new URL(url).hostname
-            } catch {
-              sourceName = sourceFeed?.name || url
-            }
-            const sourceIcon = sourceFeed?.icon || '📰'
-            return items.map(item => ({
-              ...item,
-              sourceUrl: url,
-              sourceName,
-              sourceIcon }))
-          })
-        )
-        const seen = new Set<string>()
-        for (const items of results) {
-          for (const item of items) {
-            if (!seen.has(item.link)) {
-              seen.add(item.link)
-              feedItems.push(item)
-            }
-          }
-        }
-      } else {
-        feedItems = await fetchSingleFeed(activeFeed.url)
-      }
-
-      if (feedItems.length === 0) {
-        throw new Error(activeFeed.isAggregate ? 'No items found in any source feed' : 'No items found in feed')
-      }
-
-      setItems(feedItems)
-      setItemsSourceUrl(cacheKey)
-      setError(null)
-      setLastRefresh(new Date())
-      const sourceCount = activeFeed.isAggregate ? ` from ${activeFeed.sourceUrls?.length || 0} sources` : ''
-      setFetchSuccess(`Fetched ${feedItems.length} items${sourceCount}`)
-      cacheFeed(cacheKey, feedItems)
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : t('rssFeed.failedToLoadFeed')
-
-      const cached = getCachedFeed(cacheKey)
-      if (cached && cached.items.length > 0) {
-        setItems(cached.items)
-        setItemsSourceUrl(cacheKey)
-        setLastRefresh(new Date(cached.timestamp))
-        setError(null)
-      } else {
-        setItems([])
-        setItemsSourceUrl(cacheKey)
-        setError(message)
-      }
-    } finally {
-      setIsLoading(false)
-      setIsRefreshing(false)
-    }
-  }, [activeFeed?.url, activeFeed?.name, activeFeed?.isAggregate, activeFeed?.sourceUrls, isDemoMode, feeds])
-
-  // Fetch on mount — runs once. The fetch is async but the component is
-  // long-lived (dashboard card), so stale-setState risk is minimal.
-  const feedInitRef = useRef(false)
-  useEffect(() => {
-    if (feedInitRef.current) return
-    feedInitRef.current = true
-    fetchFeed()
-    return () => {
-      // Reset init flag on unmount so a remount re-fetches.
-      feedInitRef.current = false
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // Reset source filter when feed changes
-  useEffect(() => {
-    setSourceFilter([])
-    setShowSourceFilter(false)
-  }, [activeFeedIndex])
-
-  // Keep demo mode usable even before any feeds have been configured.
-  useEffect(() => {
-    if (config?.feedUrl) return
-
-    const onlyDemoFeeds = feeds.length > 0 && feeds.every(feed => feed.url.startsWith('demo:'))
-    if (isDemoMode && feeds.length === 0) {
-      setFeeds(RSS_DEMO_FEEDS)
-      setActiveFeedIndex(0)
-      return
-    }
-
-    if (!isDemoMode && onlyDemoFeeds) {
-      setFeeds(loadSavedFeeds())
-      setActiveFeedIndex(0)
-    }
-  }, [config?.feedUrl, feeds, isDemoMode])
-
-  // Clear success message after timeout
-  useEffect(() => {
-    if (fetchSuccess) {
-      const timer = setTimeout(() => setFetchSuccess(null), TOAST_DISMISS_MS)
-      return () => clearTimeout(timer)
-    }
-  }, [fetchSuccess])
-
-  // Save feeds when changed
-  useEffect(() => {
-    if (config?.feedUrl) return
-    if (feeds.length > 0 && feeds.every(feed => feed.url.startsWith('demo:'))) return
-    saveFeeds(feeds)
-  }, [feeds, config?.feedUrl])
-
   // --- Callbacks for subcomponents ---
 
   const handleSelectFeed = useCallback((idx: number) => {
     if (idx !== activeFeedIndex) {
       setActiveFeedIndex(idx)
-      setIsRefreshing(true)
+    }
       setError(null)
     }
     setShowFeedSelector(false)
@@ -393,10 +187,6 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
   const handleToggleFeedSelector = useCallback(() => {
     setShowFeedSelector(prev => !prev)
   }, [])
-
-  const handleRefresh = useCallback(() => {
-    fetchFeed(true)
-  }, [fetchFeed])
 
   const handleToggleSettings = useCallback(() => {
     setShowSettings(prev => !prev)
@@ -656,7 +446,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={handleRefresh}
+            onClick={() => handleRefresh(t)}
             disabled={isRefreshing}
             className="p-1.5 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
             title={lastRefresh ? `Refresh (last: ${formatTimeAgo(lastRefresh, { compact: true, extended: true })})` : t('common:common.refresh')}
@@ -799,7 +589,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                 : error}
             </span>
             <button
-              onClick={handleRefresh}
+              onClick={() => handleRefresh(t)}
               className="shrink-0 px-1.5 py-0.5 bg-yellow-500/20 hover:bg-yellow-500/30 rounded text-yellow-300 transition-colors"
             >
               {t('common:common.retry')}

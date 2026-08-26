@@ -73,29 +73,13 @@ function buildQuantumMutationHeaders(token: string | null): HeadersInit {
 
 export const QuantumControlPanel: React.FC = () => {
   const { t } = useTranslation(['cards', 'common'])
-  const { showToast } = useToast()
   const { isAuthenticated, login, isLoading: authIsLoading, token } = useAuth()
-  const { open: openDrillDown, close: closeDrillDown } = useDrillDown()
-  const [control, setControl] = useState<ControlState>(DEMO_DATA)
-  const [mutationError, setMutationError] = useState<string | null>(null)
-  const [showClearCredentialsDialog, setShowClearCredentialsDialog] = useState(false)
-  const [isClearing, setIsClearing] = useState(false)
-  const [isExecuting, setIsExecuting] = useState(false)
   const [statusTab, setStatusTab] = useState<'system' | 'job'>('system')
-  // Marks the wall-clock time of the last `authenticated:true` we observed in
-  // THIS browser session. Persisted cache entries from a prior session don't
-  // count — after a pod restart or page reload we want to drop back to
-  // "Stored" until validation succeeds again.
   const [sessionValidatedAt, setSessionValidatedAt] = useState<number | null>(null)
 
-  // Custom QASM support
   const customQasmModal = useModal()
-  const [customQasmContent, setCustomQasmContent] = useState<string>('')
-  const [previousQasmFile, setPreviousQasmFile] = useState<string>(DEMO_DATA.qasm_file)
 
   const forceDemo = isQuantumForcedToDemo()
-  const hasInitializedControlRef = useRef(false)
-  const requiresIBM = BACKENDS_REQUIRING_IBM.has(control.backend)
 
   // Fetch available QASM files
   const { files: qasmFiles, isLoading: qasmFilesLoading } = useQASMFiles(undefined, forceDemo)
@@ -122,40 +106,35 @@ export const QuantumControlPanel: React.FC = () => {
     isAuthenticated,
     forceDemo,
     pollInterval: CONTROL_PANEL_POLL_MS,
-    autoRefresh: requiresIBM,
+    autoRefresh: BACKENDS_REQUIRING_IBM.has(status?.backend_info?.name || 'aer'),
   })
 
+  const {
+    control,
+    setControl,
+    mutationError,
+    isExecuting,
+    customQasmContent,
+    setPreviousQasmFile,
+    handleExecute,
+    handleLoopModeToggle,
+    handleCustomQasmSubmit,
+    handleCustomQasmCancel,
+  } = useQuantumControls({
+    status,
+    isAuthenticated,
+    refetchStatus,
+    isDemoFallback: forceDemo || isDemoFallback,
+  })
+
+  const requiresIBM = BACKENDS_REQUIRING_IBM.has(control.backend)
   const ibmAuthenticated = authStatus.authenticated
   const ibmTokenStored = authStatus.tokenStored
   const lastIbmError = authStatus.lastIbmError
 
-  // Mark the session as validated whenever a successful auth check returns
-  // authenticated:true. This is what flips the badge from "Stored" → "Configured".
-  useEffect(() => {
-    if (ibmAuthenticated && !isAuthRefreshing) {
-      setSessionValidatedAt(Date.now())
-    }
-  }, [ibmAuthenticated, isAuthRefreshing])
-
-  // Split the auth-status error from the rest. Transient IBM upstream errors
-  // (rate-limited / 5xx / timeout / "max retries attempted") shouldn't paint
-  // the panel red — those go to a softer yellow banner. Genuine fatal errors
-  // (401 with no transient signature, etc.) still surface as red — but only
-  // when the selected backend actually needs IBM. On a local-only backend
-  // (aer/sim) a stale 401/403 from a prior IBM selection shouldn't paint the
-  // panel red while the user is doing purely local work.
-  //
-  // Classification source:
-  //   1. Prefer the workload's structured `lastIbmError` (v0.4.0+). The
-  //      backend has the raw exception and classifies it authoritatively.
-  //   2. Fall back to client-side `classifyApiError` against the error
-  //      string when the workload didn't provide `lastIbmError` (older
-  //      images, network-level failures before the body parses).
+  // Split the auth-status error from the rest
   const fatalError = mutationError ?? statusError
   const classifiedFromMessage = authStatusError ? classifyApiError(authStatusError) : null
-  // Guard with `!= null` (covers `undefined` from stale pre-v0.4 cache hydration)
-  // rather than `!== null`. The fetcher coerces fresh responses to `null`, but
-  // cached payloads written before the field existed surface as `undefined`.
   const isAuthErrorTransient =
     lastIbmError != null
       ? lastIbmError.retryable === true
@@ -167,24 +146,6 @@ export const QuantumControlPanel: React.FC = () => {
       : null
   const error = fatalError || authErrorForBanner
 
-  // Three-state credential badge, driven by the workload's explicit
-  // `tokenStored` field (v0.4.0+ — see web/src/hooks/useCachedQuantum.ts):
-  //   configured — validation succeeded in this browser session.
-  //   stored     — workload reports a token saved (auth.json on emptyDir
-  //                OR Qiskit account file on the PV) but we have not
-  //                validated it this session.
-  //   none       — workload reports no token saved.
-  //
-  // Pre-v0.4 workloads omit `tokenStored`; the fetcher coerces the missing
-  // field to `false`, so the badge sits at "Not configured" until the
-  // first successful validation, which is harmless and self-healing.
-  const ibmCredentialState: 'configured' | 'stored' | 'none' =
-    sessionValidatedAt !== null
-      ? 'configured'
-      : ibmTokenStored
-        ? 'stored'
-        : 'none'
-
   useReportCardDataState({
     isLoading: isAuthenticated ? isLoading && status === null : false,
     isRefreshing: isRefreshing || isAuthRefreshing,
@@ -193,224 +154,6 @@ export const QuantumControlPanel: React.FC = () => {
     isFailed: isStatusFailed || fatalError !== null,
     consecutiveFailures,
   })
-
-  useEffect(() => {
-    if (!isAuthenticated || !status) {
-      hasInitializedControlRef.current = false
-      return
-    }
-
-    if (!hasInitializedControlRef.current) {
-      setControl(prev => {
-        const backendInfo = status.backend_info || { name: prev.backend, shots: prev.shots }
-        return {
-          ...prev,
-          backend: backendInfo?.name || prev.backend,
-          shots: backendInfo?.shots || prev.shots,
-          loop_mode: status.loop_mode !== undefined ? status.loop_mode : prev.loop_mode,
-        }
-      })
-      hasInitializedControlRef.current = true
-      return
-    }
-
-    setControl(prev => {
-      const newLoopMode = status.loop_mode !== undefined ? status.loop_mode : prev.loop_mode
-      if (prev.loop_mode === newLoopMode) return prev
-      return { ...prev, loop_mode: newLoopMode }
-    })
-  }, [isAuthenticated, status])
-
-  // Open IBM Quantum credentials dialog via drilldown
-  const handleOpenCredentialsDialog = useCallback(() => {
-    const handleSaveCredentials = async (form: { apiKey: string; crn: string }) => {
-      if (!form.apiKey.trim() || !form.crn.trim()) {
-        throw new Error(t('quantumControlPanel.credentialFieldsRequired'))
-      }
-
-      const res = await fetch('/api/quantum/auth/save', {
-        method: 'POST',
-        headers: buildQuantumMutationHeaders(token),
-        credentials: 'include',
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-        body: JSON.stringify({
-          api_key: form.apiKey,
-          crn: form.crn,
-        }),
-      })
-
-      if (!res.ok) {
-        const errorData = await res.json()
-        throw new Error(errorData.error || t('quantumControlPanel.saveCredentialsFailed'))
-      }
-
-      setMutationError(null)
-      await refetchAuthStatus()
-      showToast(t('quantumControlPanel.ibmCredentialsSaved'), 'success')
-    }
-
-    openDrillDown({
-      type: 'quantum-credentials',
-      title: t('quantumControlPanel.ibmCredentialsTitle'),
-      data: {
-        ibmAuthenticated,
-        onSave: handleSaveCredentials,
-        onClose: closeDrillDown,
-      },
-    })
-  }, [ibmAuthenticated, openDrillDown, closeDrillDown, refetchAuthStatus, showToast, t, token])
-
-  // Clear IBM Quantum credentials
-  const handleClearCredentials = useCallback(async () => {
-    setIsClearing(true)
-    try {
-      const res = await fetch('/api/quantum/auth/clear', {
-        method: 'DELETE',
-        headers: buildQuantumMutationHeaders(token),
-        credentials: 'include',
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
-
-      if (!res.ok) {
-        const errorData = await res.json()
-        throw new Error(errorData.error || t('quantumControlPanel.clearCredentialsFailed'))
-      }
-
-      setSessionValidatedAt(null)
-      await refetchAuthStatus()
-      setShowClearCredentialsDialog(false)
-      setMutationError(null)
-      showToast(t('quantumControlPanel.ibmCredentialsCleared'), 'success')
-    } catch (err) {
-      console.error('Error clearing credentials:', err)
-      setMutationError(err instanceof Error ? err.message : t('quantumControlPanel.unknownError'))
-    } finally {
-      setIsClearing(false)
-    }
-  }, [refetchAuthStatus, showToast, t, token])
-
-  useEffect(() => {
-    if (!showClearCredentialsDialog || isClearing) return
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setShowClearCredentialsDialog(false)
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [showClearCredentialsDialog, isClearing])
-
-  const handleExecute = async () => {
-    setIsExecuting(true)
-    setMutationError(null)
-    setControl(prev => ({ ...prev, executing: true }))
-    try {
-      let qasmFilename = control.qasm_file
-
-      if (control.qasm_file === 'custom') {
-      const timestamp = Date.now()
-      qasmFilename = `custom_${timestamp}.qasm`
-
-      const uploadRes = await fetch('/api/quantum/qasm/file', {
-          method: 'POST',
-          headers: buildQuantumMutationHeaders(token),
-          credentials: 'include',
-          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-          body: JSON.stringify({
-            name: qasmFilename,
-            content: customQasmContent,
-          }),
-      })
-
-      if (!uploadRes.ok) throw new Error('Failed to save custom QASM')
-      }
-
-      const payload: Record<string, unknown> = {
-      backend: control.backend,
-      shots: control.shots,
-      qasm_file: qasmFilename,
-      }
-
-      const response = await fetch('/api/quantum/execute', {
-      method: 'POST',
-      headers: buildQuantumMutationHeaders(token),
-      credentials: 'include',
-      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      body: JSON.stringify(payload),
-      })
-
-      if (!response.ok) {
-        // Log the response body for diagnostics, but keep the user-facing
-        // message generic (it may include upstream error pages or stack
-        // traces that should not surface in the UI).
-        const errBody = await response.text().catch(() => '')
-        if (errBody) {
-          console.error('[QuantumControlPanel] execute failed', { status: response.status, body: errBody })
-        }
-        throw new Error(`Execution failed (HTTP ${response.status})`)
-      }
-
-      const result = await response.json()
-      setControl(prev => ({
-      ...prev,
-      last_execution: {
-          job_id: result.job_id,
-          status: result.status,
-          timestamp: new Date().toISOString(),
-      },
-      }))
-
-      // Fix #2: Immediately poll job status to catch rapid completions
-      // Only update status, don't update shots to preserve user input
-      setTimeout(async () => {
-      try {
-          await refetchStatus()
-          setMutationError(null)
-      } catch (err) {
-          console.error('Error polling after execution:', err)
-          setMutationError(t('quantumControlPanel.executionRefreshFailed'))
-      }
-      }, EXECUTION_STATUS_POLL_DELAY_MS)
-    } catch (err) {
-      setMutationError(err instanceof Error ? err.message : t('quantumControlPanel.executionError'))
-    } finally {
-      setControl(prev => ({ ...prev, executing: false }))
-      setIsExecuting(false)
-    }
-  }
-
-  const handleLoopModeToggle = async () => {
-    setMutationError(null)
-    try {
-      const endpoint = control.loop_mode ? '/api/quantum/loop/stop' : '/api/quantum/loop/start'
-      const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: buildQuantumMutationHeaders(token),
-      credentials: 'include',
-      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
-
-      if (!response.ok) throw new Error(t('quantumControlPanel.loopModeToggleFailed'))
-
-      // Fix #1: Don't rely on response.loop_mode - refetch status instead
-      await new Promise(resolve => setTimeout(resolve, LOOP_MODE_STATUS_SYNC_DELAY_MS))
-      await refetchStatus()
-      setMutationError(null)
-    } catch (err) {
-      setMutationError(err instanceof Error ? err.message : t('quantumControlPanel.loopModeToggleFailed'))
-    }
-  }
-
-  // Stable callbacks for CustomQASMModal to prevent re-render cascades
-  const handleCustomQasmSubmit = useCallback((content: string) => {
-    setCustomQasmContent(content)
-    setControl(prev => ({ ...prev, qasm_file: 'custom' }))
-    customQasmModal.close()
-    showToast(t('quantumControlPanel.customQasmSaved'), 'success')
-  }, [customQasmModal, showToast, t])
-
-  const handleCustomQasmCancel = useCallback(() => {
-    setControl(prev => ({ ...prev, qasm_file: previousQasmFile }))
-    customQasmModal.close()
-  }, [customQasmModal, previousQasmFile])
 
   const displayStatus = status || DEMO_STATUS
   const isHealthy = displayStatus.status === 'ready' || displayStatus.loop_running === true
@@ -472,68 +215,15 @@ export const QuantumControlPanel: React.FC = () => {
 
       <div className="space-y-4">
           {/* IBM Credentials Button with Clear Option */}
-          <div className="flex gap-2 items-stretch">
-            <button
-              onClick={handleOpenCredentialsDialog}
-              className="flex-1 px-3 py-2 flex items-center justify-between rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <Key className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('quantumControlPanel.ibmCredentialsLabel')}</span>
-              </div>
-              <div className={cn('flex items-center gap-1 text-xs font-semibold',
-                ibmCredentialState === 'configured' && 'text-green-600 dark:text-green-400',
-                ibmCredentialState === 'stored' && 'text-blue-600 dark:text-blue-400',
-                ibmCredentialState === 'none' && 'text-gray-500 dark:text-gray-400',
-              )}>
-                {ibmCredentialState === 'configured' && (
-                  <>
-                    <ShieldCheck className="w-3 h-3" />
-                    {t('quantumControlPanel.credsConfigured')}
-                  </>
-                )}
-                {ibmCredentialState === 'stored' && (
-                  <>
-                    <Check className="w-3 h-3" />
-                    {t('quantumControlPanel.credsStored')}
-                  </>
-                )}
-                {ibmCredentialState === 'none' && t('quantumControlPanel.credsNone')}
-              </div>
-            </button>
-            {ibmCredentialState === 'stored' && (
-              <button
-                onClick={() => { void refetchAuthStatus() }}
-                disabled={isAuthRefreshing}
-                className="px-3 py-2 rounded-lg border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors disabled:opacity-50 flex items-center"
-                title={t('quantumControlPanel.validateNow')}
-                aria-label={t('quantumControlPanel.validateNow')}
-              >
-                <RefreshCw className={cn('w-4 h-4 text-blue-600 dark:text-blue-400', isAuthRefreshing && 'animate-spin')} />
-              </button>
-            )}
-            {ibmCredentialState !== 'none' && (
-              <button
-                onClick={() => setShowClearCredentialsDialog(true)}
-                disabled={isClearing}
-                className="px-3 py-2 rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50 flex items-center"
-                title={t('quantumControlPanel.clearCredentials')}
-              >
-                <Trash2 className={`w-4 h-4 ${isClearing ? 'text-gray-400' : 'text-red-600 dark:text-red-400'}`} />
-              </button>
-            )}
-          </div>
-
-          <ConfirmDialog
-            isOpen={showClearCredentialsDialog}
-            onClose={() => setShowClearCredentialsDialog(false)}
-            onConfirm={handleClearCredentials}
-            title={t('quantumControlPanel.clearCredentialsTitle')}
-            message={t('quantumControlPanel.clearCredentialsMessage')}
-            confirmLabel={t('quantumControlPanel.clearCredentials')}
-            cancelLabel={t('common:actions.cancel')}
-            variant="danger"
-            isLoading={isClearing}
+          <QuantumCredentialsSection
+            ibmAuthenticated={ibmAuthenticated}
+            ibmTokenStored={ibmTokenStored}
+            sessionValidatedAt={sessionValidatedAt}
+            setSessionValidatedAt={setSessionValidatedAt}
+            isAuthRefreshing={isAuthRefreshing}
+            refetchAuthStatus={refetchAuthStatus}
+            token={token}
+            isDemoFallback={forceDemo || isDemoFallback}
           />
 
           {/* Backend Selection */}
