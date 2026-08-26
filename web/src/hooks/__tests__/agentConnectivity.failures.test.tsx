@@ -1,4 +1,3 @@
-import React from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 vi.mock('../mcp/shared', () => ({
@@ -57,12 +56,9 @@ vi.mock('../../contexts/alertRunbooks', () => ({
   findAndExecuteRunbook: vi.fn(() => Promise.resolve(null)),
 }))
 let useLocalAgent: typeof import('../useLocalAgent').useLocalAgent
-let reportAgentDataError: typeof import('../useLocalAgent').reportAgentDataError
-let reportAgentDataSuccess: typeof import('../useLocalAgent').reportAgentDataSuccess
 let isAgentConnected: typeof import('../useLocalAgent').isAgentConnected
 let isAgentUnavailable: typeof import('../useLocalAgent').isAgentUnavailable
 let wasAgentEverConnected: typeof import('../useLocalAgent').wasAgentEverConnected
-let triggerAggressiveDetection: typeof import('../useLocalAgent').triggerAggressiveDetection
 const POLL_INTERVAL = 5_000
 const DISCONNECTED_POLL_INTERVAL = 60_000
 const FAILURE_THRESHOLD = 2
@@ -143,12 +139,9 @@ describe('Agent Connectivity Failure Paths (#11591)', () => {
     vi.stubGlobal('fetch', vi.fn())
     const mod = await import('../useLocalAgent')
     useLocalAgent = mod.useLocalAgent
-    reportAgentDataError = mod.reportAgentDataError
-    reportAgentDataSuccess = mod.reportAgentDataSuccess
     isAgentConnected = mod.isAgentConnected
     isAgentUnavailable = mod.isAgentUnavailable
     wasAgentEverConnected = mod.wasAgentEverConnected
-    triggerAggressiveDetection = mod.triggerAggressiveDetection
   })
   afterEach(() => {
     vi.useRealTimers()

@@ -123,9 +123,6 @@ afterEach(() => {
 })
 import {
   StellarProvider,
-  STELLAR_MISSION_TRIGGER_EVENT,
-  STELLAR_TOKEN_POLL_INTERVAL_MS,
-  STELLAR_TOKEN_POLL_MAX_ATTEMPTS,
   useStellar,
 } from '../useStellar'
 import {

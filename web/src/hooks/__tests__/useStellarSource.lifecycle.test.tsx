@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
-import React from 'react'
 import {
   useStellarSource,
   STELLAR_ACTIVITY_LIMIT,
@@ -8,9 +7,7 @@ import {
   STELLAR_RECONNECT_MAX_MS,
   STELLAR_TOKEN_POLL_INTERVAL_MS,
   STELLAR_TOKEN_POLL_MAX_ATTEMPTS,
-  STELLAR_MISSION_TRIGGER_EVENT,
 } from '../useStellarSource'
-import { STORAGE_KEY_STELLAR_BATCH_INTERVAL_MS } from '../../lib/constants/storage'
 const { mockStellarApi } = vi.hoisted(() => ({
   mockStellarApi: {
     getState: vi.fn(),

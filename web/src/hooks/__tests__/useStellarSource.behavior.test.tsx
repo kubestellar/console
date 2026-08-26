@@ -1,13 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
-import React from 'react'
 import {
   useStellarSource,
-  STELLAR_ACTIVITY_LIMIT,
-  STELLAR_RECONNECT_BASE_MS,
-  STELLAR_RECONNECT_MAX_MS,
-  STELLAR_TOKEN_POLL_INTERVAL_MS,
-  STELLAR_TOKEN_POLL_MAX_ATTEMPTS,
   STELLAR_MISSION_TRIGGER_EVENT,
 } from '../useStellarSource'
 import { STORAGE_KEY_STELLAR_BATCH_INTERVAL_MS } from '../../lib/constants/storage'
@@ -166,7 +160,8 @@ describe('useStellarSource — Optimistic mutations', () => {
     await act(async () => {
       try {
         await result.current.acknowledgeNotification('n-ack-fail')
-      } catch (e) {
+      } catch {
+        /* intentionally empty */
       }
     })
     expect(result.current.notifications).toHaveLength(1)
@@ -224,7 +219,8 @@ describe('useStellarSource — Optimistic mutations', () => {
     await act(async () => {
       try {
         await result.current.resolveNotification('n-resolve-fail', 'Notes')
-      } catch (e) {
+      } catch {
+        /* intentionally empty */
       }
     })
     expect(result.current.notifications).toHaveLength(1)
@@ -314,7 +310,8 @@ describe('useStellarSource — Optimistic mutations', () => {
     await act(async () => {
       try {
         await result.current.dismissNotification('n-dismiss-fail', 'Not relevant')
-      } catch (e) {
+      } catch {
+        /* intentionally empty */
       }
     })
     expect(result.current.notifications).toHaveLength(1)
@@ -366,7 +363,7 @@ describe('useStellarSource — Auto-solve trigger', () => {
   it('dispatches STELLAR_MISSION_TRIGGER_EVENT custom event when a critical notification arrives with solvable=true', async () => {
     const handler = vi.fn()
     window.addEventListener(STELLAR_MISSION_TRIGGER_EVENT, handler)
-    const { result } = renderHook(() => useStellarSource())
+    renderHook(() => useStellarSource())
     await waitFor(() => {
       expect(eventSourceInstances).toHaveLength(1)
     })
