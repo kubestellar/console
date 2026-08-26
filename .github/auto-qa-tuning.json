@@ -42,7 +42,7 @@
       "merged": 43,
       "closed": 10,
       "acceptance_rate": 0.81,
-      "status": "boosted",
+      "status": "blocked",
       "last_evaluated": "2026-08-23T03:20:13Z"
     },
     "resilience": {
@@ -360,7 +360,7 @@
     "a11y": 1.11,
     "operator": 1.14,
     "sre": 2.0,
-    "features": 2.0,
+    "features": 0.0,
     "resilience": 0.93,
     "consistency": 0.95
   },

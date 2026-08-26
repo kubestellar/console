@@ -17,6 +17,7 @@ import {
 
 interface ClusterCostsRatesPanelProps {
   showRatesInfo: boolean
+  isRefreshing?: boolean
   pricingMode: PricingMode
   pricing: CloudPricing
   selectedProvider: CloudProvider
@@ -28,6 +29,7 @@ interface ClusterCostsRatesPanelProps {
 
 export function ClusterCostsRatesPanel({
   showRatesInfo,
+  isRefreshing = false,
   pricingMode,
   pricing,
   selectedProvider,
@@ -49,7 +51,7 @@ export function ClusterCostsRatesPanel({
             : t('cards:clusterCosts.perClusterPricingRates')}
         </span>
         <span className="text-muted-foreground flex items-center gap-1">
-          <RefreshCcw className={cn('w-3 h-3 animate-spin')} aria-hidden="true" />
+          <RefreshCcw className={cn('w-3 h-3', isRefreshing && 'animate-spin')} aria-hidden="true" />
           {t('common:refreshing')}
         </span>
       </div>

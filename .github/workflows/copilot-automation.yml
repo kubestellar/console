@@ -11,7 +11,7 @@ on:
     types: [opened, synchronize, ready_for_review]
 
 permissions:
-  contents: write
+  contents: read
   pull-requests: write
   issues: write
   statuses: write
@@ -22,7 +22,7 @@ concurrency:
 
 jobs:
   copilot-automation:
-    uses: kubestellar/infra/.github/workflows/reusable-copilot-automation.yml@main
+    uses: kubestellar/infra/.github/workflows/reusable-copilot-automation.yml@220beeeb8dae67e2fd8e89338ada8144609fc6ef # pin to main 2026-08-24
     with:
       pr_number: ${{ github.event.inputs.pr_number || '' }}
     secrets:
