@@ -56,6 +56,10 @@ const MAX_CARDS_PER_DASHBOARD = 30
 // How long to wait for a card to show content before marking as timed out
 const CARD_CONTENT_TIMEOUT = 25_000
 
+// CI scaling constants — keep in sync with dashboard-nav.spec.ts
+const IS_CI = !!process.env.CI
+const CI_TIMEOUT_MULTIPLIER = 2
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -340,7 +344,11 @@ test('warmup (demo live live+cache) — prime Vite module cache', async ({ page 
 
 for (const dashboard of DASHBOARDS) {
   for (const mode of ['demo', 'live', 'live+cache'] as const) {
-    test(`${dashboard.name} (${mode}) — card loading performance`, async ({ page }) => {
+    test(`${dashboard.name} (${mode}) — card loading performance`, async ({ page }, testInfo) => {
+      // Give each generated test enough headroom on slow CI runners:
+      // nav + waitForFunction(30s) + card settling + afterAll reporting.
+      const PER_DASHBOARD_TIMEOUT_MS = 90_000
+      testInfo.setTimeout(IS_CI ? PER_DASHBOARD_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER : PER_DASHBOARD_TIMEOUT_MS)
       // Capture uncaught JS errors to debug React crashes
       const pageErrors: string[] = []
       page.on('pageerror', (err) => pageErrors.push(err.message))
