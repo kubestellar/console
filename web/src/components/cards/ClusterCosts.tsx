@@ -433,6 +433,7 @@ export const ClusterCosts = memo(function ClusterCosts({ config }: ClusterCostsP
       {/* Rates Info Panel */}
       <ClusterCostsRatesPanel
         showRatesInfo={showRatesInfo}
+        isRefreshing={clustersRefreshing || gpuRefreshing}
         pricingMode={pricingMode}
         pricing={pricing}
         selectedProvider={selectedProvider}

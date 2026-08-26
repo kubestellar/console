@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_updated": "2026-08-23T03:20:13Z",
+  "last_updated": "2026-08-24T03:20:49Z",
   "rolling_window_days": 30,
   "categories": {
     "performance": {
@@ -11,11 +11,11 @@
       "last_evaluated": "2026-08-16T03:18:35Z"
     },
     "security": {
-      "merged": 120,
+      "merged": 121,
       "closed": 71,
       "acceptance_rate": 0.63,
       "status": "normal",
-      "last_evaluated": "2026-08-14T03:43:45Z"
+      "last_evaluated": "2026-08-24T03:20:49Z"
     },
     "a11y": {
       "merged": 83,
@@ -29,7 +29,7 @@
       "closed": 269,
       "acceptance_rate": 0.76,
       "status": "normal",
-      "last_evaluated": "2026-08-23T03:20:13Z"
+      "last_evaluated": "2026-08-24T03:20:49Z"
     },
     "sre": {
       "merged": 583,
@@ -65,15 +65,40 @@
     "size_acceptance": {},
     "type_acceptance": {},
     "common_rejection_reasons": [
-      "- PR #22540: Verified against `origin/main` — every file this PR touches already has equivalent (or superseding) test coverage merged via other PRs, and this branch is now stale (`CONFLICTING`/`DIRTY`/`BLOCKED` against current `main`):",
+      "- PR #22540: Verified against `origin/main` \u2014 every file this PR touches already has equivalent (or superseding) test coverage merged via other PRs, and this branch is now stale (`CONFLICTING`/`DIRTY`/`BLOCKED` against current `main`):",
       "| File | Test file on `main` | Lines / `it()` | Merged via |"
     ],
     "best_change_type": "bug_fix",
     "last_report_date": "2026-08-23"
   },
   "cncf_insights": {
-    "last_scan_date": "2026-08-19",
-    "suggested_checks": []
+    "last_scan_date": "2026-08-26",
+    "suggested_checks": [
+      {
+        "pattern": "navigation_ux",
+        "count": 7,
+        "added": "2026-08-26",
+        "priority": "medium"
+      },
+      {
+        "pattern": "form_ux",
+        "count": 8,
+        "added": "2026-08-26",
+        "priority": "medium"
+      },
+      {
+        "pattern": "realtime_ux",
+        "count": 19,
+        "added": "2026-08-26",
+        "priority": "medium"
+      },
+      {
+        "pattern": "onboarding",
+        "count": 6,
+        "added": "2026-08-26",
+        "priority": "medium"
+      }
+    ]
   },
   "history": [
     {
@@ -345,6 +370,16 @@
     {
       "date": "2026-08-23",
       "total_merged": 1856,
+      "total_closed": 578,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "sre",
+        "features"
+      ]
+    },
+    {
+      "date": "2026-08-24",
+      "total_merged": 1860,
       "total_closed": 578,
       "categories_blocked": [],
       "categories_boosted": [
