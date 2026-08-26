@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, waitFor, act } from '@testing-library/react'
+import { renderHook, waitFor } from '@testing-library/react'
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks
@@ -128,14 +128,8 @@ import {
 } from '../workloadQueries'
 
 const {
-  getDemoPods,
   getDemoPodIssues,
-  getDemoDeploymentIssues,
-  getDemoDeployments,
   getDemoAllPods,
-  loadPodsCacheFromStorage,
-  savePodsCacheToStorage,
-  PODS_CACHE_KEY,
 } = __workloadsTestables
 
 // ---------------------------------------------------------------------------

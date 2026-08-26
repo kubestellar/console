@@ -5,7 +5,7 @@
  * useCronJobs, usePodLogs, subscribeWorkloadsCache uncovered branches.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, act, waitFor } from '@testing-library/react'
+import { renderHook, waitFor } from '@testing-library/react'
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks — mirrors workloads.test.ts setup
@@ -126,15 +126,6 @@ import {
   subscribeWorkloadsCache,
 } from '../workloads'
 import { __resetInfrastructureCaches } from '../workloadQueries'
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-let uniqueCounter = 0
-function uniqueCluster(prefix = 'cov') {
-  return `${prefix}-${++uniqueCounter}-${Date.now()}`
-}
 
 // ---------------------------------------------------------------------------
 // Setup / teardown

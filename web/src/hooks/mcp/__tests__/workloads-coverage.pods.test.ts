@@ -5,7 +5,7 @@
  * silent refresh behavior, useAllPods error branches.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, act, waitFor } from '@testing-library/react'
+import { renderHook, waitFor } from '@testing-library/react'
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks — mirrors workloads.test.ts setup
