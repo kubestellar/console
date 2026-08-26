@@ -1,0 +1,349 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { renderHook, act } from '@testing-library/react'
+vi.mock('../mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+vi.mock('../../hooks/useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../hooks/useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
+  isDemoModeForced: false,
+}))
+vi.mock('../../lib/demoMode', () => ({
+  isDemoMode: () => false,
+  isNetlifyDeployment: false,
+  isDemoModeForced: false,
+}))
+const mockEmitAgentConnected = vi.fn()
+const mockEmitAgentDisconnected = vi.fn()
+const mockEmitAgentProvidersDetected = vi.fn()
+const mockEmitConversionStep = vi.fn()
+vi.mock('../../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/analytics')>()),
+  emitAgentConnected: (...args: unknown[]) => mockEmitAgentConnected(...args),
+  emitAgentDisconnected: (...args: unknown[]) => mockEmitAgentDisconnected(...args),
+  emitAgentProvidersDetected: (...args: unknown[]) => mockEmitAgentProvidersDetected(...args),
+  emitConversionStep: (...args: unknown[]) => mockEmitConversionStep(...args),
+}
+))
+vi.mock('../../lib/utils/localStorage', () => ({
+  safeGetItem: vi.fn(() => null),
+  safeSetItem: vi.fn(),
+}))
+vi.mock('../../contexts/notifications', () => ({
+  shouldDispatchBrowserNotification: vi.fn(() => false),
+  isClusterUnreachable: vi.fn(() => false),
+  sendNotifications: vi.fn(),
+  sendBatchedNotifications: vi.fn(),
+}))
+vi.mock('../../contexts/alertStorage', () => ({
+  ALERTS_KEY: 'kc_alerts',
+  MAX_ALERTS: 500,
+  loadNotifiedAlertKeys: vi.fn(() => new Map()),
+  saveNotifiedAlertKeys: vi.fn(),
+  loadFromStorage: vi.fn(() => []),
+  saveToStorage: vi.fn(),
+  saveAlerts: vi.fn(),
+  STORAGE_KEY_AUTH_TOKEN: 'auth_token',
+  FETCH_DEFAULT_TIMEOUT_MS: 10_000,
+  DEFAULT_TEMPERATURE_THRESHOLD_F: 100,
+  DEFAULT_WIND_SPEED_THRESHOLD_MPH: 40,
+}))
+vi.mock('../../contexts/alertRunbooks', () => ({
+  findAndExecuteRunbook: vi.fn(() => Promise.resolve(null)),
+}))
+let useLocalAgent: typeof import('../useLocalAgent').useLocalAgent
+let isAgentConnected: typeof import('../useLocalAgent').isAgentConnected
+let isAgentUnavailable: typeof import('../useLocalAgent').isAgentUnavailable
+let wasAgentEverConnected: typeof import('../useLocalAgent').wasAgentEverConnected
+const POLL_INTERVAL = 5_000
+const DISCONNECTED_POLL_INTERVAL = 60_000
+const FAILURE_THRESHOLD = 2
+const UNAUTHORIZED_STATUS = 401
+const healthData = {
+  status: 'ok',
+  version: '1.0.0',
+  clusters: 3,
+  hasClaude: true,
+  availableProviders: [{ name: 'claude', displayName: 'Claude', capabilities: 3 }],
+}
+async function flushMicrotasks() {
+  await act(async () => {
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+  })
+}
+async function advanceUntilDisconnected(currentStatus: () => string, maxAttempts = 4) {
+  for (let i = 0; i < maxAttempts; i++) {
+    if (currentStatus() === 'disconnected') {
+      return
+    }
+    await act(async () => { vi.advanceTimersByTime(POLL_INTERVAL) })
+    await flushMicrotasks()
+  }
+}
+function mockFetchOk(data = healthData) {
+  ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+    ok: true,
+    json: () => Promise.resolve(data),
+  })
+}
+function mockFetchReject(msg = 'Connection refused') {
+  ;(global.fetch as ReturnType<typeof vi.fn>).mockRejectedValue(new Error(msg))
+}
+function mockFetchHang() {
+  ;(global.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+    () => new Promise(() => {})
+  )
+}
+function mockFetchStatus(status: number) {
+  ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+    ok: false,
+    status,
+    json: () => Promise.resolve({}),
+  })
+}
+function mockFetchAuthError(status = UNAUTHORIZED_STATUS, data = healthData) {
+  ;(global.fetch as ReturnType<typeof vi.fn>)
+    .mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(data),
+    })
+    .mockResolvedValueOnce({
+      ok: false,
+      status,
+      json: () => Promise.resolve({}),
+    })
+}
+async function driveToDisconnected() {
+  mockFetchReject()
+  await flushMicrotasks()
+  for (let i = 1; i < FAILURE_THRESHOLD; i++) {
+    await act(async () => { vi.advanceTimersByTime(POLL_INTERVAL) })
+    await flushMicrotasks()
+  }
+}
+describe('Agent Connectivity Failure Paths (#11591)', () => {
+  beforeEach(async () => {
+    vi.useFakeTimers()
+    vi.resetModules()
+    mockEmitAgentConnected.mockClear()
+    mockEmitAgentDisconnected.mockClear()
+    mockEmitAgentProvidersDetected.mockClear()
+    mockEmitConversionStep.mockClear()
+    vi.stubGlobal('fetch', vi.fn())
+    const mod = await import('../useLocalAgent')
+    useLocalAgent = mod.useLocalAgent
+    isAgentConnected = mod.isAgentConnected
+    isAgentUnavailable = mod.isAgentUnavailable
+    wasAgentEverConnected = mod.wasAgentEverConnected
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
+  describe('connection refused (agent not running)', () => {
+    it('produces "Local agent not available" error after threshold', async () => {
+      const { result } = renderHook(() => useLocalAgent())
+      await driveToDisconnected()
+      expect(result.current.error).toBe('Local agent not available')
+      expect(result.current.status).toBe('disconnected')
+    })
+    it('falls back to demo health data when disconnected', async () => {
+      const { result } = renderHook(() => useLocalAgent())
+      await driveToDisconnected()
+      expect(result.current.health).not.toBeNull()
+      expect(result.current.health?.status).toBe('demo')
+      expect(result.current.health?.version).toBe('demo')
+    })
+    it('sets isDemoMode=true when fully disconnected', async () => {
+      const { result } = renderHook(() => useLocalAgent())
+      await driveToDisconnected()
+      expect(result.current.isDemoMode).toBe(true)
+    })
+    it('isAgentUnavailable() returns true when disconnected', async () => {
+      renderHook(() => useLocalAgent())
+      await driveToDisconnected()
+      expect(isAgentUnavailable()).toBe(true)
+    })
+    it('isAgentConnected() returns false when disconnected', async () => {
+      renderHook(() => useLocalAgent())
+      await driveToDisconnected()
+      expect(isAgentConnected()).toBe(false)
+    })
+    it('records disconnection event in connectionEvents', async () => {
+      const { result } = renderHook(() => useLocalAgent())
+      await driveToDisconnected()
+      const events = result.current.connectionEvents
+      const errorEvents = events.filter(e => e.type === 'error' || e.type === 'disconnected')
+      expect(errorEvents.length).toBeGreaterThan(0)
+      const lastError = errorEvents[0]
+      expect(lastError.message).toMatch(/agent|connect/i)
+    })
+  })
+  describe('HTTP error statuses from agent health endpoint', () => {
+    it.each([
+      [502, 'Bad Gateway'],
+      [503, 'Service Unavailable'],
+      [504, 'Gateway Timeout'],
+      [500, 'Internal Server Error'],
+    ])('HTTP %i → disconnected after threshold', async (status: number) => {
+      mockFetchStatus(status)
+      const { result } = renderHook(() => useLocalAgent())
+      await flushMicrotasks()
+      for (let i = 1; i < FAILURE_THRESHOLD; i++) {
+        await act(async () => { vi.advanceTimersByTime(POLL_INTERVAL) })
+        await flushMicrotasks()
+      }
+      expect(result.current.status).toBe('disconnected')
+      expect(result.current.error).toBe('Local agent not available')
+    })
+    it('HTTP 401 from agent health is treated as a failure', async () => {
+      mockFetchStatus(UNAUTHORIZED_STATUS)
+      const { result } = renderHook(() => useLocalAgent())
+      await flushMicrotasks()
+      for (let i = 1; i < FAILURE_THRESHOLD; i++) {
+        await act(async () => { vi.advanceTimersByTime(POLL_INTERVAL) })
+        await flushMicrotasks()
+      }
+      expect(result.current.status).toBe('disconnected')
+    })
+    it('HTTP 401 from auth probe is treated as auth_error', async () => {
+      mockFetchAuthError(UNAUTHORIZED_STATUS)
+      const { result } = renderHook(() => useLocalAgent())
+      await flushMicrotasks()
+      expect(result.current.status).toBe('auth_error')
+      expect(result.current.isConnected).toBe(false)
+      expect(result.current.error).toContain(`HTTP ${UNAUTHORIZED_STATUS}`)
+    })
+  })
+  describe('timeout (agent unreachable / slow response)', () => {
+    it('hangs do not mark as connected', async () => {
+      mockFetchHang()
+      const { result } = renderHook(() => useLocalAgent())
+      await act(async () => { vi.advanceTimersByTime(POLL_INTERVAL * 3) })
+      await flushMicrotasks()
+      expect(result.current.status).toBe('connecting')
+      expect(result.current.isConnected).toBe(false)
+    })
+    it('AbortError from timeout is treated as failure', async () => {
+      const abortError = new DOMException('The operation was aborted', 'AbortError')
+      ;(global.fetch as ReturnType<typeof vi.fn>).mockRejectedValue(abortError)
+      const { result } = renderHook(() => useLocalAgent())
+      await flushMicrotasks()
+      await advanceUntilDisconnected(() => result.current.status)
+      expect(result.current.status).toBe('disconnected')
+      expect(result.current.error).toBe('Local agent not available')
+    })
+    it('TypeError (network failure) is treated as failure', async () => {
+      ;(global.fetch as ReturnType<typeof vi.fn>).mockRejectedValue(
+        new TypeError('Failed to fetch')
+      )
+      const { result } = renderHook(() => useLocalAgent())
+      await flushMicrotasks()
+      for (let i = 1; i < FAILURE_THRESHOLD; i++) {
+        await act(async () => { vi.advanceTimersByTime(POLL_INTERVAL) })
+        await flushMicrotasks()
+      }
+      expect(result.current.status).toBe('disconnected')
+    })
+  })
+  describe('error message consistency', () => {
+    it('connection refused and HTTP errors produce the same error text', async () => {
+      mockFetchReject('Connection refused')
+      const { result: result1 } = renderHook(() => useLocalAgent())
+      await driveToDisconnected()
+      const errorFromRefused = result1.current.error
+      vi.resetModules()
+      const mod2 = await import('../useLocalAgent')
+      useLocalAgent = mod2.useLocalAgent
+      mockFetchStatus(503)
+      const { result: result2 } = renderHook(() => useLocalAgent())
+      await flushMicrotasks()
+      for (let i = 1; i < FAILURE_THRESHOLD; i++) {
+        await act(async () => { vi.advanceTimersByTime(POLL_INTERVAL) })
+        await flushMicrotasks()
+      }
+      const errorFromHttp = result2.current.error
+      expect(errorFromRefused).toBe('Local agent not available')
+      expect(errorFromHttp).toBe('Local agent not available')
+      expect(errorFromRefused).toBe(errorFromHttp)
+    })
+    it('error is cleared on successful reconnection', async () => {
+      const { result } = renderHook(() => useLocalAgent())
+      await driveToDisconnected()
+      expect(result.current.error).toBe('Local agent not available')
+      mockFetchOk()
+      await act(async () => { vi.advanceTimersByTime(DISCONNECTED_POLL_INTERVAL) })
+      await flushMicrotasks()
+      await act(async () => { vi.advanceTimersByTime(DISCONNECTED_POLL_INTERVAL) })
+      await flushMicrotasks()
+      expect(result.current.error).toBeNull()
+      expect(result.current.status).toBe('connected')
+    })
+  })
+  describe('reconnection after agent recovery', () => {
+    it('single success does not reconnect (hysteresis)', async () => {
+      const { result } = renderHook(() => useLocalAgent())
+      await driveToDisconnected()
+      expect(result.current.status).toBe('disconnected')
+      mockFetchOk()
+      await act(async () => { vi.advanceTimersByTime(DISCONNECTED_POLL_INTERVAL) })
+      await flushMicrotasks()
+      expect(result.current.status).toBe('disconnected')
+    })
+    it('two consecutive successes reconnect from disconnected', async () => {
+      const { result } = renderHook(() => useLocalAgent())
+      await driveToDisconnected()
+      mockFetchOk()
+      await act(async () => { vi.advanceTimersByTime(DISCONNECTED_POLL_INTERVAL) })
+      await flushMicrotasks()
+      await act(async () => { vi.advanceTimersByTime(DISCONNECTED_POLL_INTERVAL) })
+      await flushMicrotasks()
+      expect(result.current.status).toBe('connected')
+      expect(result.current.isConnected).toBe(true)
+      expect(result.current.error).toBeNull()
+    })
+    it('emits analytics on reconnection', async () => {
+      mockFetchOk()
+      renderHook(() => useLocalAgent())
+      await flushMicrotasks()
+      mockEmitAgentConnected.mockClear()
+      mockFetchReject()
+      for (let i = 0; i < FAILURE_THRESHOLD; i++) {
+        await act(async () => { vi.advanceTimersByTime(POLL_INTERVAL) })
+        await flushMicrotasks()
+      }
+      mockFetchOk()
+      await act(async () => { vi.advanceTimersByTime(DISCONNECTED_POLL_INTERVAL) })
+      await flushMicrotasks()
+      await act(async () => { vi.advanceTimersByTime(DISCONNECTED_POLL_INTERVAL) })
+      await flushMicrotasks()
+      expect(mockEmitAgentConnected).toHaveBeenCalled()
+    })
+    it('wasAgentEverConnected() returns true after first connection', async () => {
+      mockFetchOk()
+      renderHook(() => useLocalAgent())
+      await flushMicrotasks()
+      expect(wasAgentEverConnected()).toBe(true)
+      mockFetchReject()
+      for (let i = 0; i < FAILURE_THRESHOLD; i++) {
+        await act(async () => { vi.advanceTimersByTime(POLL_INTERVAL) })
+        await flushMicrotasks()
+      }
+      expect(wasAgentEverConnected()).toBe(true)
+    })
+    it('wasAgentEverConnected() returns false if never connected', async () => {
+      mockFetchReject()
+      renderHook(() => useLocalAgent())
+      await driveToDisconnected()
+      expect(wasAgentEverConnected()).toBe(false)
+    })
+  })
+})

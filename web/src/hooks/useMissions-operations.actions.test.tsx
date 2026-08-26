@@ -1,0 +1,417 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { renderHook, act } from '@testing-library/react'
+import React from 'react'
+import { MissionProvider, useMissions } from './useMissions'
+import { getDemoMode } from './useDemoMode'
+import { emitMissionRated } from '../lib/analytics'
+import { getTokenCategoryForMissionType } from '../lib/tokenUsageMissionCategory'
+vi.mock('./mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+vi.mock('./useDemoMode', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./useDemoMode')>()),
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => false),
+  isDemoModeForced: false,
+  default: vi.fn(() => false),
+}))
+vi.mock('./useLocalAgent', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./useLocalAgent')>()
+  return {
+    ...actual,
+    useLocalAgent: vi.fn(() => ({ isConnected: false })),
+    isAgentUnavailable: vi.fn(() => false),
+    isAgentConnected: vi.fn(() => false),
+    reportAgentActivity: vi.fn(),
+    reportAgentDataSuccess: vi.fn(),
+    reportAgentDataError: vi.fn(),
+  }
+})
+vi.mock('../lib/utils/wsAuth', () => ({
+  getWsAuthParams: vi.fn((url: string) => Promise.resolve({ url, protocols: [] })),
+}))
+vi.mock('./useTokenUsage', () => ({
+  addCategoryTokens: vi.fn(),
+  setActiveTokenCategory: vi.fn(),
+  clearActiveTokenCategory: vi.fn(),
+  getActiveTokenCategories: vi.fn(() => []),
+}))
+vi.mock('./useResolutions', () => ({
+  detectIssueSignature: vi.fn(() => ({ type: 'Unknown' })),
+  findSimilarResolutionsStandalone: vi.fn(() => []),
+  generateResolutionPromptContext: vi.fn(() => ''),
+}))
+vi.mock('../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual,
+  LOCAL_AGENT_WS_URL: 'ws://localhost:8585/ws',
+  LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
+} })
+vi.mock('../lib/analytics', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/analytics')>()),
+  emitMissionStarted: vi.fn(),
+  emitMissionCompleted: vi.fn(),
+  emitMissionError: vi.fn(),
+  emitMissionRated: vi.fn(),
+  emitAgentTokenFailure: vi.fn(),
+  emitWsAuthMissing: vi.fn(),
+  emitSseAuthFailure: vi.fn(),
+  emitSessionRefreshFailure: vi.fn(),
+}
+))
+vi.mock('../lib/missions/preflightCheck', () => ({
+  runPreflightCheck: vi.fn().mockResolvedValue({ ok: true }),
+  classifyKubectlError: vi.fn().mockReturnValue({ code: 'UNKNOWN_EXECUTION_FAILURE', message: 'mock' }),
+  getRemediationActions: vi.fn().mockReturnValue([]),
+  resolveRequiredTools: vi.fn(() => []),
+  runToolPreflightCheck: vi.fn().mockResolvedValue({ ok: true, tools: [] }),
+}))
+vi.mock('../lib/missions/scanner/malicious', () => ({
+  scanForMaliciousContent: vi.fn().mockReturnValue([]),
+}))
+vi.mock('../lib/kubectlProxy', () => ({
+  kubectlProxy: { exec: vi.fn() },
+}))
+class MockWebSocket {
+  static CONNECTING = 0
+  static OPEN = 1
+  static CLOSING = 2
+  static CLOSED = 3
+  static lastInstance: MockWebSocket | null = null
+  readyState = MockWebSocket.CONNECTING
+  onopen: ((e: Event) => void) | null = null
+  onmessage: ((e: MessageEvent) => void) | null = null
+  onclose: ((e: CloseEvent) => void) | null = null
+  onerror: ((e: Event) => void) | null = null
+  send = vi.fn()
+  close = vi.fn()
+  constructor(public url: string) {
+    MockWebSocket.lastInstance = this
+  }
+  simulateOpen() {
+    this.readyState = MockWebSocket.OPEN
+    this.onopen?.(new Event('open'))
+  }
+  simulateMessage(data: unknown) {
+    this.onmessage?.(new MessageEvent('message', { data: JSON.stringify(data) }))
+  }
+  simulateClose() {
+    this.readyState = MockWebSocket.CLOSED
+    this.onclose?.(new CloseEvent('close'))
+  }
+  simulateError() {
+    this.onerror?.(new Event('error'))
+  }
+}
+vi.stubGlobal('WebSocket', MockWebSocket)
+const wrapper = ({ children }: { children: React.ReactNode }) => (
+  <MissionProvider>{children}</MissionProvider>
+)
+const defaultParams = {
+  title: 'Test Mission',
+  description: 'Pod crash investigation',
+  type: 'troubleshoot' as const,
+  initialPrompt: 'Fix the pod crash',
+  skipReview: true,
+}
+async function startMissionWithConnection(
+  result: { current: ReturnType<typeof useMissions> },
+): Promise<{ missionId: string; requestId: string }> {
+  let missionId = ''
+  act(() => {
+    missionId = result.current.startMission(defaultParams)
+  })
+  await act(async () => { await Promise.resolve() })
+  await act(async () => {
+    MockWebSocket.lastInstance?.simulateOpen()
+  })
+  const chatCall = MockWebSocket.lastInstance?.send.mock.calls.find(
+    (call: string[]) => JSON.parse(call[0]).type === 'chat',
+  )
+  const requestId = chatCall ? JSON.parse(chatCall[0]).id : ''
+  return { missionId, requestId }
+}
+beforeEach(() => {
+  localStorage.clear()
+  MockWebSocket.lastInstance = null
+  vi.clearAllMocks()
+  vi.mocked(getDemoMode).mockReturnValue(false)
+  globalThis.fetch = vi.fn().mockResolvedValue({ ok: true })
+})
+describe('setActiveTokenCategory on mission actions', () => {
+  it('sets active token category from the mission type when starting a mission', async () => {
+    const { setActiveTokenCategory } = await import('./useTokenUsage')
+    const expectedCategory = getTokenCategoryForMissionType(defaultParams.type)
+    vi.mocked(setActiveTokenCategory).mockClear()
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    act(() => { result.current.startMission(defaultParams) })
+    await act(async () => { await Promise.resolve() })
+    await act(async () => { MockWebSocket.lastInstance?.simulateOpen() })
+    expect(setActiveTokenCategory).toHaveBeenCalledWith(expect.any(String), expectedCategory)
+  })
+  it('sets active token category from the mission type on sendMessage', async () => {
+    const { setActiveTokenCategory } = await import('./useTokenUsage')
+    const expectedCategory = getTokenCategoryForMissionType(defaultParams.type)
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    const { missionId, requestId } = await startMissionWithConnection(result)
+    act(() => {
+      MockWebSocket.lastInstance?.simulateMessage({
+        id: requestId,
+        type: 'stream',
+        payload: { content: '', done: true },
+      })
+    })
+    vi.mocked(setActiveTokenCategory).mockClear()
+    act(() => {
+      result.current.sendMessage(missionId, 'follow up')
+    })
+    expect(setActiveTokenCategory).toHaveBeenCalledWith(missionId, expectedCategory)
+  })
+  it('clears active token category on result message', async () => {
+    const { clearActiveTokenCategory } = await import('./useTokenUsage')
+    vi.mocked(clearActiveTokenCategory).mockClear()
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    const { missionId, requestId } = await startMissionWithConnection(result)
+    act(() => {
+      MockWebSocket.lastInstance?.simulateMessage({
+        id: requestId,
+        type: 'result',
+        payload: { content: 'Done' },
+      })
+    })
+    expect(clearActiveTokenCategory).toHaveBeenCalledWith(missionId)
+  })
+})
+describe('loadMissions edge cases', () => {
+  it('marks cancelling missions as failed on page reload', () => {
+    const cancellingMission = {
+      id: 'cancel-1',
+      title: 'Cancelling Mission',
+      description: 'Was being cancelled',
+      type: 'troubleshoot',
+      status: 'cancelling',
+      messages: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    localStorage.setItem('kc_missions', JSON.stringify([cancellingMission]))
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    const mission = result.current.missions.find(m => m.id === 'cancel-1')
+    expect(mission?.status).toBe('failed')
+    expect(mission?.messages.some(m =>
+      m.role === 'system' && m.content.includes('page was reloaded during cancellation')
+    )).toBe(true)
+  })
+  it('marks running missions with needsReconnect on page reload', () => {
+    const runningMission = {
+      id: 'running-1',
+      title: 'Running Mission',
+      description: 'Was running',
+      type: 'analyze',
+      status: 'running',
+      messages: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    localStorage.setItem('kc_missions', JSON.stringify([runningMission]))
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    const mission = result.current.missions.find(m => m.id === 'running-1')
+    expect(mission?.status).toBe('running')
+    expect(mission?.currentStep).toBe('Reconnecting...')
+    expect(mission?.context?.needsReconnect).toBe(true)
+  })
+  it('handles corrupted localStorage gracefully', () => {
+    localStorage.setItem('kc_missions', '{{invalid json')
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    expect(result.current.missions).toEqual([])
+  })
+})
+describe('saveMissions quota handling', () => {
+  it('prunes old completed missions when quota exceeded', () => {
+    const missions = Array.from({ length: 60 }, (_, i) => ({
+      id: `m-${i}`,
+      title: `Mission ${i}`,
+      description: 'test',
+      type: 'troubleshoot',
+      status: i < 5 ? 'running' : 'completed',
+      messages: [],
+      createdAt: new Date(Date.now() - i * 60000).toISOString(),
+      updatedAt: new Date(Date.now() - i * 60000).toISOString(),
+    }))
+    localStorage.setItem('kc_missions', JSON.stringify(missions))
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    expect(result.current.missions.length).toBe(60)
+  })
+})
+describe('saveMission', () => {
+  it('creates a saved (library) mission without starting it', () => {
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    let savedId = ''
+    act(() => {
+      savedId = result.current.saveMission({
+        title: 'Saved Fix',
+        description: 'Fix for OOM',
+        type: 'repair',
+        initialPrompt: 'kubectl delete pod ...',
+      })
+    })
+    expect(savedId).toBeTruthy()
+    const mission = result.current.missions.find(m => m.id === savedId)
+    expect(mission?.status).toBe('saved')
+    expect(mission?.importedFrom?.title).toBe('Saved Fix')
+  })
+})
+describe('dismissMission', () => {
+  it('removes a mission from the list', () => {
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    let missionId = ''
+    act(() => {
+      missionId = result.current.startMission(defaultParams)
+    })
+    expect(result.current.missions.find(m => m.id === missionId)).toBeDefined()
+    act(() => {
+      result.current.dismissMission(missionId)
+    })
+    expect(result.current.missions.find(m => m.id === missionId)).toBeUndefined()
+  })
+  it('clears activeMission when dismissed mission is active', () => {
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    let missionId = ''
+    act(() => {
+      missionId = result.current.startMission(defaultParams)
+    })
+    act(() => {
+      result.current.setActiveMission(missionId)
+    })
+    expect(result.current.activeMission?.id).toBe(missionId)
+    act(() => {
+      result.current.dismissMission(missionId)
+    })
+    expect(result.current.activeMission).toBeNull()
+  })
+})
+describe('renameMission', () => {
+  it('updates mission title', () => {
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    let missionId = ''
+    act(() => {
+      missionId = result.current.startMission(defaultParams)
+    })
+    act(() => {
+      result.current.renameMission(missionId, 'New Title')
+    })
+    const mission = result.current.missions.find(m => m.id === missionId)
+    expect(mission?.title).toBe('New Title')
+  })
+})
+describe('rateMission', () => {
+  it('sets positive feedback', () => {
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    let missionId = ''
+    act(() => {
+      missionId = result.current.startMission(defaultParams)
+    })
+    act(() => {
+      result.current.rateMission(missionId, 'positive')
+    })
+    expect(result.current.missions.find(m => m.id === missionId)?.feedback).toBe('positive')
+    expect(emitMissionRated).toHaveBeenCalled()
+  })
+  it('sets negative feedback', () => {
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    let missionId = ''
+    act(() => {
+      missionId = result.current.startMission(defaultParams)
+    })
+    act(() => {
+      result.current.rateMission(missionId, 'negative')
+    })
+    expect(result.current.missions.find(m => m.id === missionId)?.feedback).toBe('negative')
+  })
+})
+describe('sidebar controls', () => {
+  it('toggleSidebar toggles isSidebarOpen', () => {
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    expect(result.current.isSidebarOpen).toBe(false)
+    act(() => { result.current.toggleSidebar() })
+    expect(result.current.isSidebarOpen).toBe(true)
+    act(() => { result.current.toggleSidebar() })
+    expect(result.current.isSidebarOpen).toBe(false)
+  })
+  it('openSidebar sets isSidebarOpen to true', () => {
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    act(() => { result.current.openSidebar() })
+    expect(result.current.isSidebarOpen).toBe(true)
+  })
+  it('closeSidebar sets isSidebarOpen to false', () => {
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    act(() => { result.current.openSidebar() })
+    act(() => { result.current.closeSidebar() })
+    expect(result.current.isSidebarOpen).toBe(false)
+  })
+  it('minimizeSidebar sets isSidebarMinimized to true', () => {
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    act(() => { result.current.minimizeSidebar() })
+    expect(result.current.isSidebarMinimized).toBe(true)
+  })
+  it('expandSidebar sets isSidebarMinimized to false', () => {
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    act(() => { result.current.minimizeSidebar() })
+    act(() => { result.current.expandSidebar() })
+    expect(result.current.isSidebarMinimized).toBe(false)
+  })
+  it('setFullScreen controls full screen mode', () => {
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    act(() => { result.current.setFullScreen(true) })
+    expect(result.current.isFullScreen).toBe(true)
+    act(() => { result.current.setFullScreen(false) })
+    expect(result.current.isFullScreen).toBe(false)
+  })
+})
+describe('error message classification', () => {
+  it('shows auth error for 401 code', async () => {
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    const { requestId } = await startMissionWithConnection(result)
+    act(() => {
+      MockWebSocket.lastInstance?.simulateMessage({
+        id: requestId,
+        type: 'error',
+        payload: { code: '401', message: 'Unauthorized' },
+      })
+    })
+    const mission = result.current.missions[0]
+    const systemMsg = mission.messages.find(m => m.role === 'system')
+    expect(systemMsg?.content).toContain('Authentication Error')
+  })
+  it('shows rate limit error for 429 code', async () => {
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    const { requestId } = await startMissionWithConnection(result)
+    act(() => {
+      MockWebSocket.lastInstance?.simulateMessage({
+        id: requestId,
+        type: 'error',
+        payload: { code: '429', message: 'Too many requests' },
+      })
+    })
+    const mission = result.current.missions[0]
+    const systemMsg = mission.messages.find(m => m.role === 'system')
+    expect(systemMsg?.content).toContain('Rate Limit')
+  })
+  it('shows agent unavailable error for no_agent code', async () => {
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    const { requestId } = await startMissionWithConnection(result)
+    act(() => {
+      MockWebSocket.lastInstance?.simulateMessage({
+        id: requestId,
+        type: 'error',
+        payload: { code: 'no_agent', message: 'Agent not available' },
+      })
+    })
+    const mission = result.current.missions[0]
+    const systemMsg = mission.messages.find(m => m.role === 'system')
+    expect(systemMsg?.content).toContain('agent not available')
+  })
+})
