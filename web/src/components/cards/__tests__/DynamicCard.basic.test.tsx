@@ -1,14 +1,16 @@
 import React from 'react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, act, waitFor } from '@testing-library/react'
+import {
+  makeT1Definition,
+  makeT2Definition,
+  makeUseCardDataReturn,
+  mockCompileCardCode,
+  mockCreateCardComponent,
+  mockGetDynamicCard,
+  mockUseCardData,
+} from './DynamicCard.test.setup'
 import { DynamicCard } from '../DynamicCard'
-import type { DynamicCardDefinition } from '../../../lib/dynamic-cards/types'
-import './DynamicCard.test.setup'
-
-const mockGetDynamicCard = vi.fn()
-vi.mock('../../../lib/dynamic-cards/dynamicCardRegistry', () => ({
-  getDynamicCard: (...args) => mockGetDynamicCard(...args),
-}))
 
 describe('DynamicCard', () => {
   beforeEach(() => {
@@ -72,9 +74,3 @@ describe('DynamicCard', () => {
     await waitFor(() => expect(screen.getByText('T2 rendered')).toBeInTheDocument())
   })
 })
-
-// ---------------------------------------------------------------------------
-// Tier1CardRuntime
-// ---------------------------------------------------------------------------
-
-describe('Tier1CardRuntime', () => {

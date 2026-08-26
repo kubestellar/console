@@ -1,8 +1,5 @@
 import React from 'react'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor, act } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { DynamicCard, Tier1CardRuntime, Tier2CardRuntime } from '../DynamicCard'
+import { vi } from 'vitest'
 import type { DynamicCardDefinition, DynamicCardDefinition_T1 } from '../../../lib/dynamic-cards/types'
 import { BTN } from '../../../test-utils/buttonLabels'
 
@@ -13,7 +10,7 @@ import { BTN } from '../../../test-utils/buttonLabels'
 // Mock useCache to avoid shared CacheStore state between tests.
 // This provides a minimal implementation that calls the fetcher immediately.
 vi.mock('../../../lib/cache', () => {
-  const React = require('react')
+  const React = require('react') as typeof import('react')
   return {
     useCache: ({ fetcher, initialData, enabled = true }: { fetcher: () => Promise<unknown>; initialData: unknown; enabled?: boolean; [k: string]: unknown }) => {
       const [data, setData] = React.useState(initialData)
@@ -37,7 +34,7 @@ vi.mock('../../../lib/cache', () => {
   }
 })
 
-const mockGetDynamicCard = vi.fn()
+export const mockGetDynamicCard = vi.fn()
 vi.mock('../../../hooks/mcp/shared', () => ({
   agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
   clusterCacheRef: { clusters: [] },
@@ -49,8 +46,8 @@ vi.mock('../../../lib/dynamic-cards/dynamicCardRegistry', () => ({
   getDynamicCard: (...args: unknown[]) => mockGetDynamicCard(...args),
 }))
 
-const mockCompileCardCode = vi.fn()
-const mockCreateCardComponent = vi.fn()
+export const mockCompileCardCode = vi.fn()
+export const mockCreateCardComponent = vi.fn()
 vi.mock('../../../lib/dynamic-cards/compiler', () => ({
   compileCardCode: (...args: unknown[]) => mockCompileCardCode(...args),
   createCardComponent: (...args: unknown[]) => mockCreateCardComponent(...args),
@@ -95,14 +92,14 @@ vi.mock('../DynamicCardErrorBoundary', () => ({
   ),
 }))
 
-const mockShouldUseDemoData = vi.fn(() => false)
+export const mockShouldUseDemoData = vi.fn(() => false)
 vi.mock('../CardDataContext', () => ({
   useCardDemoState: () => ({ shouldUseDemoData: mockShouldUseDemoData() }),
   useReportCardDataState: vi.fn(),
 }))
 
 // useCardData: returns a pass-through by default, overrideable per test
-const mockUseCardData = vi.fn()
+export const mockUseCardData = vi.fn()
 vi.mock('../../../lib/cards/cardHooks', () => ({
   useCardData: (...args: unknown[]) => mockUseCardData(...args),
 }))
@@ -111,7 +108,7 @@ vi.mock('../../../lib/cards/cardHooks', () => ({
 // Default useCardData return value
 // ---------------------------------------------------------------------------
 
-function makeUseCardDataReturn(items: Record<string, unknown>[] = []) {
+export function makeUseCardDataReturn(items: Record<string, unknown>[] = []) {
   return {
     items,
     totalItems: items.length,
@@ -130,7 +127,7 @@ function makeUseCardDataReturn(items: Record<string, unknown>[] = []) {
 // Shared fixtures
 // ---------------------------------------------------------------------------
 
-const BASE_T1_DEF: DynamicCardDefinition_T1 = {
+export const BASE_T1_DEF: DynamicCardDefinition_T1 = {
   layout: 'list',
   columns: [{ field: 'name', label: 'Name' }],
   dataSource: 'static',
@@ -140,7 +137,7 @@ const BASE_T1_DEF: DynamicCardDefinition_T1 = {
   emptyMessage: 'Nothing here.',
 }
 
-function makeT1Definition(overrides: Partial<DynamicCardDefinition> = {}): DynamicCardDefinition {
+export function makeT1Definition(overrides: Partial<DynamicCardDefinition> = {}): DynamicCardDefinition {
   return {
     id: 'card-t1',
     tier: 'tier1',
@@ -149,7 +146,7 @@ function makeT1Definition(overrides: Partial<DynamicCardDefinition> = {}): Dynam
   } as DynamicCardDefinition
 }
 
-function makeT2Definition(overrides: Partial<DynamicCardDefinition> = {}): DynamicCardDefinition {
+export function makeT2Definition(overrides: Partial<DynamicCardDefinition> = {}): DynamicCardDefinition {
   return {
     id: 'card-t2',
     tier: 'tier2',
@@ -157,8 +154,4 @@ function makeT2Definition(overrides: Partial<DynamicCardDefinition> = {}): Dynam
     ...overrides,
   } as DynamicCardDefinition
 }
-
-// ---------------------------------------------------------------------------
-// DynamicCard (top-level)
-// ---------------------------------------------------------------------------
 
