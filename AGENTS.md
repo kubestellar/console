@@ -32,3 +32,31 @@ If a tool-specific file conflicts with `CLAUDE.md`, `CLAUDE.md` wins.
 ## Reporting back
 
 When you finish a task, summarize what changed and note that build/lint are validated by CI on the PR. Do not push or open PRs unless explicitly asked.
+
+## File-split refactor rules (oversized files — MANDATORY)
+
+Splitting an oversized source or test file trips CI in predictable ways. Every
+split PR must follow these rules (learned from ten red split-PRs on 2026-08-26):
+
+1. **Test-file naming:** split parts of `name.test.ts(x)` MUST be named
+   `name.<part>.test.ts(x)` — the `.test.` suffix must stay LAST. A file named
+   `name.test.<part>.ts` escapes the tsconfig test exclude and gets compiled by
+   the strict app build (`noUnusedLocals`), producing hundreds of tsc errors.
+2. **Per-file import hygiene:** never copy the original import block wholesale.
+   Each split file imports ONLY what it uses. Unused imports/consts count as
+   NEW violations under the lint-baseline ratchet (`npm run lint:check`) even
+   though the original file was baselined — the baseline is keyed by file path.
+3. **JSX needs `.tsx`:** any split part containing JSX must be a `.tsx` file.
+4. **Completeness check:** after splitting, verify each part is self-contained —
+   shared `beforeEach`/helpers/mocks either move to a setup module that each
+   part imports, or are duplicated per part. Diff the concatenation of the
+   parts against the original: no test, helper, or trailing block may be
+   truncated, and every file must be brace-balanced.
+5. **Moved baselined violations:** code moved verbatim that carried a baselined
+   violation (e.g. `no-restricted-syntax` raw elements, `no-this-alias`) shows
+   up as NEW in the new path. Fix it properly if trivial; otherwise add a
+   justified `// eslint-disable-next-line <rule>` comment noting the code was
+   moved verbatim — do not silently regress the ratchet.
+6. **If your split PR goes red, fix THAT PR:** `gh pr checkout <N>`, read the
+   build-gate job's "New lint violations" / tsc error list, push repair commits
+   to the same branch. Never open a replacement PR.
