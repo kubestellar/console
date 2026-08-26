@@ -7,21 +7,6 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
-/**
- * Returns true if the element's src URL has the given hostname — uses
- * new URL() instead of includes() to prevent CodeQL
- * js/incomplete-url-substring-sanitization false positives (#9119).
- */
-function srcHasHostname(el: Element, hostname: string): boolean {
-  const src = (el as HTMLScriptElement).src
-  if (!src) return false
-  try {
-    return new URL(src).hostname.toLowerCase() === hostname.toLowerCase()
-  } catch {
-    return false
-  }
-}
-
 // ── Shared mock setup ──────────────────────────────────────────────
 
 vi.mock('../constants', async (importOriginal) => {

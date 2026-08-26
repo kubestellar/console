@@ -119,7 +119,7 @@ export function makeCacheResult<T>(data: T, overrides?: Record<string, unknown>)
 }
 
 export async function loadUseCachedDataModule() {
-  return await import('../useCachedData')
+  return await import('../../useCachedData')
 }
 
 beforeEach(() => {

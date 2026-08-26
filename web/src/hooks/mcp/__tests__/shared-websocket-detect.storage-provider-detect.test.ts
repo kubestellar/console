@@ -1,14 +1,9 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import type { ClusterInfo, ClusterHealth } from '../types'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { ClusterInfo } from '../types'
 
 // ---------------------------------------------------------------------------
 // Constants used in tests (mirror source values to avoid magic numbers)
 // ---------------------------------------------------------------------------
-const OFFLINE_THRESHOLD_MS = 5 * 60_000 // 5 minutes — same as OFFLINE_THRESHOLD_MS in shared.ts
-const AUTO_GENERATED_NAME_LENGTH_THRESHOLD = 50 // same as in shared.ts
-const CLUSTER_NOTIFY_DEBOUNCE_MS = 50 // same debounce delay in shared.ts
-const DEFAULT_MAX_RETRIES = 2 // fetchWithRetry default
-const DEFAULT_INITIAL_BACKOFF_MS = 500 // fetchWithRetry default
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks
@@ -82,46 +77,15 @@ vi.mock('../../../lib/constants/network', async () => {
 // ---------------------------------------------------------------------------
 import {
   // Constants
-  REFRESH_INTERVAL_MS,
-  CLUSTER_POLL_INTERVAL_MS,
-  GPU_POLL_INTERVAL_MS,
-  CACHE_TTL_MS,
-  MIN_REFRESH_INDICATOR_MS,
-  getLocalAgentURL,
   // Pure functions
-  getEffectiveInterval,
-  shareMetricsBetweenSameServerClusters,
-  deduplicateClustersByServer,
-  shouldMarkOffline,
-  recordClusterFailure,
-  clearClusterFailure,
-  clusterDisplayName,
-  fetchWithRetry,
   // Async functions
-  fullFetchClusters,
-  refreshSingleCluster,
-  fetchSingleClusterHealth,
-  connectSharedWebSocket,
   // State management
   clusterCache,
   clusterSubscribers,
-  notifyClusterSubscribers,
-  notifyClusterSubscribersDebounced,
   updateClusterCache,
-  updateSingleClusterInCache,
-  setInitialFetchStarted,
-  setHealthCheckFailures,
-  getHealthCheckFailures,
-  initialFetchStarted,
-  healthCheckFailures,
   // WebSocket
-  sharedWebSocket,
-  cleanupSharedWebSocket,
   // Cache ref
-  clusterCacheRef,
-  subscribeClusterCache,
 } from '../shared'
-import { clearAgentToken, setAgentToken } from '../agentFetch'
 
 // ---------------------------------------------------------------------------
 // Helpers

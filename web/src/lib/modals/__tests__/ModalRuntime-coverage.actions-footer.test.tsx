@@ -22,7 +22,6 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import {
   ModalRuntime,
   registerSectionRenderer,
-  parseModalYAML,
 } from '../ModalRuntime'
 import type {
   ModalDefinition,
@@ -104,7 +103,7 @@ vi.mock('../../icons', () => ({
 }))
 
 vi.mock('../ModalSections', () => ({
-  KeyValueSection: ({ items, onNavigate }: { items: Array<{ label: string; value: string }>; onNavigate?: unknown }) => (
+  KeyValueSection: ({ items }: { items: Array<{ label: string; value: string }>; onNavigate?: unknown }) => (
     <div data-testid="key-value-section">
       {items.map((item) => (
         <span key={item.label}>{item.label}: {item.value}</span>
@@ -167,18 +166,150 @@ beforeEach(() => {
 // Basic rendering
 // ============================================================================
 
-describe('ModalRuntime table section edge cases', () => {
-  it('renders table without dataKey (uses data directly)', () => {
+describe('ModalRuntime actions', () => {
+  const actions: ModalActionDefinition[] = [
+    {
+      id: 'diagnose',
+      label: 'Diagnose',
+      icon: 'Stethoscope',
+      type: 'ai',
+      variant: 'primary',
+      description: 'Run AI diagnosis',
+    },
+    {
+      id: 'delete',
+      label: 'Delete',
+      icon: 'Trash',
+      type: 'callback',
+      variant: 'danger',
+      disabled: true,
+      description: 'Delete resource',
+    },
+    {
+      id: 'warn',
+      label: 'Warning',
+      icon: 'AlertTriangle',
+      type: 'callback',
+      variant: 'warning',
+    },
+    {
+      id: 'default-action',
+      label: 'Default',
+      icon: 'Circle',
+      type: 'callback',
+    },
+  ]
+
+  it('renders action buttons', () => {
+    const def = makeDefinition({ actions })
+
+    render(
+      <ModalRuntime
+        definition={def}
+        isOpen={true}
+        onClose={vi.fn()}
+        data={defaultData}
+      />
+    )
+
+    expect(screen.getByText('Diagnose')).toBeInTheDocument()
+    expect(screen.getByText('Delete')).toBeInTheDocument()
+    expect(screen.getByText('Warning')).toBeInTheDocument()
+    expect(screen.getByText('Default')).toBeInTheDocument()
+  })
+
+  it('calls onAction when action button is clicked', () => {
+    const onAction = vi.fn()
+    const def = makeDefinition({ actions: [actions[0]] })
+
+    render(
+      <ModalRuntime
+        definition={def}
+        isOpen={true}
+        onClose={vi.fn()}
+        data={defaultData}
+        onAction={onAction}
+      />
+    )
+
+    fireEvent.click(screen.getByText('Diagnose'))
+    expect(onAction).toHaveBeenCalledWith(expect.objectContaining({ id: 'diagnose' }))
+  })
+
+  it('disabled actions are not clickable', () => {
+    const onAction = vi.fn()
+    const def = makeDefinition({ actions: [actions[1]] })
+
+    render(
+      <ModalRuntime
+        definition={def}
+        isOpen={true}
+        onClose={vi.fn()}
+        data={defaultData}
+        onAction={onAction}
+      />
+    )
+
+    const deleteBtn = screen.getByText('Delete')
+    expect(deleteBtn.closest('button')).toBeDisabled()
+  })
+
+  it('does not crash when onAction is not provided', () => {
+    const def = makeDefinition({ actions: [actions[0]] })
+
+    render(
+      <ModalRuntime
+        definition={def}
+        isOpen={true}
+        onClose={vi.fn()}
+        data={defaultData}
+      />
+    )
+
+    // Should not throw
+    fireEvent.click(screen.getByText('Diagnose'))
+  })
+})
+
+
+describe('ModalRuntime custom renderers', () => {
+  it('uses prop-based custom section renderers', () => {
+    const CustomRenderer = ({ data }: SectionRendererProps) => (
+      <div data-testid="custom-renderer">Custom: {String(data.name)}</div>
+    )
+
     const def = makeDefinition({
       tabs: [{
         id: 'tab1',
         label: 'Tab',
-        sections: [{
-          type: 'table',
-          config: {
-            columns: [{ key: 'name', header: 'Name' }],
-          },
-        }],
+        sections: [{ type: 'my-custom' as never }],
+      }],
+    })
+
+    render(
+      <ModalRuntime
+        definition={def}
+        isOpen={true}
+        onClose={vi.fn()}
+        data={defaultData}
+        sectionRenderers={{ 'my-custom': CustomRenderer }}
+      />
+    )
+    expect(screen.getByTestId('custom-renderer')).toBeInTheDocument()
+    expect(screen.getByText('Custom: nginx-abc')).toBeInTheDocument()
+  })
+
+  it('uses registry-based section renderers', () => {
+    const RegistryRenderer = ({ data }: SectionRendererProps) => (
+      <div data-testid="registry-renderer">Registry: {String(data.name)}</div>
+    )
+    registerSectionRenderer('registry-type', RegistryRenderer)
+
+    const def = makeDefinition({
+      tabs: [{
+        id: 'tab1',
+        label: 'Tab',
+        sections: [{ type: 'registry-type' as never }],
       }],
     })
 
@@ -190,18 +321,77 @@ describe('ModalRuntime table section edge cases', () => {
         data={defaultData}
       />
     )
-    expect(screen.getByTestId('table-section')).toBeInTheDocument()
+    expect(screen.getByTestId('registry-renderer')).toBeInTheDocument()
+  })
+})
+
+
+describe('ModalRuntime footer', () => {
+  it('hides keyboard hints by default', () => {
+    render(
+      <ModalRuntime
+        definition={makeDefinition()}
+        isOpen={true}
+        onClose={vi.fn()}
+        data={defaultData}
+      />
+    )
+    expect(screen.queryByText('Esc: close')).toBeNull()
+    expect(screen.queryByText('Space: back')).toBeNull()
   })
 
-  it('renders table with empty config', () => {
+  it('shows Esc + Space hints when onBack is provided and showKeyboardHints is true', () => {
+    const def = makeDefinition({ footer: { showKeyboardHints: true } })
+    render(
+      <ModalRuntime
+        definition={def}
+        isOpen={true}
+        onClose={vi.fn()}
+        onBack={vi.fn()}
+        data={defaultData}
+      />
+    )
+    expect(screen.getByText('Esc: close')).toBeInTheDocument()
+    expect(screen.getByText('Space: back')).toBeInTheDocument()
+  })
+
+  it('shows only Esc hint when onBack is not provided and showKeyboardHints is true', () => {
+    const def = makeDefinition({ footer: { showKeyboardHints: true } })
+    render(
+      <ModalRuntime
+        definition={def}
+        isOpen={true}
+        onClose={vi.fn()}
+        data={defaultData}
+      />
+    )
+    expect(screen.getByText('Esc: close')).toBeInTheDocument()
+    expect(screen.queryByText('Space: back')).toBeNull()
+  })
+
+  it('respects footer.showKeyboardHints=false', () => {
+    const def = makeDefinition({ footer: { showKeyboardHints: false } })
+
+    render(
+      <ModalRuntime
+        definition={def}
+        isOpen={true}
+        onClose={vi.fn()}
+        data={defaultData}
+      />
+    )
+    // Footer is rendered but hints are hidden
+    expect(screen.getByTestId('modal-footer')).toBeInTheDocument()
+  })
+})
+
+
+describe('ModalRuntime keyboard config', () => {
+  it('renders with custom keyboard config (escape=none, backspace=none)', async () => {
+    const { useModalNavigation } = await import('../useModalNavigation') as { useModalNavigation: ReturnType<typeof vi.fn> }
+
     const def = makeDefinition({
-      tabs: [{
-        id: 'tab1',
-        label: 'Tab',
-        sections: [{
-          type: 'table',
-        }],
-      }],
+      keyboard: { escape: 'none', backspace: 'none' },
     })
 
     render(
@@ -212,111 +402,12 @@ describe('ModalRuntime table section edge cases', () => {
         data={defaultData}
       />
     )
-    expect(screen.getByTestId('table-section')).toBeInTheDocument()
+
+    expect(useModalNavigation).toHaveBeenCalledWith(expect.objectContaining({
+      enableEscape: false,
+      enableBackspace: false,
+    }))
   })
 })
 
-
-describe('ModalRuntime key-value with linkTo', () => {
-  it('passes linkTo navigation target in items', () => {
-    const def = makeDefinition({
-      tabs: [{
-        id: 'tab1',
-        label: 'Tab',
-        sections: [{
-          type: 'key-value',
-          fields: [
-            { key: 'nodeName', label: 'Node', linkTo: 'node' },
-          ],
-        }],
-      }],
-    })
-
-    render(
-      <ModalRuntime
-        definition={def}
-        isOpen={true}
-        onClose={vi.fn()}
-        data={{ ...defaultData, nodeName: 'worker-1' }}
-        onNavigate={vi.fn()}
-      />
-    )
-    expect(screen.getByText('Node: worker-1')).toBeInTheDocument()
-  })
-})
-
-
-describe('ModalRuntime badges with missing data', () => {
-  it('renders dash for missing badge values', () => {
-    const def = makeDefinition({
-      tabs: [{
-        id: 'tab1',
-        label: 'Tab',
-        sections: [{
-          type: 'badges',
-          config: { badges: ['missing'] },
-        }],
-      }],
-    })
-
-    render(
-      <ModalRuntime
-        definition={def}
-        isOpen={true}
-        onClose={vi.fn()}
-        data={defaultData}
-      />
-    )
-    expect(screen.getByText('Missing: -')).toBeInTheDocument()
-  })
-})
-
-
-describe('parseModalYAML', () => {
-  it('throws with descriptive error', () => {
-    expect(() => parseModalYAML('kind: Pod')).toThrow('YAML parsing not yet implemented')
-  })
-})
-
-
-describe('ModalRuntime without tabs', () => {
-  it('renders without tabs section', () => {
-    const def = makeDefinition({ tabs: undefined })
-
-    render(
-      <ModalRuntime
-        definition={def}
-        isOpen={true}
-        onClose={vi.fn()}
-        data={defaultData}
-      />
-    )
-    expect(screen.getByTestId('base-modal')).toBeInTheDocument()
-    expect(screen.queryByTestId('modal-tabs')).toBeNull()
-  })
-})
-
-
-describe('ModalRuntime custom section with no content', () => {
-  it('renders null for custom section without config.content', () => {
-    const def = makeDefinition({
-      tabs: [{
-        id: 'tab1',
-        label: 'Tab',
-        sections: [{ type: 'custom', config: {} }],
-      }],
-    })
-
-    render(
-      <ModalRuntime
-        definition={def}
-        isOpen={true}
-        onClose={vi.fn()}
-        data={defaultData}
-      />
-    )
-    // Should not crash
-    expect(screen.getByTestId('modal-content')).toBeInTheDocument()
-  })
-})
 

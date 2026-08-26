@@ -21,13 +21,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import {
   ModalRuntime,
-  registerSectionRenderer,
-  parseModalYAML,
 } from '../ModalRuntime'
 import type {
   ModalDefinition,
-  ModalActionDefinition,
-  SectionRendererProps,
 } from '../types'
 
 // Mock the BaseModal to avoid portal rendering and simplify testing
@@ -104,7 +100,7 @@ vi.mock('../../icons', () => ({
 }))
 
 vi.mock('../ModalSections', () => ({
-  KeyValueSection: ({ items, onNavigate }: { items: Array<{ label: string; value: string }>; onNavigate?: unknown }) => (
+  KeyValueSection: ({ items }: { items: Array<{ label: string; value: string }>; onNavigate?: unknown }) => (
     <div data-testid="key-value-section">
       {items.map((item) => (
         <span key={item.label}>{item.label}: {item.value}</span>

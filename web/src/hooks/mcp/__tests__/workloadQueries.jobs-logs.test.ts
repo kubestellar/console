@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, waitFor, act } from '@testing-library/react'
+import { renderHook, waitFor } from '@testing-library/react'
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks
@@ -123,11 +123,6 @@ vi.mock('../workloadSubscriptions', () => ({
 // ---------------------------------------------------------------------------
 
 import {
-  usePods,
-  useAllPods,
-  usePodIssues,
-  useDeploymentIssues,
-  useDeployments,
   useJobs,
   useHPAs,
   useReplicaSets,
