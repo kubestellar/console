@@ -198,140 +198,100 @@ function renderWithProvider() {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('useStellar — fallback outside provider', () => {
-  it('returns zeroed state when called outside StellarProvider', () => {
-    const { result } = renderHook(() => useStellar())
-    expect(result.current.isConnected).toBe(false)
-    expect(result.current.notifications).toEqual([])
-    expect(result.current.pendingActions).toEqual([])
-    expect(result.current.tasks).toEqual([])
-    expect(result.current.watches).toEqual([])
-    expect(result.current.unreadCount).toBe(0)
-    expect(result.current.state).toBeNull()
-    expect(result.current.nudge).toBeNull()
-    expect(result.current.catchUp).toBeNull()
-    expect(result.current.batchIntervalMs).toBe(STELLAR_DEFAULT_BATCH_INTERVAL_MS)
-    expect(result.current.isBatchRefreshing).toBe(false)
-  })
-
-  it('fallback action handlers are callable without throwing', async () => {
-    const { result } = renderHook(() => useStellar())
-    await expect(result.current.acknowledgeNotification('x')).resolves.toBeUndefined()
-    await expect(result.current.dismissAllNotifications()).resolves.toBeUndefined()
-    await expect(result.current.approveAction('x')).resolves.toBeUndefined()
-    await expect(result.current.rejectAction('x', 'reason')).resolves.toBeUndefined()
-    await expect(result.current.updateTaskStatus('x', 'done')).resolves.toBeUndefined()
-    await expect(result.current.refreshState()).resolves.toBeUndefined()
-    expect(() => result.current.dismissNudge()).not.toThrow()
-    expect(() => result.current.dismissCatchUp()).not.toThrow()
-    expect(() => result.current.setProviderSession(null)).not.toThrow()
-  })
-
-  it('fallback solves/solveProgress are empty', () => {
-    const { result } = renderHook(() => useStellar())
-    expect(result.current.solves).toEqual([])
-    expect(result.current.solveProgress).toEqual({})
-    expect(result.current.activity).toEqual([])
-  })
-})
-
-describe('StellarProvider — initial state', () => {
-  it('renders children without throwing', async () => {
-    await act(async () => {
-      render(
-        <StellarProvider>
-          <span data-testid="child">hello</span>
-        </StellarProvider>
-      )
-    })
-    expect(screen.getByTestId('child')).toBeTruthy()
-  })
-
-  it('starts with isConnected false before SSE opens', async () => {
-    const { capturedRef } = renderWithProvider()
-    await act(async () => { await Promise.resolve() })
-    // SSE not yet opened — isConnected false
-    expect(capturedRef.current?.isConnected).toBe(false)
-  })
-
-  it('sets isConnected true after SSE open event', async () => {
+describe('StellarProvider — actions', () => {
+  it('acknowledgeNotification removes notification optimistically', async () => {
     const { capturedRef } = renderWithProvider()
     await act(async () => { await Promise.resolve() })
     const es = eventSourceInstances[0]
-    await act(async () => { es._triggerOpen() })
-    expect(capturedRef.current?.isConnected).toBe(true)
-  })
-
-  it('calls refreshState on mount', async () => {
-    renderWithProvider()
-    await act(async () => { await Promise.resolve() })
-    expect(mockStellarApi.getState).toHaveBeenCalled()
-    expect(mockStellarApi.getNotifications).toHaveBeenCalled()
-    expect(mockStellarApi.getTasks).toHaveBeenCalled()
-  })
-})
-
-describe('StellarProvider — batch scheduling', () => {
-  it('loads the stored batch interval preference', async () => {
-    localStorage.setItem(STORAGE_KEY_STELLAR_BATCH_INTERVAL_MS, String(STELLAR_BATCH_INTERVAL_TWO_HOURS_MS))
-
-    const { capturedRef } = renderWithProvider()
-    await act(async () => { await Promise.resolve() })
-
-    expect(capturedRef.current?.batchIntervalMs).toBe(STELLAR_BATCH_INTERVAL_TWO_HOURS_MS)
-  })
-
-  it('persists batch interval changes and resets the next batch time', async () => {
-    const { capturedRef } = renderWithProvider()
-    await act(async () => { await Promise.resolve() })
-
-    const previousNextBatchAtMs = capturedRef.current?.nextBatchAtMs ?? 0
-
+    es._triggerOpen()
+    // Seed notification
     await act(async () => {
-      capturedRef.current?.setBatchIntervalMs(STELLAR_BATCH_INTERVAL_TWO_HOURS_MS)
-    })
-
-    expect(localStorage.getItem(STORAGE_KEY_STELLAR_BATCH_INTERVAL_MS)).toBe(String(STELLAR_BATCH_INTERVAL_TWO_HOURS_MS))
-    expect(capturedRef.current?.batchIntervalMs).toBe(STELLAR_BATCH_INTERVAL_TWO_HOURS_MS)
-    expect((capturedRef.current?.nextBatchAtMs ?? 0)).toBeGreaterThan(previousNextBatchAtMs)
-  })
-
-  it('automatically refreshes when the configured batch interval elapses', async () => {
-    vi.useFakeTimers()
-    try {
-      localStorage.setItem(STORAGE_KEY_STELLAR_BATCH_INTERVAL_MS, String(STELLAR_BATCH_INTERVAL_FIFTEEN_MINUTES_MS))
-
-      renderWithProvider()
-      await act(async () => { await Promise.resolve() })
-
-      mockStellarApi.getState.mockClear()
-      mockStellarApi.getNotifications.mockClear()
-
-      await act(async () => {
-        vi.advanceTimersByTime(STELLAR_BATCH_INTERVAL_FIFTEEN_MINUTES_MS)
-        await Promise.resolve()
+      es._triggerEvent('notification', {
+        id: 'n1', type: 'event', severity: 'info',
+        title: 'T', body: 'B', read: false, createdAt: new Date().toISOString(),
       })
-
-      expect(mockStellarApi.getState).toHaveBeenCalledTimes(1)
-      expect(mockStellarApi.getNotifications).toHaveBeenCalledTimes(1)
-    } finally {
-      vi.useRealTimers()
-    }
+    })
+    expect(capturedRef.current?.notifications.some(n => n.id === 'n1')).toBe(true)
+    await act(async () => {
+      await capturedRef.current?.acknowledgeNotification('n1')
+    })
+    expect(capturedRef.current?.notifications.some(n => n.id === 'n1')).toBe(false)
+    expect(mockStellarApi.acknowledgeNotification).toHaveBeenCalledWith('n1')
   })
 
-  it('runs a batch immediately when requested', async () => {
+  it('acknowledgeNotification restores notification if API call fails', async () => {
     const { capturedRef } = renderWithProvider()
     await act(async () => { await Promise.resolve() })
-
-    mockStellarApi.getState.mockClear()
-    mockStellarApi.getNotifications.mockClear()
-
+    const es = eventSourceInstances[0]
+    es._triggerOpen()
     await act(async () => {
-      await capturedRef.current?.runBatchNow()
+      es._triggerEvent('notification', {
+        id: 'n2', type: 'event', severity: 'info',
+        title: 'T', body: 'B', read: false, createdAt: new Date().toISOString(),
+      })
     })
+    mockStellarApi.acknowledgeNotification.mockRejectedValueOnce(new Error('server error'))
+    await act(async () => {
+      try { await capturedRef.current?.acknowledgeNotification('n2') } catch { /* expected */ }
+    })
+    // Notification should be restored after failure
+    expect(capturedRef.current?.notifications.some(n => n.id === 'n2')).toBe(true)
+  })
 
-    expect(mockStellarApi.getState).toHaveBeenCalledTimes(1)
-    expect(mockStellarApi.getNotifications).toHaveBeenCalledTimes(1)
+  it('approveAction removes action from pendingActions', async () => {
+    const { capturedRef } = renderWithProvider()
+    await act(async () => { await Promise.resolve() })
+    const es = eventSourceInstances[0]
+    es._triggerOpen()
+    await act(async () => {
+      es._triggerEvent('initial_batch', {
+        pendingActions: [{ id: 'a1', status: 'pending_approval', description: 'Deploy' }],
+      })
+    })
+    await act(async () => { await capturedRef.current?.approveAction('a1') })
+    expect(capturedRef.current?.pendingActions.some(a => a.id === 'a1')).toBe(false)
+    expect(mockStellarApi.approveAction).toHaveBeenCalledWith('a1', undefined)
+  })
+
+  it('rejectAction removes action from pendingActions', async () => {
+    const { capturedRef } = renderWithProvider()
+    await act(async () => { await Promise.resolve() })
+    const es = eventSourceInstances[0]
+    es._triggerOpen()
+    await act(async () => {
+      es._triggerEvent('initial_batch', {
+        pendingActions: [{ id: 'a2', status: 'pending_approval', description: 'Scale down' }],
+      })
+    })
+    await act(async () => { await capturedRef.current?.rejectAction('a2', 'not safe') })
+    expect(capturedRef.current?.pendingActions.some(a => a.id === 'a2')).toBe(false)
+    expect(mockStellarApi.rejectAction).toHaveBeenCalledWith('a2', 'not safe')
+  })
+
+  it('dismissNudge clears nudge', async () => {
+    const { capturedRef } = renderWithProvider()
+    await act(async () => { await Promise.resolve() })
+    const es = eventSourceInstances[0]
+    es._triggerOpen()
+    await act(async () => {
+      es._triggerEvent('observation', { id: 'obs1', summary: 'High CPU' })
+    })
+    expect(capturedRef.current?.nudge).not.toBeNull()
+    act(() => { capturedRef.current?.dismissNudge() })
+    expect(capturedRef.current?.nudge).toBeNull()
+  })
+
+  it('dismissCatchUp clears catchUp state', async () => {
+    const { capturedRef } = renderWithProvider()
+    await act(async () => { await Promise.resolve() })
+    const es = eventSourceInstances[0]
+    es._triggerOpen()
+    await act(async () => {
+      es._triggerEvent('catchup', { summary: 'Missed events', kind: 'digest', highlights: ['Away for 1h.'] })
+    })
+    expect(capturedRef.current?.catchUp).not.toBeNull()
+    act(() => { capturedRef.current?.dismissCatchUp() })
+    expect(capturedRef.current?.catchUp).toBeNull()
   })
 })
 

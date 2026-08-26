@@ -6,15 +6,11 @@
  * useCached* hook by mocking the underlying cache layer and network.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { renderHook } from '@testing-library/react'
 
 // ---------------------------------------------------------------------------
 // Mocks — must be declared BEFORE importing the module under test
 // ---------------------------------------------------------------------------
-
-const { mockClusterCacheRef, mockIsDemoMode } = vi.hoisted(() => ({
-  mockClusterCacheRef: { clusters: [] as Array<{ name: string; context?: string; reachable?: boolean; namespaces?: string[] }> },
-  mockIsDemoMode: vi.fn(() => false),
-}))
 
 const mockUseCache = vi.fn()
 const mockIsBackendUnavailable = vi.fn(() => false)
@@ -50,10 +46,6 @@ vi.mock('../../lib/api', () => ({
   authFetch: (...args: unknown[]) => mockAuthFetch(...args),
 }))
 
-vi.mock('../../lib/demoMode', () => ({
-  isDemoMode: () => mockIsDemoMode(),
-}))
-
 vi.mock('../../lib/kubectlProxy', () => ({
     createCachedHook: vi.fn(),
   kubectlProxy: mockKubectlProxy,
@@ -66,14 +58,8 @@ vi.mock('../../lib/sseClient', () => ({
 
 vi.mock('../mcp/shared', () => ({
     createCachedHook: vi.fn(),
-  clusterCacheRef: mockClusterCacheRef,
+  clusterCacheRef: { clusters: [] },
   agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
-  deduplicateClustersByServer: (clusters: unknown[]) => clusters,
-}))
-
-vi.mock('../mcp/clusterCacheRef', () => ({
-  clusterCacheRef: mockClusterCacheRef,
-  setClusterCacheRefClusters: vi.fn(),
 }))
 
 vi.mock('../useLocalAgent', () => ({
@@ -169,163 +155,163 @@ describe('useCachedData', () => {
     localStorage.clear()
     // Set a valid token so fetchAPI doesn't throw
     localStorage.setItem('kc_token', 'test-jwt-token')
-    // Reset the shared cluster cache so tests start with a clean slate
-    mockClusterCacheRef.clusters = []
-    mockIsDemoMode.mockReturnValue(false)
     // Default useCache implementation
     mockUseCache.mockImplementation((opts: { initialData: unknown }) =>
       makeCacheResult(opts.initialData)
     )
     // Default settledWithConcurrency: run tasks and return settled results
     mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>) => {
-      return Promise.allSettled(tasks.map(t => t()))
-    })
-  })
-
-  afterEach(() => {
-    vi.restoreAllMocks()
-  })
-
-  // Lazy-load module after mocks are set up
-  async function loadModule() {
-    mod = await import('../useCachedData')
-    return mod
-  }
-
-  // ========================================================================
-  // Security issues progressive fetcher
-  // ========================================================================
-  describe('security issues progressive fetcher', () => {
-    it('provides progressiveFetcher when no cluster', async () => {
+  describe('progressive fetcher patterns', () => {
+    it('provides progressiveFetcher for services when no cluster', async () => {
       let capturedOpts: Record<string, unknown> = {}
       mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
         capturedOpts = opts
         return makeCacheResult([])
       })
 
-      const { useCachedSecurityIssues } = await loadModule()
-      useCachedSecurityIssues()
+      const { useCachedServices } = await loadModule()
+      useCachedServices()
 
       expect(capturedOpts.progressiveFetcher).toBeTypeOf('function')
     })
 
-    it('omits progressiveFetcher when cluster specified', async () => {
+    it('omits progressiveFetcher for services when cluster specified', async () => {
       let capturedOpts: Record<string, unknown> = {}
       mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
         capturedOpts = opts
         return makeCacheResult([])
       })
 
-      const { useCachedSecurityIssues } = await loadModule()
-      useCachedSecurityIssues('prod')
+      const { useCachedServices } = await loadModule()
+      useCachedServices('my-cluster')
 
       expect(capturedOpts.progressiveFetcher).toBeUndefined()
     })
 
-    it('progressive fetcher: uses kubectl then falls back to SSE', async () => {
+    it('provides progressiveFetcher for warning events when no cluster', async () => {
       let capturedOpts: Record<string, unknown> = {}
       mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
         capturedOpts = opts
         return makeCacheResult([])
       })
 
-      mockClusterCacheRef.clusters = [] as typeof mockClusterCacheRef.clusters
-      mockIsAgentUnavailable.mockReturnValue(true)
+      const { useCachedWarningEvents } = await loadModule()
+      useCachedWarningEvents()
 
-      mockFetchSSE.mockResolvedValue([{ name: 'sec-sse', issue: 'Priv', severity: 'high' }])
-
-      const { useCachedSecurityIssues } = await loadModule()
-      useCachedSecurityIssues()
-
-      const progressiveFetcher = capturedOpts.progressiveFetcher as (onProgress: (p: unknown[]) => void) => Promise<unknown[]>
-      const result = await progressiveFetcher(vi.fn())
-      expect(result).toHaveLength(1)
-    })
-  })
-
-  // ========================================================================
-  // useCachedAllPods
-  // ========================================================================
-  describe('useCachedAllPods', () => {
-    it('returns pods from cache', async () => {
-      const data = [{ name: 'all-pod-1' }]
-      mockUseCache.mockReturnValue(makeCacheResult(data))
-      const { useCachedAllPods } = await loadModule()
-      const result = useCachedAllPods()
-      expect(result.pods).toEqual(data)
+      expect(capturedOpts.progressiveFetcher).toBeTypeOf('function')
     })
 
-    it('uses correct key format', async () => {
-      mockUseCache.mockReturnValue(makeCacheResult([]))
-      const { useCachedAllPods } = await loadModule()
-      useCachedAllPods('gpu-cluster')
-      expect(mockUseCache.mock.calls[0][0].key).toBe('allPods:gpu-cluster')
-    })
-
-    it('provides progressiveFetcher when no cluster', async () => {
+    it('omits progressiveFetcher for warning events when cluster specified', async () => {
       let capturedOpts: Record<string, unknown> = {}
       mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
         capturedOpts = opts
         return makeCacheResult([])
       })
 
-      const { useCachedAllPods } = await loadModule()
-      useCachedAllPods()
+      const { useCachedWarningEvents } = await loadModule()
+      useCachedWarningEvents('prod-east')
+
+      expect(capturedOpts.progressiveFetcher).toBeUndefined()
+    })
+
+    it('omits progressiveFetcher for deployment issues when cluster specified', async () => {
+      let capturedOpts: Record<string, unknown> = {}
+      mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
+        capturedOpts = opts
+        return makeCacheResult([])
+      })
+
+      const { useCachedDeploymentIssues } = await loadModule()
+      renderHook(() => useCachedDeploymentIssues('my-cluster'))
+
+      expect(capturedOpts.progressiveFetcher).toBeUndefined()
+    })
+
+    it('provides progressiveFetcher for nodes when no cluster', async () => {
+      let capturedOpts: Record<string, unknown> = {}
+      mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
+        capturedOpts = opts
+        return makeCacheResult([])
+      })
+
+      const { useCachedNodes } = await loadModule()
+      useCachedNodes()
+
       expect(capturedOpts.progressiveFetcher).toBeTypeOf('function')
     })
   })
 
   // ========================================================================
-  // Deployments progressive fetcher
+  // Enabled flag — conditional fetching
   // ========================================================================
-  describe('deployments progressive fetcher', () => {
-    it('uses agent when available', async () => {
+  describe('enabled flag for conditional hooks', () => {
+    it('useCachedHelmHistory is disabled when release is missing', async () => {
       let capturedOpts: Record<string, unknown> = {}
       mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
         capturedOpts = opts
         return makeCacheResult([])
       })
 
-      mockClusterCacheRef.clusters = [{ name: 'c1', context: 'c1-ctx', reachable: true }] as typeof mockClusterCacheRef.clusters
-      mockIsAgentUnavailable.mockReturnValue(false)
+      const { useCachedHelmHistory } = await loadModule()
+      useCachedHelmHistory('my-cluster', undefined)
 
-      const agentRes = { ok: true, json: vi.fn().mockResolvedValue({ deployments: [{ name: 'd1' }] }) }
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(agentRes))
-
-      const { useCachedDeployments } = await loadModule()
-      useCachedDeployments()
-
-      const progressiveFetcher = capturedOpts.progressiveFetcher as (onProgress: (p: unknown[]) => void) => Promise<unknown[]>
-      const result = await progressiveFetcher(vi.fn())
-      expect(result.length).toBeGreaterThanOrEqual(1)
-      expect(mockFetchSSE).not.toHaveBeenCalled()
-
-      vi.unstubAllGlobals()
+      expect(capturedOpts.enabled).toBe(false)
     })
 
-    it('falls back to SSE when no agent', async () => {
+    it('useCachedHelmValues is disabled when cluster is missing', async () => {
+      let capturedOpts: Record<string, unknown> = {}
+      mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
+        capturedOpts = opts
+        return makeCacheResult({})
+      })
+
+      const { useCachedHelmValues } = await loadModule()
+      useCachedHelmValues(undefined, 'my-release')
+
+      expect(capturedOpts.enabled).toBe(false)
+    })
+
+    it('useCachedHelmValues is enabled when both cluster and release provided', async () => {
+      let capturedOpts: Record<string, unknown> = {}
+      mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
+        capturedOpts = opts
+        return makeCacheResult({})
+      })
+
+      const { useCachedHelmValues } = await loadModule()
+      useCachedHelmValues('c1', 'my-release')
+
+      expect(capturedOpts.enabled).toBe(true)
+    })
+
+    it('useCachedHelmHistory is enabled when both cluster and release provided', async () => {
       let capturedOpts: Record<string, unknown> = {}
       mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
         capturedOpts = opts
         return makeCacheResult([])
       })
 
-      mockClusterCacheRef.clusters = [] as typeof mockClusterCacheRef.clusters
-      mockIsAgentUnavailable.mockReturnValue(true)
+      const { useCachedHelmHistory } = await loadModule()
+      useCachedHelmHistory('c1', 'my-release', 'ns')
 
-      mockFetchSSE.mockResolvedValue([{ name: 'sse-dep' }])
+      expect(capturedOpts.enabled).toBe(true)
+    })
 
-      const { useCachedDeployments } = await loadModule()
-      useCachedDeployments()
+    it('useCachedHelmHistory key includes cluster, release, and namespace', async () => {
+      let capturedOpts: Record<string, unknown> = {}
+      mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
+        capturedOpts = opts
+        return makeCacheResult([])
+      })
 
-      const progressiveFetcher = capturedOpts.progressiveFetcher as (onProgress: (p: unknown[]) => void) => Promise<unknown[]>
-      const result = await progressiveFetcher(vi.fn())
-      expect(mockFetchSSE).toHaveBeenCalled()
-      expect(result).toHaveLength(1)
+      const { useCachedHelmHistory } = await loadModule()
+      useCachedHelmHistory('prod', 'nginx', 'web')
+
+      expect(capturedOpts.key).toBe('helmHistory:prod:nginx:web')
     })
   })
 
   // ========================================================================
-  // Hook fetcher cluster-specific paths (cover lines 2156-2754)
+  // Cache key construction
   // ========================================================================
 })
