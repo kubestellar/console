@@ -8,8 +8,7 @@ import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../../lib/cards/CardComponents'
 import { useCardLoadingState } from '../CardDataContext'
 import { useDemoMode } from '../../../hooks/useDemoMode'
-import type { FeedItem, FeedConfig, FeedFilter, RSSFeedProps } from './types'
-import { PRESET_FEEDS } from './constants'
+import type { FeedItem, FeedConfig, RSSFeedProps } from './types'
 import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
 import { formatTimeAgo } from '../../../lib/formatters'
 import { useTranslation } from 'react-i18next'
@@ -19,7 +18,11 @@ import { FeedFilterEditor } from './FeedFilterEditor'
 import { FeedSettingsPanel } from './FeedSettingsPanel'
 import { FeedItemsList } from './FeedItemsList'
 import { SourceFilterDropdown } from './SourceFilterDropdown'
+import { FeedStatusBar } from './FeedStatusBar'
+import { FeedLoadingSkeleton } from './FeedLoadingSkeleton'
 import { useRSSFeedManagement } from './hooks/useRSSFeedManagement'
+import { useFeedOperations } from './hooks/useFeedOperations'
+import { useAggregateFeed } from './hooks/useAggregateFeed'
 
 type SortByOption = 'date' | 'title'
 
@@ -29,7 +32,8 @@ const SORT_COMPARATORS: Record<SortByOption, (a: FeedItem, b: FeedItem) => numbe
     const bTime = b.pubDate?.getTime() || 0
     return aTime - bTime
   },
-  title: commonComparators.string<FeedItem>('title') }
+  title: commonComparators.string<FeedItem>('title'),
+}
 
 function RSSFeedInternal({ config }: RSSFeedProps) {
   const { t } = useTranslation(['cards', 'common'])
@@ -43,7 +47,9 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     items,
     isLoading,
     isRefreshing,
+    setIsRefreshing,
     error,
+    setError,
     lastRefresh,
     fetchSuccess,
     activeFeed,
@@ -58,16 +64,46 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
   const [showFilterEditor, setShowFilterEditor] = useState(false)
   const [tempIncludeTerms, setTempIncludeTerms] = useState('')
   const [tempExcludeTerms, setTempExcludeTerms] = useState('')
-  // Aggregate feed creator/editor
-  const [showAggregateCreator, setShowAggregateCreator] = useState(false)
-  const [editingAggregateIndex, setEditingAggregateIndex] = useState<number | null>(null)
-  const [aggregateName, setAggregateName] = useState('')
-  const [selectedSourceUrls, setSelectedSourceUrls] = useState<string[]>([])
-  const [aggregateIncludeTerms, setAggregateIncludeTerms] = useState('')
-  const [aggregateExcludeTerms, setAggregateExcludeTerms] = useState('')
-  // Source feed filter for aggregate feeds
   const [sourceFilter, setSourceFilter] = useState<string[]>([])
   const [showSourceFilter, setShowSourceFilter] = useState(false)
+
+  const {
+    showAggregateCreator,
+    editingAggregateIndex,
+    aggregateName,
+    setAggregateName,
+    selectedSourceUrls,
+    setSelectedSourceUrls,
+    aggregateIncludeTerms,
+    setAggregateIncludeTerms,
+    aggregateExcludeTerms,
+    setAggregateExcludeTerms,
+    handleEditAggregate,
+    handleToggleAggregateCreator,
+    handleSaveAggregate,
+    handleCancelAggregateEdit,
+  } = useAggregateFeed({
+    feeds,
+    setFeeds,
+    setActiveFeedIndex,
+    setIsRefreshing,
+    setError,
+    setShowSettings,
+  })
+
+  const { addFeed, handleAddCustomFeed, handleSelectFeedFromSettings, handleRemoveFeed } = useFeedOperations({
+    feeds,
+    activeFeedIndex,
+    setFeeds,
+    setActiveFeedIndex,
+    setIsRefreshing,
+    setError,
+    setShowSettings,
+    newFeedUrl,
+    newFeedName,
+    setNewFeedUrl,
+    setNewFeedName,
+  })
 
   const hasData = items.length > 0
   useCardLoadingState({ isLoading: isLoading && !hasData, isRefreshing, hasAnyData: hasData, isDemoData: isDemoMode })
@@ -79,7 +115,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault()
-        if (showAggregateCreator) setShowAggregateCreator(false)
+        if (showAggregateCreator) handleToggleAggregateCreator()
         else if (showFilterEditor) setShowFilterEditor(false)
         else if (showSourceFilter) setShowSourceFilter(false)
         else if (showFeedSelector) setShowFeedSelector(false)
@@ -88,7 +124,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [showSettings, showFeedSelector, showFilterEditor, showSourceFilter, showAggregateCreator])
+  }, [showSettings, showFeedSelector, showFilterEditor, showSourceFilter, showAggregateCreator, handleToggleAggregateCreator])
 
   // Reset source filter when feed changes
   useEffect(() => {
@@ -96,7 +132,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     setShowSourceFilter(false)
   }, [activeFeedIndex])
 
-  // Get unique sources from items (for aggregate feed source filter)
+  // Unique sources from items (for aggregate feed source filter)
   const availableSources = useMemo(() => {
     if (!activeFeed?.isAggregate) return []
     const sources = new Map<string, { url: string, name: string, icon: string }>()
@@ -105,7 +141,8 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
         sources.set(item.sourceUrl, {
           url: item.sourceUrl,
           name: item.sourceName || 'Unknown',
-          icon: item.sourceIcon || '📰' })
+          icon: item.sourceIcon || '📰',
+        })
       }
     }
     return Array.from(sources.values()).sort((a, b) => a.name.localeCompare(b.name))
@@ -115,12 +152,10 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
   const preFilteredItems = useMemo(() => {
     let result = [...items]
 
-    // Apply source filter (for aggregate feeds)
     if (sourceFilter.length > 0 && activeFeed?.isAggregate) {
       result = result.filter(item => item.sourceUrl && sourceFilter.includes(item.sourceUrl))
     }
 
-    // Apply feed-specific include/exclude filters
     const filter = activeFeed?.filter
     if (filter) {
       if (filter.includeTerms.length > 0) {
@@ -140,7 +175,6 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     return result
   }, [items, activeFeed?.filter, activeFeed?.isAggregate, sourceFilter])
 
-  // useCardData: handles search, sort, and pagination
   const {
     items: paginatedItems,
     totalItems,
@@ -153,7 +187,8 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     filters,
     sorting,
     containerRef,
-    containerStyle } = useCardData<FeedItem, SortByOption>(preFilteredItems, {
+    containerStyle,
+  } = useCardData<FeedItem, SortByOption>(preFilteredItems, {
     filter: {
       searchFields: ['title', 'description', 'author'] as (keyof FeedItem)[],
       customPredicate: (item, query) => {
@@ -161,23 +196,23 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
         if (item.sourceName && item.sourceName.toLowerCase().includes(query)) return true
         return false
       },
-      storageKey: 'rss-feed' },
+      storageKey: 'rss-feed',
+    },
     sort: {
       defaultField: 'date',
       defaultDirection: 'desc',
-      comparators: SORT_COMPARATORS },
-    defaultLimit: 10 })
-
-  // --- Callbacks for subcomponents ---
+      comparators: SORT_COMPARATORS,
+    },
+    defaultLimit: 10,
+  })
 
   const handleSelectFeed = useCallback((idx: number) => {
     if (idx !== activeFeedIndex) {
       setActiveFeedIndex(idx)
-    }
       setError(null)
     }
     setShowFeedSelector(false)
-  }, [activeFeedIndex])
+  }, [activeFeedIndex, setActiveFeedIndex, setError])
 
   const handleOpenSettings = useCallback(() => {
     setShowFeedSelector(false)
@@ -192,16 +227,14 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     setShowSettings(prev => !prev)
   }, [])
 
-  // Feed pill selection (no close of selector needed)
   const handlePillSelect = useCallback((idx: number) => {
     if (idx !== activeFeedIndex) {
       setActiveFeedIndex(idx)
       setIsRefreshing(true)
       setError(null)
     }
-  }, [activeFeedIndex])
+  }, [activeFeedIndex, setActiveFeedIndex, setIsRefreshing, setError])
 
-  // Filter editor
   const handleOpenFilterEditor = useCallback(() => {
     const filter = activeFeed?.filter
     setTempIncludeTerms((filter?.includeTerms ?? []).join(', '))
@@ -210,224 +243,33 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
   }, [activeFeed?.filter])
 
   const handleSaveFilter = useCallback(() => {
-    const includeTerms = tempIncludeTerms.split(',').map(t => t.trim()).filter(t => t)
-    const excludeTerms = tempExcludeTerms.split(',').map(t => t.trim()).filter(t => t)
-
-    const newFilter: FeedFilter | undefined = (includeTerms.length === 0 && excludeTerms.length === 0)
+    const includeTerms = tempIncludeTerms.split(',').map(s => s.trim()).filter(s => s)
+    const excludeTerms = tempExcludeTerms.split(',').map(s => s.trim()).filter(s => s)
+    const newFilter = (includeTerms.length === 0 && excludeTerms.length === 0)
       ? undefined
       : { includeTerms, excludeTerms }
-
-    setFeeds(prev => prev.map((feed, i) =>
-      i === activeFeedIndex ? { ...feed, filter: newFilter } : feed
-    ))
+    setFeeds(prev => prev.map((feed, i) => i === activeFeedIndex ? { ...feed, filter: newFilter } : feed))
     setShowFilterEditor(false)
-  }, [tempIncludeTerms, tempExcludeTerms, activeFeedIndex])
+  }, [tempIncludeTerms, tempExcludeTerms, activeFeedIndex, setFeeds])
 
   const handleClearFilter = useCallback(() => {
-    setFeeds(prev => prev.map((feed, i) =>
-      i === activeFeedIndex ? { ...feed, filter: undefined } : feed
-    ))
+    setFeeds(prev => prev.map((feed, i) => i === activeFeedIndex ? { ...feed, filter: undefined } : feed))
     setShowFilterEditor(false)
-  }, [activeFeedIndex])
+  }, [activeFeedIndex, setFeeds])
 
-  const handleCloseFilterEditor = useCallback(() => {
-    setShowFilterEditor(false)
-  }, [])
-
-  // Source filter
-  const handleToggleSourceFilter = useCallback(() => {
-    setShowSourceFilter(prev => !prev)
-  }, [])
-
-  const handleCloseSourceFilter = useCallback(() => {
-    setShowSourceFilter(false)
-  }, [])
-
-  // Settings panel callbacks
-  const normalizeUrl = useCallback((url: string): string => {
-    let normalized = url.trim()
-
-    if (normalized.match(/^r\/\w+$/i)) {
-      normalized = `https://www.reddit.com/${normalized}.rss`
-      return normalized
-    }
-    if (normalized.match(/^\/r\/\w+$/i)) {
-      normalized = `https://www.reddit.com${normalized}.rss`
-      return normalized
-    }
-
-    const withScheme = normalized.startsWith('http://') || normalized.startsWith('https://')
-      ? normalized
-      : 'https://' + normalized
-    if (hostnameEndsWith(withScheme, 'reddit.com') && !normalized.endsWith('.rss')) {
-      normalized = withScheme.replace(/\/?$/, '.rss')
-    }
-
-    if (!normalized.startsWith('http://') && !normalized.startsWith('https://')) {
-      normalized = 'https://' + normalized
-    }
-
-    return normalized
-  }, [])
-
-  const addFeed = useCallback((feed: FeedConfig) => {
-    if (!feeds.some(f => f.url === feed.url && !f.isAggregate)) {
-      setFeeds(prev => [...prev, feed])
-      setActiveFeedIndex(feeds.length)
-      setIsRefreshing(true)
-      setError(null)
-    } else {
-      const existingIndex = feeds.findIndex(f => f.url === feed.url)
-      if (existingIndex !== -1 && existingIndex !== activeFeedIndex) {
-        setActiveFeedIndex(existingIndex)
-        setIsRefreshing(true)
-        setError(null)
-      }
-    }
-    setNewFeedUrl('')
-    setNewFeedName('')
-    setShowSettings(false)
-  }, [feeds, activeFeedIndex])
-
-  const handleAddCustomFeed = useCallback(() => {
-    if (newFeedUrl.trim()) {
-      const rawUrl = newFeedUrl.trim()
-      const url = normalizeUrl(rawUrl)
-      let defaultName: string
-      const subredditMatch = rawUrl.match(/^r\/(\w+)$/i) || url.match(/reddit\.com\/r\/(\w+)/)
-      if (subredditMatch) {
-        defaultName = `r/${subredditMatch[1]}`
-      } else {
-        try {
-          defaultName = new URL(url).hostname
-        } catch {
-          defaultName = rawUrl
-        }
-      }
-      addFeed({
-        url,
-        name: newFeedName || defaultName,
-        icon: hostnameEndsWith(url, 'reddit.com') ? '🔴' : '📰' })
-    }
-  }, [newFeedUrl, newFeedName, normalizeUrl, addFeed])
-
-  const handleSelectFeedFromSettings = useCallback((idx: number) => {
-    setActiveFeedIndex(idx)
-    setShowSettings(false)
-  }, [])
-
-  const handleRemoveFeed = useCallback((index: number) => {
-    if (feeds.length > 1) {
-      setFeeds(prev => prev.filter((_, i) => i !== index))
-      if (activeFeedIndex >= index && activeFeedIndex > 0) {
-        setActiveFeedIndex(prev => prev - 1)
-      }
-    }
-  }, [feeds.length, activeFeedIndex])
-
-  const handleEditAggregate = useCallback((index: number) => {
-    const feed = feeds[index]
-    if (!feed?.isAggregate) return
-
-    setEditingAggregateIndex(index)
-    setAggregateName(feed.name)
-    setSelectedSourceUrls(feed.sourceUrls || [])
-    setAggregateIncludeTerms((feed.filter?.includeTerms ?? []).join(', '))
-    setAggregateExcludeTerms((feed.filter?.excludeTerms ?? []).join(', '))
-    setShowAggregateCreator(true)
-  }, [feeds])
-
-  const handleToggleAggregateCreator = useCallback(() => {
-    if (showAggregateCreator) {
-      setShowAggregateCreator(false)
-      setEditingAggregateIndex(null)
-      setAggregateName('')
-      setSelectedSourceUrls([])
-      setAggregateIncludeTerms('')
-      setAggregateExcludeTerms('')
-    } else {
-      setShowAggregateCreator(true)
-    }
-  }, [showAggregateCreator])
-
-  const handleSaveAggregate = useCallback(() => {
-    if (!aggregateName.trim() || selectedSourceUrls.length === 0) return
-
-    const includeTerms = aggregateIncludeTerms.split(',').map(t => t.trim()).filter(t => t)
-    const excludeTerms = aggregateExcludeTerms.split(',').map(t => t.trim()).filter(t => t)
-
-    const aggregate: FeedConfig = {
-      url: editingAggregateIndex !== null
-        ? feeds[editingAggregateIndex].url
-        : `aggregate:${Date.now()}`,
-      name: aggregateName.trim(),
-      icon: '📚',
-      isAggregate: true,
-      sourceUrls: selectedSourceUrls,
-      filter: includeTerms.length > 0 || excludeTerms.length > 0
-        ? { includeTerms, excludeTerms }
-        : undefined }
-
-    if (editingAggregateIndex !== null) {
-      setFeeds(prev => prev.map((f, i) => i === editingAggregateIndex ? aggregate : f))
-      setActiveFeedIndex(editingAggregateIndex)
-    } else {
-      setFeeds(prev => [...prev, aggregate])
-      setActiveFeedIndex(feeds.length)
-    }
-
-    setIsRefreshing(true)
-    setError(null)
-    setShowAggregateCreator(false)
-    setEditingAggregateIndex(null)
-    setAggregateName('')
-    setSelectedSourceUrls([])
-    setAggregateIncludeTerms('')
-    setAggregateExcludeTerms('')
-    setShowSettings(false)
-  }, [aggregateName, selectedSourceUrls, aggregateIncludeTerms, aggregateExcludeTerms, editingAggregateIndex, feeds])
-
-  const handleCancelAggregateEdit = useCallback(() => {
-    setShowAggregateCreator(false)
-    setEditingAggregateIndex(null)
-    setAggregateName('')
-    setSelectedSourceUrls([])
-    setAggregateIncludeTerms('')
-    setAggregateExcludeTerms('')
-  }, [])
-
-  // Feed items list callbacks
   const handleClearFilters = useCallback(() => {
     filters.setSearch('')
     if (activeFeed?.filter) {
-      setFeeds(prev => prev.map((feed, i) =>
-        i === activeFeedIndex ? { ...feed, filter: undefined } : feed
-      ))
+      setFeeds(prev => prev.map((feed, i) => i === activeFeedIndex ? { ...feed, filter: undefined } : feed))
     }
-  }, [filters, activeFeed?.filter, activeFeedIndex])
+  }, [filters, activeFeed?.filter, activeFeedIndex, setFeeds])
 
   const isRedditFeed = activeFeed?.url ? hostnameEndsWith(activeFeed.url, 'reddit.com') : false
-
   const showFullSkeleton = isLoading && items.length === 0 && !feeds.length
   const showListSkeleton = (isLoading && items.length === 0) || (isRefreshing && !itemsMatchActiveFeed)
 
   if (showFullSkeleton) {
-    return (
-      <div className="h-full flex flex-col animate-pulse">
-        <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3">
-          <div className="h-5 w-32 bg-secondary/50 rounded" />
-          <div className="h-6 w-6 bg-secondary/50 rounded" />
-        </div>
-        <div className="space-y-3 flex-1">
-          {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} className="p-3 rounded-lg bg-secondary/20">
-              <div className="h-4 w-3/4 bg-secondary/50 rounded mb-2" />
-              <div className="h-3 w-1/2 bg-secondary/30 rounded" />
-            </div>
-          ))}
-        </div>
-      </div>
-    )
+    return <FeedLoadingSkeleton />
   }
 
   return (
@@ -443,7 +285,6 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
           onSelectFeed={handleSelectFeed}
           onOpenSettings={handleOpenSettings}
         />
-
         <div className="flex items-center gap-2">
           <button
             onClick={() => handleRefresh(t)}
@@ -498,10 +339,9 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
               ],
               onSortChange: (v) => sorting.setSortBy(v as SortByOption),
               sortDirection: sorting.sortDirection,
-              onSortDirectionChange: sorting.setSortDirection }}
+              onSortDirectionChange: sorting.setSortDirection,
+            }}
           />
-
-          {/* Filter button */}
           <button
             onClick={handleOpenFilterEditor}
             className={cn(
@@ -514,16 +354,14 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
             <Filter className="w-3 h-3" />
             {activeFeed?.filter ? t('cards:rssFeed.filtered') : t('common:common.filter')}
           </button>
-
-          {/* Source filter for aggregate feeds */}
           {activeFeed?.isAggregate && availableSources.length > 1 && (
             <SourceFilterDropdown
               availableSources={availableSources}
               sourceFilter={sourceFilter}
               showSourceFilter={showSourceFilter}
-              onToggle={handleToggleSourceFilter}
+              onToggle={() => setShowSourceFilter(prev => !prev)}
               onSetFilter={setSourceFilter}
-              onClose={handleCloseSourceFilter}
+              onClose={() => setShowSourceFilter(false)}
             />
           )}
         </div>
@@ -539,7 +377,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
           onExcludeChange={setTempExcludeTerms}
           onSave={handleSaveFilter}
           onClear={handleClearFilter}
-          onClose={handleCloseFilterEditor}
+          onClose={() => setShowFilterEditor(false)}
         />
       )}
 
@@ -576,34 +414,18 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
 
       {/* Status area */}
       <div className="h-5 mb-1 shrink-0 flex items-center">
-        {(isLoading || isRefreshing) && !error ? (
-          <span className="text-2xs text-muted-foreground/60 flex items-center gap-1">
-            <RefreshCw className="w-3 h-3 animate-spin" />
-            Loading {activeFeed?.name || 'feed'}...
-          </span>
-        ) : error ? (
-          <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2 w-full px-2 py-0.5 bg-yellow-500/10 border border-yellow-500/20 rounded text-2xs text-yellow-400">
-            <span className="truncate">
-              ⚠ {error === 'Failed to fetch' || error.includes('failed')
-                ? `Could not load ${activeFeed?.name || 'feed'}`
-                : error}
-            </span>
-            <button
-              onClick={() => handleRefresh(t)}
-              className="shrink-0 px-1.5 py-0.5 bg-yellow-500/20 hover:bg-yellow-500/30 rounded text-yellow-300 transition-colors"
-            >
-              {t('common:common.retry')}
-            </button>
-          </div>
-        ) : fetchSuccess ? (
-          <span className="text-2xs text-muted-foreground/60">✓ {fetchSuccess}</span>
-        ) : (filters.search || activeFeed?.filter) ? (
-          <span className="text-2xs text-muted-foreground">
-            {totalItems} of {items.length} items
-            {filters.search && ` matching "${filters.search}"`}
-            {activeFeed?.filter && ' (filtered)'}
-          </span>
-        ) : null}
+        <FeedStatusBar
+          isLoading={isLoading}
+          isRefreshing={isRefreshing}
+          error={error}
+          fetchSuccess={fetchSuccess}
+          activeFeed={activeFeed}
+          search={filters.search}
+          feedFilter={activeFeed?.filter}
+          totalItems={totalItems}
+          itemsCount={items.length}
+          onRefresh={() => handleRefresh(t)}
+        />
       </div>
 
       {/* Feed items */}
@@ -630,7 +452,6 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
           needsPagination={needsPagination}
         />
       </div>
-
     </div>
   )
 }
