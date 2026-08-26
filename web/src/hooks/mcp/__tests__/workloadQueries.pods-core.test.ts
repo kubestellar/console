@@ -1,11 +1,11 @@
 /**
- * Tests for hooks/mcp/workloadQueries.ts
+ * Tests for hooks/mcp/workloadQueries.ts — pod data helpers and usePods.
  *
- * Covers: demo data helpers, localStorage cache helpers, demo-mode hook paths
- * for usePods, useAllPods, usePodIssues, useDeploymentIssues, useDeployments,
- * useJobs, useHPAs, useReplicaSets, useStatefulSets, useDaemonSets,
- * useCronJobs, and usePodLogs.
+ * Covers: demo pod/pod-issue helpers, localStorage pod-cache helpers, and
+ * usePods hook behavior (demo mode, backend-unavailable, SSE fetch paths).
+ * Split from workloadQueries.test.ts (see kubestellar/console#22772).
  */
+
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
@@ -177,6 +177,10 @@ afterEach(() => {
 // Demo data helpers
 // =============================================================================
 
+// =============================================================================
+// Demo data helpers
+// =============================================================================
+
 describe('getDemoPods', () => {
   it('returns 10 demo pods', () => {
     const pods = getDemoPods()
@@ -195,6 +199,7 @@ describe('getDemoPods', () => {
     }
   })
 })
+
 
 describe('getDemoPodIssues', () => {
   it('returns 3 demo pod issues', () => {
@@ -223,45 +228,6 @@ describe('getDemoPodIssues', () => {
   })
 })
 
-describe('getDemoDeploymentIssues', () => {
-  it('returns 2 demo deployment issues', () => {
-    const issues = getDemoDeploymentIssues()
-    expect(issues).toHaveLength(2)
-  })
-
-  it('each issue has replicas and readyReplicas', () => {
-    const issues = getDemoDeploymentIssues()
-    for (const issue of issues) {
-      expect(typeof issue.replicas).toBe('number')
-      expect(typeof issue.readyReplicas).toBe('number')
-      expect(issue.readyReplicas).toBeLessThan(issue.replicas)
-    }
-  })
-})
-
-describe('getDemoDeployments', () => {
-  it('returns 4 demo deployments', () => {
-    const deployments = getDemoDeployments()
-    expect(deployments).toHaveLength(4)
-  })
-
-  it('includes running, deploying, and failed statuses', () => {
-    const deployments = getDemoDeployments()
-    const statuses = deployments.map(d => d.status)
-    expect(statuses).toContain('running')
-    expect(statuses).toContain('deploying')
-    expect(statuses).toContain('failed')
-  })
-
-  it('each deployment has progress field', () => {
-    const deployments = getDemoDeployments()
-    for (const d of deployments) {
-      expect(typeof d.progress).toBe('number')
-      expect(d.progress).toBeGreaterThanOrEqual(0)
-      expect(d.progress).toBeLessThanOrEqual(100)
-    }
-  })
-})
 
 describe('getDemoAllPods', () => {
   it('returns more pods than getDemoPods (includes extra ml pods)', () => {
@@ -277,6 +243,7 @@ describe('getDemoAllPods', () => {
     expect(names.some(n => n.startsWith('model-server'))).toBe(true)
   })
 })
+
 
 // =============================================================================
 // localStorage cache helpers
@@ -343,6 +310,7 @@ describe('loadPodsCacheFromStorage', () => {
   })
 })
 
+
 describe('savePodsCacheToStorage', () => {
   it('persists module cache to localStorage after loading', () => {
     const cacheKey = 'pods:save-test:all:restarts:10'
@@ -361,6 +329,7 @@ describe('savePodsCacheToStorage', () => {
     expect(parsed.key).toBe(cacheKey)
   })
 })
+
 
 // =============================================================================
 // usePods — demo mode
@@ -447,6 +416,7 @@ describe('usePods — demo mode', () => {
   })
 })
 
+
 // =============================================================================
 // usePods — backend unavailable
 // =============================================================================
@@ -461,6 +431,7 @@ describe('usePods — backend unavailable', () => {
     expect(result.current.lastUpdated).not.toBeNull()
   })
 })
+
 
 // =============================================================================
 // usePods — SSE fetch
@@ -502,370 +473,4 @@ describe('usePods — SSE fetch', () => {
   })
 })
 
-// =============================================================================
-// useAllPods — demo mode
-// =============================================================================
 
-describe('useAllPods — demo mode', () => {
-  beforeEach(() => {
-    mockIsDemoMode.mockReturnValue(true)
-  })
-
-  it('returns all demo pods in demo mode', async () => {
-    const { result } = renderHook(() => useAllPods())
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-    expect(result.current.pods.length).toBe(getDemoAllPods().length)
-    expect(result.current.error).toBeNull()
-    expect(result.current.clusterErrors).toHaveLength(0)
-  })
-
-  it('filters by cluster in demo mode', async () => {
-    const { result } = renderHook(() => useAllPods('vllm-d'))
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-    for (const pod of result.current.pods) {
-      expect(pod.cluster).toBe('vllm-d')
-    }
-  })
-
-  it('forceLive=true skips demo mode', async () => {
-    mockFetchSSE.mockResolvedValue([])
-    const { result } = renderHook(() => useAllPods(undefined, undefined, true))
-    await waitFor(() => {
-      expect(mockFetchSSE).toHaveBeenCalled()
-    })
-    expect(result.current.pods).toHaveLength(0)
-  })
-})
-
-// =============================================================================
-// usePodIssues — demo mode
-// =============================================================================
-
-describe('usePodIssues — demo mode', () => {
-  beforeEach(() => {
-    mockIsDemoMode.mockReturnValue(true)
-  })
-
-  it('returns demo pod issues in demo mode', async () => {
-    const { result } = renderHook(() => usePodIssues())
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-    expect(result.current.issues.length).toBe(getDemoPodIssues().length)
-    expect(result.current.error).toBeNull()
-  })
-
-  it('filters demo issues by cluster', async () => {
-    const { result } = renderHook(() => usePodIssues('prod-east'))
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-    for (const issue of result.current.issues) {
-      expect(issue.cluster).toBe('prod-east')
-    }
-  })
-
-  it('sets lastRefresh in demo mode', async () => {
-    const { result } = renderHook(() => usePodIssues())
-    await waitFor(() => {
-      expect(result.current.lastRefresh).not.toBeNull()
-    })
-  })
-})
-
-// =============================================================================
-// useDeploymentIssues — demo mode
-// =============================================================================
-
-describe('useDeploymentIssues — demo mode', () => {
-  beforeEach(() => {
-    mockIsDemoMode.mockReturnValue(true)
-  })
-
-  it('returns demo deployment issues in demo mode', async () => {
-    const { result } = renderHook(() => useDeploymentIssues())
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-    expect(result.current.issues.length).toBe(getDemoDeploymentIssues().length)
-    expect(result.current.error).toBeNull()
-  })
-
-  it('filters demo deployment issues by cluster', async () => {
-    const { result } = renderHook(() => useDeploymentIssues('prod-east'))
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-    for (const issue of result.current.issues) {
-      expect(issue.cluster).toBe('prod-east')
-    }
-  })
-})
-
-// =============================================================================
-// useDeployments — demo mode
-// =============================================================================
-
-describe('useDeployments — demo mode', () => {
-  beforeEach(() => {
-    mockIsDemoMode.mockReturnValue(true)
-  })
-
-  it('returns demo deployments in demo mode', async () => {
-    const { result } = renderHook(() => useDeployments())
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-    expect(result.current.deployments.length).toBe(getDemoDeployments().length)
-    expect(result.current.error).toBeNull()
-  })
-
-  it('filters demo deployments by cluster', async () => {
-    const { result } = renderHook(() => useDeployments('prod-east'))
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-    for (const d of result.current.deployments) {
-      expect(d.cluster).toBe('prod-east')
-    }
-  })
-})
-
-// =============================================================================
-// useJobs — SSE path (no demo mode for jobs)
-// =============================================================================
-
-describe('useJobs', () => {
-  it('calls fetchSSE when agent is unavailable', async () => {
-    mockFetchSSE.mockResolvedValue([])
-    const { result } = renderHook(() => useJobs())
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-    expect(mockFetchSSE).toHaveBeenCalled()
-    expect(result.current.jobs).toHaveLength(0)
-  })
-
-  it('handles SSE error for jobs', async () => {
-    mockFetchSSE.mockRejectedValue(new Error('SSE failed'))
-    const { result } = renderHook(() => useJobs())
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-    expect(result.current.error).toBe('SSE failed')
-    expect(result.current.consecutiveFailures).toBe(1)
-  })
-
-  it('uses agent fetch when cluster provided and agent available', async () => {
-    mockIsAgentUnavailable.mockReturnValue(false)
-    const mockResponse = { ok: true, json: () => Promise.resolve({ jobs: [{ name: 'job-1' }] }) }
-    mockFetchWithRetry.mockResolvedValue(mockResponse)
-    const { result } = renderHook(() => useJobs('prod-east'))
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-    expect(result.current.jobs).toHaveLength(1)
-    expect(mockReportAgentDataSuccess).toHaveBeenCalled()
-  })
-})
-
-// =============================================================================
-// useHPAs
-// =============================================================================
-
-describe('useHPAs', () => {
-  it('calls agentFetch fallback when agent is unavailable', async () => {
-    mockAgentFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ hpas: [] }) })
-    const { result } = renderHook(() => useHPAs())
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-    expect(result.current.hpas).toHaveLength(0)
-  })
-
-  it('uses fetchWithRetry when cluster provided and agent available', async () => {
-    mockIsAgentUnavailable.mockReturnValue(false)
-    const mockResponse = { ok: true, json: () => Promise.resolve({ hpas: [{ name: 'hpa-1' }] }) }
-    mockFetchWithRetry.mockResolvedValue(mockResponse)
-    const { result } = renderHook(() => useHPAs('prod-east'))
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-    expect(result.current.hpas).toHaveLength(1)
-  })
-})
-
-// =============================================================================
-// useReplicaSets
-// =============================================================================
-
-describe('useReplicaSets', () => {
-  it('returns empty array on agentFetch failure', async () => {
-    mockAgentFetch.mockRejectedValue(new Error('Network error'))
-    const { result } = renderHook(() => useReplicaSets())
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-    expect(result.current.replicaSets).toHaveLength(0)
-    expect(result.current.error).toBe('Network error')
-  })
-
-  it('uses agent when cluster provided and agent available', async () => {
-    mockIsAgentUnavailable.mockReturnValue(false)
-    const mockResponse = { ok: true, json: () => Promise.resolve({ replicasets: [{ name: 'rs-1' }] }) }
-    mockFetchWithRetry.mockResolvedValue(mockResponse)
-    const { result } = renderHook(() => useReplicaSets('prod-east'))
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-    expect(result.current.replicaSets).toHaveLength(1)
-  })
-})
-
-// =============================================================================
-// useStatefulSets
-// =============================================================================
-
-describe('useStatefulSets', () => {
-  it('returns empty array initially with SSE', async () => {
-    mockFetchSSE.mockResolvedValue([])
-    const { result } = renderHook(() => useStatefulSets())
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-    expect(result.current.statefulSets).toHaveLength(0)
-  })
-
-  it('uses agent when cluster provided and agent available', async () => {
-    mockIsAgentUnavailable.mockReturnValue(false)
-    const mockResponse = { ok: true, json: () => Promise.resolve({ statefulsets: [{ name: 'ss-1' }] }) }
-    mockFetchWithRetry.mockResolvedValue(mockResponse)
-    const { result } = renderHook(() => useStatefulSets('prod-east'))
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-    expect(result.current.statefulSets).toHaveLength(1)
-  })
-})
-
-// =============================================================================
-// useDaemonSets
-// =============================================================================
-
-describe('useDaemonSets', () => {
-  it('returns empty array with SSE', async () => {
-    mockFetchSSE.mockResolvedValue([])
-    const { result } = renderHook(() => useDaemonSets())
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-    expect(result.current.daemonSets).toHaveLength(0)
-  })
-
-  it('uses agent when cluster provided and agent available', async () => {
-    mockIsAgentUnavailable.mockReturnValue(false)
-    const mockResponse = { ok: true, json: () => Promise.resolve({ daemonsets: [{ name: 'ds-1' }] }) }
-    mockFetchWithRetry.mockResolvedValue(mockResponse)
-    const { result } = renderHook(() => useDaemonSets('prod-east'))
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-    expect(result.current.daemonSets).toHaveLength(1)
-  })
-})
-
-// =============================================================================
-// useCronJobs
-// =============================================================================
-
-describe('useCronJobs', () => {
-  it('returns empty array with SSE', async () => {
-    mockFetchSSE.mockResolvedValue([])
-    const { result } = renderHook(() => useCronJobs())
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-    expect(result.current.cronJobs).toHaveLength(0)
-  })
-
-  it('uses agent when cluster provided and agent available', async () => {
-    mockIsAgentUnavailable.mockReturnValue(false)
-    const mockResponse = { ok: true, json: () => Promise.resolve({ cronjobs: [{ name: 'cj-1' }] }) }
-    mockFetchWithRetry.mockResolvedValue(mockResponse)
-    const { result } = renderHook(() => useCronJobs('prod-east'))
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-    expect(result.current.cronJobs).toHaveLength(1)
-  })
-})
-
-// =============================================================================
-// usePodLogs
-// =============================================================================
-
-describe('usePodLogs', () => {
-  it('fetches logs via agentFetch', async () => {
-    mockAgentFetch.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ logs: 'line1\nline2\nline3' }),
-    })
-    const { result } = renderHook(() => usePodLogs('prod-east', 'default', 'my-pod'))
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-    expect(result.current.logs).toBe('line1\nline2\nline3')
-    expect(result.current.error).toBeNull()
-  })
-
-  it('handles fetch error', async () => {
-    mockAgentFetch.mockRejectedValue(new Error('Connection refused'))
-    const { result } = renderHook(() => usePodLogs('prod-east', 'default', 'my-pod'))
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-    expect(result.current.logs).toBe('')
-    expect(result.current.error).toBe('Connection refused')
-  })
-
-  it('clears logs when pod is empty', async () => {
-    const { result } = renderHook(() => usePodLogs('prod-east', 'default', ''))
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-    expect(result.current.logs).toBe('')
-    expect(result.current.error).toBeNull()
-  })
-
-  it('handles non-OK response', async () => {
-    mockAgentFetch.mockResolvedValue({
-      ok: false,
-      status: 500,
-    })
-    const { result } = renderHook(() => usePodLogs('prod-east', 'default', 'my-pod'))
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-    expect(result.current.error).toContain('HTTP 500')
-    expect(result.current.logs).toBe('')
-  })
-
-  it('passes container and tail params', async () => {
-    const TAIL_LINES = 50
-    mockAgentFetch.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ logs: 'log output' }),
-    })
-    renderHook(() => usePodLogs('prod-east', 'default', 'my-pod', 'sidecar', TAIL_LINES))
-    await waitFor(() => {
-      expect(mockAgentFetch).toHaveBeenCalled()
-    })
-    const callUrl = mockAgentFetch.mock.calls[0][0] as string
-    expect(callUrl).toContain('container=sidecar')
-    expect(callUrl).toContain(`tail=${TAIL_LINES}`)
-  })
-})
