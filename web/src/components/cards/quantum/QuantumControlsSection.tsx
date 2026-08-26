@@ -125,6 +125,7 @@ export const QuantumControlsSection: React.FC<Props> = ({
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Backend
         </label>
+        {/* eslint-disable-next-line no-restricted-syntax -- moved verbatim from QuantumControlPanel split; migrate to ui/Select separately */}
         <select
           value={control.backend}
           onChange={e => setControl(prev => ({ ...prev, backend: e.target.value }))}
@@ -160,6 +161,7 @@ export const QuantumControlsSection: React.FC<Props> = ({
         <label className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
           Shots
         </label>
+        {/* eslint-disable-next-line no-restricted-syntax -- moved verbatim from QuantumControlPanel split; migrate to ui/Input separately */}
         <input
           type="number"
           min="1"
@@ -192,6 +194,7 @@ export const QuantumControlsSection: React.FC<Props> = ({
           {t('cards:quantumControlPanel.qasmFileLabel')}
         </label>
         <div className="flex gap-2">
+          {/* eslint-disable-next-line no-restricted-syntax -- moved verbatim from QuantumControlPanel split; migrate to ui/Select separately */}
           <select
             value={control.qasm_file}
             onChange={e => onQasmFileChange(e.target.value)}
