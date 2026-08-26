@@ -257,7 +257,6 @@ describe('setActiveTokenCategory on mission actions', () => {
   })
 })
 
-// ── loadMissions — localStorage error and cancelling migration ────────
 
 describe('loadMissions edge cases', () => {
   it('marks cancelling missions as failed on page reload', () => {
@@ -879,3 +878,4 @@ describe('saveMissions pruning: blocked and cancelling missions preserved', () =
     })
   })
 })
+

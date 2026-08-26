@@ -872,3 +872,4 @@ describe('subscribeWorkloadsCache — notification', () => {
     expect(cb2).not.toHaveBeenCalled()
   })
 })
+
