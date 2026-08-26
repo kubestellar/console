@@ -13,8 +13,8 @@ import type { RSSFeedProps } from './types'
 
 export function RSSFeedView(props: RSSFeedProps & { t: (key: string) => string }) {
   const state = useRSSFeedState(props)
+  const { t } = props
   const {
-    t,
     isDemoMode,
     activeFeed,
     activeFeedIndex,
@@ -73,8 +73,6 @@ export function RSSFeedView(props: RSSFeedProps & { t: (key: string) => string }
     setSelectedSourceUrls,
     setTempExcludeTerms,
     setTempIncludeTerms,
-    setShowSourceFilter,
-    setSourceFilter,
     addFeed,
   } = state
 

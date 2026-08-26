@@ -1,4 +1,3 @@
-import type { HeadersInit } from 'react'
 
 export function buildQuantumMutationHeaders(token: string | null): HeadersInit {
   const headers: Record<string, string> = {

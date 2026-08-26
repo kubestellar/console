@@ -457,6 +457,7 @@ export function useRSSFeedState({ config, t }: RSSFeedProps & { t: (key: string)
     setShowFeedSelector,
     setShowFilterEditor,
     setShowSourceFilter,
+    setSourceFilter,
     setTempIncludeTerms,
     setTempExcludeTerms,
     setShowAggregateCreator,

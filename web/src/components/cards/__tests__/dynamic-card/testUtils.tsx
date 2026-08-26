@@ -9,7 +9,7 @@ export const mockShouldUseDemoData = vi.fn(() => false)
 export const mockUseCardData = vi.fn()
 
 vi.mock('../../../../lib/cache', () => {
-  const React = require('react')
+  const React = require('react') as typeof import('react')
   return {
     useCache: ({ fetcher, initialData, enabled = true }: { fetcher: () => Promise<unknown>; initialData: unknown; enabled?: boolean }) => {
       const [data, setData] = React.useState(initialData)
