@@ -328,7 +328,9 @@ test.describe('Interaction Compliance', () => {
     }
   })
 
-  test('card refresh', async ({ page }) => {
+  test('card refresh', async ({ page }, testInfo) => {
+    const CARD_REFRESH_TIMEOUT_MS = 30_000
+    testInfo.setTimeout(IS_CI ? CARD_REFRESH_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER : CARD_REFRESH_TIMEOUT_MS)
     const start = Date.now()
     await setupPage(page)
     await navigateAndSettle(page, '/')
@@ -385,7 +387,9 @@ test.describe('Interaction Compliance', () => {
     }
   })
 
-  test('sidebar collapse/expand', async ({ page }) => {
+  test('sidebar collapse/expand', async ({ page }, testInfo) => {
+    const SIDEBAR_TEST_TIMEOUT_MS = 30_000
+    testInfo.setTimeout(IS_CI ? SIDEBAR_TEST_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER : SIDEBAR_TEST_TIMEOUT_MS)
     const start = Date.now()
     await setupPage(page)
     await navigateAndSettle(page, '/')
@@ -498,7 +502,9 @@ test.describe('Interaction Compliance', () => {
     }
   })
 
-  test('dashboard refresh', async ({ page }) => {
+  test('dashboard refresh', async ({ page }, testInfo) => {
+    const DASHBOARD_REFRESH_TIMEOUT_MS = 30_000
+    testInfo.setTimeout(IS_CI ? DASHBOARD_REFRESH_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER : DASHBOARD_REFRESH_TIMEOUT_MS)
     const start = Date.now()
     await setupPage(page)
     await navigateAndSettle(page, '/')
