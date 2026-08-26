@@ -17,6 +17,9 @@ const VALID_CATEGORIES = new Set([
 const VALID_DETECTION_TYPES = new Set(['path', 'glob', 'any-of'])
 const VALID_CROSS_CUTTING = new Set(['learning', 'traceability'])
 
+const patternsOf = (c: Criterion): string[] =>
+  Array.isArray(c.detection.pattern) ? c.detection.pattern : [c.detection.pattern]
+
 describe('acmm.criteria (CRITERIA export)', () => {
   it('exports a non-empty array', () => {
     expect(Array.isArray(CRITERIA)).toBe(true)
@@ -171,6 +174,91 @@ describe('acmm.criteria (CRITERIA export)', () => {
           expect(typeof c.frequency).toBe('string')
           expect(c.frequency.length).toBeGreaterThan(0)
         }
+      }
+    })
+
+    it('referencePath, when set, is one of the criterion detection patterns', () => {
+      for (const c of CRITERIA) {
+        if (c.referencePath !== undefined) {
+          expect(
+            patternsOf(c).includes(c.referencePath),
+            `${c.id} referencePath "${c.referencePath}" is not a detection pattern`,
+          ).toBe(true)
+        }
+      }
+    })
+
+    it('covers both cross-cutting dimensions', () => {
+      const dims = new Set(CRITERIA.map(c => c.crossCutting).filter(Boolean))
+      expect(dims).toEqual(VALID_CROSS_CUTTING)
+    })
+  })
+
+  describe('detection pattern shape', () => {
+    it('path detections use a single string pattern', () => {
+      for (const c of CRITERIA) {
+        if (c.detection.type === 'path') {
+          expect(Array.isArray(c.detection.pattern), `${c.id} path must be a string`).toBe(false)
+        }
+      }
+    })
+
+    it('glob detections always contain a wildcard', () => {
+      for (const c of CRITERIA) {
+        if (c.detection.type === 'glob') {
+          for (const p of patternsOf(c)) {
+            expect(p.includes('*'), `${c.id} glob pattern "${p}" has no wildcard`).toBe(true)
+          }
+        }
+      }
+    })
+
+    it('patterns are repo-relative and free of surrounding whitespace', () => {
+      for (const c of CRITERIA) {
+        for (const p of patternsOf(c)) {
+          expect(p, `${c.id} pattern "${p}" has surrounding whitespace`).toBe(p.trim())
+          expect(p.startsWith('./'), `${c.id} pattern "${p}" is not repo-relative`).toBe(false)
+          expect(p.startsWith('/'), `${c.id} pattern "${p}" is not repo-relative`).toBe(false)
+        }
+      }
+    })
+
+    it('any-of pattern lists have no duplicate entries', () => {
+      for (const c of CRITERIA) {
+        const patterns = patternsOf(c)
+        expect(new Set(patterns).size, `${c.id} has duplicate patterns`).toBe(patterns.length)
+      }
+    })
+  })
+
+  describe('level/category coherence', () => {
+    it('only L0 criteria use the prerequisite category', () => {
+      for (const c of CRITERIA) {
+        if (c.category === 'prerequisite') {
+          expect(c.level, `${c.id} is prerequisite but not at L0`).toBe(0)
+        }
+      }
+    })
+
+    it('every maturity level present has at least one scannable criterion', () => {
+      const levels = new Set(CRITERIA.map(c => c.level))
+      for (const level of levels) {
+        const scannable = CRITERIA.filter(c => c.level === level && c.scannable !== false)
+        expect(scannable.length, `level ${level} has no scannable criteria`).toBeGreaterThan(0)
+      }
+    })
+  })
+
+  describe('display copy', () => {
+    it('names are unique', () => {
+      const names = CRITERIA.map(c => c.name)
+      const dupes = names.filter((n, i) => names.indexOf(n) !== i)
+      expect(dupes).toEqual([])
+    })
+
+    it('descriptions end with sentence punctuation', () => {
+      for (const c of CRITERIA) {
+        expect(/[.!?]$/.test(c.description), `${c.id} description lacks final punctuation`).toBe(true)
       }
     })
   })
