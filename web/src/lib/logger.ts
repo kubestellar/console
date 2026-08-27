@@ -10,7 +10,7 @@ try {
 
 export const logger = {
   // Prefer console.debug for development-only messages so they can be filtered
-  // separately from user-facing console.log output.
+  // separately from user-facing output.
   log: (...args: unknown[]) => { if (isDevLoggingEnabled) console.debug(...args) },
   debug: (...args: unknown[]) => { if (isDevLoggingEnabled) console.debug(...args) },
   warn: (...args: unknown[]) => console.warn(...args),

@@ -43,7 +43,7 @@ describe('logger.error', () => {
 })
 
 describe('logger.log in test env (DEV=false)', () => {
-  it('does not call console.log', () => {
+  it('does not call the native log method', () => {
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {})
     logger.log('should be silent')
     expect(spy).not.toHaveBeenCalled()
