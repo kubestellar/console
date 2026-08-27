@@ -371,8 +371,17 @@ if [ -z "$FAST_MODE" ]; then
           #   the suite mid-run. 900s matches the Playwright per-test ceiling (#11461, #11464).
           ["deploy-test"]=900
           ["ai-ml-test"]=900
-          ["nav-test"]=900
+          # #22697 nav-test: 7 serial scenarios now take >900s on CI runners
+          #   that share compute with perf-test. Bumped to 1200s (#22697-fix).
+          ["nav-test"]=1200
+          #   #22698 perf-test: dashboard-nav.spec.ts included in perf dir caused
+          #     rapid-nav to "did not run" when prior tests exhausted runner capacity.
+          #     Scoped perf-test.sh to dashboard-perf.spec.ts only (#22698-fix).
           ["perf-test"]=2400
+          #   #22715 interaction-test: sidebar collapse/expand test threw uncaught
+          #     error from setupPage/navigateAndSettle outside try/catch, causing
+          #     Playwright-level test failure and 2 subsequent tests to not run.
+          #     Fixed outer try/catch + doubled SIDEBAR/DASHBOARD_REFRESH timeouts.
           ["interaction-test"]=900
         )
 

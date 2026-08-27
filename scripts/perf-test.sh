@@ -52,8 +52,13 @@ elif [[ "$TTFI_MODE" == "ttfi-gate" ]]; then
     e2e/perf/all-cards-ttfi.spec.ts
   node e2e/perf/compare-ttfi.mjs
 else
+  # Scope to dashboard-perf.spec.ts only — dashboard-nav.spec.ts is exercised
+  # separately by nav-test.sh to avoid counting nav tests twice and to prevent
+  # the nav suite (7 long-running tests) from pushing perf-test past its wall-
+  # clock budget (#22698: rapid-nav "did not run" when all perf dir specs ran).
   env "${EXTRA_ENV[@]}" npx playwright test \
     --config e2e/perf/perf.config.ts \
+    e2e/perf/dashboard-perf.spec.ts \
     "${GREP_FILTER[@]}"
 fi
 
