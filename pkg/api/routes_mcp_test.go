@@ -22,7 +22,7 @@ func TestSetupMCPRoutes_RegistersExpectedRoutes(t *testing.T) {
 	}
 
 	api := app.Group("/api")
-	namespaces := handlers.NewNamespaceHandler(mockStore)
+	namespaces := handlers.NewNamespaceHandler(mockStore, k8sClient)
 	server.setupMCPRoutes(api, namespaces)
 
 	routes := routeTable(app)
@@ -96,7 +96,7 @@ func TestSetupMCPRoutes_RegistersDrasiProxy(t *testing.T) {
 	}
 
 	api := app.Group("/api")
-	namespaces := handlers.NewNamespaceHandler(mockStore)
+	namespaces := handlers.NewNamespaceHandler(mockStore, k8sClient)
 	server.setupMCPRoutes(api, namespaces)
 
 	routes := routeTable(app)
@@ -135,7 +135,7 @@ func TestSetupMCPRoutes_RegistersWidgetAliases(t *testing.T) {
 	}
 
 	api := app.Group("/api")
-	namespaces := handlers.NewNamespaceHandler(mockStore)
+	namespaces := handlers.NewNamespaceHandler(mockStore, k8sClient)
 	server.setupMCPRoutes(api, namespaces)
 
 	routes := routeTable(app)
@@ -174,7 +174,7 @@ func TestSetupMCPRoutes_RegistersSSEStreamingVariants(t *testing.T) {
 	}
 
 	api := app.Group("/api")
-	namespaces := handlers.NewNamespaceHandler(mockStore)
+	namespaces := handlers.NewNamespaceHandler(mockStore, k8sClient)
 	server.setupMCPRoutes(api, namespaces)
 
 	routes := routeTable(app)
