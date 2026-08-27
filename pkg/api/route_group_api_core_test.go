@@ -20,12 +20,12 @@ func TestAPICoreRouteGroup_RegistersExpectedRoutes(t *testing.T) {
 	persistStore := store.NewPersistenceStore("testdata/persistence-route-group-api-core.json")
 	k8sClient := &k8s.MultiClusterClient{}
 	done := make(chan struct{})
-	
+
 	cfg := Config{
 		AuthConfig: AuthConfig{
-			JWTSecret: "test-secret",
+			JWTSecret:  "test-secret",
+			AgentToken: "test-agent-token",
 		},
-		AgentToken: "test-agent-token",
 	}
 
 	routeCtx := &routeSetupContext{
@@ -136,10 +136,11 @@ func TestAPICoreRouteGroup_MissionsSubroutes(t *testing.T) {
 	persistStore := store.NewPersistenceStore("testdata/persistence-route-group-api-core.json")
 	k8sClient := &k8s.MultiClusterClient{}
 	done := make(chan struct{})
-	
+
 	cfg := Config{
 		AuthConfig: AuthConfig{
-			JWTSecret: "test-secret",
+			JWTSecret:  "test-secret",
+			AgentToken: "test-agent-token",
 		},
 	}
 
@@ -159,11 +160,10 @@ func TestAPICoreRouteGroup_MissionsSubroutes(t *testing.T) {
 		method string
 		path   string
 	}{
-		{"GET", "/api/missions"},
-		{"POST", "/api/missions"},
-		{"GET", "/api/missions/:id"},
-		{"PUT", "/api/missions/:id"},
-		{"DELETE", "/api/missions/:id"},
+		{"POST", "/api/missions/validate"},
+		{"POST", "/api/missions/share/slack"},
+		{"POST", "/api/missions/share/github"},
+		{"GET", "/api/missions/gaps"},
 	}
 
 	for _, tc := range missionsRoutes {
@@ -181,12 +181,15 @@ func TestAPICoreRouteGroup_OrbitSubroutes(t *testing.T) {
 	persistStore := store.NewPersistenceStore("testdata/persistence-route-group-api-core.json")
 	k8sClient := &k8s.MultiClusterClient{}
 	done := make(chan struct{})
-	
+
 	cfg := Config{
 		AuthConfig: AuthConfig{
-			JWTSecret: "test-secret",
+			JWTSecret:  "test-secret",
+			AgentToken: "test-agent-token",
 		},
-		DatabasePath: "./data/test.db",
+		ServerConfig: ServerConfig{
+			DatabasePath: "./data/test.db",
+		},
 	}
 
 	routeCtx := &routeSetupContext{
@@ -205,13 +208,10 @@ func TestAPICoreRouteGroup_OrbitSubroutes(t *testing.T) {
 		method string
 		path   string
 	}{
-		{"GET", "/api/orbit/snapshot"},
-		{"POST", "/api/orbit/snapshot"},
-		{"GET", "/api/orbit/snapshots"},
-		{"DELETE", "/api/orbit/snapshots/:id"},
-		{"POST", "/api/orbit/restore/:id"},
+		{"GET", "/api/orbit/missions"},
+		{"POST", "/api/orbit/missions"},
+		{"POST", "/api/orbit/missions/:id/run"},
 		{"GET", "/api/orbit/schedule"},
-		{"PUT", "/api/orbit/schedule"},
 	}
 
 	for _, tc := range orbitRoutes {
@@ -229,12 +229,12 @@ func TestAPICoreRouteGroup_MinHandlerChainLength(t *testing.T) {
 	persistStore := store.NewPersistenceStore("testdata/persistence-route-group-api-core.json")
 	k8sClient := &k8s.MultiClusterClient{}
 	done := make(chan struct{})
-	
+
 	cfg := Config{
 		AuthConfig: AuthConfig{
-			JWTSecret: "test-secret",
+			JWTSecret:  "test-secret",
+			AgentToken: "test-agent-token",
 		},
-		AgentToken: "test-agent-token",
 	}
 
 	bodyGuardMiddleware := func(c *fiber.Ctx) error { return c.Next() }
