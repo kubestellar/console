@@ -126,7 +126,7 @@ describe('CardListItem', () => {
 
   it('renders a chevron when clickable and showChevron is default', () => {
     const { container } = render(
-      <CardListItem onClick={() => {}}>x</CardListItem>
+      <CardListItem onClick={vi.fn()}>x</CardListItem>
     )
     // ChevronRight from lucide-react renders an <svg>
     expect(container.querySelector('svg')).not.toBeNull()
@@ -134,7 +134,7 @@ describe('CardListItem', () => {
 
   it('does not render a chevron when showChevron is false', () => {
     const { container } = render(
-      <CardListItem onClick={() => {}} showChevron={false}>
+      <CardListItem onClick={vi.fn()} showChevron={false}>
         x
       </CardListItem>
     )
