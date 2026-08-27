@@ -23,9 +23,9 @@ func TestAPICoreRouteGroup_RegistersExpectedRoutes(t *testing.T) {
 	
 	cfg := Config{
 		AuthConfig: AuthConfig{
-			JWTSecret: "test-secret",
+			JWTSecret:  "test-secret",
+			AgentToken: "test-agent-token",
 		},
-		AgentToken: "test-agent-token",
 	}
 
 	routeCtx := &routeSetupContext{
@@ -183,10 +183,12 @@ func TestAPICoreRouteGroup_OrbitSubroutes(t *testing.T) {
 	done := make(chan struct{})
 	
 	cfg := Config{
+		ServerConfig: ServerConfig{
+			DatabasePath: "./data/test.db",
+		},
 		AuthConfig: AuthConfig{
 			JWTSecret: "test-secret",
 		},
-		DatabasePath: "./data/test.db",
 	}
 
 	routeCtx := &routeSetupContext{
@@ -232,9 +234,9 @@ func TestAPICoreRouteGroup_MinHandlerChainLength(t *testing.T) {
 	
 	cfg := Config{
 		AuthConfig: AuthConfig{
-			JWTSecret: "test-secret",
+			JWTSecret:  "test-secret",
+			AgentToken: "test-agent-token",
 		},
-		AgentToken: "test-agent-token",
 	}
 
 	bodyGuardMiddleware := func(c *fiber.Ctx) error { return c.Next() }
