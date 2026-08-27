@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_updated": "2026-08-24T03:20:49Z",
+  "last_updated": "2026-08-26T03:21:31Z",
   "rolling_window_days": 30,
   "categories": {
     "performance": {
@@ -11,11 +11,11 @@
       "last_evaluated": "2026-08-16T03:18:35Z"
     },
     "security": {
-      "merged": 121,
+      "merged": 120,
       "closed": 71,
       "acceptance_rate": 0.63,
       "status": "normal",
-      "last_evaluated": "2026-08-24T03:20:49Z"
+      "last_evaluated": "2026-08-14T03:43:45Z"
     },
     "a11y": {
       "merged": 83,
@@ -25,18 +25,18 @@
       "last_evaluated": "2026-08-18T03:16:41Z"
     },
     "operator": {
-      "merged": 867,
+      "merged": 872,
       "closed": 269,
       "acceptance_rate": 0.76,
       "status": "normal",
-      "last_evaluated": "2026-08-24T03:20:49Z"
+      "last_evaluated": "2026-08-26T03:21:31Z"
     },
     "sre": {
-      "merged": 583,
+      "merged": 585,
       "closed": 101,
       "acceptance_rate": 0.85,
       "status": "boosted",
-      "last_evaluated": "2026-08-23T03:20:13Z"
+      "last_evaluated": "2026-08-26T03:21:31Z"
     },
     "features": {
       "merged": 43,
@@ -65,51 +65,17 @@
     "size_acceptance": {},
     "type_acceptance": {},
     "common_rejection_reasons": [
-      "- PR #22540: Verified against `origin/main` \u2014 every file this PR touches already has equivalent (or superseding) test coverage merged via other PRs, and this branch is now stale (`CONFLICTING`/`DIRTY`/`BLOCKED` against current `main`):",
+      "- PR #22540: Verified against `origin/main` — every file this PR touches already has equivalent (or superseding) test coverage merged via other PRs, and this branch is now stale (`CONFLICTING`/`DIRTY`/`BLOCKED` against current `main`):",
       "| File | Test file on `main` | Lines / `it()` | Merged via |"
     ],
     "best_change_type": "bug_fix",
     "last_report_date": "2026-08-23"
   },
   "cncf_insights": {
-    "last_scan_date": "2026-08-26",
-    "suggested_checks": [
-      {
-        "pattern": "navigation_ux",
-        "count": 7,
-        "added": "2026-08-26",
-        "priority": "medium"
-      },
-      {
-        "pattern": "form_ux",
-        "count": 8,
-        "added": "2026-08-26",
-        "priority": "medium"
-      },
-      {
-        "pattern": "realtime_ux",
-        "count": 19,
-        "added": "2026-08-26",
-        "priority": "medium"
-      },
-      {
-        "pattern": "onboarding",
-        "count": 6,
-        "added": "2026-08-26",
-        "priority": "medium"
-      }
-    ]
+    "last_scan_date": "2026-08-19",
+    "suggested_checks": []
   },
   "history": [
-    {
-      "date": "2026-07-16",
-      "total_merged": 1406,
-      "total_closed": 568,
-      "categories_blocked": [],
-      "categories_boosted": [
-        "sre"
-      ]
-    },
     {
       "date": "2026-07-17",
       "total_merged": 1423,
@@ -378,8 +344,8 @@
       ]
     },
     {
-      "date": "2026-08-24",
-      "total_merged": 1860,
+      "date": "2026-08-26",
+      "total_merged": 1863,
       "total_closed": 578,
       "categories_blocked": [],
       "categories_boosted": [
@@ -399,7 +365,7 @@
     "consistency": 0.95
   },
   "max_issues_override": 5,
-  "pr_guidance": "Keep PRs small and focused. Smaller PRs have higher acceptance rates.",
+  "pr_guidance": "Keep changes under 50 lines (size S) for best acceptance rate. Split larger fixes into multiple PRs.",
   "regression_insights": {
     "focus_overrides": [],
     "repeat_issue_patterns": [],
