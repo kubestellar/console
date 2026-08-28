@@ -2,8 +2,8 @@ import React from 'react'
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { DynamicCard, Tier1CardRuntime } from '../DynamicCard'
-import type { DynamicCardDefinition, DynamicCardDefinition_T1 } from '../../../lib/dynamic-cards/types'
+import { Tier1CardRuntime } from '../DynamicCard'
+import type { DynamicCardDefinition_T1 } from '../../../lib/dynamic-cards/types'
 import { BTN } from '../../../test-utils/buttonLabels'
 
 // ---------------------------------------------------------------------------
@@ -13,6 +13,7 @@ import { BTN } from '../../../test-utils/buttonLabels'
 // Mock useCache to avoid shared CacheStore state between tests.
 // This provides a minimal implementation that calls the fetcher immediately.
 vi.mock('../../../lib/cache', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- moved verbatim from baselined DynamicCard.test.tsx; vi.mock factories are hoisted and cannot reference top-level imports
   const React = require('react')
   return {
     useCache: ({ fetcher, initialData, enabled = true }: { fetcher: () => Promise<unknown>; initialData: unknown; enabled?: boolean; [k: string]: unknown }) => {
@@ -138,24 +139,6 @@ const BASE_T1_DEF: DynamicCardDefinition_T1 = {
   searchFields: ['name'],
   defaultLimit: 5,
   emptyMessage: 'Nothing here.',
-}
-
-function makeT1Definition(overrides: Partial<DynamicCardDefinition> = {}): DynamicCardDefinition {
-  return {
-    id: 'card-t1',
-    tier: 'tier1',
-    cardDefinition: BASE_T1_DEF,
-    ...overrides,
-  } as DynamicCardDefinition
-}
-
-function makeT2Definition(overrides: Partial<DynamicCardDefinition> = {}): DynamicCardDefinition {
-  return {
-    id: 'card-t2',
-    tier: 'tier2',
-    sourceCode: 'export default function MyCard() { return <div>T2 Card</div> }',
-    ...overrides,
-  } as DynamicCardDefinition
 }
 
 // ---------------------------------------------------------------------------

@@ -1,8 +1,8 @@
 import React from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, act } from '@testing-library/react'
-import { DynamicCard, Tier2CardRuntime } from '../DynamicCard'
-import type { DynamicCardDefinition, DynamicCardDefinition_T1 } from '../../../lib/dynamic-cards/types'
+import { Tier2CardRuntime } from '../DynamicCard'
+import type { DynamicCardDefinition } from '../../../lib/dynamic-cards/types'
 import { BTN } from '../../../test-utils/buttonLabels'
 
 // ---------------------------------------------------------------------------
@@ -12,6 +12,7 @@ import { BTN } from '../../../test-utils/buttonLabels'
 // Mock useCache to avoid shared CacheStore state between tests.
 // This provides a minimal implementation that calls the fetcher immediately.
 vi.mock('../../../lib/cache', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- moved verbatim from baselined DynamicCard.test.tsx; vi.mock factories are hoisted and cannot reference top-level imports
   const React = require('react')
   return {
     useCache: ({ fetcher, initialData, enabled = true }: { fetcher: () => Promise<unknown>; initialData: unknown; enabled?: boolean; [k: string]: unknown }) => {
@@ -107,46 +108,8 @@ vi.mock('../../../lib/cards/cardHooks', () => ({
 }))
 
 // ---------------------------------------------------------------------------
-// Default useCardData return value
-// ---------------------------------------------------------------------------
-
-function makeUseCardDataReturn(items: Record<string, unknown>[] = []) {
-  return {
-    items,
-    totalItems: items.length,
-    currentPage: 1,
-    totalPages: 1,
-    goToPage: vi.fn(),
-    needsPagination: false,
-    itemsPerPage: 10,
-    filters: { search: '', setSearch: vi.fn() },
-    containerRef: { current: null },
-    containerStyle: {},
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Shared fixtures
 // ---------------------------------------------------------------------------
-
-const BASE_T1_DEF: DynamicCardDefinition_T1 = {
-  layout: 'list',
-  columns: [{ field: 'name', label: 'Name' }],
-  dataSource: 'static',
-  staticData: [{ name: 'Alpha' }, { name: 'Beta' }],
-  searchFields: ['name'],
-  defaultLimit: 5,
-  emptyMessage: 'Nothing here.',
-}
-
-function makeT1Definition(overrides: Partial<DynamicCardDefinition> = {}): DynamicCardDefinition {
-  return {
-    id: 'card-t1',
-    tier: 'tier1',
-    cardDefinition: BASE_T1_DEF,
-    ...overrides,
-  } as DynamicCardDefinition
-}
 
 function makeT2Definition(overrides: Partial<DynamicCardDefinition> = {}): DynamicCardDefinition {
   return {
