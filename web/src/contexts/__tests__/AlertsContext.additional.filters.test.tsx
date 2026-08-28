@@ -21,8 +21,8 @@ vi.mock('../../hooks/useMissions', () => ({
 let mockIsDemoMode = false
 vi.mock('../../hooks/useDemoMode', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../hooks/useDemoMode')>()),
-  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
-  getDemoMode: vi.fn(() => false),
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => mockIsDemoMode),
 }))
 
 vi.mock('../../hooks/useDeepLink', () => ({
@@ -63,9 +63,8 @@ let mockMCPData: {
 
 vi.mock('../AlertsDataFetcher', () => ({
   __esModule: true,
-  default: ({ onData }: { onData: (d: typeof mockMCPData) => void }) => {
-    const { useEffect } = require('react')
-    useEffect(() => { onData(mockMCPData) }, [onData])
+  default: function MockAlertsDataFetcher({ onData }: { onData: (d: typeof mockMCPData) => void }) {
+    React.useEffect(() => { onData(mockMCPData) }, [onData])
     return null
   },
 }))
