@@ -3,9 +3,15 @@ package feedback
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
+
+// asyncTestWaitTimeout bounds how long these tests wait on channels for
+// async GitHub operations to complete, so a dropped/lost signal fails fast
+// instead of hanging until the package-level `go test` timeout (#22870).
+const asyncTestWaitTimeout = 5 * time.Second
 
 func TestRunAsyncGitHubOp_SemaphoreLimit(t *testing.T) {
 	completedCount := 0
@@ -28,9 +34,15 @@ func TestRunAsyncGitHubOp_SemaphoreLimit(t *testing.T) {
 	// Release all blocking operations
 	close(done)
 
-	// Wait for all blocking operations to complete
+	// Wait for all blocking operations to complete with timeout
+	timeout := time.After(asyncTestWaitTimeout)
 	for i := 0; i < maxConcurrentGitHubOps; i++ {
-		<-finished
+		select {
+		case <-finished:
+			// Operation completed
+		case <-timeout:
+			t.Fatalf("timeout waiting for blocking operations to complete: %d/%d finished", i, maxConcurrentGitHubOps)
+		}
 	}
 
 	// The dropped operation should not have run
@@ -79,11 +91,16 @@ func TestRunAsyncGitHubOp_MultipleOperations(t *testing.T) {
 		})
 	}
 
-	// Wait for all operations to complete
+	// Wait for all operations to complete with timeout
 	count := 0
+	timeout := time.After(asyncTestWaitTimeout)
 	for i := 0; i < numOps; i++ {
-		<-completed
-		count++
+		select {
+		case <-completed:
+			count++
+		case <-timeout:
+			t.Fatalf("timeout waiting for operations: got %d/%d (semaphore may be saturated from prior tests)", count, numOps)
+		}
 	}
 
 	assert.Equal(t, numOps, count, "all operations should complete")
