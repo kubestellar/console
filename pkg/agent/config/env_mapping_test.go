@@ -38,6 +38,11 @@ func TestGetEnvKeyForProvider_AllProviders(t *testing.T) {
 		{"goose", "GOOSE_PROVIDER"},
 		{"ollama", "OLLAMA_API_KEY"},
 		{"llamacpp", "LLAMACPP_API_KEY"},
+		{"localai", "LOCALAI_API_KEY"},
+		{"vllm", "VLLM_API_KEY"},
+		{"lm-studio", "LM_STUDIO_API_KEY"},
+		{"rhaiis", "RHAIIS_API_KEY"},
+		{"ramalama", "RAMALAMA_API_KEY"},
 		{"unknown-provider", ""},
 	}
 	for _, tc := range tests {
