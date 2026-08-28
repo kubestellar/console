@@ -1,12 +1,9 @@
 import React from 'react'
 /**
- * AlertsContext Tests
+ * AlertsContext — condition evaluation tests (A1–A5)
  *
- * Exercises the AlertsProvider, useAlertsContext hook, rule CRUD,
- * alert lifecycle (create/acknowledge/resolve/delete), condition
- * evaluation for every supported condition type, deduplication,
- * localStorage persistence, quota-exceeded handling, AI diagnosis,
- * demo-mode cleanup, notification sending, and stats computation.
+ * Covers: memory_pressure, certificate_error, cluster_unreachable,
+ * dns_failure, and disabled-rule skipping.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
@@ -23,8 +20,8 @@ vi.mock('../../hooks/useMissions', () => ({
 let mockIsDemoMode = false
 vi.mock('../../hooks/useDemoMode', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../hooks/useDemoMode')>()),
-  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
-  getDemoMode: vi.fn(() => false),
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  getDemoMode: vi.fn(() => mockIsDemoMode),
 }))
 
 vi.mock('../../hooks/useDeepLink', () => ({
@@ -55,8 +52,6 @@ vi.mock('../../lib/utils/concurrency', () => ({
   ),
 }))
 
-// Stub the lazy-loaded AlertsDataFetcher — calls onData with injected MCP data
-// The `mockMCPData` variable is written by individual tests before rendering.
 let mockMCPData: {
   gpuNodes: Array<{ cluster: string; gpuCount: number; gpuAllocated: number }>
   podIssues: Array<{ name: string; cluster?: string; namespace?: string; status?: string; restarts?: number; reason?: string; issues?: string[] }>
@@ -67,10 +62,8 @@ let mockMCPData: {
 
 vi.mock('../AlertsDataFetcher', () => ({
   __esModule: true,
-  default: ({ onData }: { onData: (d: typeof mockMCPData) => void }) => {
-     
-    const { useEffect } = require('react')
-    useEffect(() => { onData(mockMCPData) }, [onData])
+  default: function MockAlertsDataFetcher({ onData }: { onData: (d: typeof mockMCPData) => void }) {
+    React.useEffect(() => { onData(mockMCPData) }, [onData])
     return null
   },
 }))
@@ -86,20 +79,6 @@ function wrapper({ children }: { children: ReactNode }) {
   return <AlertsProvider>{children}</AlertsProvider>
 }
 
-/** Create a minimal AlertRule with sensible defaults. */
-function makeRule(overrides: Partial<AlertRule> = {}): Omit<AlertRule, 'id' | 'createdAt' | 'updatedAt'> {
-  return {
-    name: overrides.name ?? 'Test Rule',
-    description: overrides.description ?? 'A test rule',
-    enabled: overrides.enabled ?? true,
-    condition: overrides.condition ?? { type: 'gpu_usage', threshold: 90 },
-    severity: overrides.severity ?? 'warning',
-    channels: overrides.channels ?? [{ type: 'browser', enabled: true, config: {} }],
-    aiDiagnose: overrides.aiDiagnose ?? false,
-  }
-}
-
-/** Flush microtasks and deferred MCP updates after render/evaluation. */
 const MCP_DATA_FLUSH_MS = 20
 
 async function flushTimers() {
@@ -118,7 +97,6 @@ beforeEach(() => {
   mockIsDemoMode = false
   mockMCPData = { gpuNodes: [], podIssues: [], clusters: [], isLoading: false, error: null }
   mockStartMission.mockClear()
-  // Suppress console.error/warn noise from storage and notification code
   vi.spyOn(console, 'error').mockImplementation(() => {})
   vi.spyOn(console, 'warn').mockImplementation(() => {})
   vi.spyOn(console, 'debug').mockImplementation(() => {})
@@ -130,14 +108,10 @@ afterEach(() => {
 })
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Tests
+// Tests — condition evaluation (A1–A5)
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ═══════════════════════════════════════════════════════════════════════════
-// NEW TESTS — push toward 80% coverage
-// ═══════════════════════════════════════════════════════════════════════════
-
-describe('AlertsContext — additional coverage', () => {
+describe('AlertsContext — condition evaluation (A1–A5)', () => {
   // ── A1. Memory pressure condition ────────────────────────────────────
 
   it('evaluateConditions: memory_pressure fires alert for MemoryPressure issue', async () => {
@@ -469,383 +443,5 @@ describe('AlertsContext — additional coverage', () => {
     // No alert because the rule is disabled
     const alerts = result.current.alerts.filter(a => a.ruleId === 'disabled-rule')
     expect(alerts.length).toBe(0)
-  })
-
-  // ── A6. Pod crash with namespace filter ──────────────────────────────
-
-  it('evaluateConditions: pod_crash respects namespace filter in rule', async () => {
-    const rule: AlertRule = {
-      id: 'pod-ns-rule',
-      name: 'Pod Crash NS',
-      description: '',
-      enabled: true,
-      condition: { type: 'pod_crash', threshold: 3, namespaces: ['production'] },
-      severity: 'warning',
-      channels: [],
-      aiDiagnose: false,
-      createdAt: '2024-01-01T00:00:00Z',
-      updatedAt: '2024-01-01T00:00:00Z',
-    }
-    localStorage.setItem('kc_alert_rules', JSON.stringify([rule]))
-    localStorage.setItem('kc_alerts', JSON.stringify([]))
-
-    mockMCPData = {
-      gpuNodes: [],
-      podIssues: [
-        { name: 'pod-in-prod', cluster: 'prod', namespace: 'production', status: 'CrashLoopBackOff', restarts: 10 },
-        { name: 'pod-in-dev', cluster: 'prod', namespace: 'development', status: 'CrashLoopBackOff', restarts: 10 },
-      ],
-      clusters: [{ name: 'prod', healthy: true, nodeCount: 3 }],
-      isLoading: false,
-      error: null,
-    }
-
-    const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await flushTimers()
-
-    await act(async () => {
-      result.current.evaluateConditions()
-    })
-
-    const podAlerts = result.current.alerts.filter(a => a.ruleId === 'pod-ns-rule')
-    // Only the pod in 'production' namespace should trigger
-    expect(podAlerts.length).toBe(1)
-    expect(podAlerts[0].resource).toBe('pod-in-prod')
-  })
-
-  // ── A7. GPU usage with cluster filter ────────────────────────────────
-
-  it('evaluateConditions: gpu_usage respects cluster filter in rule', async () => {
-    const rule: AlertRule = {
-      id: 'gpu-cluster-rule',
-      name: 'GPU Usage Filtered',
-      description: '',
-      enabled: true,
-      condition: { type: 'gpu_usage', threshold: 80, clusters: ['target-cluster'] },
-      severity: 'critical',
-      channels: [],
-      aiDiagnose: false,
-      createdAt: '2024-01-01T00:00:00Z',
-      updatedAt: '2024-01-01T00:00:00Z',
-    }
-    localStorage.setItem('kc_alert_rules', JSON.stringify([rule]))
-    localStorage.setItem('kc_alerts', JSON.stringify([]))
-
-    mockMCPData = {
-      gpuNodes: [
-        { cluster: 'target-cluster', gpuCount: 10, gpuAllocated: 9 },
-        { cluster: 'other-cluster', gpuCount: 10, gpuAllocated: 9 },
-      ],
-      podIssues: [],
-      clusters: [
-        { name: 'target-cluster', healthy: true, nodeCount: 1 },
-        { name: 'other-cluster', healthy: true, nodeCount: 1 },
-      ],
-      isLoading: false,
-      error: null,
-    }
-
-    const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await flushTimers()
-
-    await act(async () => {
-      result.current.evaluateConditions()
-    })
-
-    const gpuAlerts = result.current.alerts.filter(a => a.ruleId === 'gpu-cluster-rule')
-    // Only target-cluster should trigger
-    expect(gpuAlerts.length).toBe(1)
-    expect(gpuAlerts[0].cluster).toBe('target-cluster')
-  })
-
-  // ── A8. GPU usage skips clusters with zero GPUs ──────────────────────
-
-  it('evaluateConditions: gpu_usage skips clusters with no GPUs', async () => {
-    const rule: AlertRule = {
-      id: 'gpu-zero-rule',
-      name: 'GPU Zero',
-      description: '',
-      enabled: true,
-      condition: { type: 'gpu_usage', threshold: 50 },
-      severity: 'warning',
-      channels: [],
-      aiDiagnose: false,
-      createdAt: '2024-01-01T00:00:00Z',
-      updatedAt: '2024-01-01T00:00:00Z',
-    }
-    localStorage.setItem('kc_alert_rules', JSON.stringify([rule]))
-    localStorage.setItem('kc_alerts', JSON.stringify([]))
-
-    mockMCPData = {
-      gpuNodes: [], // no GPU nodes
-      podIssues: [],
-      clusters: [{ name: 'cpu-only', healthy: true, nodeCount: 3 }],
-      isLoading: false,
-      error: null,
-    }
-
-    const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await flushTimers()
-
-    await act(async () => {
-      result.current.evaluateConditions()
-    })
-
-    // No alert because totalGPUs is 0
-    const alerts = result.current.alerts.filter(a => a.ruleId === 'gpu-zero-rule')
-    expect(alerts.length).toBe(0)
-  })
-
-  // ── A9. Disk pressure notification with browser channel ──────────────
-
-  it('evaluateConditions: disk_pressure sends browser notification via sendNotificationWithDeepLink', async () => {
-    const { sendNotificationWithDeepLink: mockSendNotif } = await import('../../hooks/useDeepLink')
-
-    const rule: AlertRule = {
-      id: 'dp-notif-rule',
-      name: 'Disk Pressure Notif',
-      description: '',
-      enabled: true,
-      condition: { type: 'disk_pressure' },
-      severity: 'critical',
-      channels: [{ type: 'browser', enabled: true, config: {} }],
-      aiDiagnose: false,
-      createdAt: '2024-01-01T00:00:00Z',
-      updatedAt: '2024-01-01T00:00:00Z',
-    }
-    localStorage.setItem('kc_alert_rules', JSON.stringify([rule]))
-    localStorage.setItem('kc_alerts', JSON.stringify([]))
-
-    mockMCPData = {
-      gpuNodes: [],
-      podIssues: [],
-      clusters: [{ name: 'dp-cluster', healthy: true, nodeCount: 2, issues: ['DiskPressure on worker-node-1'] }],
-      isLoading: false,
-      error: null,
-    }
-
-    const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await flushTimers()
-
-    await act(async () => {
-      result.current.evaluateConditions()
-    })
-
-    expect(mockSendNotif).toHaveBeenCalledWith(
-      expect.stringContaining('Disk Pressure'),
-      expect.stringContaining('DiskPressure'),
-      expect.objectContaining({ drilldown: 'node', node: 'worker-node-1' })
-    )
-  })
-
-  // ── A10. Cluster unreachable error label variants ────────────────────
-
-  it('evaluateConditions: cluster_unreachable shows auth error label', async () => {
-    const rule: AlertRule = {
-      id: 'cu-auth-rule',
-      name: 'Cluster Unreachable Auth',
-      description: '',
-      enabled: true,
-      condition: { type: 'cluster_unreachable' },
-      severity: 'critical',
-      channels: [],
-      aiDiagnose: false,
-      createdAt: '2024-01-01T00:00:00Z',
-      updatedAt: '2024-01-01T00:00:00Z',
-    }
-    localStorage.setItem('kc_alert_rules', JSON.stringify([rule]))
-    localStorage.setItem('kc_alerts', JSON.stringify([]))
-
-    mockMCPData = {
-      gpuNodes: [],
-      podIssues: [],
-      clusters: [{ name: 'auth-fail', healthy: false, reachable: false, nodeCount: 0, errorType: 'auth', errorMessage: 'forbidden' }],
-      isLoading: false,
-      error: null,
-    }
-
-    const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await flushTimers()
-
-    await act(async () => {
-      result.current.evaluateConditions()
-    })
-
-    const cuAlerts = result.current.alerts.filter(a => a.ruleId === 'cu-auth-rule')
-    expect(cuAlerts.length).toBe(1)
-    expect(cuAlerts[0].message).toContain('authentication failed')
-  })
-
-  it('evaluateConditions: cluster_unreachable shows network error label', async () => {
-    const rule: AlertRule = {
-      id: 'cu-net-rule',
-      name: 'Cluster Unreachable Net',
-      description: '',
-      enabled: true,
-      condition: { type: 'cluster_unreachable' },
-      severity: 'critical',
-      channels: [],
-      aiDiagnose: false,
-      createdAt: '2024-01-01T00:00:00Z',
-      updatedAt: '2024-01-01T00:00:00Z',
-    }
-    localStorage.setItem('kc_alert_rules', JSON.stringify([rule]))
-    localStorage.setItem('kc_alerts', JSON.stringify([]))
-
-    mockMCPData = {
-      gpuNodes: [],
-      podIssues: [],
-      clusters: [{ name: 'net-fail', healthy: false, reachable: false, nodeCount: 0, errorType: 'network' }],
-      isLoading: false,
-      error: null,
-    }
-
-    const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await flushTimers()
-
-    await act(async () => {
-      result.current.evaluateConditions()
-    })
-
-    const cuAlerts = result.current.alerts.filter(a => a.ruleId === 'cu-net-rule')
-    expect(cuAlerts.length).toBe(1)
-    expect(cuAlerts[0].message).toContain('network unreachable')
-  })
-
-  // ── A11. Unreachable cluster with certificate error is NOT flagged by cluster_unreachable ──
-
-  it('evaluateConditions: cluster_unreachable ignores clusters with certificate errorType', async () => {
-    const rule: AlertRule = {
-      id: 'cu-cert-skip',
-      name: 'Cluster Unreachable Cert Skip',
-      description: '',
-      enabled: true,
-      condition: { type: 'cluster_unreachable' },
-      severity: 'critical',
-      channels: [],
-      aiDiagnose: false,
-      createdAt: '2024-01-01T00:00:00Z',
-      updatedAt: '2024-01-01T00:00:00Z',
-    }
-    localStorage.setItem('kc_alert_rules', JSON.stringify([rule]))
-    localStorage.setItem('kc_alerts', JSON.stringify([]))
-
-    mockMCPData = {
-      gpuNodes: [],
-      podIssues: [],
-      clusters: [{ name: 'cert-only', healthy: false, reachable: false, nodeCount: 0, errorType: 'certificate' }],
-      isLoading: false,
-      error: null,
-    }
-
-    const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await flushTimers()
-
-    await act(async () => {
-      result.current.evaluateConditions()
-    })
-
-    // No cluster_unreachable alert because errorType is 'certificate'
-    const cuAlerts = result.current.alerts.filter(a => a.ruleId === 'cu-cert-skip')
-    expect(cuAlerts.length).toBe(0)
-  })
-
-  // ── A12. createAlert deduplication — same details skips re-render ────
-
-  it('createAlert skips update when details are unchanged (shallowEqualRecords)', async () => {
-    const rule: AlertRule = {
-      id: 'dedup-same',
-      name: 'Dedup Same',
-      description: '',
-      enabled: true,
-      condition: { type: 'gpu_usage', threshold: 80 },
-      severity: 'critical',
-      channels: [],
-      aiDiagnose: false,
-      createdAt: '2024-01-01T00:00:00Z',
-      updatedAt: '2024-01-01T00:00:00Z',
-    }
-    localStorage.setItem('kc_alert_rules', JSON.stringify([rule]))
-    localStorage.setItem('kc_alerts', JSON.stringify([]))
-
-    // First evaluation creates the alert
-    mockMCPData = {
-      gpuNodes: [{ cluster: 'gpu-cluster', gpuCount: 10, gpuAllocated: 9 }],
-      podIssues: [],
-      clusters: [{ name: 'gpu-cluster', healthy: true, nodeCount: 1 }],
-      isLoading: false,
-      error: null,
-    }
-
-    const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await flushTimers()
-
-    await act(async () => {
-      result.current.evaluateConditions()
-    })
-    const alertCountAfterFirst = result.current.alerts.length
-
-    // Second evaluation with same data should not create a new alert
-    await act(async () => {
-      result.current.evaluateConditions()
-    })
-
-    expect(result.current.alerts.length).toBe(alertCountAfterFirst)
-  })
-
-  // ── A13. saveAlerts retry on quota exceeded that fails again ──────────
-
-  it('clears localStorage when quota exceeded persists after pruning', () => {
-    // Load some alerts
-    const alerts: Alert[] = Array.from({ length: 5 }, (_, i) => ({
-      id: `quota-${i}`,
-      ruleId: 'r1',
-      ruleName: 'A',
-      severity: 'warning' as const,
-      status: 'firing' as const,
-      message: `alert ${i}`,
-      details: {},
-      firedAt: '2024-01-01T00:00:00Z',
-    }))
-    localStorage.setItem('kc_alerts', JSON.stringify(alerts))
-
-    // Make setItem always throw QuotaExceededError for alerts
-    const originalSetItem = localStorage.setItem.bind(localStorage)
-    vi.spyOn(localStorage, 'setItem').mockImplementation((key: string, value: string) => {
-      if (key === 'kc_alerts') {
-        throw new DOMException('quota exceeded', 'QuotaExceededError')
-      }
-      return originalSetItem(key, value)
-    })
-
-    const { result } = renderHook(() => useAlertsContext(), { wrapper })
-
-    // Trigger a write
-    act(() => {
-      result.current.deleteAlert('quota-0')
-    })
-
-    // After persistent failure, alerts key should be removed
-    // The mock clears it via localStorage.removeItem
-    expect(result.current).toBeDefined()
-  })
-
-  // ── A14. Periodic evaluation fires on 30-second interval ─────────────
-
-  it('triggers periodic evaluation every 30 seconds', async () => {
-    const { result } = renderHook(() => useAlertsContext(), { wrapper })
-
-    // Advance past initial 1-second delay
-    await act(async () => {
-      vi.advanceTimersByTime(1100)
-    })
-
-    // Advance to 31 seconds — should trigger another evaluation
-    await act(async () => {
-      vi.advanceTimersByTime(30000)
-    })
-
-    // Just verify it doesn't crash after multiple evaluation cycles
-    expect(result.current.isEvaluating).toBe(false)
   })
 })
