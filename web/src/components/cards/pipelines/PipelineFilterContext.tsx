@@ -99,6 +99,8 @@ export interface PipelineFilterState {
   isDemoMode: boolean
   /** Timestamp of the last filter/config change */
   lastUpdated: number | null
+  /** True while the server repo list has never been refreshed (initial load). */
+  isRepoListLoading: boolean
 }
 
 const PipelineFilterCtx = createContext<PipelineFilterState | null>(null)
@@ -238,6 +240,7 @@ export function PipelineFilterProvider({ children, initialRepo }: { children: Re
     resetToDefaults,
     isDemoMode,
     lastUpdated,
+    isRepoListLoading: repoListUpdatedAt === null,
   }), [
     selectedRepos,
     toggleRepo,

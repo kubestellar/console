@@ -2,7 +2,7 @@
 // Pure UI component — renders AI assistant interface; no data fetching.
 // Demo data support provided by Kubectl card.
 import { useState } from 'react'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, Loader2 } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { useTranslation } from 'react-i18next'
 
@@ -23,7 +23,11 @@ export function AIAssistantPanel({
   return (
     <div className="mb-4 p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
       <div className="flex items-center gap-2 mb-2">
-        <Sparkles className="w-4 h-4 text-purple-400" />
+        {isExecuting ? (
+          <Loader2 className="w-4 h-4 text-purple-400 animate-spin" aria-label="Generating…" />
+        ) : (
+          <Sparkles className="w-4 h-4 text-purple-400" />
+        )}
         <span className="text-sm font-medium text-purple-300">{t('cards:kubectl.aiAssist')}</span>
       </div>
       <input
