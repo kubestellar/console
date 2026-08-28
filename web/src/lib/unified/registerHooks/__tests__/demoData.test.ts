@@ -65,7 +65,7 @@ describe('DEMO_HOOK_TABLE', () => {
     // The pattern in the table is: array-typed exports are inlined,
     // object-typed exports are wrapped as `[DEMO_FOO]`. A .length of 1
     // where the element is a plain object confirms the wrapper form.
-    for (const { name, data } of DEMO_HOOK_TABLE) {
+    for (const { data } of DEMO_HOOK_TABLE) {
       if (data.length === 1 && data[0] && typeof data[0] === 'object' && !Array.isArray(data[0])) {
         expect(data[0]).toBeTruthy()
       }
