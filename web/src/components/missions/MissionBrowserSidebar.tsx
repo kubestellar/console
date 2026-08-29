@@ -131,6 +131,8 @@ export function MissionBrowserSidebar({
     <>
       <div
         data-testid="mission-tree"
+        role="tree"
+        aria-label={t('missionBrowser.treeAriaLabel', { defaultValue: 'Mission source tree' })}
         className="hidden md:flex flex-col border-r border-border bg-card overflow-y-auto"
         style={{ width: SIDEBAR_WIDTH, minWidth: SIDEBAR_WIDTH }}
       >

@@ -200,7 +200,7 @@ function StandaloneOrbitDialogInner({ onClose, prefill }: StandaloneOrbitDialogP
                         <span className="text-xs text-foreground truncate">{c.name}</span>
                         <span className={cn(
                           'ml-auto text-[10px] shrink-0',
-                          c.healthy ? 'text-green-400' : 'text-red-400',
+                          c.healthy ? 'text-status-success' : 'text-status-error',
                         )}>
                           {c.healthy ? 'Healthy' : 'Unhealthy'}
                         </span>

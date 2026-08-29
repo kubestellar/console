@@ -1,6 +1,6 @@
 import React from 'react'
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { Tooltip } from '../Tooltip'
 
 describe('Tooltip', () => {
@@ -131,5 +131,23 @@ describe('Tooltip', () => {
       expect(bubble.className).toContain(expected[side])
       unmount()
     }
+  })
+
+  it('dismisses tooltip when Escape key is pressed and restores on pointer leave / blur', () => {
+    const { container } = render(
+      <Tooltip content="Helpful text">
+        <button data-testid="trigger">Trigger</button>
+      </Tooltip>,
+    )
+    const bubble = screen.getByRole('tooltip')
+    const wrapper = container.firstChild as HTMLElement
+
+    expect(bubble.className).toContain('group-hover:opacity-100')
+
+    fireEvent.keyDown(wrapper, { key: 'Escape' })
+    expect(bubble.className).not.toContain('group-hover:opacity-100')
+
+    fireEvent.pointerLeave(wrapper)
+    expect(bubble.className).toContain('group-hover:opacity-100')
   })
 })
