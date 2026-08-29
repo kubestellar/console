@@ -2835,9 +2835,11 @@ jobs:
             LINE_NO=$(echo "$line" | cut -d: -f2)
             # Get context: 20 lines after this button opening
             CONTEXT=$(sed -n "${LINE_NO},$((LINE_NO + 20))p" "$FILE" 2>/dev/null)
-            # Check if there's another button before the closing tag
-            NESTED=$(echo "$CONTEXT" | grep -n "<button" | tail -n +2 | head -1 || true)
-            if [ -n "$NESTED" ]; then
+            # Only flag if a second <button appears before the closing </button>
+            # i.e. the closing tag must not appear before the nested opening
+            CLOSE_LINE=$(echo "$CONTEXT" | grep -n "</button>" | head -1 | cut -d: -f1 || true)
+            NEXT_OPEN_LINE=$(echo "$CONTEXT" | grep -n "<button" | tail -n +2 | head -1 | cut -d: -f1 || true)
+            if [ -n "$NEXT_OPEN_LINE" ] && [ -n "$CLOSE_LINE" ] && [ "$NEXT_OPEN_LINE" -lt "$CLOSE_LINE" ] 2>/dev/null; then
               RELATIVE=$(echo "$FILE" | sed 's|^src/||')
               echo "  - \`${RELATIVE}:${LINE_NO}\` — potential nested button"
             fi
@@ -2869,8 +2871,10 @@ jobs:
             FILE=$(echo "$line" | cut -d: -f1)
             LINE_NO=$(echo "$line" | cut -d: -f2)
             CONTEXT=$(sed -n "${LINE_NO},$((LINE_NO + 10))p" "$FILE" 2>/dev/null)
-            NESTED=$(echo "$CONTEXT" | grep -E "<div|<section|<article|<header|<footer" | head -1 || true)
-            if [ -n "$NESTED" ]; then
+            # Only flag if the block element appears before </p> closes the paragraph
+            CLOSE_LINE=$(echo "$CONTEXT" | grep -n "</p>" | head -1 | cut -d: -f1 || true)
+            BLOCK_LINE=$(echo "$CONTEXT" | grep -nE "<div|<section|<article|<header|<footer" | head -1 | cut -d: -f1 || true)
+            if [ -n "$BLOCK_LINE" ] && { [ -z "$CLOSE_LINE" ] || { [ -n "$CLOSE_LINE" ] && [ "$BLOCK_LINE" -lt "$CLOSE_LINE" ] 2>/dev/null; }; }; then
               RELATIVE=$(echo "$FILE" | sed 's|^src/||')
               echo "  - \`${RELATIVE}:${LINE_NO}\` — block element inside <p>"
             fi
@@ -2917,8 +2921,8 @@ jobs:
           LI_OUTSIDE=$(grep -rn "<li" src/ --include="*.tsx" 2>/dev/null | while read line; do
             FILE=$(echo "$line" | cut -d: -f1)
             LINE_NO=$(echo "$line" | cut -d: -f2)
-            # Check 10 lines before for ul/ol
-            CONTEXT=$(sed -n "$((LINE_NO > 10 ? LINE_NO - 10 : 1)),${LINE_NO}p" "$FILE" 2>/dev/null)
+            # Check 30 lines before for ul/ol to accommodate multi-line list components
+            CONTEXT=$(sed -n "$((LINE_NO > 30 ? LINE_NO - 30 : 1)),${LINE_NO}p" "$FILE" 2>/dev/null)
             HAS_LIST=$(echo "$CONTEXT" | grep -E "<ul|<ol" || true)
             if [ -z "$HAS_LIST" ]; then
               RELATIVE=$(echo "$FILE" | sed 's|^src/||')
@@ -2935,8 +2939,10 @@ jobs:
             FILE=$(echo "$line" | cut -d: -f1)
             LINE_NO=$(echo "$line" | cut -d: -f2)
             CONTEXT=$(sed -n "${LINE_NO},$((LINE_NO + 5))p" "$FILE" 2>/dev/null)
-            NESTED=$(echo "$CONTEXT" | grep -oE "<h[1-6]" | wc -l | tr -d ' ')
-            if [ "$NESTED" -gt 1 ]; then
+            # Only flag if a second heading tag appears before the closing tag of the first
+            CLOSE_LINE=$(echo "$CONTEXT" | grep -noE "</h[1-6]>" | head -1 | cut -d: -f1 || true)
+            NEXT_OPEN_LINE=$(echo "$CONTEXT" | grep -noE "<h[1-6]" | tail -n +2 | head -1 | cut -d: -f1 || true)
+            if [ -n "$NEXT_OPEN_LINE" ] && [ -n "$CLOSE_LINE" ] && [ "$NEXT_OPEN_LINE" -lt "$CLOSE_LINE" ] 2>/dev/null; then
               RELATIVE=$(echo "$FILE" | sed 's|^src/||')
               echo "  - \`${RELATIVE}:${LINE_NO}\` — nested heading elements"
             fi
