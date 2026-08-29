@@ -780,8 +780,9 @@ test('rapid-nav — quick clicks through dashboards', async ({ page }, testInfo)
     const linkSelector = `[data-testid="sidebar-primary-nav"] a[href="${dashboard.route}"]`
     const link = page.locator(linkSelector).first()
     // CI runners are slower — give sidebar links more time to appear during rapid-nav
-    const RAPID_LINK_VISIBLE_MS = IS_CI ? 5_000 : 2_000
-    const RAPID_URL_CHANGE_MS = IS_CI ? 5_000 : 2_000
+    // Increased from 5_000 to 10_000 for CI due to continued timeouts on shared runners (#22697)
+    const RAPID_LINK_VISIBLE_MS = IS_CI ? 10_000 : 2_000
+    const RAPID_URL_CHANGE_MS = IS_CI ? 10_000 : 2_000
     try {
       await link.waitFor({ state: 'visible', timeout: RAPID_LINK_VISIBLE_MS })
     } catch (error) { console.error('Error:', error)
