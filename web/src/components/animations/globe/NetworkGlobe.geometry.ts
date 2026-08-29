@@ -191,23 +191,26 @@ export function buildDataFlows(clusters: ClusterConfig[]): DataFlow[] {
     })
   })
 
-  // Add typed cross-cluster flows for each adjacent cluster pair.
-  // Uses explicit index checks so this scales to any number of clusters
-  // without assuming a fixed topology.
-  const FLOW_PAIRS: Array<{ from: number; to: number; type: DataFlow["type"]; idOffset: number }> = [
-    { from: 2, to: 1, type: "workload", idOffset: 1 }, // distribution: third → second cluster
-    { from: 0, to: 1, type: "control",  idOffset: 2 }, // control:      first → second cluster
-    { from: 3, to: 2, type: "deploy",   idOffset: 3 }, // deploy:       fourth → third cluster
-  ]
-  for (const { from, to, type, idOffset } of FLOW_PAIRS) {
-    const src = clusters[from]
-    const dst = clusters[to]
-    if (src && dst) {
-      flows.push({
-        path: [src.position, dst.position],
-        id: clusters.length + idOffset,
-        type,
-      })
+  // Add typed cross-cluster flows for the deterministic four-cluster topology.
+  // Guarded by the same minimum cluster count as before (>= 4), with each
+  // pair also index-checked so the accesses stay safe for any array shape.
+  const MIN_CLUSTERS_FOR_DETERMINISTIC_FLOWS = 4
+  if (clusters.length >= MIN_CLUSTERS_FOR_DETERMINISTIC_FLOWS) {
+    const FLOW_PAIRS: Array<{ from: number; to: number; type: DataFlow["type"]; idOffset: number }> = [
+      { from: 2, to: 1, type: "workload", idOffset: 1 }, // distribution: third → second cluster
+      { from: 0, to: 1, type: "control",  idOffset: 2 }, // control:      first → second cluster
+      { from: 3, to: 2, type: "deploy",   idOffset: 3 }, // deploy:       fourth → third cluster
+    ]
+    for (const { from, to, type, idOffset } of FLOW_PAIRS) {
+      const src = clusters[from]
+      const dst = clusters[to]
+      if (src && dst) {
+        flows.push({
+          path: [src.position, dst.position],
+          id: clusters.length + idOffset,
+          type,
+        })
+      }
     }
   }
 
