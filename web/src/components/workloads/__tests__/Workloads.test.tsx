@@ -161,7 +161,7 @@ vi.mock('../../../lib/modals', () => ({
         confirmLabel?: string
         cancelLabel?: string
     }) => isOpen ? (
-        <div role="dialog">
+        <div role="dialog" onKeyDown={(e) => { if (e.key === 'Escape') onClose() }}>
             <span>{title}</span>
             <span>{message}</span>
             <button onClick={onClose}>{cancelLabel}</button>

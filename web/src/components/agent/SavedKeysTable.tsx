@@ -30,6 +30,7 @@ export function SavedKeysTable({
   const [newKeyValue, setNewKeyValue] = useState('')
   const [showKey, setShowKey] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [isDeletingKey, setIsDeletingKey] = useState(false)
   const [expandedAdvanced, setExpandedAdvanced] = useState<Set<string>>(new Set())
   const [baseURLDraft, setBaseURLDraft] = useState<Record<string, string>>({})
   const [baseURLSaved, setBaseURLSaved] = useState<Set<string>>(new Set())
@@ -143,6 +144,7 @@ export function SavedKeysTable({
   const handleDeleteKey = async (provider: string) => {
     try {
       setSaving(true)
+      setIsDeletingKey(true)
       const response = await fetch(`${KC_AGENT_URL}/settings/keys/${provider}`, {
         method: 'DELETE',
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
@@ -160,10 +162,12 @@ export function SavedKeysTable({
       }
 
       await onRefresh()
+      setDeleteConfirmProvider(null)
       emitApiKeyRemoved(provider)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t('agent.failedToDeleteKey'))
     } finally {
+      setIsDeletingKey(false)
       setSaving(false)
     }
   }
@@ -233,8 +237,7 @@ export function SavedKeysTable({
         onClose={() => setDeleteConfirmProvider(null)}
         onConfirm={() => {
           if (deleteConfirmProvider) {
-            handleDeleteKey(deleteConfirmProvider)
-            setDeleteConfirmProvider(null)
+            void handleDeleteKey(deleteConfirmProvider)
           }
         }}
         title={t('agent.removeKey')}
@@ -242,6 +245,7 @@ export function SavedKeysTable({
         confirmLabel={t('actions.delete')}
         cancelLabel={t('actions.cancel')}
         variant="danger"
+        isLoading={isDeletingKey}
       />
     </div>
   )

@@ -1,4 +1,4 @@
-import { memo, useState, useRef, useEffect, useCallback, useId, type MutableRefObject } from 'react'
+import { memo, useState, useRef, useEffect, useCallback, type KeyboardEvent, type MutableRefObject } from 'react'
 import {
   Folder, FolderOpen, FileJson, FileCode, FileText, ChevronRight, ChevronDown,
   Loader2, Globe, HardDrive, Trash2, Plus, RefreshCw, Info } from 'lucide-react'
@@ -55,17 +55,10 @@ function InfoPopover({ tooltip }: { tooltip: string }) {
   const [pinned, setPinned] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const popoverId = useId()
 
   const clearHoverTimer = useCallback(() => {
     if (hoverTimer.current) { clearTimeout(hoverTimer.current); hoverTimer.current = null }
   }, [])
-
-  const dismiss = useCallback(() => {
-    clearHoverTimer()
-    setPinned(false)
-    setShow(false)
-  }, [clearHoverTimer])
 
   useEffect(() => {
     if (!pinned) return
@@ -79,19 +72,6 @@ function InfoPopover({ tooltip }: { tooltip: string }) {
     return () => document.removeEventListener('mousedown', onClickOutside)
   }, [pinned])
 
-  // Escape dismisses the popover for keyboard users (WCAG 1.4.13 "Dismissible").
-  useEffect(() => {
-    if (!show) return
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation()
-        dismiss()
-      }
-    }
-    document.addEventListener('keydown', onKeyDown)
-    return () => document.removeEventListener('keydown', onKeyDown)
-  }, [show, dismiss])
-
   useEffect(() => clearHoverTimer, [clearHoverTimer])
 
   return (
@@ -100,26 +80,24 @@ function InfoPopover({ tooltip }: { tooltip: string }) {
       className="relative shrink-0"
       onMouseEnter={() => { clearHoverTimer(); hoverTimer.current = setTimeout(() => setShow(true), TOOLTIP_SHOW_DELAY_MS) }}
       onMouseLeave={() => { clearHoverTimer(); if (!pinned) setShow(false) }}
-      onFocus={() => { clearHoverTimer(); setShow(true) }}
-      onBlur={() => { clearHoverTimer(); if (!pinned) setShow(false) }}
     >
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); setPinned(p => !p); setShow(true) }}
-        className="p-2 min-h-11 min-w-11 rounded text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') {
+            setPinned(false)
+            setShow(false)
+          }
+        }}
+        className="p-2 min-h-11 min-w-11 rounded text-muted-foreground hover:text-foreground transition-colors"
         aria-label="More information"
         aria-expanded={show}
-        aria-haspopup="dialog"
-        aria-describedby={show ? popoverId : undefined}
       >
         <Info className="w-3.5 h-3.5" />
       </button>
       {show && (
-        <div
-          id={popoverId}
-          role="tooltip"
-          className="absolute right-0 top-full mt-1 z-50 w-72 rounded-lg border border-border bg-background shadow-lg p-3 text-xs text-muted-foreground leading-relaxed"
-        >
+        <div className="absolute right-0 top-full mt-1 z-50 w-72 rounded-lg border border-border bg-background shadow-lg p-3 text-xs text-muted-foreground leading-relaxed">
           {tooltip}
         </div>
       )}
@@ -170,6 +148,59 @@ export const TreeNodeItem = memo(function TreeNodeItem({
   }
 
   const showHeaderActions = showRemoveButton || showRefreshButton || (depth === 0 && !!onAdd) || (depth === 0 && !!node.infoTooltip)
+  const getNodeIds = () => Array.from(nodeRefs.current.keys())
+  const focusNodeByIndex = (nodeIds: string[], targetIndex: number) => {
+    const targetId = nodeIds[targetIndex]
+    if (!targetId) return
+    nodeRefs.current.get(targetId)?.focus()
+  }
+  const handleNodeActivate = () => {
+    if (isDir) onToggle(node)
+    onSelect(node)
+  }
+  const handleNodeKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
+    const nodeIds = getNodeIds()
+    const nodeIndex = nodeIds.indexOf(node.id)
+    if (nodeIndex < 0) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      focusNodeByIndex(nodeIds, nodeIndex + 1)
+      return
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      focusNodeByIndex(nodeIds, nodeIndex - 1)
+      return
+    }
+    if (e.key === 'Home') {
+      e.preventDefault()
+      focusNodeByIndex(nodeIds, 0)
+      return
+    }
+    if (e.key === 'End') {
+      e.preventDefault()
+      focusNodeByIndex(nodeIds, nodeIds.length - 1)
+      return
+    }
+    if (e.key === 'ArrowRight' && isDir) {
+      e.preventDefault()
+      if (!isExpanded) {
+        onToggle(node)
+        return
+      }
+      focusNodeByIndex(nodeIds, nodeIndex + 1)
+      return
+    }
+    if (e.key === 'ArrowLeft' && isDir && isExpanded) {
+      e.preventDefault()
+      onToggle(node)
+      return
+    }
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      handleNodeActivate()
+    }
+  }
 
   // Memoize inline style objects to avoid creating new references on each render
   const paddingStyle = { paddingLeft: `${depth * 16 + 8}px` }
@@ -186,10 +217,12 @@ export const TreeNodeItem = memo(function TreeNodeItem({
             }
             nodeRefs.current.delete(node.id)
           }}
-          onClick={() => {
-            if (isDir) onToggle(node)
-            onSelect(node)
-          }}
+          onClick={handleNodeActivate}
+          onKeyDown={handleNodeKeyDown}
+          role="treeitem"
+          aria-level={depth + 1}
+          aria-expanded={isDir ? isExpanded : undefined}
+          aria-selected={isSelected}
           className={cn(
             'w-full flex items-center gap-1.5 px-2 py-1.5 rounded-md text-sm transition-colors text-left',
             isSelected
@@ -255,33 +288,39 @@ export const TreeNodeItem = memo(function TreeNodeItem({
         {/* Root-level add button — rendered in the header row so it stays anchored to the header */}
         {depth === 0 && onAdd && (
           <button
+            type="button"
             onClick={(e) => { e.stopPropagation(); onAdd() }}
             className="p-2 min-h-11 min-w-11 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors shrink-0"
             title="Add"
+            aria-label="Add watched source"
           >
             <Plus className="w-3.5 h-3.5" />
           </button>
         )}
         {showRefreshButton && (
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation()
               onRefresh(node)
             }}
             className="p-1.5 min-h-8 min-w-8 rounded hover:bg-blue-500/20 text-muted-foreground hover:text-blue-400 transition-colors shrink-0"
             title="Refresh contents"
+            aria-label={`Refresh ${node.name}`}
           >
             <RefreshCw className={`w-3 h-3 ${node.loading ? 'animate-spin' : ''}`} />
           </button>
         )}
         {showRemoveButton && isDir && (
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation()
               onRemove(node)
             }}
             className="p-2 min-h-11 min-w-11 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors shrink-0"
             title="Remove from watched"
+            aria-label={`Remove ${node.name} from watched`}
           >
             <Trash2 className="w-3 h-3" />
           </button>
