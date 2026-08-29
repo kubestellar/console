@@ -191,29 +191,24 @@ export function buildDataFlows(clusters: ClusterConfig[]): DataFlow[] {
     })
   })
 
-  // Add some cross-cluster connections with specific types
-  // Guard: indices 0–3 must exist before accessing them directly
-  if (clusters.length >= 4) {
-    // Production to Edge (workload distribution)
-    flows.push({
-      path: [clusters[2].position, clusters[1].position],
-      id: clusters.length + 1,
-      type: "workload",
-    })
-
-    // Development to Edge (control commands)
-    flows.push({
-      path: [clusters[0].position, clusters[1].position],
-      id: clusters.length + 2,
-      type: "control",
-    })
-
-    // Test to Production (deployment pipeline)
-    flows.push({
-      path: [clusters[3].position, clusters[2].position],
-      id: clusters.length + 3,
-      type: "deploy",
-    })
+  // Add typed cross-cluster flows for each adjacent cluster pair.
+  // Uses explicit index checks so this scales to any number of clusters
+  // without assuming a fixed topology.
+  const FLOW_PAIRS: Array<{ from: number; to: number; type: DataFlow["type"]; idOffset: number }> = [
+    { from: 2, to: 1, type: "workload", idOffset: 1 }, // distribution: third → second cluster
+    { from: 0, to: 1, type: "control",  idOffset: 2 }, // control:      first → second cluster
+    { from: 3, to: 2, type: "deploy",   idOffset: 3 }, // deploy:       fourth → third cluster
+  ]
+  for (const { from, to, type, idOffset } of FLOW_PAIRS) {
+    const src = clusters[from]
+    const dst = clusters[to]
+    if (src && dst) {
+      flows.push({
+        path: [src.position, dst.position],
+        id: clusters.length + idOffset,
+        type,
+      })
+    }
   }
 
   // Add some other cross-cluster connections
