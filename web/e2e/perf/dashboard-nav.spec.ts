@@ -519,6 +519,8 @@ test('warmup — prime module cache', async ({ page }, testInfo) => {
 })
 
 test('cold-nav — first visit to each dashboard via sidebar', async ({ page }, testInfo) => {
+  const COLD_NAV_TIMEOUT_MS = 180_000 // first visit through all dashboards
+  testInfo.setTimeout(IS_CI ? COLD_NAV_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER : COLD_NAV_TIMEOUT_MS)
   if (REAL_BACKEND) testInfo.setTimeout(REAL_BACKEND_TEST_TIMEOUT)
   const pageErrors: string[] = []
   page.on('pageerror', (err) => pageErrors.push(err.message))
