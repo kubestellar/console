@@ -139,6 +139,7 @@ export function ComplianceSearchFilters({
             <button
               onClick={() => onSearchChange('')}
               className={cn('absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground z-10', TOUCH_TARGET_SIZE_CLASS)}
+              aria-label="Clear search"
             >
               <X className="w-4 h-4" />
             </button>
@@ -146,6 +147,8 @@ export function ComplianceSearchFilters({
         </div>
         <button
           onClick={onToggleFilters}
+          aria-expanded={showFilters}
+          aria-controls="compliance-filters-panel"
           className={cn(
             'flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm transition-colors',
             TOUCH_TARGET_HEIGHT_CLASS,
@@ -164,7 +167,7 @@ export function ComplianceSearchFilters({
         </button>
       </div>
       {showFilters && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
+        <div id="compliance-filters-panel" className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
           <Select
             value={statusFilter}
             onChange={e => onStatusChange(e.target.value)}
