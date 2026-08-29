@@ -19,9 +19,16 @@ vi.mock('../../../lib/modals', () => {
   const Content = ({ children }: { children: React.ReactNode }) => <div>{children}</div>
   const Footer = ({ children }: { children: React.ReactNode }) => <div>{children}</div>
 
-  const BaseModal = ({ isOpen, children }: { isOpen: boolean; children: React.ReactNode }) => {
+  const BaseModal = ({ isOpen, onClose, children }: { isOpen: boolean; onClose?: () => void; children: React.ReactNode }) => {
     if (!isOpen) return null
-    return <div data-testid="modal">{children}</div>
+    return (
+      <div
+        data-testid="modal"
+        onKeyDown={(e) => { if (e.key === 'Escape' && onClose) onClose() }}
+      >
+        {children}
+      </div>
+    )
   }
   BaseModal.Header = Header
   BaseModal.Content = Content

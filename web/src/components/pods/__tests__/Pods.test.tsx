@@ -148,11 +148,14 @@ vi.mock('../../../lib/kubectlProxy', () => ({
 
 // Mock ConfirmDialog so it renders its title/message inline (no portal/animation issues)
 vi.mock('../../../lib/modals/ConfirmDialog', () => ({
-  ConfirmDialog: ({ isOpen, onConfirm, title, confirmLabel }: {
-    isOpen: boolean; onConfirm: () => void; title: string; confirmLabel: string
+  ConfirmDialog: ({ isOpen, onClose, onConfirm, title, confirmLabel }: {
+    isOpen: boolean; onClose?: () => void; onConfirm: () => void; title: string; confirmLabel: string
   }) =>
     isOpen ? (
-      <div data-testid="confirm-dialog">
+      <div
+        data-testid="confirm-dialog"
+        onKeyDown={(e) => { if (e.key === 'Escape' && onClose) onClose() }}
+      >
         <span>{title}</span>
         <button onClick={onConfirm}>{confirmLabel}</button>
       </div>

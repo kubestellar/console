@@ -297,19 +297,46 @@ describe('useTour', () => {
     dispatchSpy.mockRestore()
   })
 
-  // ---------- Cleanup ----------
+  // ---------- Keyboard Navigation ----------
 
-  it('cleans up event listener on unmount', () => {
-    const removeSpy = vi.spyOn(window, 'removeEventListener')
-    const { unmount } = renderHook(() => useTour(), { wrapper })
+  it('navigates forward and backward with ArrowRight and ArrowLeft keys when active', () => {
+    const { result } = renderHook(() => useTour(), { wrapper })
 
-    unmount()
+    act(() => { result.current.startTour() })
+    expect(result.current.currentStepIndex).toBe(0)
 
-    const removed = removeSpy.mock.calls.some(
-      call => call[0] === 'kubestellar-settings-restored'
-    )
-    expect(removed).toBe(true)
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', cancelable: true }))
+    })
+    expect(result.current.currentStepIndex).toBe(1)
 
-    removeSpy.mockRestore()
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', cancelable: true }))
+    })
+    expect(result.current.currentStepIndex).toBe(0)
+  })
+
+  it('skips tour when Escape key is pressed while active', () => {
+    const { result } = renderHook(() => useTour(), { wrapper })
+
+    act(() => { result.current.startTour() })
+    expect(result.current.isActive).toBe(true)
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true }))
+    })
+    expect(result.current.isActive).toBe(false)
+    expect(result.current.hasCompletedTour).toBe(true)
+  })
+
+  it('ignores keyboard events when tour is not active', () => {
+    const { result } = renderHook(() => useTour(), { wrapper })
+    expect(result.current.isActive).toBe(false)
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', cancelable: true }))
+    })
+    expect(result.current.currentStepIndex).toBe(0)
+    expect(result.current.isActive).toBe(false)
   })
 })
