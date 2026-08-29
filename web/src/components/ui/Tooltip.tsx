@@ -22,7 +22,7 @@
  *   </Tooltip>
  */
 
-import React, { type ReactNode, useId } from 'react'
+import React, { type ReactNode, useId, useState } from 'react'
 import { cn } from '../../lib/cn'
 
 // ── Named constants ─────────────────────────────────────────────────────────
@@ -104,9 +104,25 @@ export function Tooltip({
   disabled,
 }: TooltipProps) {
   const tooltipId = useId()
+  const [isDismissed, setIsDismissed] = useState(false)
 
   if (disabled || content == null || content === '') {
     return <>{children}</>
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape' && !isDismissed) {
+      e.stopPropagation()
+      setIsDismissed(true)
+    }
+  }
+
+  const handlePointerLeave = () => {
+    if (isDismissed) setIsDismissed(false)
+  }
+
+  const handleBlur = () => {
+    if (isDismissed) setIsDismissed(false)
   }
 
   // Clone the child so `aria-describedby` lands on the actual focusable
@@ -136,7 +152,12 @@ export function Tooltip({
     : children
 
   return (
-    <div className={cn('group relative inline-flex', wrapperClassName)}>
+    <div
+      className={cn('group relative inline-flex', wrapperClassName)}
+      onKeyDown={handleKeyDown}
+      onPointerLeave={handlePointerLeave}
+      onBlur={handleBlur}
+    >
       {childWithAria}
       <span
         id={tooltipId}
@@ -144,7 +165,8 @@ export function Tooltip({
         className={cn(
           'absolute z-dropdown',
           SIDE_POSITION_MAP[side],
-          'pointer-events-none opacity-0 group-hover:opacity-100 group-focus-within:opacity-100',
+          'pointer-events-none opacity-0',
+          !isDismissed && 'group-hover:opacity-100 group-focus-within:opacity-100',
           'transition-opacity',
           TOOLTIP_FADE_DURATION_CLASS,
           'bg-card text-card-foreground border border-border shadow-lg',
