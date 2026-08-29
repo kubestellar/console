@@ -25,6 +25,8 @@ interface ClusterCostsRatesPanelProps {
   memoryCost: number
   gpuCost: number
   providerBreakdown: Record<string, number>
+  /** Forwarded from parent ClusterCosts — true when rendering demo/fallback data */
+  isDemoData?: boolean
 }
 
 export function ClusterCostsRatesPanel({
@@ -37,6 +39,7 @@ export function ClusterCostsRatesPanel({
   memoryCost,
   gpuCost,
   providerBreakdown,
+  isDemoData = false,
 }: ClusterCostsRatesPanelProps) {
   const { t } = useTranslation(['cards', 'common'])
 
