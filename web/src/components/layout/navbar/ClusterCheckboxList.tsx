@@ -93,11 +93,11 @@ export function ClusterCheckboxList({
                 ) : isUnreachable ? (
                   <WifiOff className="w-3 h-3 text-yellow-400 shrink-0" />
                 ) : isHealthy ? (
-                  <CheckCircle2 className="w-3 h-3 text-green-400 shrink-0" />
+                  <CheckCircle2 className="w-3 h-3 text-status-success shrink-0" />
                 ) : (
-                  <AlertCircle className="w-3 h-3 text-red-400 shrink-0" />
+                  <AlertCircle className="w-3 h-3 text-status-error shrink-0" />
                 )}
-                <span className={cn('text-sm truncate', isUnreachable ? 'text-yellow-400' : !isHealthy && !isLoading && 'text-red-400')}>{cluster}</span>
+                <span className={cn('text-sm truncate', isUnreachable ? 'text-yellow-400' : !isHealthy && !isLoading && 'text-status-error')}>{cluster}</span>
               </button>
             )
           })

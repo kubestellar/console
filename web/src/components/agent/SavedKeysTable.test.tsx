@@ -41,15 +41,16 @@ const { emitApiKeyConfigured, emitApiKeyRemoved, emitConversionStep } = vi.hoist
 }))
 vi.mock('../../lib/analytics', () => ({ emitApiKeyConfigured, emitApiKeyRemoved, emitConversionStep }))
 
-let confirmDialogProps: { isOpen: boolean; onConfirm: () => void; onClose: () => void; message?: React.ReactNode } | null = null
+let confirmDialogProps: { isOpen: boolean; onConfirm: () => void; onClose: () => void; message?: React.ReactNode; isLoading?: boolean } | null = null
 vi.mock('../../lib/modals', () => ({
-  ConfirmDialog: (props: { isOpen: boolean; onConfirm: () => void; onClose: () => void; message?: React.ReactNode }) => {
+  ConfirmDialog: (props: { isOpen: boolean; onConfirm: () => void; onClose: () => void; message?: React.ReactNode; isLoading?: boolean }) => {
     confirmDialogProps = props
     if (!props.isOpen) return null
     return (
       <div data-testid="confirm-dialog">
         <button onClick={props.onConfirm}>confirm</button>
         <button onClick={props.onClose}>cancel</button>
+        <span data-testid="confirm-loading">{String(Boolean(props.isLoading))}</span>
       </div>
     )
   },
@@ -188,5 +189,21 @@ describe('SavedKeysTable', () => {
       expect.stringContaining('/settings/keys/groq'),
       expect.objectContaining({ method: 'DELETE' }),
     )
+  })
+
+  it('shows loading state while delete request is in progress', async () => {
+    let resolveDelete: (() => void) | null = null
+    const pendingDelete = new Promise<Response>((resolve) => {
+      resolveDelete = () => resolve({ ok: true, json: async () => ({}) } as Response)
+    })
+    vi.mocked(globalThis.fetch).mockReturnValue(pendingDelete)
+
+    render(<SavedKeysTable {...makeProps()} />)
+    fireEvent.click(screen.getByTitle('Remove key'))
+    fireEvent.click(screen.getByText('confirm'))
+
+    expect(screen.getByTestId('confirm-loading')).toHaveTextContent('true')
+    resolveDelete?.()
+    await waitFor(() => expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument())
   })
 })
