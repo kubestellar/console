@@ -184,6 +184,7 @@ function MissionBrowserRecommendedTabInner({
                 {filteredRecommendations.length}
               </span>
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation()
                   resetMissionCache()

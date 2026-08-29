@@ -26,8 +26,8 @@ export function ApprovalCard({
             onApprove(action.confirmToken).catch((e) => setError(e instanceof Error ? e.message : 'approval failed')).finally(() => setBusy(false))
           }}
           disabled={busy}
-          className="px-3 py-1"
-          style={{ background: 'var(--s-success)', color: 'var(--s-success-foreground)', border: 'none', borderRadius: 'var(--s-rs)', fontSize: 11, fontWeight: 700, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}
+          className="px-3 py-1 text-[11px]"
+          style={{ background: 'var(--s-success)', color: 'var(--s-success-foreground)', border: 'none', borderRadius: 'var(--s-rs)', fontWeight: 700, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}
         >
           {busy ? '...' : 'Approve'}
         </button>
@@ -38,13 +38,13 @@ export function ApprovalCard({
             onReject('Rejected by user').catch((e) => setError(e instanceof Error ? e.message : 'reject failed')).finally(() => setBusy(false))
           }}
           disabled={busy}
-          className="px-3 py-1"
-          style={{ background: 'none', color: 'var(--s-critical)', border: '1px solid var(--s-critical)', borderRadius: 'var(--s-rs)', fontSize: 11, fontWeight: 600, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}
+          className="px-3 py-1 text-[11px]"
+          style={{ background: 'none', color: 'var(--s-critical)', border: '1px solid var(--s-critical)', borderRadius: 'var(--s-rs)', fontWeight: 600, cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1 }}
         >
           Reject
         </button>
       </div>
-      {error && <div className="mt-1.5" style={{ fontSize: 11, color: 'var(--s-critical)' }}>{error}</div>}
+      {error && <div className="mt-1.5 text-[11px]" style={{ color: 'var(--s-critical)' }}>{error}</div>}
     </div>
   )
 }
