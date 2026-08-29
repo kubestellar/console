@@ -95,9 +95,9 @@ export function ClusterCheckboxList({
                 ) : isHealthy ? (
                   <CheckCircle2 className="w-3 h-3 text-green-400 shrink-0" />
                 ) : (
-                  <AlertCircle className="w-3 h-3 text-orange-400 shrink-0" />
+                  <AlertCircle className="w-3 h-3 text-red-400 shrink-0" />
                 )}
-                <span className={cn('text-sm truncate', isUnreachable ? 'text-yellow-400' : !isHealthy && !isLoading && 'text-orange-400')}>{cluster}</span>
+                <span className={cn('text-sm truncate', isUnreachable ? 'text-yellow-400' : !isHealthy && !isLoading && 'text-red-400')}>{cluster}</span>
               </button>
             )
           })

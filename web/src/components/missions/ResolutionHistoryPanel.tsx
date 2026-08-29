@@ -219,6 +219,7 @@ function ResolutionHistoryPanelInner({ onApplyResolution }: ResolutionHistoryPan
           {resolutions.length > 0 && (
             <div className="mb-4">
               <button
+                type="button"
                 onClick={() => setShowPersonal(!showPersonal)}
                 className="w-full flex items-center gap-2 text-xs text-muted-foreground mb-2 hover:text-foreground transition-colors"
               >
@@ -254,6 +255,7 @@ function ResolutionHistoryPanelInner({ onApplyResolution }: ResolutionHistoryPan
           {sharedResolutions.length > 0 && (
             <div>
               <button
+                type="button"
                 onClick={() => setShowShared(!showShared)}
                 className="w-full flex items-center gap-2 text-xs text-muted-foreground mb-2 hover:text-foreground transition-colors"
               >
