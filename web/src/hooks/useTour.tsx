@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useEffect, useMemo, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useReducer, useEffect, useMemo, useCallback, ReactNode, useRef } from 'react'
 import { useMobile } from './useMobile'
 import { SETTINGS_CHANGED_EVENT, SETTINGS_RESTORED_EVENT } from '../lib/settingsSync'
 import { emitTourStarted, emitTourCompleted, emitTourSkipped } from '../lib/analytics'
@@ -187,25 +187,36 @@ export function TourProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  // Use refs to hold latest callback functions without recreating listeners
+  const nextStepRef = useRef(nextStep)
+  const prevStepRef = useRef(prevStep)
+  const skipTourRef = useRef(skipTour)
+
+  useEffect(() => {
+    nextStepRef.current = nextStep
+    prevStepRef.current = prevStep
+    skipTourRef.current = skipTour
+  }, [nextStep, prevStep, skipTour])
+
   useEffect(() => {
     if (!isActive) return
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight') {
         e.preventDefault()
-        nextStep()
+        nextStepRef.current()
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault()
-        prevStep()
+        prevStepRef.current()
       } else if (e.key === 'Escape') {
         e.preventDefault()
-        skipTour()
+        skipTourRef.current()
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isActive, nextStep, prevStep, skipTour])
+  }, [isActive])
 
   const contextValue = useMemo(() => ({
     isActive,
