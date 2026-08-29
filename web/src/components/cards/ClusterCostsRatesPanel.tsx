@@ -39,7 +39,6 @@ export function ClusterCostsRatesPanel({
   memoryCost,
   gpuCost,
   providerBreakdown,
-  isDemoData = false,
 }: ClusterCostsRatesPanelProps) {
   const { t } = useTranslation(['cards', 'common'])
 
