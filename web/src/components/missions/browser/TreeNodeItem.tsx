@@ -1,4 +1,4 @@
-import { memo, useState, useRef, useEffect, useCallback, type MutableRefObject } from 'react'
+import { memo, useState, useRef, useEffect, useCallback, useId, type MutableRefObject } from 'react'
 import {
   Folder, FolderOpen, FileJson, FileCode, FileText, ChevronRight, ChevronDown,
   Loader2, Globe, HardDrive, Trash2, Plus, RefreshCw, Info } from 'lucide-react'
@@ -55,10 +55,17 @@ function InfoPopover({ tooltip }: { tooltip: string }) {
   const [pinned, setPinned] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const popoverId = useId()
 
   const clearHoverTimer = useCallback(() => {
     if (hoverTimer.current) { clearTimeout(hoverTimer.current); hoverTimer.current = null }
   }, [])
+
+  const dismiss = useCallback(() => {
+    clearHoverTimer()
+    setPinned(false)
+    setShow(false)
+  }, [clearHoverTimer])
 
   useEffect(() => {
     if (!pinned) return
@@ -72,6 +79,19 @@ function InfoPopover({ tooltip }: { tooltip: string }) {
     return () => document.removeEventListener('mousedown', onClickOutside)
   }, [pinned])
 
+  // Escape dismisses the popover for keyboard users (WCAG 1.4.13 "Dismissible").
+  useEffect(() => {
+    if (!show) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation()
+        dismiss()
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [show, dismiss])
+
   useEffect(() => clearHoverTimer, [clearHoverTimer])
 
   return (
@@ -80,16 +100,26 @@ function InfoPopover({ tooltip }: { tooltip: string }) {
       className="relative shrink-0"
       onMouseEnter={() => { clearHoverTimer(); hoverTimer.current = setTimeout(() => setShow(true), TOOLTIP_SHOW_DELAY_MS) }}
       onMouseLeave={() => { clearHoverTimer(); if (!pinned) setShow(false) }}
+      onFocus={() => { clearHoverTimer(); setShow(true) }}
+      onBlur={() => { clearHoverTimer(); if (!pinned) setShow(false) }}
     >
       <button
+        type="button"
         onClick={(e) => { e.stopPropagation(); setPinned(p => !p); setShow(true) }}
-        className="p-2 min-h-11 min-w-11 rounded text-muted-foreground hover:text-foreground transition-colors"
+        className="p-2 min-h-11 min-w-11 rounded text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         aria-label="More information"
+        aria-expanded={show}
+        aria-haspopup="dialog"
+        aria-describedby={show ? popoverId : undefined}
       >
         <Info className="w-3.5 h-3.5" />
       </button>
       {show && (
-        <div className="absolute right-0 top-full mt-1 z-50 w-72 rounded-lg border border-border bg-background shadow-lg p-3 text-xs text-muted-foreground leading-relaxed">
+        <div
+          id={popoverId}
+          role="tooltip"
+          className="absolute right-0 top-full mt-1 z-50 w-72 rounded-lg border border-border bg-background shadow-lg p-3 text-xs text-muted-foreground leading-relaxed"
+        >
           {tooltip}
         </div>
       )}
