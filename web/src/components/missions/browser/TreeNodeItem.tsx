@@ -80,16 +80,24 @@ function InfoPopover({ tooltip }: { tooltip: string }) {
       className="relative shrink-0"
       onMouseEnter={() => { clearHoverTimer(); hoverTimer.current = setTimeout(() => setShow(true), TOOLTIP_SHOW_DELAY_MS) }}
       onMouseLeave={() => { clearHoverTimer(); if (!pinned) setShow(false) }}
+      onKeyDown={(e) => { if (e.key === 'Escape') { setPinned(false); setShow(false) } }}
     >
       <button
         onClick={(e) => { e.stopPropagation(); setPinned(p => !p); setShow(true) }}
+        onKeyDown={(e) => { if (e.key === 'Escape') { setPinned(false); setShow(false) } }}
         className="p-2 min-h-11 min-w-11 rounded text-muted-foreground hover:text-foreground transition-colors"
         aria-label="More information"
+        aria-expanded={show}
+        aria-haspopup="dialog"
       >
         <Info className="w-3.5 h-3.5" />
       </button>
       {show && (
-        <div className="absolute right-0 top-full mt-1 z-50 w-72 rounded-lg border border-border bg-background shadow-lg p-3 text-xs text-muted-foreground leading-relaxed">
+        <div
+          role="dialog"
+          aria-label="More information"
+          className="absolute right-0 top-full mt-1 z-50 w-72 rounded-lg border border-border bg-background shadow-lg p-3 text-xs text-muted-foreground leading-relaxed"
+        >
           {tooltip}
         </div>
       )}
@@ -160,6 +168,9 @@ export const TreeNodeItem = memo(function TreeNodeItem({
             if (isDir) onToggle(node)
             onSelect(node)
           }}
+          role="treeitem"
+          aria-expanded={isDir ? isExpanded : undefined}
+          aria-selected={isSelected}
           className={cn(
             'w-full flex items-center gap-1.5 px-2 py-1.5 rounded-md text-sm transition-colors text-left',
             isSelected
