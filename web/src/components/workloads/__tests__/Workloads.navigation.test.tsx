@@ -152,7 +152,10 @@ vi.mock('../../cards/llmd/shared/PortalTooltip', () => ({
 }))
 
 vi.mock('../../../lib/modals', () => ({
-  ConfirmDialog: () => null,
+  ConfirmDialog: ({ isOpen, onClose }: { isOpen?: boolean; onClose?: () => void }) =>
+    isOpen ? (
+      <div role="dialog" onKeyDown={(e) => { if (e.key === 'Escape' && onClose) onClose() }} />
+    ) : null,
 }))
 
 vi.mock('../../ui/Toast', () => ({
