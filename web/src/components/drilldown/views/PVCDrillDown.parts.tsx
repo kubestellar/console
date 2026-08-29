@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { HardDrive, Code, Info, Tag, Loader2, Copy, Check, ChevronLeft, Layers, Server, Database } from 'lucide-react'
+import { HardDrive, Code, Info, Tag, Loader2, Copy, Check, ChevronLeft, Layers, Server, Database, AlertCircle, RefreshCw } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { useTranslation } from 'react-i18next'
@@ -21,6 +21,32 @@ export function getTabs(t: TFunction): { id: TabType; label: string; icon: typeo
     { id: 'describe', label: String(t('drilldown.describe', 'Describe')), icon: Code },
     { id: 'yaml', label: 'YAML', icon: Code },
   ]
+}
+
+interface DrillDownErrorBannerProps {
+  message: string
+  onRetry: () => void
+}
+
+export function DrillDownErrorBanner({ message, onRetry }: DrillDownErrorBannerProps) {
+  const { t } = useTranslation()
+  return (
+    <div
+      role="alert"
+      className="flex items-center gap-3 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+    >
+      <AlertCircle className="w-4 h-4 shrink-0" />
+      <span className="flex-1">{message}</span>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="flex items-center gap-1.5 rounded-md bg-red-500/20 px-3 py-1.5 text-xs font-medium text-red-200 transition-colors hover:bg-red-500/30"
+      >
+        <RefreshCw className="w-3 h-3" />
+        {t('common.retry', 'Retry')}
+      </button>
+    </div>
+  )
 }
 
 interface CopyButtonProps {

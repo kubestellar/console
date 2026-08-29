@@ -1,3 +1,4 @@
+// ai-quality-ignore — side-effect bridge only; returns null with no visible UI, no async data loading
 import { useEffect, useRef } from 'react'
 import { useMissions } from '../../hooks/useMissions'
 import { INACTIVE_MISSION_STATUSES } from '../../hooks/useMissionTypes'

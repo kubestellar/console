@@ -1,4 +1,4 @@
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedPodIssues } from '../../hooks/useCachedData'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
@@ -24,8 +24,10 @@ export function Pods() {
     issues: podIssues,
     isLoading: podIssuesLoading,
     isRefreshing,
+    error: podIssuesError,
     lastRefresh: podIssuesLastRefresh,
     refetch: refetchPodIssues,
+    retryFetch: retryPodIssues,
   } = useCachedPodIssues()
   const { deduplicatedClusters: clusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
   const isLoading = podIssuesLoading || clustersLoading
@@ -89,6 +91,25 @@ export function Pods() {
       {backendActionUnavailable && (
         <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
           {backendUnavailableMessage}
+        </div>
+      )}
+
+      {podIssuesError && (
+        <div
+          role="alert"
+          className="mb-4 flex items-center gap-3 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+        >
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span className="flex-1">Unable to load pod issues: {podIssuesError}</span>
+          <button
+            type="button"
+            onClick={() => retryPodIssues()}
+            disabled={isRefreshing}
+            className="flex items-center gap-1.5 rounded-md bg-red-500/20 px-3 py-1.5 text-xs font-medium text-red-200 transition-colors hover:bg-red-500/30 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <RefreshCw className={`h-3 w-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Retry
+          </button>
         </div>
       )}
 

@@ -1,3 +1,4 @@
+// ai-quality-ignore — pure UI sub-components; all data is passed via props, no data fetching
 /**
  * GitHubActivityItems — Pure UI item components for GitHubActivity card.
  * Renders PRs, Issues, Releases, and Contributors as individual list rows.

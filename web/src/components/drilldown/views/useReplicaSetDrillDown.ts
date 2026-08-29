@@ -25,6 +25,8 @@ export interface UseReplicaSetDrillDownResult {
   yamlLoading: boolean
   copiedField: string | null
   handleCopy: (field: string, value: string) => void
+  error: string | null
+  retry: () => void
 }
 
 /**
@@ -51,6 +53,7 @@ export function useReplicaSetDrillDown(
   const [yamlOutput, setYamlOutput] = useState<string | null>(null)
   const [yamlLoading, setYamlLoading] = useState(false)
   const [copiedField, setCopiedField] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const copiedFieldTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Fetch ReplicaSet data
@@ -101,37 +104,64 @@ export function useReplicaSetDrillDown(
           }
         }
       }
-    } catch {
-      // Ignore fetch errors
+      setError(null)
+    } catch (err) {
+      console.error('[ReplicaSetDrillDown] Failed to load ReplicaSet data', err)
+      setError(err instanceof Error ? err.message : 'Failed to load ReplicaSet data')
     }
   }, [agentConnected, runKubectl, replicasetName, namespace])
 
   const fetchEvents = useCallback(async () => {
     if (!agentConnected || eventsOutput) return
     setEventsLoading(true)
-    const output = await runKubectl(['get', 'events', '-n', namespace, '--field-selector', `involvedObject.name=${replicasetName}`, '-o', 'wide'])
-    setEventsOutput(output)
-    setEventsLoading(false)
+    try {
+      const output = await runKubectl(['get', 'events', '-n', namespace, '--field-selector', `involvedObject.name=${replicasetName}`, '-o', 'wide'])
+      setEventsOutput(output)
+    } catch (err) {
+      console.error('[ReplicaSetDrillDown] Failed to load events', err)
+      setError(err instanceof Error ? err.message : 'Failed to load events')
+    } finally {
+      setEventsLoading(false)
+    }
   }, [agentConnected, eventsOutput, runKubectl, namespace, replicasetName])
 
   const fetchDescribe = useCallback(async () => {
     if (!agentConnected || describeOutput) return
     setDescribeLoading(true)
-    const output = await runKubectl(['describe', 'replicaset', replicasetName, '-n', namespace])
-    setDescribeOutput(output)
-    setDescribeLoading(false)
+    try {
+      const output = await runKubectl(['describe', 'replicaset', replicasetName, '-n', namespace])
+      setDescribeOutput(output)
+    } catch (err) {
+      console.error('[ReplicaSetDrillDown] Failed to describe ReplicaSet', err)
+      setError(err instanceof Error ? err.message : 'Failed to describe ReplicaSet')
+    } finally {
+      setDescribeLoading(false)
+    }
   }, [agentConnected, describeOutput, runKubectl, replicasetName, namespace])
 
   const fetchYaml = useCallback(async () => {
     if (!agentConnected || yamlOutput) return
     setYamlLoading(true)
-    const output = await runKubectl(['get', 'replicaset', replicasetName, '-n', namespace, '-o', 'yaml'])
-    setYamlOutput(output)
-    setYamlLoading(false)
+    try {
+      const output = await runKubectl(['get', 'replicaset', replicasetName, '-n', namespace, '-o', 'yaml'])
+      setYamlOutput(output)
+    } catch (err) {
+      console.error('[ReplicaSetDrillDown] Failed to load YAML', err)
+      setError(err instanceof Error ? err.message : 'Failed to load YAML')
+    } finally {
+      setYamlLoading(false)
+    }
   }, [agentConnected, yamlOutput, runKubectl, replicasetName, namespace])
 
   // Track if we've already loaded data to prevent refetching
   const hasLoadedRef = useRef(false)
+  const [retryToken, setRetryToken] = useState(0)
+
+  const retry = useCallback(() => {
+    hasLoadedRef.current = false
+    setError(null)
+    setRetryToken(token => token + 1)
+  }, [])
 
   // Pre-fetch tab data when agent connects
   useEffect(() => {
@@ -153,7 +183,7 @@ export function useReplicaSetDrillDown(
     }
 
     loadData()
-  }, [agentConnected, fetchData, fetchDescribe, fetchEvents, fetchYaml])
+  }, [agentConnected, fetchData, fetchDescribe, fetchEvents, fetchYaml, retryToken])
 
   useEffect(() => {
     return () => {
@@ -190,5 +220,7 @@ export function useReplicaSetDrillDown(
     yamlLoading,
     copiedField,
     handleCopy,
+    error,
+    retry,
   }
 }

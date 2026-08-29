@@ -1,3 +1,4 @@
+// ai-quality-ignore — context provider; manages filter/repo state only, no async UI rendering
 /**
  * PipelineFilterContext — dashboard-level shared filter + repo CRUD for
  * the GitHub Pipelines cards.
