@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
-import { FileText, Code, Info, Tag, Zap, Loader2, Copy, Check, ChevronLeft, Layers, Server, Box } from 'lucide-react'
+import { FileText, Code, Info, Tag, Zap, Loader2, Copy, Check, ChevronLeft, Layers, Server, Box, AlertCircle, RefreshCw } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { getHealthColors } from '../../../lib/statusColors'
@@ -40,6 +40,8 @@ export function ReplicaSetDrillDown({ data }: Props) {
     yamlLoading,
     copiedField,
     handleCopy,
+    error,
+    retry,
   } = useReplicaSetDrillDown(cluster, namespace, replicasetName)
 
   const isHealthy = readyReplicas === replicas && replicas > 0
@@ -123,6 +125,24 @@ export function ReplicaSetDrillDown({ data }: Props) {
 
       {/* Tab Content */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        {error && (
+          <div
+            role="alert"
+            className="flex items-center gap-3 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+          >
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span className="flex-1">{error}</span>
+            <button
+              type="button"
+              onClick={retry}
+              className="flex items-center gap-1.5 rounded-md bg-red-500/20 px-3 py-1.5 text-xs font-medium text-red-200 transition-colors hover:bg-red-500/30"
+            >
+              <RefreshCw className="w-3 h-3" />
+              {t('common.retry', 'Retry')}
+            </button>
+          </div>
+        )}
+
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* Status */}

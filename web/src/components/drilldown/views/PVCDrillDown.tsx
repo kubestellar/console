@@ -9,6 +9,7 @@ import {
   getStatusColor,
   getTabs,
   CopyButton,
+  DrillDownErrorBanner,
   PVCDrillDownHeader,
   PVCTabBar,
   LabelsSection,
@@ -48,9 +49,11 @@ export function PVCDrillDown({ data }: Props) {
     yamlLoading,
     copiedField,
     isLoading,
+    error,
     handleCopy,
     fetchDescribe,
     fetchYaml,
+    retry,
     agentConnected,
   } = usePVCDrillDown(cluster, namespace, pvcName, data)
 
@@ -82,6 +85,8 @@ export function PVCDrillDown({ data }: Props) {
         fetchDescribe={fetchDescribe}
         fetchYaml={fetchYaml}
       />
+
+      {error && <DrillDownErrorBanner message={error} onRetry={retry} />}
 
       {/* Tab content */}
       {activeTab === 'overview' && (

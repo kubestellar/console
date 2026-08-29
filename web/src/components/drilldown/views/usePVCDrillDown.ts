@@ -20,9 +20,11 @@ export interface UsePVCDrillDownResult {
   yamlLoading: boolean
   copiedField: string | null
   isLoading: boolean
+  error: string | null
   handleCopy: (text: string, field: string) => Promise<void>
   fetchDescribe: () => Promise<void>
   fetchYaml: () => Promise<void>
+  retry: () => void
 }
 
 /**
@@ -53,6 +55,7 @@ export function usePVCDrillDown(
   const [copiedField, setCopiedField] = useState<string | null>(null)
   const copiedFieldTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   // Fetch PVC data from cluster
   const fetchData = useCallback(async () => {
@@ -79,8 +82,10 @@ export function usePVCDrillDown(
         setLabels(pvc.metadata?.labels || null)
         setAnnotations(pvc.metadata?.annotations || null)
       }
-    } catch {
-      // Parse error — keep data from props
+      setError(null)
+    } catch (err) {
+      console.error('[PVCDrillDown] Failed to load PVC data', err)
+      setError(err instanceof Error ? err.message : 'Failed to load PersistentVolumeClaim')
     } finally {
       setIsLoading(false)
     }
@@ -94,20 +99,37 @@ export function usePVCDrillDown(
     }
   }, [fetchData])
 
+  const retry = useCallback(() => {
+    setError(null)
+    void fetchData()
+  }, [fetchData])
+
   const fetchDescribe = useCallback(async () => {
     if (!agentConnected || describeLoading) return
     setDescribeLoading(true)
-    const output = await runKubectl(['describe', 'pvc', pvcName, '-n', namespace])
-    setDescribeOutput(output || 'No output received')
-    setDescribeLoading(false)
+    try {
+      const output = await runKubectl(['describe', 'pvc', pvcName, '-n', namespace])
+      setDescribeOutput(output || 'No output received')
+    } catch (err) {
+      console.error('[PVCDrillDown] Failed to describe PVC', err)
+      setError(err instanceof Error ? err.message : 'Failed to describe PersistentVolumeClaim')
+    } finally {
+      setDescribeLoading(false)
+    }
   }, [agentConnected, describeLoading, runKubectl, pvcName, namespace])
 
   const fetchYaml = useCallback(async () => {
     if (!agentConnected || yamlLoading) return
     setYamlLoading(true)
-    const output = await runKubectl(['get', 'pvc', pvcName, '-n', namespace, '-o', 'yaml'])
-    setYamlOutput(output || 'No output received')
-    setYamlLoading(false)
+    try {
+      const output = await runKubectl(['get', 'pvc', pvcName, '-n', namespace, '-o', 'yaml'])
+      setYamlOutput(output || 'No output received')
+    } catch (err) {
+      console.error('[PVCDrillDown] Failed to load PVC YAML', err)
+      setError(err instanceof Error ? err.message : 'Failed to load PersistentVolumeClaim YAML')
+    } finally {
+      setYamlLoading(false)
+    }
   }, [agentConnected, yamlLoading, runKubectl, pvcName, namespace])
 
   useEffect(() => {
@@ -148,8 +170,10 @@ export function usePVCDrillDown(
     yamlLoading,
     copiedField,
     isLoading,
+    error,
     handleCopy,
     fetchDescribe,
     fetchYaml,
+    retry,
   }
 }
