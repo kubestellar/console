@@ -5,7 +5,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { crdStatusIcons, crdStatusColors } from '../../lib/cards/statusMappers'
-import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions, CardBody, CardBodyLoaded, CardBodyEmpty } from '../../lib/cards/CardComponents'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions, CardBody, CardBodyLoaded, CardBodyEmpty, CardStatGrid } from '../../lib/cards/CardComponents'
 import { useTranslation } from 'react-i18next'
 import { useCRDs } from '../../hooks/useCRDs'
 import type { CRDData } from '../../hooks/useCRDs'
@@ -216,7 +216,7 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
           </div>
 
           {/* Summary */}
-          <div className="grid grid-cols-2 @md:grid-cols-4 gap-2 mb-4">
+          <CardStatGrid className="@md:grid-cols-4 gap-2 mb-4">
             <div className="p-2 rounded-lg bg-cyan-500/10 text-center">
               <span className="text-lg font-bold text-cyan-400">{statsSource.length}</span>
               <p className="text-xs text-muted-foreground">{t('crdHealth.crds')}</p>
@@ -233,7 +233,7 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
               <span className="text-lg font-bold text-blue-400">{totalInstances}</span>
               <p className="text-xs text-muted-foreground">{t('crdHealth.instances')}</p>
             </div>
-          </div>
+          </CardStatGrid>
 
           {/* CRDs list */}
           <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto" style={containerStyle}>

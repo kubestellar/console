@@ -74,6 +74,9 @@ vi.mock('../../lib/cards/CardComponents', () => ({
   CardPaginationFooter: ({ currentPage, totalPages }: { currentPage: number; totalPages: number }) => (
     <div data-testid="pagination" data-page={currentPage} data-total={totalPages} />
   ),
+  CardStatGrid: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div data-testid="card-stat-grid" className={className}>{children}</div>
+  ),
 }))
 
 // ---------------------------------------------------------------------------

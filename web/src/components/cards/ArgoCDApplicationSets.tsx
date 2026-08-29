@@ -8,7 +8,8 @@ import { useCardData, commonComparators, type SortDirection } from '../../lib/ca
 import {
   CardSearchInput,
   CardControlsRow,
-  CardPaginationFooter } from '../../lib/cards/CardComponents'
+  CardPaginationFooter,
+  CardStatGrid } from '../../lib/cards/CardComponents'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { useTranslation } from 'react-i18next'
 
@@ -213,7 +214,7 @@ function ArgoCDApplicationSetsInternal({ config }: ArgoCDApplicationSetsProps) {
       />
 
       {/* Stats */}
-      <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-3">
+      <CardStatGrid className="@md:grid-cols-3 gap-2 mb-3">
         <div className="text-center p-2 rounded-lg bg-green-500/10">
           <p className="text-lg font-bold text-green-400">{stats.healthy}</p>
           <p className="text-xs text-muted-foreground">Healthy</p>
@@ -226,7 +227,7 @@ function ArgoCDApplicationSetsInternal({ config }: ArgoCDApplicationSetsProps) {
           <p className="text-lg font-bold text-red-400">{stats.error}</p>
           <p className="text-xs text-muted-foreground">Error</p>
         </div>
-      </div>
+      </CardStatGrid>
 
       {/* ApplicationSet list */}
       <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto min-h-card-content" style={containerStyle}>
