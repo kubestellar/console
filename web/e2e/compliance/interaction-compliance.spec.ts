@@ -45,6 +45,15 @@ const IS_CI = !!process.env.CI
 const CI_TIMEOUT_MULTIPLIER = 2
 const PAGE_LOAD_TIMEOUT_MS = IS_CI ? 30_000 : 15_000
 const SETTLE_MS = 2_000
+// Explicit cap for click() actions. Playwright's default action timeout is 0
+// (no timeout) unless overridden, so an element that never becomes
+// actionable (e.g. mid-transition or briefly covered) makes click() wait
+// until the *entire test* timeout fires instead of failing fast into the
+// surrounding try/catch. #22715: the sidebar collapse toggle intermittently
+// wasn't immediately actionable, and the un-timed click() consumed the full
+// 120s (60s x CI_TIMEOUT_MULTIPLIER) test timeout, failing the whole suite
+// instead of being caught and recorded as a soft 'skip'/'warn' result.
+const CLICK_TIMEOUT_MS = 10_000
 
 // ---------------------------------------------------------------------------
 // Report state
@@ -200,7 +209,7 @@ test.describe('Interaction Compliance', () => {
       const initialDark = await page.evaluate(() => document.documentElement.classList.contains('dark'))
 
       // Click theme toggle
-      await themeToggle.click()
+      await themeToggle.click({ timeout: CLICK_TIMEOUT_MS })
       // Wait for theme class to change on <html>
       await page.waitForFunction(
         (wasDark) => document.documentElement.classList.contains('dark') !== wasDark,
@@ -284,7 +293,7 @@ test.describe('Interaction Compliance', () => {
       }
 
       // Click expand
-      await targetButton.click()
+      await targetButton.click({ timeout: CLICK_TIMEOUT_MS })
       // Wait for modal/dialog to appear after expand click
       await page.locator('[role="dialog"], [data-testid*="modal"], [data-testid*="expanded"], .fixed.inset-0, [class*="modal"]').first().waitFor({ state: 'visible', timeout: 3_000 }).catch(() => { /* may not open */ })
 
@@ -359,7 +368,7 @@ test.describe('Interaction Compliance', () => {
       const cardType = await card.getAttribute('data-card-type')
 
       // Click refresh
-      await refreshButton.click()
+      await refreshButton.click({ timeout: CLICK_TIMEOUT_MS })
 
       // Check for loading indicator (spinner, skeleton, etc.)
       const hasLoadingIndicator = await card.locator('.animate-spin, [data-loading="true"], .skeleton, [class*="loading"]').first().waitFor({ state: 'visible', timeout: 2_000 }).then(() => true).catch((error) => { console.error('Promise error:', error); return false })
@@ -452,7 +461,7 @@ test.describe('Interaction Compliance', () => {
       }
 
       // Click collapse
-      await collapseButton.click()
+      await collapseButton.click({ timeout: CLICK_TIMEOUT_MS })
       // Wait for sidebar width animation to complete
       await page.waitForFunction(
         ({ selector, origWidth }) => {
@@ -470,7 +479,7 @@ test.describe('Interaction Compliance', () => {
 
       if (widthChanged) {
         // Click expand (same button)
-        await collapseButton.click()
+        await collapseButton.click({ timeout: CLICK_TIMEOUT_MS })
         // Wait for sidebar to expand back to original width
         await page.waitForFunction(
           ({ selector, origWidth }) => {
@@ -554,7 +563,7 @@ test.describe('Interaction Compliance', () => {
       const cardsBefore = await page.locator('[data-card-type]').count()
 
       // Click refresh
-      await dashRefresh.click()
+      await dashRefresh.click({ timeout: CLICK_TIMEOUT_MS })
 
       // Check for loading states (brief window — cards may start loading)
       const loadingCards = await page.locator('[data-card-type][data-loading="true"], [data-card-type] .skeleton, [data-card-type] .animate-pulse').count()
