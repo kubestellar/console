@@ -441,6 +441,7 @@ export const ClusterCosts = memo(function ClusterCosts({ config }: ClusterCostsP
         memoryCost={memoryCost}
         gpuCost={gpuCost}
         providerBreakdown={providerBreakdown}
+        isDemoData={isDemoMode || isDemoFallback}
       />
 
       {/* Local Search */}
