@@ -213,4 +213,65 @@ describe('TreeNodeItem', () => {
 
     expect(collapsed.innerHTML).not.toBe(expanded.innerHTML)
   })
+
+  it('supports arrow-key navigation between visible tree nodes', async () => {
+    const user = userEvent.setup()
+    const onSelect = vi.fn()
+    const nodeRefs = { current: new Map<string, HTMLButtonElement>() }
+    const rootNode: TreeNode = {
+      id: 'root',
+      name: 'root',
+      path: '/root',
+      type: 'directory',
+      source: 'community',
+      children: [
+        {
+          id: 'child-a',
+          name: 'a.yaml',
+          path: '/root/a.yaml',
+          type: 'file',
+          source: 'community',
+        },
+        {
+          id: 'child-b',
+          name: 'b.yaml',
+          path: '/root/b.yaml',
+          type: 'file',
+          source: 'community',
+        },
+      ],
+    }
+
+    render(
+      <div role="tree">
+        <TreeNodeItem
+          node={rootNode}
+          depth={0}
+          expandedNodes={new Set(['root'])}
+          selectedPath={null}
+          nodeRefs={nodeRefs}
+          onToggle={vi.fn()}
+          onSelect={onSelect}
+        />
+      </div>
+    )
+
+    const rootButton = screen.getByText('root').closest('button')
+    const childAButton = screen.getByText('a.yaml').closest('button')
+    const childBButton = screen.getByText('b.yaml').closest('button')
+    expect(rootButton).toBeTruthy()
+    expect(childAButton).toBeTruthy()
+    expect(childBButton).toBeTruthy()
+    if (!rootButton || !childAButton || !childBButton) return
+
+    rootButton.focus()
+    await user.keyboard('{ArrowDown}')
+    expect(childAButton).toHaveFocus()
+
+    await user.keyboard('{ArrowDown}')
+    expect(childBButton).toHaveFocus()
+
+    await user.keyboard('{Home}')
+    expect(rootButton).toHaveFocus()
+  })
 })
