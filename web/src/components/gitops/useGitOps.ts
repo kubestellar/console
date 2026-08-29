@@ -70,8 +70,11 @@ export function useGitOps() {
 
   const resolveAppCluster = (preferred: string): { cluster: string; ambiguous: boolean } => {
     if (preferred) return { cluster: preferred, ambiguous: false }
+    // Only auto-select when there is exactly one cluster to avoid silently
+    // ignoring all others in a multi-cluster deployment.
     if (deduplicatedClusters.length === EXACTLY_ONE_CLUSTER) {
-      return { cluster: clusterDisplayName(deduplicatedClusters[0]), ambiguous: false }
+      const only = deduplicatedClusters[0]
+      if (only) return { cluster: clusterDisplayName(only), ambiguous: false }
     }
     return { cluster: '', ambiguous: deduplicatedClusters.length > EXACTLY_ONE_CLUSTER }
   }
