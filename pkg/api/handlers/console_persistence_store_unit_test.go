@@ -234,6 +234,56 @@ func TestStartWatcher(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), noClusterAccessMsg)
 	})
+
+	// Path 3: persistence enabled, k8sClient present, but GetActiveCluster errors
+	// because no health checker is registered so the cluster is never marked active.
+	t.Run("fails when GetActiveCluster returns an error (no health checker registered)", func(t *testing.T) {
+		persistenceStore := store.NewPersistenceStore("")
+		err := persistenceStore.UpdateConfig(store.PersistenceConfig{
+			Enabled:        true,
+			PrimaryCluster: "test-cluster",
+			Namespace:      store.DefaultNamespace,
+			SyncMode:       "primary-only",
+		})
+		require.NoError(t, err)
+		// Deliberately omit SetClusterHealthChecker so GetActiveCluster returns an error.
+
+		k8sClient := newStoreBackedK8sClient(t)
+		handler := &ConsolePersistenceHandlers{
+			persistenceStore: persistenceStore,
+			k8sClient:        k8sClient,
+		}
+		err = handler.StartWatcher(context.Background())
+		require.Error(t, err)
+	})
+
+	// Path 4: persistence enabled, k8sClient present, health checker says cluster is
+	// active, but GetDynamicClient errors because the cluster name is not in the
+	// kubeconfig (the test kubeconfig only contains "test-cluster").
+	t.Run("fails when GetDynamicClient errors for an unconfigured cluster", func(t *testing.T) {
+		persistenceStore := store.NewPersistenceStore("")
+		err := persistenceStore.UpdateConfig(store.PersistenceConfig{
+			Enabled:        true,
+			PrimaryCluster: "missing-cluster",
+			Namespace:      store.DefaultNamespace,
+			SyncMode:       "primary-only",
+		})
+		require.NoError(t, err)
+		// Health checker reports the cluster as healthy so GetActiveCluster succeeds,
+		// but "missing-cluster" is absent from the kubeconfig so GetDynamicClient fails.
+		persistenceStore.SetClusterHealthChecker(func(_ context.Context, _ string) store.ClusterHealth {
+			return store.ClusterHealthHealthy
+		})
+
+		k8sClient := newStoreBackedK8sClient(t)
+		handler := &ConsolePersistenceHandlers{
+			persistenceStore: persistenceStore,
+			k8sClient:        k8sClient,
+		}
+		err = handler.StartWatcher(context.Background())
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "missing-cluster")
+	})
 }
 
 func TestStopWatcherWithNilWatcher(t *testing.T) {
