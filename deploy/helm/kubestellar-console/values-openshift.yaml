@@ -35,3 +35,10 @@ securityContext:
   runAsNonRoot: true
   seccompProfile:
     type: RuntimeDefault
+
+# The pvc-migration pre-upgrade hook container follows the same SCC rule:
+# drop the fixed UID/GID (numeric defaults in values.yaml, needed on plain
+# Kubernetes) so restricted-v2 injects an in-range UID (#22925/#22946).
+migration:
+  runAsUser: null
+  runAsGroup: null

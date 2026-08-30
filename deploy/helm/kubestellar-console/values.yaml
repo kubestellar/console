@@ -32,6 +32,23 @@ migration:
   image:
     repository: alpine/k8s
     tag: "1.32.4"
+  # Numeric non-root UID/GID for the migrate-pvcs hook container.
+  # alpine/k8s has no USER directive baked in (runs as root), and the
+  # kubelet can only verify runAsNonRoot against a numeric UID, so on
+  # plain Kubernetes (Kind, Minikube, OKE console-live) an explicit
+  # numeric non-root UID is REQUIRED or the container is refused at
+  # start: "container has runAsNonRoot and image will run as root"
+  # (#22907/#22919/#22946). 65532 is the conventional "nonroot" UID
+  # (distroless convention); it does not need to exist in the image's
+  # /etc/passwd, and the hook sets HOME=/tmp so kubectl cache/config
+  # writes work for any UID.
+  # NOTE: on OpenShift these MUST be null (use values-openshift.yaml or
+  # --set migration.runAsUser=null --set migration.runAsGroup=null): the
+  # restricted-v2 SCC only admits UIDs from the namespace's assigned
+  # range and injects an in-range UID itself when unset (#22925). Same
+  # rule as securityContext.runAsUser / podSecurityContext.fsGroup above.
+  runAsUser: 65532
+  runAsGroup: 65532
 
 serviceAccount:
   create: true
