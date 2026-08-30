@@ -9,24 +9,44 @@ import (
 	"time"
 )
 
-// newTestLogger returns a slog.Logger that writes JSON to buf and replaces
-// the default logger for the duration of the test. The original default is
-// restored via t.Cleanup.
-func newTestLogger(t *testing.T) *bytes.Buffer {
+// syncBuffer is a goroutine-safe wrapper around bytes.Buffer. The slog
+// handler writes from the goroutine spawned by Go/GoWith while the test
+// goroutine polls String(), so unsynchronized access is a data race.
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *syncBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *syncBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
+}
+
+// newTestLogger returns a goroutine-safe buffer capturing JSON output of a
+// slog.Logger installed as the default logger for the duration of the test.
+// The original default is restored via t.Cleanup.
+func newTestLogger(t *testing.T) *syncBuffer {
 	t.Helper()
-	var buf bytes.Buffer
-	h := slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug})
+	buf := &syncBuffer{}
+	h := slog.NewJSONHandler(buf, &slog.HandlerOptions{Level: slog.LevelDebug})
 	logger := slog.New(h)
 	orig := slog.Default()
 	slog.SetDefault(logger)
 	t.Cleanup(func() { slog.SetDefault(orig) })
-	return &buf
+	return buf
 }
 
 // waitForLog polls buf until predicate returns true or the deadline passes.
 // Needed because the recover-and-log defer inside Go/GoWith runs after the
 // caller's wg.Done(), so the log write may race the outer goroutine.
-func waitForLog(buf *bytes.Buffer, predicate func(string) bool) bool {
+func waitForLog(buf *syncBuffer, predicate func(string) bool) bool {
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
 		if predicate(buf.String()) {
