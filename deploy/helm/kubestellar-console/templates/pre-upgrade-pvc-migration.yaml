@@ -92,23 +92,24 @@ spec:
           image: "{{ .Values.migration.image.repository }}:{{ .Values.migration.image.tag }}"
           imagePullPolicy: IfNotPresent
           # Use a lighter securityContext for the migration job: the kubectl
-          # image needs a writable home dir. The app's securityContext
-          # (readOnlyRootFilesystem=true) breaks kubectl's cache writes on
-          # some OpenShift clusters, causing the pod to fail immediately.
+          # image (alpine/k8s) runs as root (UID 0) and has no non-root
+          # user baked in. Setting runAsNonRoot: true causes Kubernetes to
+          # refuse to start the container (Error: container has runAsNonRoot
+          # and image will run as root), which breaks the pre-upgrade hook
+          # and causes helm to fail with "pre-upgrade hooks failed" (#22919).
+          # We explicitly set runAsNonRoot: false + runAsUser: 0 to match
+          # the image's actual runtime UID and allow the hook to run.
           securityContext:
-            runAsNonRoot: true
+            runAsNonRoot: false
+            runAsUser: 0
             allowPrivilegeEscalation: false
             capabilities:
               drop:
                 - ALL
           env:
-            # alpine/k8s has no non-root user baked in, so under an
-            # OpenShift-assigned arbitrary UID (runAsNonRoot with no fixed
-            # runAsUser) the default $HOME (/root) is not writable by that
-            # UID. kubectl and any tool cache/config writes would fail.
-            # /tmp is world-writable (sticky bit) regardless of UID, so
-            # pointing HOME there avoids the failure without needing a
-            # fixed UID or an extra writable volume.
+            # HOME is set to /tmp (world-writable) so kubectl cache/config
+            # writes succeed even though the container runs as root inside a
+            # restricted namespace (some environments mount /root read-only).
             - name: HOME
               value: /tmp
           command:
