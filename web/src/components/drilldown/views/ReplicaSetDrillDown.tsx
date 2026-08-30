@@ -46,6 +46,7 @@ export function ReplicaSetDrillDown({ data }: Props) {
 
   const isHealthy = readyReplicas === replicas && replicas > 0
   const healthColors = getHealthColors(isHealthy)
+  const isLoading = eventsLoading || describeLoading || yamlLoading
 
   const TABS: { id: TabType; label: string; icon: typeof Info }[] = useMemo(() => [
     { id: 'overview', label: t('drilldown.tabs.overview'), icon: Info },
@@ -135,9 +136,10 @@ export function ReplicaSetDrillDown({ data }: Props) {
             <button
               type="button"
               onClick={retry}
-              className="flex items-center gap-1.5 rounded-md bg-red-500/20 px-3 py-1.5 text-xs font-medium text-red-200 transition-colors hover:bg-red-500/30"
+              disabled={isLoading}
+              className="flex items-center gap-1.5 rounded-md bg-red-500/20 px-3 py-1.5 text-xs font-medium text-red-200 transition-colors hover:bg-red-500/30 disabled:opacity-50"
             >
-              <RefreshCw className="w-3 h-3" />
+              <RefreshCw className={cn('w-3 h-3', isLoading && 'animate-spin')} />
               {t('common.retry', 'Retry')}
             </button>
           </div>
