@@ -468,7 +468,9 @@ If you are not using the overlay file, you can also null the fields manually:
 helm upgrade kc ./deploy/helm/kubestellar-console -n kubestellar-console \
   --set securityContext.runAsUser=null \
   --set securityContext.runAsGroup=null \
-  --set podSecurityContext.fsGroup=null
+  --set podSecurityContext.fsGroup=null \
+  --set migration.runAsUser=null \
+  --set migration.runAsGroup=null
 ```
 
 ### `container has runAsNonRoot and image has non-numeric user (appuser)`

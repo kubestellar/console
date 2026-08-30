@@ -91,16 +91,33 @@ spec:
         - name: migrate-pvcs
           image: "{{ .Values.migration.image.repository }}:{{ .Values.migration.image.tag }}"
           imagePullPolicy: IfNotPresent
-          # OpenShift's restricted-v2 SCC forbids runAsUser: 0 (root) and
-          # requires the UID to fall within the namespace's allowed range
-          # (e.g. [1001240000, 1001249999]). Setting runAsNonRoot: true
-          # without an explicit runAsUser lets OpenShift inject an allowed
-          # UID automatically. alpine/k8s has no hard-coded USER directive
-          # so Kubernetes can override the UID at runtime (#22925).
+          # Two conflicting admission regimes must both pass here:
+          #  - Plain Kubernetes (Kind, Minikube, OKE console-live): nothing
+          #    injects a UID, and the kubelet can only verify runAsNonRoot
+          #    against a NUMERIC effective UID. alpine/k8s has no USER
+          #    directive (runs as root), so runAsNonRoot: true without an
+          #    explicit numeric runAsUser is refused at container start:
+          #    "container has runAsNonRoot and image will run as root"
+          #    (#22907/#22919/#22946).
+          #  - OpenShift restricted-v2 SCC: forbids runAsUser: 0 and rejects
+          #    any fixed UID outside the namespace's assigned range; it
+          #    injects an in-range UID itself when runAsUser is unset
+          #    (#22925).
+          # Both are satisfied by defaulting migration.runAsUser/runAsGroup
+          # to a numeric non-root UID in values.yaml and nulling them on
+          # OpenShift (values-openshift.yaml or --set
+          # migration.runAsUser=null), mirroring the chart's existing
+          # securityContext.runAsUser pattern for the app container.
           # HOME=/tmp (set below) ensures kubectl cache writes succeed
-          # regardless of which UID is injected.
+          # regardless of which UID runs the container.
           securityContext:
             runAsNonRoot: true
+            {{- if .Values.migration.runAsUser }}
+            runAsUser: {{ .Values.migration.runAsUser }}
+            {{- end }}
+            {{- if .Values.migration.runAsGroup }}
+            runAsGroup: {{ .Values.migration.runAsGroup }}
+            {{- end }}
             allowPrivilegeEscalation: false
             capabilities:
               drop:
