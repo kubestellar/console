@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"os"
 	"strings"
@@ -249,6 +250,17 @@ func TestSweepOld_HappyPath(t *testing.T) {
 	assert.NotPanics(t, func() {
 		h.sweepOld()
 	})
+}
+
+func TestSweepOld_StoreError(t *testing.T) {
+	env := setupTestEnv(t)
+	env.Store.On("SweepOldEvents", mock.AnythingOfType("int")).Return(int64(0), errors.New("db error"))
+	h := NewTimelineHandler(env.Store, nil)
+	// sweepOld logs the error but must not panic.
+	assert.NotPanics(t, func() {
+		h.sweepOld()
+	})
+	env.Store.AssertCalled(t, "SweepOldEvents", mock.AnythingOfType("int"))
 }
 
 // ---------------------------------------------------------------------------

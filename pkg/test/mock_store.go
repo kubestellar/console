@@ -631,8 +631,12 @@ func (m *MockStore) QueryTimeline(_ context.Context, filter store.TimelineFilter
 	return args.Get(0).([]store.ClusterEvent), args.Error(1)
 }
 
-func (m *MockStore) SweepOldEvents(_ context.Context, _ int) (int64, error) {
-	return 0, nil
+func (m *MockStore) SweepOldEvents(_ context.Context, retentionDays int) (int64, error) {
+	if !m.hasExpectation("SweepOldEvents") {
+		return 0, nil
+	}
+	args := m.Called(retentionDays)
+	return args.Get(0).(int64), args.Error(1)
 }
 
 func (m *MockStore) GetStellarPreferences(_ context.Context, _ string) (*store.StellarPreferences, error) {
