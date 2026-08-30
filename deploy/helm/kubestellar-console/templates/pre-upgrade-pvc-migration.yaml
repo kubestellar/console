@@ -91,17 +91,16 @@ spec:
         - name: migrate-pvcs
           image: "{{ .Values.migration.image.repository }}:{{ .Values.migration.image.tag }}"
           imagePullPolicy: IfNotPresent
-          # Use a lighter securityContext for the migration job: the kubectl
-          # image (alpine/k8s) runs as root (UID 0) and has no non-root
-          # user baked in. Setting runAsNonRoot: true causes Kubernetes to
-          # refuse to start the container (Error: container has runAsNonRoot
-          # and image will run as root), which breaks the pre-upgrade hook
-          # and causes helm to fail with "pre-upgrade hooks failed" (#22919).
-          # We explicitly set runAsNonRoot: false + runAsUser: 0 to match
-          # the image's actual runtime UID and allow the hook to run.
+          # OpenShift's restricted-v2 SCC forbids runAsUser: 0 (root) and
+          # requires the UID to fall within the namespace's allowed range
+          # (e.g. [1001240000, 1001249999]). Setting runAsNonRoot: true
+          # without an explicit runAsUser lets OpenShift inject an allowed
+          # UID automatically. alpine/k8s has no hard-coded USER directive
+          # so Kubernetes can override the UID at runtime (#22925).
+          # HOME=/tmp (set below) ensures kubectl cache writes succeed
+          # regardless of which UID is injected.
           securityContext:
-            runAsNonRoot: false
-            runAsUser: 0
+            runAsNonRoot: true
             allowPrivilegeEscalation: false
             capabilities:
               drop:
