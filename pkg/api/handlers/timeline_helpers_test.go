@@ -254,13 +254,15 @@ func TestSweepOld_HappyPath(t *testing.T) {
 
 func TestSweepOld_StoreError(t *testing.T) {
 	env := setupTestEnv(t)
-	env.Store.On("SweepOldEvents", mock.AnythingOfType("int")).Return(int64(0), errors.New("db error"))
+	mockStore, ok := env.Store.(*test.MockStore)
+	require.True(t, ok, "env.Store must be a *test.MockStore")
+	mockStore.On("SweepOldEvents", mock.AnythingOfType("int")).Return(int64(0), errors.New("db error"))
 	h := NewTimelineHandler(env.Store, nil)
 	// sweepOld logs the error but must not panic.
 	assert.NotPanics(t, func() {
 		h.sweepOld()
 	})
-	env.Store.AssertCalled(t, "SweepOldEvents", mock.AnythingOfType("int"))
+	mockStore.AssertCalled(t, "SweepOldEvents", mock.AnythingOfType("int"))
 }
 
 // ---------------------------------------------------------------------------
