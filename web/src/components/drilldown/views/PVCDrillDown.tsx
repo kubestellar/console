@@ -86,7 +86,7 @@ export function PVCDrillDown({ data }: Props) {
         fetchYaml={fetchYaml}
       />
 
-      {error && <DrillDownErrorBanner message={error} onRetry={retry} />}
+      {error && <DrillDownErrorBanner message={error} onRetry={retry} isLoading={isLoading} />}
 
       {/* Tab content */}
       {activeTab === 'overview' && (
