@@ -65,11 +65,13 @@
     "size_acceptance": {},
     "type_acceptance": {},
     "common_rejection_reasons": [
-      "- PR #22540: Verified against `origin/main` — every file this PR touches already has equivalent (or superseding) test coverage merged via other PRs, and this branch is now stale (`CONFLICTING`/`DIRTY`/`BLOCKED` against current `main`):",
-      "| File | Test file on `main` | Lines / `it()` | Merged via |"
+      "- PR #22794: ## 🛑 Fix loop escalated — human attention needed",
+      "This PR has failed CI on **1 distinct fix attempts** (new commits, still red). The hive has stopped dispatching further automated fixes for it.",
+      "- PR #22763: Looks like k8s.io/client-go is up-to-date now, so this is no longer needed.",
+      "- PR #22758: Looks like k8s.io/apimachinery is up-to-date now, so this is no longer needed."
     ],
     "best_change_type": "bug_fix",
-    "last_report_date": "2026-08-23"
+    "last_report_date": "2026-08-30"
   },
   "cncf_insights": {
     "last_scan_date": "2026-08-19",
