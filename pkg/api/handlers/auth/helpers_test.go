@@ -171,5 +171,50 @@ func TestAuthHelpers(t *testing.T) {
 				assert.Equal(t, tt.wantStatus, resp.StatusCode)
 			})
 		}
+
+		// The table above covers the nil-user 403, the invalid-role 403,
+		// and the happy path for each valid role. It does NOT cover
+		// (a) the nil-store short-circuit, or
+		// (b) the store-returning-error arm that maps to
+		//     StatusInternalServerError / "Failed to verify user role".
+		// Both are asserted below.
+
+		t.Run("NilStoreShortCircuit", func(t *testing.T) {
+			// Nil store means we skip the check entirely (used at very
+			// early boot). The helper must return nil without touching
+			// the fiber context; the surrounding handler then decides
+			// the response, so a plain 200 is expected here.
+			app := fiber.New()
+			app.Get("/test", func(c *fiber.Ctx) error {
+				return RequireViewerOrAbove(c, nil)
+			})
+			req := httptest.NewRequest("GET", "/test", nil)
+			req.Host = "localhost"
+			resp, _ := app.Test(req)
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
+		})
+
+		t.Run("StoreErrorMapsTo500", func(t *testing.T) {
+			// GetUser returning an error must fail closed as a 500 with
+			// the "Failed to verify user role" message — NOT be treated
+			// as "user not found" (which would silently 403 legitimate
+			// users on a transient DB blip).
+			app := fiber.New()
+			mockStore := new(test.MockStore)
+			userID := uuid.New()
+			mockStore.On("GetUser", userID).
+				Return(nil, assert.AnError)
+
+			app.Get("/test", func(c *fiber.Ctx) error {
+				c.Locals("userID", userID)
+				return RequireViewerOrAbove(c, mockStore)
+			})
+
+			req := httptest.NewRequest("GET", "/test", nil)
+			req.Host = "localhost"
+			resp, _ := app.Test(req)
+			assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+			mockStore.AssertExpectations(t)
+		})
 	})
 }
