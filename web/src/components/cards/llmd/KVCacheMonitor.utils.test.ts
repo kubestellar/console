@@ -526,7 +526,6 @@ describe('generateMonitorStats', () => {
           tokenRate: 0,
           activeRequests: 0,
           errorRate: 0,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as PodMetrics,
       },
       selectedStack: stack,
@@ -595,7 +594,6 @@ describe('generateMonitorStats', () => {
           tokenRate: 0,
           activeRequests: 0,
           errorRate: 0,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as PodMetrics,
       },
       selectedStack: stack,

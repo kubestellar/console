@@ -100,7 +100,6 @@ describe('NightlyE2EGuideRow', () => {
     }
     const { container } = render(
       <GuideRow
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         guide={guide as NightlyGuideStatus}
         delay={0}
         isSelected={false}
@@ -130,7 +129,6 @@ describe('NightlyE2EGuideRow', () => {
     }
     const { container } = render(
       <GuideRow
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         guide={guide as NightlyGuideStatus}
         delay={0}
         isSelected={false}
