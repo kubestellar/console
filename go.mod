@@ -21,10 +21,10 @@ require (
 	golang.org/x/sync v0.22.0
 	golang.org/x/time v0.15.0
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/api v0.36.4
-	k8s.io/apiextensions-apiserver v0.36.4
+	k8s.io/api v0.37.0
+	k8s.io/apiextensions-apiserver v0.37.0
 	k8s.io/apimachinery v0.37.0
-	k8s.io/client-go v0.36.4
+	k8s.io/client-go v0.37.0
 	modernc.org/sqlite v1.57.0
 )
 
@@ -54,7 +54,6 @@ require (
 	github.com/google/gnostic-models v0.7.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.19.1 // indirect
-	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
