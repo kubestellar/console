@@ -2,10 +2,12 @@ package k8s
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/kubestellar/console/pkg/apis/v1alpha1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -372,5 +374,92 @@ func TestParseHTTPRoutesFromList_NonUnstructuredList(t *testing.T) {
 	}
 	if len(result) != 0 {
 		t.Errorf("expected 0 routes for nil input, got %d", len(result))
+	}
+}
+
+// TestIsGatewayCRDNotInstalled locks down the classifier at the top of
+// gateway.go that decides whether a per-cluster error is a benign
+// "Gateway API CRDs are not installed here" signal (empty-list success)
+// or a real failure (auth/network/RBAC) that must be surfaced to the
+// caller. Prior to this test the helper was only exercised indirectly
+// via ListGateways / ListHTTPRoutesForCluster happy paths, leaving the
+// four classification arms (nil, IsNotFound, "no matches for",
+// "server could not find") uncovered and vulnerable to a silent
+// misclassification — the exact regression pattern of #6510 in mcs.go.
+//
+// Structured as a table so a future arm addition needs only one row.
+func TestIsGatewayCRDNotInstalled(t *testing.T) {
+	gvr := schema.GroupVersionResource{
+		Group:    "gateway.networking.k8s.io",
+		Version:  "v1",
+		Resource: "gateways",
+	}
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "nil error is not a missing CRD",
+			err:  nil,
+			want: false,
+		},
+		{
+			// The current helper broadly accepts IsNotFound (unlike
+			// mcs.go which specifically excludes object-level NotFounds).
+			// Lock the current shape down — if a future refactor
+			// tightens this to type-only NotFound (matching MCS's
+			// behavior for #6510), this test must be updated in the
+			// same commit, not silently drift.
+			name: "IsNotFound (any 404) is treated as missing CRD",
+			err:  apierrors.NewNotFound(gvr.GroupResource(), "gw-1"),
+			want: true,
+		},
+		{
+			name: "server-side RESTMapper 'no matches for' message → missing CRD",
+			err:  errors.New("no matches for kind \"Gateway\" in version \"gateway.networking.k8s.io/v1\""),
+			want: true,
+		},
+		{
+			name: "server discovery 'the server could not find the requested resource' → missing CRD",
+			err:  errors.New("the server could not find the requested resource"),
+			want: true,
+		},
+		{
+			// Case-insensitive matching: the helper lowercases the
+			// message before substring checks, so mixed-case surface
+			// text from a proxy/wrapper must still classify correctly.
+			name: "uppercase 'No Matches For' still classifies as missing CRD (case-insensitive)",
+			err:  errors.New("No Matches For kind Gateway"),
+			want: true,
+		},
+		{
+			name: "generic auth failure must NOT be classified as missing CRD (#6510)",
+			err:  errors.New("401 Unauthorized"),
+			want: false,
+		},
+		{
+			name: "generic network dial failure must NOT be classified as missing CRD (#6510)",
+			err:  errors.New("dial tcp 10.0.0.1:6443: connect: connection refused"),
+			want: false,
+		},
+		{
+			name: "RBAC forbidden must NOT be classified as missing CRD",
+			err:  errors.New("gateways.gateway.networking.k8s.io is forbidden: user cannot list resource"),
+			want: false,
+		},
+		{
+			name: "unrelated internal server error is not a missing CRD",
+			err:  errors.New("etcdserver: request timed out"),
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isGatewayCRDNotInstalled(tt.err); got != tt.want {
+				t.Errorf("isGatewayCRDNotInstalled(%v) = %v, want %v", tt.err, got, tt.want)
+			}
+		})
 	}
 }
