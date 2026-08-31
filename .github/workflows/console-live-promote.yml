@@ -281,6 +281,27 @@ jobs:
             --from-file=config="$GROUNDTRUTH_KUBECONFIG_PATH" \
             --dry-run=client -o yaml | kubectl apply -f -
 
+      - name: Ensure live ServiceAccount exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          export KUBECONFIG="$DEPLOY_KUBECONFIG"
+          # Repair + standing guard for #22957: both the canary and live pods
+          # run as $LIVE_SERVICE_ACCOUNT, but the SA used to be managed by
+          # nobody (serviceAccount.create: false in both releases), so
+          # rollback debris from the failed pvc-migration era (#22946) left a
+          # cluster where the Helm upgrade/rollback cycle deletes the SA:
+          # the perpetual rollback-target revision still lists the SA in its
+          # manifest while the upgrade renders none, so Helm prunes it
+          # mid-upgrade and the Deployment's ReplicaSet immediately fails
+          # with 'serviceaccount "kc-live-kubestellar-console" not found'
+          # (scheduled run 33346472599). Recreate it idempotently before
+          # anything deploys; a no-op when it already exists. The live helm
+          # upgrade below (serviceAccount.create: true) then adopts it into
+          # the release so an upgrade can never prune it again.
+          kubectl -n "$LIVE_NAMESPACE" create serviceaccount "$LIVE_SERVICE_ACCOUNT" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
       - name: Deploy candidate to private canary
         id: deploy_canary
         shell: bash
@@ -523,8 +544,19 @@ jobs:
           clusterName: "$LIVE_CLUSTER_NAME"
           service:
             type: ClusterIP
+          # The live release OWNS the shared ServiceAccount (#22957). It used
+          # to be create: false (SA pre-created out of band), but the release
+          # state on console-live still records the SA from older revisions,
+          # so rendering no SA made Helm prune it mid-upgrade (present in the
+          # old release manifest, absent from the new one). The Deployment's
+          # ReplicaSet then failed instantly with "serviceaccount not found",
+          # the 10m --wait expired, and the atomic rollback wedged on the
+          # immutable PVC (#22946). With create: true the SA is part of every
+          # rendered upgrade, so Helm reconciles it instead of deleting it.
+          # The canary release keeps create: false and only references the
+          # SA — exactly one release may own it.
           serviceAccount:
-            create: false
+            create: true
             name: "$LIVE_SERVICE_ACCOUNT"
           persistence:
             enabled: true
