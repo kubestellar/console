@@ -73,7 +73,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@netlify/blobs": "^11.0.2",
     "@react-three/drei": "^10.7.8",
-    "@react-three/fiber": "^9.6.1",
+    "@react-three/fiber": "^9.7.0",
     "@sqlite.org/sqlite-wasm": "^3.51.2-build9",
     "@tailwindcss/container-queries": "^0.1.1",
     "@tanstack/react-virtual": "^3.14.9",
