@@ -40,8 +40,8 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('recharts', () => ({
-  ResponsiveContainer: ({ children }: any) => <div>{children}</div>,
-  ComposedChart: ({ children }: any) => <div>{children}</div>,
+  ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  ComposedChart: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   Line: () => null,
   CartesianGrid: () => null,
   XAxis: () => null,
@@ -51,9 +51,10 @@ vi.mock('recharts', () => ({
 }))
 
 import { KVCacheMonitorVisualization } from '../KVCacheMonitorChart'
+import type { CardsCommonTFunction } from '../KVCacheMonitor.types'
 
 describe('KVCacheMonitorChart', () => {
-  const mockT = ((key: string, fallback?: string) => fallback || key) as any
+  const mockT = ((key: string, fallback?: string) => fallback || key) as CardsCommonTFunction
 
   it('renders without crashing with empty data', () => {
     const { container } = render(
