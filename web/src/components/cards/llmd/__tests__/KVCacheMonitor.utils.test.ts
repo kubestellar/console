@@ -16,6 +16,7 @@ import {
   updatePodHistory,
 } from '../KVCacheMonitor.utils'
 import type { KVCacheStats } from '../../../../lib/llmd/mockData'
+import type { LLMdStack } from '../../../../hooks/useStackDiscovery'
 
 function makeStat(overrides: Partial<KVCacheStats> = {}): KVCacheStats {
   return {
@@ -281,7 +282,7 @@ describe('KVCacheMonitor.utils', () => {
         aggregationMode: 'aggregated',
         isDemoMode: false,
         prometheusMetrics: null,
-        selectedStack: stack as any,
+        selectedStack: stack as LLMdStack,
       })
       expect(result.length).toBeGreaterThanOrEqual(1)
       expect(result.some(s => s.podName.startsWith('Prefill'))).toBe(true)
@@ -302,7 +303,7 @@ describe('KVCacheMonitor.utils', () => {
         aggregationMode: 'disaggregated',
         isDemoMode: false,
         prometheusMetrics: null,
-        selectedStack: stack as any,
+        selectedStack: stack as LLMdStack,
       })
       expect(result.length).toBe(2)
       expect(result[0].podName).toMatch(/^P-/)

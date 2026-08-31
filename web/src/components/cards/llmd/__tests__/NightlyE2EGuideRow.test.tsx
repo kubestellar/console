@@ -80,6 +80,7 @@ vi.mock('framer-motion', () => ({
 }))
 
 import { GuideRow } from '../NightlyE2EGuideRow'
+import type { NightlyGuideStatus } from '../../../../lib/llmd/nightlyE2EDemoData'
 
 describe('NightlyE2EGuideRow', () => {
   it('renders without crashing', () => {
@@ -100,7 +101,7 @@ describe('NightlyE2EGuideRow', () => {
     const { container } = render(
       <GuideRow
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        guide={guide as any}
+        guide={guide as NightlyGuideStatus}
         delay={0}
         isSelected={false}
         onMouseEnter={vi.fn()}
@@ -130,7 +131,7 @@ describe('NightlyE2EGuideRow', () => {
     const { container } = render(
       <GuideRow
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        guide={guide as any}
+        guide={guide as NightlyGuideStatus}
         delay={0}
         isSelected={false}
         onMouseEnter={vi.fn()}
