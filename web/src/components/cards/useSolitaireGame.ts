@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import {
   SUITS, VALUES, SUIT_CONFIG, TIMER_TICK_MS, MAX_UNDO_HISTORY, SOLITAIRE_HIGH_SCORE_KEY,
-  type Suit, type CardValue, type PlayingCard, type GameState, type HighScore,
+  type CardValue, type PlayingCard, type GameState, type HighScore,
 } from './solitaire.constants'
 
 export function getValueIndex(value: CardValue): number {
