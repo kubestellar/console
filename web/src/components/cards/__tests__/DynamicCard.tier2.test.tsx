@@ -1,17 +1,10 @@
-import React from 'react'
-import { describe, it, expect, vi, beforeEach, afterEach, act, waitFor } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { Tier2CardRuntime } from '../DynamicCard'
-import {
-  mockCompileCardCode,
-  mockCreateCardComponent,
-  makeT2Definition,
-} from './DynamicCard.test.shared'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, waitFor, act } from '@testing-library/react'
+import { makeT2Definition, mockCompileCardCode, mockCreateCardComponent } from './DynamicCard.test.shared'
 
-// ---------------------------------------------------------------------------
-// Tier2CardRuntime — compilation, component rendering, error handling,
-//                    cleanup, and edge cases (#5282 failure paths)
-// ---------------------------------------------------------------------------
+// Load after DynamicCard.test.shared so its vi.mock() registrations apply
+// (see comment in DynamicCard.tier1.test.tsx).
+const { Tier2CardRuntime } = await import('../DynamicCard')
 
 describe('Tier2CardRuntime', () => {
   const definition = makeT2Definition()
@@ -26,8 +19,7 @@ describe('Tier2CardRuntime', () => {
   })
 
   it('shows compiling spinner initially', () => {
-    // Never resolves — stays in compiling state
-    mockCompileCardCode.mockReturnValue(new Promise(() => { }))
+    mockCompileCardCode.mockReturnValue(new Promise(() => {}))
     render(<Tier2CardRuntime definition={definition} />)
     expect(screen.getByText('dynamicCard.compiling')).toBeInTheDocument()
   })
@@ -76,9 +68,7 @@ describe('Tier2CardRuntime', () => {
     await act(async () => {
       render(<Tier2CardRuntime definition={def} />)
     })
-    await waitFor(() =>
-      expect(screen.getByText(/No source code provided/i)).toBeInTheDocument()
-    )
+    await waitFor(() => expect(screen.getByText(/No source code provided/i)).toBeInTheDocument())
   })
 
   it('uses compiledCode cache and skips compileCardCode when available', async () => {
@@ -107,9 +97,7 @@ describe('Tier2CardRuntime', () => {
     await act(async () => {
       render(<Tier2CardRuntime definition={definition} />)
     })
-    await waitFor(() =>
-      expect(screen.getByText('dynamicCard.noComponent')).toBeInTheDocument()
-    )
+    await waitFor(() => expect(screen.getByText('dynamicCard.noComponent')).toBeInTheDocument())
   })
 
   it('calls cleanup on unmount', async () => {
@@ -123,7 +111,7 @@ describe('Tier2CardRuntime', () => {
 
     let unmount!: () => void
     await act(async () => {
-      ; ({ unmount } = render(<Tier2CardRuntime definition={definition} />))
+      ;({ unmount } = render(<Tier2CardRuntime definition={definition} />))
     })
     await waitFor(() => expect(screen.getByText('OK')).toBeInTheDocument())
     unmount()
@@ -136,9 +124,7 @@ describe('Tier2CardRuntime', () => {
     await act(async () => {
       render(<Tier2CardRuntime definition={definition} />)
     })
-    await waitFor(() =>
-      expect(screen.getByText(/Unexpected error: Totally unexpected/i)).toBeInTheDocument()
-    )
+    await waitFor(() => expect(screen.getByText(/Unexpected error: Totally unexpected/i)).toBeInTheDocument())
   })
 
   it('passes config prop through to the compiled component', async () => {
@@ -155,9 +141,7 @@ describe('Tier2CardRuntime', () => {
     await act(async () => {
       render(<Tier2CardRuntime definition={definition} config={{ mode: 'dark', limit: 5 }} />)
     })
-    await waitFor(() =>
-      expect(screen.getByTestId('cfg').textContent).toContain('"mode":"dark"')
-    )
+    await waitFor(() => expect(screen.getByTestId('cfg').textContent).toContain('"mode":"dark"'))
   })
 
   it('passes empty config when config prop is undefined', async () => {
@@ -174,14 +158,8 @@ describe('Tier2CardRuntime', () => {
     await act(async () => {
       render(<Tier2CardRuntime definition={definition} config={undefined} />)
     })
-    await waitFor(() =>
-      expect(screen.getByTestId('cfg').textContent).toBe('{}')
-    )
+    await waitFor(() => expect(screen.getByTestId('cfg').textContent).toBe('{}'))
   })
-
-  // =========================================================================
-  // #5282 — Tier 2 Compile/Runtime Failure Paths
-  // =========================================================================
 
   describe('Tier 2 compile/runtime failure paths (#5282)', () => {
     it('shows error when compileCardCode throws synchronously', async () => {
@@ -190,22 +168,17 @@ describe('Tier2CardRuntime', () => {
       await act(async () => {
         render(<Tier2CardRuntime definition={definition} />)
       })
-      await waitFor(() =>
-        expect(screen.getByText(/Unexpected error/i)).toBeInTheDocument()
-      )
+      await waitFor(() => expect(screen.getByText(/Unexpected error/i)).toBeInTheDocument())
       expect(screen.getByText(/Cannot read property of undefined/)).toBeInTheDocument()
     })
 
     it('shows error when compileCardCode returns both code and error', async () => {
-      // Edge case: compile returns error (should take precedence)
       mockCompileCardCode.mockResolvedValue({ code: 'some-code', error: 'Parse error at line 1' })
 
       await act(async () => {
         render(<Tier2CardRuntime definition={definition} />)
       })
-      await waitFor(() =>
-        expect(screen.getByText('Parse error at line 1')).toBeInTheDocument()
-      )
+      await waitFor(() => expect(screen.getByText('Parse error at line 1')).toBeInTheDocument())
     })
 
     it('shows error when createCardComponent throws during execution', async () => {
@@ -215,9 +188,7 @@ describe('Tier2CardRuntime', () => {
       await act(async () => {
         render(<Tier2CardRuntime definition={definition} />)
       })
-      await waitFor(() =>
-        expect(screen.getByText(/Unexpected error: Maximum call stack size exceeded/)).toBeInTheDocument()
-      )
+      await waitFor(() => expect(screen.getByText(/Unexpected error: Maximum call stack size exceeded/)).toBeInTheDocument())
     })
 
     it('shows Compilation Error heading with error detail from compileCardCode', async () => {
@@ -229,22 +200,16 @@ describe('Tier2CardRuntime', () => {
       await act(async () => {
         render(<Tier2CardRuntime definition={definition} />)
       })
-      // The heading "Compilation Error" and the detail message are both rendered
-      await waitFor(() =>
-        expect(screen.getByText(/Unexpected token at line 42/)).toBeInTheDocument()
-      )
+      await waitFor(() => expect(screen.getByText(/Unexpected token at line 42/)).toBeInTheDocument())
     })
 
     it('handles non-Error thrown values from compileCardCode', async () => {
-      // Throw a string instead of an Error instance
       mockCompileCardCode.mockRejectedValue('string error thrown')
 
       await act(async () => {
         render(<Tier2CardRuntime definition={definition} />)
       })
-      await waitFor(() =>
-        expect(screen.getByText(/Unexpected error: string error thrown/)).toBeInTheDocument()
-      )
+      await waitFor(() => expect(screen.getByText(/Unexpected error: string error thrown/)).toBeInTheDocument())
     })
 
     it('renders "No component produced" when component is null and error is null', async () => {
@@ -258,9 +223,7 @@ describe('Tier2CardRuntime', () => {
       await act(async () => {
         render(<Tier2CardRuntime definition={definition} />)
       })
-      await waitFor(() =>
-        expect(screen.getByText('dynamicCard.noComponent')).toBeInTheDocument()
-      )
+      await waitFor(() => expect(screen.getByText('dynamicCard.noComponent')).toBeInTheDocument())
     })
 
     it('does not call compileCardCode when definition has compiledCode but createCardComponent fails', async () => {
@@ -274,9 +237,7 @@ describe('Tier2CardRuntime', () => {
       await act(async () => {
         render(<Tier2CardRuntime definition={defWithCache} />)
       })
-      await waitFor(() =>
-        expect(screen.getByText('Invalid module.exports: not a function')).toBeInTheDocument()
-      )
+      await waitFor(() => expect(screen.getByText('Invalid module.exports: not a function')).toBeInTheDocument())
       expect(mockCompileCardCode).not.toHaveBeenCalled()
     })
 
@@ -295,7 +256,6 @@ describe('Tier2CardRuntime', () => {
       })
       await waitFor(() => expect(screen.getByText('OK')).toBeInTheDocument())
 
-      // Replace with a failing definition to trigger recompile
       unmount()
       expect(cleanup).toHaveBeenCalledTimes(1)
     })

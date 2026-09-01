@@ -1,20 +1,10 @@
-import React from 'react'
-import { describe, it, expect, vi, beforeEach, afterEach, act, waitFor } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { DynamicCard } from '../DynamicCard'
-import {
-  mockGetDynamicCard,
-  mockCompileCardCode,
-  mockCreateCardComponent,
-  mockUseCardData,
-  makeT1Definition,
-  makeT2Definition,
-  makeUseCardDataReturn,
-} from './DynamicCard.test.shared'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, waitFor, act } from '@testing-library/react'
+import { makeT1Definition, makeT2Definition, makeUseCardDataReturn, mockCompileCardCode, mockCreateCardComponent, mockGetDynamicCard, mockUseCardData } from './DynamicCard.test.shared'
 
-// ---------------------------------------------------------------------------
-// DynamicCard — top-level rendering & configuration validation
-// ---------------------------------------------------------------------------
+// Load after DynamicCard.test.shared so its vi.mock() registrations apply
+// (see comment in DynamicCard.tier1.test.tsx).
+const { DynamicCard } = await import('../DynamicCard')
 
 describe('DynamicCard', () => {
   beforeEach(() => {
@@ -72,6 +62,7 @@ describe('DynamicCard', () => {
       cleanup: mockCleanup,
       error: false,
     })
+
     await act(async () => {
       render(<DynamicCard config={{ dynamicCardId: 'card-t2', extra: true }} />)
     })

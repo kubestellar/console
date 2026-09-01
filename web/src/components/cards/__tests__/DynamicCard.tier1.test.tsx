@@ -1,20 +1,15 @@
-import React from 'react'
-import { describe, it, expect, vi, beforeEach, afterEach, act, waitFor } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { Tier1CardRuntime } from '../DynamicCard'
 import type { DynamicCardDefinition_T1 } from '../../../lib/dynamic-cards/types'
-import {
-  mockUseCardData,
-  BASE_T1_DEF,
-  makeT1Definition,
-  makeUseCardDataReturn,
-} from './DynamicCard.test.shared'
+import { BASE_T1_DEF, makeT1Definition, makeUseCardDataReturn, mockUseCardData } from './DynamicCard.test.shared'
 
-// ---------------------------------------------------------------------------
-// Tier1CardRuntime — validation, rendering, search, stats, badges, pagination,
-//                    and API data fetching
-// ---------------------------------------------------------------------------
+// The shared harness registers the vi.mock() factories for DynamicCard's
+// dependencies, so the component under test must be loaded only after that
+// module has been evaluated (same pattern as useCachedLLMd.test.shared /
+// cache.test.shared). A static import would evaluate DynamicCard before the
+// mocks are registered and the real hooks would be used.
+const { Tier1CardRuntime } = await import('../DynamicCard')
 
 describe('Tier1CardRuntime', () => {
   const definition = makeT1Definition()
@@ -22,6 +17,10 @@ describe('Tier1CardRuntime', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockUseCardData.mockReturnValue(makeUseCardDataReturn())
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   describe('validation errors', () => {
@@ -44,9 +43,7 @@ describe('Tier1CardRuntime', () => {
 
   describe('static data rendering', () => {
     it('renders list rows from static data via useCardData', () => {
-      mockUseCardData.mockReturnValue(
-        makeUseCardDataReturn([{ name: 'Alpha' }, { name: 'Beta' }])
-      )
+      mockUseCardData.mockReturnValue(makeUseCardDataReturn([{ name: 'Alpha' }, { name: 'Beta' }]))
       render(<Tier1CardRuntime definition={definition} cardDefinition={BASE_T1_DEF} />)
       expect(screen.getByText('Alpha')).toBeInTheDocument()
       expect(screen.getByText('Beta')).toBeInTheDocument()
@@ -108,7 +105,6 @@ describe('Tier1CardRuntime', () => {
       mockUseCardData.mockReturnValue(makeUseCardDataReturn([{ name: 'X' }, { name: 'Y' }]))
       render(<Tier1CardRuntime definition={definition} cardDefinition={def} />)
       expect(screen.getByText('Total')).toBeInTheDocument()
-      // count: resolves to data.length — but data here comes from static, so 2
       expect(screen.getByText('2')).toBeInTheDocument()
     })
 
@@ -212,9 +208,7 @@ describe('Tier1CardRuntime', () => {
 
     it('shows skeleton while fetching', async () => {
       let resolveFetch!: (v: Response) => void
-      global.fetch = vi.fn(
-        () => new Promise<Response>((r) => { resolveFetch = r })
-      ) as unknown as typeof fetch
+      global.fetch = vi.fn(() => new Promise<Response>((r) => { resolveFetch = r })) as unknown as typeof fetch
 
       const def: DynamicCardDefinition_T1 = {
         ...BASE_T1_DEF,
@@ -225,16 +219,13 @@ describe('Tier1CardRuntime', () => {
       expect(screen.getByTestId('skeleton-text')).toBeInTheDocument()
       await waitFor(() => expect(global.fetch).toHaveBeenCalled())
 
-      // Cleanup
       await act(async () => {
         resolveFetch(new Response(JSON.stringify([]), { status: 200 }))
       })
     })
 
     it('shows error state on non-ok HTTP response', async () => {
-      global.fetch = vi.fn().mockResolvedValue(
-        new Response('', { status: 500 })
-      ) as unknown as typeof fetch
+      global.fetch = vi.fn().mockResolvedValue(new Response('', { status: 500 })) as unknown as typeof fetch
 
       const def: DynamicCardDefinition_T1 = {
         ...BASE_T1_DEF,
@@ -244,9 +235,7 @@ describe('Tier1CardRuntime', () => {
       await act(async () => {
         render(<Tier1CardRuntime definition={definition} cardDefinition={def} />)
       })
-      await waitFor(() =>
-        expect(screen.getByText('dynamicCard.fetchFailed')).toBeInTheDocument()
-      )
+      await waitFor(() => expect(screen.getByText('dynamicCard.fetchFailed')).toBeInTheDocument())
     })
 
     it('shows error message from fetch rejection', async () => {
@@ -260,15 +249,11 @@ describe('Tier1CardRuntime', () => {
       await act(async () => {
         render(<Tier1CardRuntime definition={definition} cardDefinition={def} />)
       })
-      await waitFor(() =>
-        expect(screen.getByText('Network down')).toBeInTheDocument()
-      )
+      await waitFor(() => expect(screen.getByText('Network down')).toBeInTheDocument())
     })
 
     it('sends Authorization header when token exists', async () => {
-      global.fetch = vi.fn().mockResolvedValue(
-        new Response(JSON.stringify([{ name: 'X' }]), { status: 200 })
-      ) as unknown as typeof fetch
+      global.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify([{ name: 'X' }]), { status: 200 })) as unknown as typeof fetch
 
       const def: DynamicCardDefinition_T1 = {
         ...BASE_T1_DEF,
@@ -282,17 +267,15 @@ describe('Tier1CardRuntime', () => {
         expect(global.fetch).toHaveBeenCalledWith(
           '/api/things',
           expect.objectContaining({
-            headers: { Authorization: '******' },
-          })
+            headers: { Authorization: 'Bearer test-token' },
+          }),
         )
       })
     })
 
     it('sends no Authorization header when token is absent', async () => {
       vi.spyOn(localStorage, 'getItem').mockReturnValue(null)
-      global.fetch = vi.fn().mockResolvedValue(
-        new Response(JSON.stringify([]), { status: 200 })
-      ) as unknown as typeof fetch
+      global.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify([]), { status: 200 })) as unknown as typeof fetch
 
       const def: DynamicCardDefinition_T1 = {
         ...BASE_T1_DEF,
@@ -302,20 +285,13 @@ describe('Tier1CardRuntime', () => {
       await act(async () => {
         render(<Tier1CardRuntime definition={definition} cardDefinition={def} />)
       })
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/things',
-        expect.objectContaining({ headers: {} })
-      )
+      expect(global.fetch).toHaveBeenCalledWith('/api/things', expect.objectContaining({ headers: {} }))
     })
 
     it('normalises non-array JSON response via items key', async () => {
       const payload = { items: [{ name: 'FromItems' }] }
-      global.fetch = vi.fn().mockResolvedValue(
-        new Response(JSON.stringify(payload), { status: 200 })
-      ) as unknown as typeof fetch
-      mockUseCardData.mockImplementation((data: unknown[]) =>
-        makeUseCardDataReturn(data as Record<string, unknown>[])
-      )
+      global.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify(payload), { status: 200 })) as unknown as typeof fetch
+      mockUseCardData.mockImplementation((data: unknown[]) => makeUseCardDataReturn(data as Record<string, unknown>[]))
 
       const def: DynamicCardDefinition_T1 = {
         ...BASE_T1_DEF,
@@ -333,9 +309,7 @@ describe('Tier1CardRuntime', () => {
 
     it('allows same-origin absolute apiEndpoint URLs', async () => {
       const sameOriginEndpoint = `${window.location.origin}/api/things`
-      global.fetch = vi.fn().mockResolvedValue(
-        new Response(JSON.stringify([{ name: 'Allowed' }]), { status: 200 })
-      ) as unknown as typeof fetch
+      global.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify([{ name: 'Allowed' }]), { status: 200 })) as unknown as typeof fetch
 
       const def: DynamicCardDefinition_T1 = {
         ...BASE_T1_DEF,
@@ -351,7 +325,7 @@ describe('Tier1CardRuntime', () => {
         expect(global.fetch).toHaveBeenCalledWith(
           sameOriginEndpoint,
           expect.objectContaining({
-            headers: { Authorization: '******' },
+            headers: { Authorization: 'Bearer test-token' },
           }),
         )
       })
