@@ -1,9 +1,12 @@
 package settings
 
 import (
+	"errors"
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -226,6 +229,105 @@ func TestPersistence_ConcurrentReads(t *testing.T) {
 
 	for err := range errors {
 		t.Errorf("concurrent read failed: %v", err)
+	}
+}
+
+func TestPersistence_SaveRefusesWhenPendingLoadErrorExists(t *testing.T) {
+	sm := newTestManager(t)
+
+	sentinel := errors.New("backup failed")
+	sm.mu.Lock()
+	sm.loadErr = sentinel
+	sm.mu.Unlock()
+
+	err := sm.Save()
+	if err == nil {
+		t.Fatal("Save error = nil, want refusal after pending load error")
+	}
+	if !strings.Contains(err.Error(), "refusing to overwrite settings after backup failure") {
+		t.Fatalf("Save error = %v, want refusal message", err)
+	}
+	if !strings.Contains(err.Error(), sentinel.Error()) {
+		t.Fatalf("Save error = %v, want wrapped sentinel error", err)
+	}
+}
+
+func TestPersistence_SaveBackfillsNilSettingsToDefaults(t *testing.T) {
+	sm := newTestManager(t)
+
+	sm.mu.Lock()
+	sm.settings = nil
+	sm.mu.Unlock()
+
+	if err := sm.Save(); err != nil {
+		t.Fatalf("Save failed: %v", err)
+	}
+
+	sm.mu.RLock()
+	saved := sm.settings
+	sm.mu.RUnlock()
+
+	if saved == nil {
+		t.Fatal("settings = nil, want defaults after Save")
+	}
+	if saved.Settings.AIMode != DefaultSettings().Settings.AIMode {
+		t.Errorf("aiMode = %q, want default %q", saved.Settings.AIMode, DefaultSettings().Settings.AIMode)
+	}
+}
+
+func TestPersistence_SaveReturnsWrappedErrorWhenMkdirAllFails(t *testing.T) {
+	sm := newTestManager(t)
+
+	baseDir := t.TempDir()
+	blockingPath := filepath.Join(baseDir, "blocking-file")
+	if err := os.WriteFile(blockingPath, []byte("x"), 0600); err != nil {
+		t.Fatalf("failed to create blocking file: %v", err)
+	}
+
+	sm.SetSettingsPath(filepath.Join(blockingPath, "nested", settingsFileName))
+
+	err := sm.Save()
+	if err == nil {
+		t.Fatal("Save error = nil, want mkdir failure")
+	}
+	if !strings.Contains(err.Error(), "failed to create settings directory") {
+		t.Fatalf("Save error = %v, want wrapped mkdir failure", err)
+	}
+}
+
+func TestPersistence_SaveCleansTempFileWhenRenameFails(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("rename semantics differ on windows")
+	}
+
+	sm := newTestManager(t)
+
+	baseDir := t.TempDir()
+	targetDir := filepath.Join(baseDir, "existing-dir")
+	if err := os.MkdirAll(targetDir, settingsDirMode); err != nil {
+		t.Fatalf("failed to create target dir: %v", err)
+	}
+	keepFile := filepath.Join(targetDir, "keep.txt")
+	if err := os.WriteFile(keepFile, []byte("keep"), settingsFileMode); err != nil {
+		t.Fatalf("failed to write keep file: %v", err)
+	}
+
+	sm.SetSettingsPath(targetDir)
+
+	err := sm.Save()
+	if err == nil {
+		t.Fatal("Save error = nil, want rename failure")
+	}
+	if !strings.Contains(err.Error(), "failed to rename temp settings file") {
+		t.Fatalf("Save error = %v, want wrapped rename failure", err)
+	}
+
+	matches, globErr := filepath.Glob(filepath.Join(baseDir, ".settings-*.tmp"))
+	if globErr != nil {
+		t.Fatalf("glob failed: %v", globErr)
+	}
+	if len(matches) != 0 {
+		t.Fatalf("found orphaned temp files: %v", matches)
 	}
 }
 
