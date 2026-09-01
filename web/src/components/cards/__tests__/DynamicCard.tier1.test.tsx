@@ -1,9 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { Tier1CardRuntime } from '../DynamicCard'
 import type { DynamicCardDefinition_T1 } from '../../../lib/dynamic-cards/types'
 import { BASE_T1_DEF, makeT1Definition, makeUseCardDataReturn, mockUseCardData } from './DynamicCard.test.shared'
+
+// The shared harness registers the vi.mock() factories for DynamicCard's
+// dependencies, so the component under test must be loaded only after that
+// module has been evaluated (same pattern as useCachedLLMd.test.shared /
+// cache.test.shared). A static import would evaluate DynamicCard before the
+// mocks are registered and the real hooks would be used.
+const { Tier1CardRuntime } = await import('../DynamicCard')
 
 describe('Tier1CardRuntime', () => {
   const definition = makeT1Definition()

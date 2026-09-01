@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, act } from '@testing-library/react'
-import { Tier2CardRuntime } from '../DynamicCard'
 import { makeT2Definition, mockCompileCardCode, mockCreateCardComponent } from './DynamicCard.test.shared'
+
+// Load after DynamicCard.test.shared so its vi.mock() registrations apply
+// (see comment in DynamicCard.tier1.test.tsx).
+const { Tier2CardRuntime } = await import('../DynamicCard')
 
 describe('Tier2CardRuntime', () => {
   const definition = makeT2Definition()
