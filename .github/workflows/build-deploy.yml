@@ -602,6 +602,8 @@ jobs:
               --set securityContext.runAsUser=null \
               --set securityContext.runAsGroup=null \
               --set podSecurityContext.fsGroup=null \
+              --set migration.runAsUser=null \
+              --set migration.runAsGroup=null \
               --set podLabels.team=kubestellar \
               --atomic \
               --cleanup-on-fail \

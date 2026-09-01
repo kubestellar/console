@@ -71,8 +71,12 @@ test.describe('Enterprise Compliance Portal', () => {
 
     for (const vertical of verticals) {
       test(`navigates to ${vertical.label} vertical`, async ({ page }) => {
-        // Click on the vertical in the sidebar
+        // Click on the vertical in the sidebar. Enterprise nav sections are
+        // collapsible and the list is scrollable, so the target item may be
+        // rendered outside the viewport — scroll it into view before clicking
+        // to avoid selector-drift timeouts.
         const navItem = page.locator(`[data-testid="sidebar-item"][data-test-label="${vertical.label}"]`)
+        await navItem.scrollIntoViewIfNeeded()
         await navItem.click()
         
         // Wait for navigation and header update
@@ -90,7 +94,9 @@ test.describe('Enterprise Compliance Portal', () => {
     await expect(sidebar).toBeVisible()
     
     // Click 'Frameworks' and verify navigation
-    await sidebar.locator('[data-testid="sidebar-item"][data-test-label="Frameworks"]').click()
+    const frameworksItem = sidebar.locator('[data-testid="sidebar-item"][data-test-label="Frameworks"]')
+    await frameworksItem.scrollIntoViewIfNeeded()
+    await frameworksItem.click()
     await expect(page.getByTestId('dashboard-title')).toHaveText(/Compliance Frameworks/i)
   })
 

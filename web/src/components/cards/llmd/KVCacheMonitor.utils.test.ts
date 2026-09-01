@@ -18,6 +18,7 @@ import {
 import type { PodHistoryMap } from './KVCacheMonitor.types'
 import type { KVCacheStats } from '../../../lib/llmd/mockData'
 import type { LLMdStack, LLMdStackComponent } from '../../../hooks/useStackDiscovery'
+import type { PodMetrics } from '../../../hooks/usePrometheusMetrics'
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -525,8 +526,7 @@ describe('generateMonitorStats', () => {
           tokenRate: 0,
           activeRequests: 0,
           errorRate: 0,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } as any,
+        } as PodMetrics,
       },
       selectedStack: stack,
     })
@@ -594,8 +594,7 @@ describe('generateMonitorStats', () => {
           tokenRate: 0,
           activeRequests: 0,
           errorRate: 0,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } as any,
+        } as PodMetrics,
       },
       selectedStack: stack,
     })

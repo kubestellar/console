@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_updated": "2026-08-28T05:41:20Z",
+  "last_updated": "2026-09-01T03:08:02Z",
   "rolling_window_days": 30,
   "categories": {
     "performance": {
@@ -11,53 +11,53 @@
       "last_evaluated": "2026-08-16T03:18:35Z"
     },
     "security": {
-      "merged": 120,
+      "merged": 123,
       "closed": 71,
       "acceptance_rate": 0.63,
       "status": "normal",
-      "last_evaluated": "2026-08-14T03:43:45Z"
+      "last_evaluated": "2026-08-30T03:07:26Z"
     },
     "a11y": {
-      "merged": 83,
+      "merged": 90,
       "closed": 29,
-      "acceptance_rate": 0.74,
+      "acceptance_rate": 0.76,
       "status": "normal",
-      "last_evaluated": "2026-08-18T03:16:41Z"
+      "last_evaluated": "2026-08-31T03:08:06Z"
     },
     "operator": {
-      "merged": 881,
-      "closed": 270,
+      "merged": 924,
+      "closed": 273,
       "acceptance_rate": 0.77,
       "status": "normal",
-      "last_evaluated": "2026-08-28T05:41:20Z"
+      "last_evaluated": "2026-09-01T03:08:02Z"
     },
     "sre": {
-      "merged": 600,
+      "merged": 619,
       "closed": 101,
       "acceptance_rate": 0.86,
       "status": "boosted",
-      "last_evaluated": "2026-08-28T05:41:20Z"
+      "last_evaluated": "2026-09-01T03:08:02Z"
     },
     "features": {
-      "merged": 43,
+      "merged": 47,
       "closed": 10,
-      "acceptance_rate": 0.81,
+      "acceptance_rate": 0.82,
       "status": "boosted",
-      "last_evaluated": "2026-08-23T03:20:13Z"
+      "last_evaluated": "2026-08-31T03:08:06Z"
     },
     "resilience": {
-      "merged": 108,
+      "merged": 119,
       "closed": 66,
-      "acceptance_rate": 0.62,
+      "acceptance_rate": 0.64,
       "status": "normal",
-      "last_evaluated": "2026-08-27T04:45:54Z"
+      "last_evaluated": "2026-09-01T03:08:02Z"
     },
     "consistency": {
-      "merged": 36,
+      "merged": 38,
       "closed": 21,
-      "acceptance_rate": 0.63,
+      "acceptance_rate": 0.64,
       "status": "normal",
-      "last_evaluated": "2026-08-28T05:41:20Z"
+      "last_evaluated": "2026-08-30T03:07:27Z"
     }
   },
   "weekly_insights": {
@@ -65,53 +65,19 @@
     "size_acceptance": {},
     "type_acceptance": {},
     "common_rejection_reasons": [
-      "- PR #22540: Verified against `origin/main` — every file this PR touches already has equivalent (or superseding) test coverage merged via other PRs, and this branch is now stale (`CONFLICTING`/`DIRTY`/`BLOCKED` against current `main`):",
-      "| File | Test file on `main` | Lines / `it()` | Merged via |"
+      "- PR #22794: ## 🛑 Fix loop escalated — human attention needed",
+      "This PR has failed CI on **1 distinct fix attempts** (new commits, still red). The hive has stopped dispatching further automated fixes for it.",
+      "- PR #22763: Looks like k8s.io/client-go is up-to-date now, so this is no longer needed.",
+      "- PR #22758: Looks like k8s.io/apimachinery is up-to-date now, so this is no longer needed."
     ],
     "best_change_type": "bug_fix",
-    "last_report_date": "2026-08-23"
+    "last_report_date": "2026-08-30"
   },
   "cncf_insights": {
     "last_scan_date": "2026-08-19",
     "suggested_checks": []
   },
   "history": [
-    {
-      "date": "2026-07-19",
-      "total_merged": 1454,
-      "total_closed": 568,
-      "categories_blocked": [],
-      "categories_boosted": [
-        "sre"
-      ]
-    },
-    {
-      "date": "2026-07-20",
-      "total_merged": 1463,
-      "total_closed": 568,
-      "categories_blocked": [],
-      "categories_boosted": [
-        "sre"
-      ]
-    },
-    {
-      "date": "2026-07-21",
-      "total_merged": 1488,
-      "total_closed": 568,
-      "categories_blocked": [],
-      "categories_boosted": [
-        "sre"
-      ]
-    },
-    {
-      "date": "2026-07-22",
-      "total_merged": 1500,
-      "total_closed": 568,
-      "categories_blocked": [],
-      "categories_boosted": [
-        "sre"
-      ]
-    },
     {
       "date": "2026-07-23",
       "total_merged": 1511,
@@ -354,17 +320,57 @@
         "sre",
         "features"
       ]
+    },
+    {
+      "date": "2026-08-29",
+      "total_merged": 1920,
+      "total_closed": 582,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "sre",
+        "features"
+      ]
+    },
+    {
+      "date": "2026-08-30",
+      "total_merged": 1938,
+      "total_closed": 582,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "sre",
+        "features"
+      ]
+    },
+    {
+      "date": "2026-08-31",
+      "total_merged": 1955,
+      "total_closed": 582,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "sre",
+        "features"
+      ]
+    },
+    {
+      "date": "2026-09-01",
+      "total_merged": 1979,
+      "total_closed": 582,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "sre",
+        "features"
+      ]
     }
   ],
   "rotation_weights": {
     "performance": 0.95,
     "security": 0.95,
-    "a11y": 1.11,
+    "a11y": 1.14,
     "operator": 1.16,
     "sre": 2.0,
     "features": 2.0,
-    "resilience": 0.93,
-    "consistency": 0.95
+    "resilience": 0.96,
+    "consistency": 0.96
   },
   "max_issues_override": 5,
   "pr_guidance": "Keep changes under 50 lines (size S) for best acceptance rate. Split larger fixes into multiple PRs.",

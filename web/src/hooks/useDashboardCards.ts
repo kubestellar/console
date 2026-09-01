@@ -4,6 +4,7 @@ import {
   loadDashboardCardsFromStorage,
   saveDashboardCardsToStorage,
 } from '../lib/dashboards/dashboardCardStorage'
+import { safeGetItem } from '../lib/utils/localStorage'
 
 export interface DashboardCard {
   id: string
@@ -24,7 +25,7 @@ function safeJsonParse<T>(raw: string, fallback: T, context: string): T {
   try {
     return JSON.parse(raw) as T
   } catch (err) {
-    console.error(`[useDashboardCards] Failed to parse ${context}, using default`, err)
+    console.warn(`[useDashboardCards] Failed to parse ${context}, using default`, err)
     return fallback
   }
 }
@@ -42,14 +43,13 @@ export function useDashboardCards({ storageKey, defaultCards = [], defaultCollap
   )
 
   // Collapsed state - persisted separately
+  // safeGetItem handles storage access failures (private browsing, disabled
+  // storage) by logging and dispatching a 'storage-error' event that
+  // ErrorToastListener surfaces to the user, instead of swallowing them.
   const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
-    try {
-      const stored = localStorage.getItem(collapsedKey)
-      // If not stored, use default (expanded = false collapsed)
-      return stored !== null ? safeJsonParse<boolean>(stored, defaultCollapsed, `${collapsedKey} collapsed state`) : defaultCollapsed
-    } catch {
-      return defaultCollapsed
-    }
+    const stored = safeGetItem(collapsedKey)
+    // If not stored, use default (expanded = false collapsed)
+    return stored !== null ? safeJsonParse<boolean>(stored, defaultCollapsed, `${collapsedKey} collapsed state`) : defaultCollapsed
   })
 
   // Save collapsed state to localStorage

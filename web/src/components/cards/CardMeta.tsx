@@ -83,7 +83,7 @@ export function CardMeta({
           <span
             className={cn(
               'cursor-help text-2xs',
-              isFailed ? 'text-orange-400' : 'text-muted-foreground'
+              isFailed ? 'text-red-400' : 'text-muted-foreground'
             )}
             title={tooltipLabel}
           >

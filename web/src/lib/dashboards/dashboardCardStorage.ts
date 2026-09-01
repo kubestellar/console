@@ -1,3 +1,4 @@
+import { logger } from '../logger'
 import { safeGetItem, safeRemoveItem, safeSetItem, safeSetJSON } from '../utils/localStorage'
 
 const DASHBOARD_CARD_STORAGE_SCHEMA_VERSION = '1'
@@ -80,7 +81,9 @@ export function loadDashboardCardsFromStorage<T extends DashboardCardStorageEntr
   let storedCards: unknown
   try {
     storedCards = JSON.parse(storedValue)
-  } catch {
+  } catch (error: unknown) {
+    // Corrupt/invalid JSON in storage - log for debugging before falling back
+    logger.error(`Failed to parse dashboard cards for "${storageKey}", clearing storage:`, error)
     clearDashboardCardStorage(storageKey)
     return fallbackCards
   }

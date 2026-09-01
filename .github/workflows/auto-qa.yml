@@ -2051,7 +2051,9 @@ jobs:
 
           # Check for stat blocks without demo values
           # Stat blocks in cards using useCached* hooks get demo data automatically
-          STAT_NO_DEMO=$(grep -rln "StatBlock\|StatCard\|stats\[" src/components --include="*.tsx" 2>/dev/null | while read f; do
+          # Pure UI components (skeletons, modals, pickers, configurators) are excluded
+          STAT_EXCLUDE_PATTERN="Skeleton\|Modal\|ModePicker\|StatsConfig\|Customizer\|CatalogSection\|ManageTab\|ClusterZone\|stories\|test\|spec"
+          STAT_NO_DEMO=$(grep -rln "StatBlock\|StatCard\|stats\[" src/components --include="*.tsx" 2>/dev/null | grep -v "$STAT_EXCLUDE_PATTERN" | while read f; do
             HAS_DEMO=$(grep -l "demo\|Demo\|mock\|Mock\|sample\|Sample\|isDemoFallback\|useCached\|useClusters\|useMCP" "$f" 2>/dev/null || true)
             if [ -z "$HAS_DEMO" ]; then
               basename "$f"

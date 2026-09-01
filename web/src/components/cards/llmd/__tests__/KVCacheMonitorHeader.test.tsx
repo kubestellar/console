@@ -48,10 +48,11 @@ vi.mock('lucide-react', () => ({
 }))
 
 import { KVCacheMonitorHeader } from '../KVCacheMonitorHeader'
+import type { CardsCommonTFunction } from '../KVCacheMonitor.types'
+import type { LLMdStack } from '../../../../hooks/useStackDiscovery'
 
 describe('KVCacheMonitorHeader', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const mockT = ((key: string, fallback?: string) => fallback || key) as any
+  const mockT = ((key: string, fallback?: string) => fallback || key) as CardsCommonTFunction
 
   it('renders without crashing', () => {
     const { container } = render(
@@ -83,8 +84,7 @@ describe('KVCacheMonitorHeader', () => {
       <KVCacheMonitorHeader
         viewMode="heatmap"
         aggregationMode="disaggregated"
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        selectedStack={stack as any}
+        selectedStack={stack as LLMdStack}
         isDemoMode={false}
         onViewModeToggle={vi.fn()}
         onAggregationModeChange={vi.fn()}

@@ -80,8 +80,8 @@ export function useMissionToolCheck({
         setResult({ status: 'ready', missingTools: [], errorMessage: undefined })
       })
       .catch((error: unknown) => {
-        console.error('[MissionToolCheck] preflight failed:', error)
         if (!isActive) return
+        console.debug('[MissionToolCheck] preflight failed:', error)
         setResult({
           status: 'error',
           missingTools: [],

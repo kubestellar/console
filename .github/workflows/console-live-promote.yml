@@ -281,6 +281,27 @@ jobs:
             --from-file=config="$GROUNDTRUTH_KUBECONFIG_PATH" \
             --dry-run=client -o yaml | kubectl apply -f -
 
+      - name: Ensure live ServiceAccount exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          export KUBECONFIG="$DEPLOY_KUBECONFIG"
+          # Repair + standing guard for #22957: both the canary and live pods
+          # run as $LIVE_SERVICE_ACCOUNT, but the SA used to be managed by
+          # nobody (serviceAccount.create: false in both releases), so
+          # rollback debris from the failed pvc-migration era (#22946) left a
+          # cluster where the Helm upgrade/rollback cycle deletes the SA:
+          # the perpetual rollback-target revision still lists the SA in its
+          # manifest while the upgrade renders none, so Helm prunes it
+          # mid-upgrade and the Deployment's ReplicaSet immediately fails
+          # with 'serviceaccount "kc-live-kubestellar-console" not found'
+          # (scheduled run 33346472599). Recreate it idempotently before
+          # anything deploys; a no-op when it already exists. The live helm
+          # upgrade below (serviceAccount.create: true) then adopts it into
+          # the release so an upgrade can never prune it again.
+          kubectl -n "$LIVE_NAMESPACE" create serviceaccount "$LIVE_SERVICE_ACCOUNT" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
       - name: Deploy candidate to private canary
         id: deploy_canary
         shell: bash
@@ -455,6 +476,19 @@ jobs:
           export KUBECONFIG="$DEPLOY_KUBECONFIG"
 
           target_access_mode="${LIVE_PERSISTENCE_ACCESS_MODE:-ReadWriteOnce}"
+
+          # Always clear any stale pvc-migration hook Job before the Helm
+          # upgrade, even when no PVC migration is needed below. The chart's
+          # "before-hook-creation" delete policy is supposed to do this, but
+          # if a prior run's Job is stuck terminating (e.g. its Pod is stuck
+          # in a finalizer/grace-period state), Helm's own recreation can
+          # fail before the migration script ever runs, which then surfaces
+          # only as an opaque "Job Failed" during the pre-upgrade hook
+          # (#22907, re-regression of #21087/#21088). Best-effort: a missing
+          # or already-clean Job here is not an error.
+          stale_migration_job="${LIVE_DEPLOYMENT}-pvc-migration"
+          kubectl -n "$LIVE_NAMESPACE" delete job "$stale_migration_job" --ignore-not-found=true --wait=true --timeout=60s 2>/dev/null || true
+
           incompatible_pvcs="$(kubectl -n "$LIVE_NAMESPACE" get pvc -l "app.kubernetes.io/instance=$LIVE_RELEASE" -o json 2>/dev/null \
             | jq -r --arg mode "$target_access_mode" '.items[] | select((.spec.accessModes // []) | index($mode) | not) | .metadata.name' || true)"
           if [ -n "$incompatible_pvcs" ]; then
@@ -510,8 +544,19 @@ jobs:
           clusterName: "$LIVE_CLUSTER_NAME"
           service:
             type: ClusterIP
+          # The live release OWNS the shared ServiceAccount (#22957). It used
+          # to be create: false (SA pre-created out of band), but the release
+          # state on console-live still records the SA from older revisions,
+          # so rendering no SA made Helm prune it mid-upgrade (present in the
+          # old release manifest, absent from the new one). The Deployment's
+          # ReplicaSet then failed instantly with "serviceaccount not found",
+          # the 10m --wait expired, and the atomic rollback wedged on the
+          # immutable PVC (#22946). With create: true the SA is part of every
+          # rendered upgrade, so Helm reconciles it instead of deleting it.
+          # The canary release keeps create: false and only references the
+          # SA — exactly one release may own it.
           serviceAccount:
-            create: false
+            create: true
             name: "$LIVE_SERVICE_ACCOUNT"
           persistence:
             enabled: true
@@ -562,14 +607,42 @@ jobs:
             - name: WATCHDOG_RUNTIME_FILE
               value: /tmp/kc-watcher-runtime.env
           EOF
-          helm upgrade --install "$LIVE_RELEASE" ./deploy/helm/kubestellar-console \
+
+          # Dumps the pre-upgrade PVC-migration hook Job's diagnostics.
+          # helm.sh/hook-delete-policy on that Job includes hook-failed, so
+          # a failed Job (and its Pod/logs) gets deleted by Helm shortly
+          # after `helm upgrade` returns. This must run immediately after
+          # the failed upgrade, before any other step touches the release,
+          # or the logs are gone for good. Every command is best-effort
+          # (|| true) so a diagnostics failure never masks the real error.
+          dump_migration_hook_diagnostics() {
+            local job_name="${LIVE_DEPLOYMENT}-pvc-migration"
+            echo "::group::PVC migration hook Job/Pod status"
+            kubectl -n "$LIVE_NAMESPACE" get jobs,pods -l app.kubernetes.io/component=pvc-migration -o wide || true
+            echo "::endgroup::"
+            echo "::group::PVC migration hook Job describe (events, failure reason)"
+            kubectl -n "$LIVE_NAMESPACE" describe job "$job_name" || true
+            echo "::endgroup::"
+            echo "::group::PVC migration hook Job logs"
+            kubectl -n "$LIVE_NAMESPACE" logs "job/$job_name" --all-containers --tail=200 --prefix || true
+            echo "::endgroup::"
+            echo "::group::Recent namespace events"
+            kubectl -n "$LIVE_NAMESPACE" get events --sort-by=.lastTimestamp | tail -40 || true
+            echo "::endgroup::"
+          }
+
+          if ! helm upgrade --install "$LIVE_RELEASE" ./deploy/helm/kubestellar-console \
             --namespace "$LIVE_NAMESPACE" \
             --reset-values \
             -f "$prod_values" \
             --atomic \
             --cleanup-on-fail \
             --wait \
-            --timeout 10m
+            --timeout 10m; then
+            echo "::warning::helm upgrade for $LIVE_RELEASE failed; capturing pvc-migration hook diagnostics"
+            dump_migration_hook_diagnostics
+            exit 1
+          fi
 
       - name: Verify live deployment and auth boundary
         id: live_smoke

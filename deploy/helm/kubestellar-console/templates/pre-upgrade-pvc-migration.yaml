@@ -91,24 +91,41 @@ spec:
         - name: migrate-pvcs
           image: "{{ .Values.migration.image.repository }}:{{ .Values.migration.image.tag }}"
           imagePullPolicy: IfNotPresent
-          # Use a lighter securityContext for the migration job: the kubectl
-          # image needs a writable home dir. The app's securityContext
-          # (readOnlyRootFilesystem=true) breaks kubectl's cache writes on
-          # some OpenShift clusters, causing the pod to fail immediately.
+          # Two conflicting admission regimes must both pass here:
+          #  - Plain Kubernetes (Kind, Minikube, OKE console-live): nothing
+          #    injects a UID, and the kubelet can only verify runAsNonRoot
+          #    against a NUMERIC effective UID. alpine/k8s has no USER
+          #    directive (runs as root), so runAsNonRoot: true without an
+          #    explicit numeric runAsUser is refused at container start:
+          #    "container has runAsNonRoot and image will run as root"
+          #    (#22907/#22919/#22946).
+          #  - OpenShift restricted-v2 SCC: forbids runAsUser: 0 and rejects
+          #    any fixed UID outside the namespace's assigned range; it
+          #    injects an in-range UID itself when runAsUser is unset
+          #    (#22925).
+          # Both are satisfied by defaulting migration.runAsUser/runAsGroup
+          # to a numeric non-root UID in values.yaml and nulling them on
+          # OpenShift (values-openshift.yaml or --set
+          # migration.runAsUser=null), mirroring the chart's existing
+          # securityContext.runAsUser pattern for the app container.
+          # HOME=/tmp (set below) ensures kubectl cache writes succeed
+          # regardless of which UID runs the container.
           securityContext:
             runAsNonRoot: true
+            {{- if .Values.migration.runAsUser }}
+            runAsUser: {{ .Values.migration.runAsUser }}
+            {{- end }}
+            {{- if .Values.migration.runAsGroup }}
+            runAsGroup: {{ .Values.migration.runAsGroup }}
+            {{- end }}
             allowPrivilegeEscalation: false
             capabilities:
               drop:
                 - ALL
           env:
-            # alpine/k8s has no non-root user baked in, so under an
-            # OpenShift-assigned arbitrary UID (runAsNonRoot with no fixed
-            # runAsUser) the default $HOME (/root) is not writable by that
-            # UID. kubectl and any tool cache/config writes would fail.
-            # /tmp is world-writable (sticky bit) regardless of UID, so
-            # pointing HOME there avoids the failure without needing a
-            # fixed UID or an extra writable volume.
+            # HOME is set to /tmp (world-writable) so kubectl cache/config
+            # writes succeed even though the container runs as root inside a
+            # restricted namespace (some environments mount /root read-only).
             - name: HOME
               value: /tmp
           command:

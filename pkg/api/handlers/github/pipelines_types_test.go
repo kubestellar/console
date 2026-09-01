@@ -4,6 +4,7 @@ import (
 	"os"
 	"sync"
 	"testing"
+	"time"
 )
 
 // ---------------------------------------------------------------------------
@@ -242,12 +243,15 @@ func TestGhpHistory_NewEmpty(t *testing.T) {
 func TestGhpHistory_MergeBasic(t *testing.T) {
 	h := newGHPHistory()
 	conclusion := "success"
+	// Use a recent date so the entry is not purged by the retention window.
+	today := time.Now().UTC().Format("2006-01-02")
+	createdAt := today + "T10:00:00Z"
 	runs := []ghpWorkflowRun{
 		{
 			ID:         1,
 			Repo:       "org/repo",
 			Name:       "CI",
-			CreatedAt:  "2026-06-01T10:00:00Z",
+			CreatedAt:  createdAt,
 			Conclusion: &conclusion,
 			HTMLURL:    "https://github.com/org/repo/actions/runs/1",
 		},
@@ -261,9 +265,9 @@ func TestGhpHistory_MergeBasic(t *testing.T) {
 	if _, ok := snap["org/repo"]["CI"]; !ok {
 		t.Fatal("expected CI workflow in snapshot")
 	}
-	day, ok := snap["org/repo"]["CI"]["2026-06-01"]
+	day, ok := snap["org/repo"]["CI"][today]
 	if !ok {
-		t.Fatal("expected 2026-06-01 entry")
+		t.Fatalf("expected %s entry", today)
 	}
 	if day.RunID != 1 {
 		t.Errorf("expected RunID 1, got %d", day.RunID)
@@ -273,14 +277,16 @@ func TestGhpHistory_MergeBasic(t *testing.T) {
 func TestGhpHistory_MergeKeepsLatestRun(t *testing.T) {
 	h := newGHPHistory()
 	c1, c2 := "failure", "success"
+	// Use a recent date so the entries are not purged by the retention window.
+	today := time.Now().UTC().Format("2006-01-02")
 	runs := []ghpWorkflowRun{
-		{ID: 1, Repo: "org/repo", Name: "CI", CreatedAt: "2026-06-01T10:00:00Z", Conclusion: &c1},
-		{ID: 5, Repo: "org/repo", Name: "CI", CreatedAt: "2026-06-01T14:00:00Z", Conclusion: &c2},
+		{ID: 1, Repo: "org/repo", Name: "CI", CreatedAt: today + "T10:00:00Z", Conclusion: &c1},
+		{ID: 5, Repo: "org/repo", Name: "CI", CreatedAt: today + "T14:00:00Z", Conclusion: &c2},
 	}
 	h.merge(runs)
 
 	snap := h.snapshot()
-	day := snap["org/repo"]["CI"]["2026-06-01"]
+	day := snap["org/repo"]["CI"][today]
 	if day.RunID != 5 {
 		t.Errorf("expected latest RunID 5, got %d", day.RunID)
 	}
@@ -303,12 +309,13 @@ func TestGhpHistory_MergeSkipsShortCreatedAt(t *testing.T) {
 
 func TestGhpHistory_MergeInProgressConclusion(t *testing.T) {
 	h := newGHPHistory()
+	today := time.Now().UTC().Format("2006-01-02")
 	runs := []ghpWorkflowRun{
-		{ID: 1, Repo: "org/repo", Name: "CI", CreatedAt: "2026-06-01T10:00:00Z", Status: "in_progress"},
+		{ID: 1, Repo: "org/repo", Name: "CI", CreatedAt: today + "T10:00:00Z", Status: "in_progress"},
 	}
 	h.merge(runs)
 	snap := h.snapshot()
-	day := snap["org/repo"]["CI"]["2026-06-01"]
+	day := snap["org/repo"]["CI"][today]
 	if day.Conclusion == nil {
 		t.Fatal("expected non-nil conclusion for in_progress run")
 	}
@@ -320,23 +327,25 @@ func TestGhpHistory_MergeInProgressConclusion(t *testing.T) {
 func TestGhpHistory_SnapshotIsDeepCopy(t *testing.T) {
 	h := newGHPHistory()
 	c := "success"
+	today := time.Now().UTC().Format("2006-01-02")
 	h.merge([]ghpWorkflowRun{
-		{ID: 1, Repo: "org/repo", Name: "CI", CreatedAt: "2026-06-01T10:00:00Z", Conclusion: &c},
+		{ID: 1, Repo: "org/repo", Name: "CI", CreatedAt: today + "T10:00:00Z", Conclusion: &c},
 	})
 
 	snap1 := h.snapshot()
 	// Mutate the snapshot
-	delete(snap1["org/repo"]["CI"], "2026-06-01")
+	delete(snap1["org/repo"]["CI"], today)
 
 	// Original should be unaffected
 	snap2 := h.snapshot()
-	if _, ok := snap2["org/repo"]["CI"]["2026-06-01"]; !ok {
+	if _, ok := snap2["org/repo"]["CI"][today]; !ok {
 		t.Error("snapshot mutation leaked into original data")
 	}
 }
 
 func TestGhpHistory_ConcurrentMerge(t *testing.T) {
 	h := newGHPHistory()
+	today := time.Now().UTC().Format("2006-01-02")
 	var wg sync.WaitGroup
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
@@ -344,7 +353,7 @@ func TestGhpHistory_ConcurrentMerge(t *testing.T) {
 			defer wg.Done()
 			c := "success"
 			h.merge([]ghpWorkflowRun{
-				{ID: id, Repo: "org/repo", Name: "CI", CreatedAt: "2026-06-01T10:00:00Z", Conclusion: &c},
+				{ID: id, Repo: "org/repo", Name: "CI", CreatedAt: today + "T10:00:00Z", Conclusion: &c},
 			})
 			_ = h.snapshot()
 		}(int64(i))

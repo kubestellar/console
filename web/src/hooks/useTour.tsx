@@ -187,6 +187,26 @@ export function TourProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  useEffect(() => {
+    if (!isActive) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        nextStep()
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        prevStep()
+      } else if (e.key === 'Escape') {
+        e.preventDefault()
+        skipTour()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isActive, nextStep, prevStep, skipTour])
+
   const contextValue = useMemo(() => ({
     isActive,
     currentStep,

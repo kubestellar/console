@@ -519,6 +519,8 @@ test('warmup — prime module cache', async ({ page }, testInfo) => {
 })
 
 test('cold-nav — first visit to each dashboard via sidebar', async ({ page }, testInfo) => {
+  const COLD_NAV_TIMEOUT_MS = 180_000 // first visit through all dashboards
+  testInfo.setTimeout(IS_CI ? COLD_NAV_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER : COLD_NAV_TIMEOUT_MS)
   if (REAL_BACKEND) testInfo.setTimeout(REAL_BACKEND_TEST_TIMEOUT)
   const pageErrors: string[] = []
   page.on('pageerror', (err) => pageErrors.push(err.message))
@@ -780,8 +782,9 @@ test('rapid-nav — quick clicks through dashboards', async ({ page }, testInfo)
     const linkSelector = `[data-testid="sidebar-primary-nav"] a[href="${dashboard.route}"]`
     const link = page.locator(linkSelector).first()
     // CI runners are slower — give sidebar links more time to appear during rapid-nav
-    const RAPID_LINK_VISIBLE_MS = IS_CI ? 5_000 : 2_000
-    const RAPID_URL_CHANGE_MS = IS_CI ? 5_000 : 2_000
+    // Increased from 5_000 to 10_000 for CI due to continued timeouts on shared runners (#22697)
+    const RAPID_LINK_VISIBLE_MS = IS_CI ? 10_000 : 2_000
+    const RAPID_URL_CHANGE_MS = IS_CI ? 10_000 : 2_000
     try {
       await link.waitFor({ state: 'visible', timeout: RAPID_LINK_VISIBLE_MS })
     } catch (error) { console.error('Error:', error)

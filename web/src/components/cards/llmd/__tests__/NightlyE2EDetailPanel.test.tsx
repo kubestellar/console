@@ -40,8 +40,8 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('recharts', () => ({
-  ResponsiveContainer: ({ children }: any) => <div>{children}</div>,
-  LineChart: ({ children }: any) => <div>{children}</div>,
+  ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  LineChart: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   Line: () => null,
   XAxis: () => null,
   YAxis: () => null,
@@ -51,6 +51,7 @@ vi.mock('recharts', () => ({
 }))
 
 import { NightlySummaryPanel, GuideDetailPanel } from '../NightlyE2EDetailPanel'
+import type { NightlyGuideStatus } from '../../../../lib/llmd/nightlyE2EDemoData'
 
 describe('NightlyE2EDetailPanel', () => {
   it('renders without crashing when no guide selected', () => {
@@ -77,7 +78,7 @@ describe('NightlyE2EDetailPanel', () => {
     }
     const { container } = render(
       <GuideDetailPanel
-        guide={guide as any}
+        guide={guide as NightlyGuideStatus}
         hoveredRun={null}
         onRunHover={vi.fn()}
       />
