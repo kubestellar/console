@@ -63,8 +63,8 @@ export function makeUseCardDataReturn(items: Record<string, unknown>[] = []) {
 // Shared vi.mock calls — import this file first in each test module
 // ---------------------------------------------------------------------------
 
-vi.mock('../../../lib/cache', () => {
-  const React = require('react')
+vi.mock('../../../lib/cache', async () => {
+  const React = await import('react')
   return {
     useCache: ({ fetcher, initialData, enabled = true }: { fetcher: () => Promise<unknown>; initialData: unknown; enabled?: boolean; [k: string]: unknown }) => {
       const [data, setData] = React.useState(initialData)
