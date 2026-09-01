@@ -53,13 +53,14 @@ export function useSudokuGame() {
   }, [showToast, t])
 
   // Timer
+  const isTimerRunning = gameState !== null && !gameState.isPaused && !gameState.isComplete
   useEffect(() => {
-    if (!gameState || gameState.isPaused || gameState.isComplete) return
+    if (!isTimerRunning) return
     const interval = setInterval(() => {
       setGameState(prev => prev ? { ...prev, timer: prev.timer + 1 } : null)
     }, 1000)
     return () => clearInterval(interval)
-  }, [gameState?.isPaused, gameState?.isComplete])
+  }, [isTimerRunning])
 
   const saveGame = useCallback(() => {
     if (!gameState) return
