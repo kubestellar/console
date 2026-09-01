@@ -315,7 +315,7 @@ export function DependencySummary({ dependencies, depActionStyles }: { dependenc
 // Helpers
 // ============================================================================
 
-export function getElapsed(startedAt: number, completedAt?: number): string {
+function getElapsed(startedAt: number, completedAt?: number): string {
   const end = completedAt || Date.now()
   const seconds = Math.floor((end - startedAt) / 1000)
   if (seconds < 60) return `${seconds}s`
