@@ -12,7 +12,7 @@ interface GPUInventoryHistoryChartProps {
   setLocalClusterFilter: (v: string[]) => void
   showClusterFilter: boolean
   setShowClusterFilter: (v: boolean) => void
-  clusterFilterRef: React.RefObject<HTMLDivElement>
+  clusterFilterRef: React.RefObject<HTMLDivElement | null>
   toggleClusterFilter: (name: string) => void
   availableClusters: { name: string; reachable: boolean }[]
   availableGPUTypes: string[]
@@ -29,8 +29,8 @@ interface GPUInventoryHistoryChartProps {
   setShowTypeDropdown: (fn: (v: boolean) => boolean) => void
   showNodeDropdown: boolean
   setShowNodeDropdown: (fn: (v: boolean) => boolean) => void
-  typeDropdownRef: React.RefObject<HTMLDivElement>
-  nodeDropdownRef: React.RefObject<HTMLDivElement>
+  typeDropdownRef: React.RefObject<HTMLDivElement | null>
+  nodeDropdownRef: React.RefObject<HTMLDivElement | null>
   tablePage: number
   setTablePage: (fn: (p: number) => number) => void
   chartData: GPUHistoryDataPoint[]
@@ -44,7 +44,6 @@ interface GPUInventoryHistoryChartProps {
   formatIntervalDuration: (intervals: number) => string
   tableRows: { name: string; cluster: string; gpuType: string; allocated: number; total: number; free: number; utilizationPct: number }[]
   totalTablePages: number
-  effectivePage: number
   paginatedRows: { name: string; cluster: string; gpuType: string; allocated: number; total: number; free: number; utilizationPct: number }[]
   usagePercent: number
   getUsageColor: () => string
@@ -52,7 +51,7 @@ interface GPUInventoryHistoryChartProps {
 }
 
 export function GPUInventoryHistoryChart(props: GPUInventoryHistoryChartProps) {
-  const { t, isRefreshing, refetch, localClusterFilter, setLocalClusterFilter, showClusterFilter, setShowClusterFilter, clusterFilterRef, toggleClusterFilter, availableClusters, availableGPUTypes, availableNodes, viewMode, setViewMode, chartMode, setChartMode, selectedGPUType, setSelectedGPUType, selectedNode, setSelectedNode, showTypeDropdown, setShowTypeDropdown, showNodeDropdown, setShowNodeDropdown, typeDropdownRef, nodeDropdownRef, tablePage, setTablePage, chartData, displayChartData, chartGPUTypes, currentTotals, churnMetrics, meanAllocatedGPUs, snapshotIntervalMin, formatIntervalDuration, tableRows, totalTablePages, effectivePage, paginatedRows, usagePercent, getUsageColor, TrendIcon } = props
+  const { t, isRefreshing, refetch, localClusterFilter, setLocalClusterFilter, showClusterFilter, setShowClusterFilter, clusterFilterRef, toggleClusterFilter, availableClusters, availableGPUTypes, availableNodes, viewMode, setViewMode, chartMode, setChartMode, selectedGPUType, setSelectedGPUType, selectedNode, setSelectedNode, showTypeDropdown, setShowTypeDropdown, showNodeDropdown, setShowNodeDropdown, typeDropdownRef, nodeDropdownRef, tablePage, setTablePage, chartData, displayChartData, chartGPUTypes, currentTotals, churnMetrics, meanAllocatedGPUs, snapshotIntervalMin, formatIntervalDuration, tableRows, totalTablePages, paginatedRows, usagePercent, getUsageColor, TrendIcon } = props
 
   return (
     <div className="h-full w-full min-w-0 flex flex-col content-loaded">

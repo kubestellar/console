@@ -107,7 +107,6 @@ export function GPUInventoryHistory() {
       formatIntervalDuration={state.formatIntervalDuration}
       tableRows={state.tableRows}
       totalTablePages={state.totalTablePages}
-      effectivePage={state.effectivePage}
       paginatedRows={state.paginatedRows}
       usagePercent={state.usagePercent}
       getUsageColor={state.getUsageColor}

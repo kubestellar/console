@@ -329,7 +329,6 @@ export function useGPUInventoryHistory() {
     formatIntervalDuration,
     tableRows,
     totalTablePages,
-    effectivePage,
     paginatedRows,
     usagePercent,
     getUsageColor,
