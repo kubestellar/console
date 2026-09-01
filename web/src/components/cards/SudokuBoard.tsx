@@ -1,5 +1,5 @@
 import { Trophy, Sparkles } from 'lucide-react'
-import type { Cell, GameState } from './sudoku.types'
+import type { BestTimes, Cell, GameState } from './sudoku.types'
 import { BOX_SIZE } from './sudoku.constants'
 
 interface SudokuBoardProps {
@@ -71,7 +71,7 @@ export function SudokuBoard({
 
 interface SudokuVictoryModalProps {
   gameState: GameState
-  bestTimes: Record<string, number | undefined>
+  bestTimes: BestTimes
   formatTime: (s: number) => string
   difficulties: Record<string, { label: string }>
   onPlayAgain: () => void
