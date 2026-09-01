@@ -10,37 +10,32 @@
  * Phase 3: Flight Plan (SVG blueprint + deploy)
  */
 
-import { useEffect, useLayoutEffect, useCallback, useRef, useState, Suspense } from 'react'
+import { Suspense } from 'react'
 import { safeLazy } from '../../lib/safeLazy'
-import { useModalFocusTrap, useModalState } from '../../lib/modals/useModalNavigation'
+import { useModalState } from '../../lib/modals/useModalNavigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   X,
   Rocket,
-  Target,
-  Map,
-  ChevronRight,
-  ChevronLeft,
-  RotateCcw,
-  FlaskConical,
-  Monitor,
   ArrowLeft,
-  GitPullRequestArrow,
-  Loader2,
+  RotateCcw,
 } from 'lucide-react'
-import { cn } from '../../lib/cn'
 import { Button } from '../ui/Button'
 import { useToast } from '../ui/Toast'
 import { ChunkErrorBoundary } from '../ChunkErrorBoundary'
-import { useMissionControl, consumePersistQuotaBanner } from './useMissionControl'
 import { FixerDefinitionPanel } from './FixerDefinitionPanel'
 import { ClusterAssignmentPanel } from './ClusterAssignmentPanel'
 const FlightPlanBlueprint = safeLazy(() => import('./FlightPlanBlueprint'), 'FlightPlanBlueprint')
 import { LaunchSequence } from './LaunchSequence'
 import { RequestApprovalModal } from './RequestApprovalModal'
-import { decodePlan, planToState } from './missionPlanCodec'
-import { useMissions } from '../../hooks/useMissions'
-import type { WizardPhase } from './types'
+import { useMissionControlDialog } from './useMissionControlDialog'
+import { MissionControlDialogStepper } from './MissionControlDialogStepper'
+import { MissionControlDialogFooter } from './MissionControlDialogFooter'
+import {
+  DEFAULT_DIALOG_ARIA_LABEL,
+  MODAL_SIDE_INSET_PX,
+  MODAL_TOP_INSET_PX,
+} from './MissionControlDialog.constants'
 
 interface MissionControlDialogProps {
   open: boolean
@@ -55,328 +50,34 @@ interface MissionControlDialogProps {
   historicalMissionId?: string
 }
 
-const PHASE_STEPS: {
-  key: WizardPhase
-  label: string
-  icon: React.ReactNode
-  description: string
-}[] = [
-  {
-    key: 'define',
-    label: 'Define Mission',
-    icon: <Target className="w-4 h-4" />,
-    description: 'Describe your fix and select projects',
-  },
-  {
-    key: 'assign',
-    label: 'Chart Course',
-    icon: <Map className="w-4 h-4" />,
-    description: 'Assign projects to clusters',
-  },
-  {
-    key: 'blueprint',
-    label: 'Flight Plan',
-    icon: <Rocket className="w-4 h-4" />,
-    description: 'Review blueprint and deploy',
-  },
-]
-
-/** Fallback a11y label when the user hasn't entered a mission title yet (issue 6745) */
-const DEFAULT_DIALOG_ARIA_LABEL = 'Mission control dialog'
-
-export function MissionControlDialog({ open, onClose, initialKubaraChart, reviewPlanEncoded, freshSessionToken, historicalMissionId }: MissionControlDialogProps) {
-  const mc = useMissionControl()
+export function MissionControlDialog(props: MissionControlDialogProps) {
+  const { open } = props
   const { showToast } = useToast()
-  const { startMission, openSidebar } = useMissions()
-  const { state } = mc
-  const showToastRef = useRef(showToast)
-  const [isReviewMode, setIsReviewMode] = useState(false)
-  const [reviewNotes, setReviewNotes] = useState<string | undefined>()
-  const [isSubmittingLaunch, setIsSubmittingLaunch] = useState(false)
-  const launchSubmittingRef = useRef(false)
-
-  // Track the highest phase the user has reached so they can click back to any visited phase
-  const currentStepIndex = PHASE_STEPS.findIndex((s) => s.key === state.phase)
-  const [highestReached, setHighestReached] = useState(0)
-  useEffect(() => {
-    setHighestReached(prev => Math.max(prev, currentStepIndex))
-  }, [currentStepIndex])
-
-  useEffect(() => {
-    showToastRef.current = showToast
-  }, [showToast])
-
-  // Track previous freshSessionToken to detect increments (not initial mount)
-  const prevFreshSessionTokenRef = useRef<number | undefined>(undefined)
-
-  // Initialize Mission Control before the dialog paints so a fresh open never
-  // flashes stale state and historical opens land on the selected run.
-  useLayoutEffect(() => {
-    if (!open) return
-
-    if (historicalMissionId) {
-      const loaded = mc.loadHistoricalSession(historicalMissionId)
-      if (loaded) {
-        setIsReviewMode(true)
-        setReviewNotes(undefined)
-      }
-      return
-    }
-
-    if (reviewPlanEncoded) {
-      const plan = decodePlan(reviewPlanEncoded)
-      if (!plan) {
-        showToastRef.current('Invalid plan link — could not decode the deployment plan', 'error')
-        return
-      }
-      mc.hydrateFromPlan(planToState(plan))
-      setIsReviewMode(true)
-      setReviewNotes(plan.notes)
-      return
-    }
-
-    // Only reset when freshSessionToken increments from a previous value,
-    // not on initial mount (undefined → N). This prevents overwriting
-    // test-seeded localStorage during E2E tests (#16079).
-    const prevToken = prevFreshSessionTokenRef.current
-    const hasTokenIncremented = freshSessionToken !== undefined && prevToken !== undefined && freshSessionToken !== prevToken
-
-    if (hasTokenIncremented) {
-      setIsReviewMode(false)
-      setReviewNotes(undefined)
-      mc.reset()
-      setHighestReached(0)
-    }
-
-    // Update ref after handling
-    prevFreshSessionTokenRef.current = freshSessionToken
-  }, [open, historicalMissionId, reviewPlanEncoded, freshSessionToken]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleClose = useCallback(() => {
-    if (isReviewMode) {
-      setIsReviewMode(false)
-      setReviewNotes(undefined)
-      mc.reset()
-    }
-    onClose()
-  }, [isReviewMode, onClose, mc])
-
-  /** #14190 — Launch a rollback mission for failed projects */
-  const handleRollback = useCallback(() => {
-    const failedProjects = (state.launchProgress || [])
-      .flatMap(phase => (phase.projects || []).filter(p => p.status === 'failed'))
-    const projectNames = failedProjects.map(p => p.name).join(', ')
-    const clusters = (state.assignments || []).map(a => a.clusterName).filter(Boolean).join(', ')
-
-    const rollbackPrompt = [
-      `The following Mission Control deployment failed and may have left clusters in an inconsistent state.`,
-      `Failed projects: ${projectNames || 'unknown'}`,
-      clusters ? `Target clusters: ${clusters}` : '',
-      ``,
-      `Please analyze what changes were partially applied and reverse them safely.`,
-      `Check the current state of the cluster(s) first, identify any partially-applied resources,`,
-      `and roll them back. Ask me before making destructive changes.`,
-    ].filter(Boolean).join('\n')
-
-    startMission({
-      title: `Rollback: ${state.title || 'Mission Control deployment'}`,
-      description: `Reverse changes from failed deployment`,
-      type: 'repair',
-      initialPrompt: rollbackPrompt,
-    })
-    openSidebar()
-    handleClose()
-  }, [state, startMission, openSidebar, handleClose])
-
-  // #8483 — Pre-populate Phase 1 with a Kubara chart when opened from Mission Browser
-  // #12216 — Clear the guard when the dialog closes so every new "Use in Mission
-  // Control" click (same or different chart) starts a fresh session.
-  const initialChartAdded = useRef<string | null>(null)
-  useLayoutEffect(() => {
-    if (!open) {
-      initialChartAdded.current = null
-      return
-    }
-    if (!initialKubaraChart || initialChartAdded.current === initialKubaraChart) return
-    initialChartAdded.current = initialKubaraChart
-    // #12216 — Reset any stale persisted session so the user always lands on
-    // Phase 1 with a clean slate instead of resuming a previous incomplete run.
-    mc.reset()
-    setHighestReached(0)
-    mc.addProject({
-      name: initialKubaraChart,
-      displayName: initialKubaraChart.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
-      reason: 'Imported from Kubara Platform Catalog',
-      category: 'Helm Chart',
-      priority: 'required',
-      dependencies: [],
-      kubaraChart: { repoPath: `helm/${initialKubaraChart}` },
-      userAdded: true,
-    })
-    // Ensure we're on Phase 1 (reset() already does this, but explicit for clarity)
-    mc.setPhase('define')
-  }, [open, initialKubaraChart]) // eslint-disable-line react-hooks/exhaustive-deps
-  // issue 6738 — Ref used by useModalFocusTrap to keep Tab/Shift+Tab inside the dialog
-  const dialogRef = useRef<HTMLDivElement>(null)
-  useModalFocusTrap(dialogRef, open)
-  // issue 6738 — Restore focus to the element that opened the dialog on close
-  const previouslyFocusedRef = useRef<HTMLElement | null>(null)
-  useEffect(() => {
-    if (open) {
-      previouslyFocusedRef.current = document.activeElement as HTMLElement | null
-      return
-    }
-    const prev = previouslyFocusedRef.current
-    if (prev && typeof prev.focus === 'function') {
-      prev.focus()
-    }
-  }, [open])
-
-  // #7150 — Escape to close. Uses capture phase (registered below) so
-  // child stopPropagation cannot swallow the Escape key. stopImmediatePropagation
-  // prevents other capture-phase handlers from interfering.
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopImmediatePropagation()
-        e.preventDefault()
-        handleClose()
-      }
-    },
-    [handleClose]
-  )
-
   const approvalModal = useModalState()
 
-  useEffect(() => {
-    if (!open || state.phase !== 'blueprint') {
-      launchSubmittingRef.current = false
-      setIsSubmittingLaunch(false)
-    }
-  }, [open, state.phase])
-
-  // #6787 — Use capture phase so child stopPropagation cannot swallow Escape
-  useEffect(() => {
-    if (!open) return
-    document.addEventListener('keydown', handleKeyDown, { capture: true })
-    return () => document.removeEventListener('keydown', handleKeyDown, { capture: true })
-  }, [open, handleKeyDown])
-
-  // #6758 (Copilot on PR #6755) — Surface a toast when a previous
-  // Mission Control session hit a QuotaExceededError while trying to
-  // persist its state. `consumePersistQuotaBanner()` reads and clears
-  // the session-storage flag set by the persistState writer in
-  // #6665, returning the mission title (or the literal `'(untitled)'`)
-  // that was being saved. Without this wiring the helper was dead
-  // code — the flag got written but nobody ever displayed it.
-  useEffect(() => {
-    if (!open) return
-    const pendingTitle = consumePersistQuotaBanner()
-    if (pendingTitle === null) return
-    showToast(
-      `Mission '${pendingTitle}' could not be persisted (browser storage quota exceeded). Your work is preserved in memory but will be lost on reload.`,
-      'warning',
-    )
-  }, [open, showToast])
-
-  // #6403 — Surface a toast when stale cluster references are dropped from
-  // persisted state. The hook already reconciles the state; we just notify
-  // the user so they don't stare at a mysteriously-shrunk assignment list.
-  useEffect(() => {
-    if (!open) return
-    if (mc.staleClusterNames.length === 0) return
-    const names = (mc.staleClusterNames || []).join(', ')
-    showToast(
-      `Unassigned ${mc.staleClusterNames.length} cluster(s) from your previous session that no longer exist: ${names}`,
-      'warning',
-    )
-    mc.acknowledgeStaleClusters()
-  }, [open, mc.staleClusterNames, showToast, mc])
-
-  // Lock body scroll while modal is open so users cannot scroll the page behind it
-  useEffect(() => {
-    if (!open) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
-  }, [open])
-
-  // #6828 — Ref-based guard prevents double-click from skipping a phase.
-  // The guard resets after one React render cycle via useEffect.
-  // MUST be before the early return — React Rules of Hooks require
-  // hooks to run in the same order on every render.
-  const phaseAdvancingRef = useRef(false)
-  useEffect(() => { phaseAdvancingRef.current = false }, [state.phase])
-
-  const handleLaunch = useCallback((dryRun: boolean) => {
-    if (launchSubmittingRef.current) return
-
-    launchSubmittingRef.current = true
-    setIsSubmittingLaunch(true)
-
-    try {
-      const hasAssignedClusters = state.assignments.some(
-        (assignment) => (assignment.projectNames ?? []).length > 0
-      )
-      if (!hasAssignedClusters) {
-        showToast('No clusters have project assignments. Go back to Chart Course to assign projects before launching.', 'warning')
-        launchSubmittingRef.current = false
-        setIsSubmittingLaunch(false)
-        return
-      }
-
-      mc.setDryRun(dryRun)
-      mc.setPhase('launching')
-    } catch (error) {
-      launchSubmittingRef.current = false
-      setIsSubmittingLaunch(false)
-      throw error
-    }
-  }, [mc, showToast, state.assignments])
+  const {
+    mc,
+    state,
+    dialogRef,
+    isReviewMode,
+    reviewNotes,
+    isSubmittingLaunch,
+    isLaunching,
+    isComplete,
+    canAdvance,
+    canGoBack,
+    currentStepIndex,
+    highestReached,
+    setHighestReached,
+    handleClose,
+    handleNext,
+    handleBack,
+    handleNewMission,
+    handleLaunch,
+    handleRollback,
+  } = useMissionControlDialog(props)
 
   if (!open) return null
-
-  const isLaunching = state.phase === 'launching'
-  const isComplete = state.phase === 'complete'
-
-  const canAdvance =
-    (state.phase === 'define' && state.projects.length > 0 && !state.aiStreaming) ||
-    (state.phase === 'assign' && (
-      state.assignments.some((a) => (a.projectNames ?? []).length > 0) ||
-      state.targetClusters.length > 0
-    )) ||
-    state.phase === 'blueprint'
-
-  const canGoBack =
-    state.phase === 'assign' || state.phase === 'blueprint'
-
-  const handleNext = () => {
-    if (phaseAdvancingRef.current) return
-    phaseAdvancingRef.current = true
-    if (state.phase === 'define') mc.setPhase('assign')
-    else if (state.phase === 'assign') mc.setPhase('blueprint')
-  }
-
-  const handleBack = () => {
-    if (state.phase === 'assign') mc.setPhase('define')
-    else if (state.phase === 'blueprint') mc.setPhase('assign')
-  }
-
-  const handleNewMission = () => {
-    mc.reset()
-    // Reset the stepper's "highest reached" state so only Phase 1 is
-    // reachable in the new mission (#5504)
-    setHighestReached(0)
-  }
-
-  /** Inset from left/right/bottom so the backdrop peeks through. */
-  const MODAL_SIDE_INSET_PX = 16
-  /** Top inset must clear the fixed navbar (64px) + a small gap so the
-   *  modal header doesn't hide behind it. Previous value was 16px which
-   *  left the top ~48px of the modal obscured. */
-  const MODAL_TOP_INSET_PX = 80 // NAVBAR_HEIGHT_PX (64) + 16px breathing room
 
   return (
     <AnimatePresence>
@@ -449,89 +150,16 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
               </div>
 
               {/* ── Stepper ─────────────────────────────────────────── */}
-              {/* issue 6739 — role=tablist + Arrow key handling so the stepper is keyboard navigable,
-                  especially on mobile where there's no persistent Next/Back focus path. */}
-              <nav
-                className="hidden md:flex items-center gap-1"
-                role="tablist"
-                aria-label="Mission control phases"
-                onKeyDown={(e) => {
-                  if (isLaunching || isComplete) return
-                  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
-                  e.preventDefault()
-                  const delta = e.key === 'ArrowRight' ? 1 : -1
-                  // #9501 — Allow keyboard ArrowRight to advance beyond highestReached
-                  // when the current step's validation passes (same condition as the
-                  // Next button being enabled). Without this, highestReached clamps
-                  // the index to 0 on first pass, blocking a11y keyboard navigation.
-                  const upperBound = (delta > 0 && canAdvance)
-                    ? Math.min(highestReached + 1, PHASE_STEPS.length - 1)
-                    : highestReached
-                  const nextIdx = Math.max(0, Math.min(upperBound, currentStepIndex + delta))
-                  if (nextIdx !== currentStepIndex) {
-                    if (nextIdx > highestReached) {
-                      setHighestReached(nextIdx)
-                    }
-                    mc.setPhase(PHASE_STEPS[nextIdx].key)
-                  }
-                }}
-              >
-                {PHASE_STEPS.map((step, i) => {
-                  const isCurrent = step.key === state.phase
-                  const isPast = currentStepIndex > i
-                  const isLaunchOrComplete = isLaunching || isComplete
-                  return (
-                    <div key={step.key} className="flex items-center gap-1">
-                      {i > 0 && (
-                        <ChevronRight
-                          className="w-3 h-3 text-muted-foreground/40 mx-1"
-                          aria-hidden="true"
-                        />
-                      )}
-                      <button
-                        data-testid={`mission-control-phase-${i + 1}`}
-                        role="tab"
-                        aria-selected={isCurrent}
-                        aria-controls={`mission-control-phase-panel-${step.key}`}
-                        tabIndex={isCurrent ? 0 : -1}
-                        onClick={() => {
-                          if (i <= highestReached && !isLaunchOrComplete) mc.setPhase(step.key)
-                        }}
-                        disabled={i > highestReached || isLaunchOrComplete}
-                        className={cn(
-                          'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all',
-                          isCurrent && 'bg-primary/10 text-primary font-medium',
-                          isPast &&
-                            !isLaunchOrComplete &&
-                            'text-muted-foreground hover:text-foreground cursor-pointer',
-                          !isCurrent && !isPast && i <= highestReached &&
-                            !isLaunchOrComplete &&
-                            'text-muted-foreground hover:text-foreground cursor-pointer',
-                          !isCurrent &&
-                            !isPast && i > highestReached &&
-                            'text-muted-foreground/50 cursor-default'
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            'flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold transition-colors',
-                            isCurrent &&
-                              'bg-primary text-primary-foreground',
-                            isPast &&
-                              'bg-green-500/20 text-green-400',
-                            !isCurrent &&
-                              !isPast &&
-                              'bg-muted text-muted-foreground/50'
-                          )}
-                        >
-                          {isPast ? '✓' : i + 1}
-                        </span>
-                        {step.label}
-                      </button>
-                    </div>
-                  )
-                })}
-              </nav>
+              <MissionControlDialogStepper
+                currentPhase={state.phase}
+                currentStepIndex={currentStepIndex}
+                highestReached={highestReached}
+                setHighestReached={setHighestReached}
+                canAdvance={canAdvance}
+                isLaunching={isLaunching}
+                isComplete={isComplete}
+                onSetPhase={mc.setPhase}
+              />
 
               <div className="flex items-center gap-2">
                 {(isComplete || isLaunching) && (
@@ -645,111 +273,17 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
 
             {/* ── Footer nav ─────────────────────────────────────────── */}
             {!isLaunching && !isComplete && !isReviewMode && (
-              <footer className="flex items-center justify-between px-6 py-3 border-t border-border bg-card rounded-b-xl">
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  {state.projects.length > 0 && (
-                    <span>
-                      {state.projects.length} project
-                      {state.projects.length !== 1 ? 's' : ''} selected
-                    </span>
-                  )}
-                  {state.assignments.length > 0 && (
-                    <span>
-                      → {state.assignments.filter((a) => (a.projectNames ?? []).length > 0).length} cluster
-                      {state.assignments.filter((a) => (a.projectNames ?? []).length > 0).length !== 1
-                        ? 's'
-                        : ''}
-                    </span>
-                  )}
-                  {/* Legend (only on blueprint phase) */}
-                  {state.phase === 'blueprint' && (
-                    <>
-                      <span className="w-px h-4 bg-border" />
-                      <span className="flex items-center gap-1.5 text-2xs">
-                        <span className="w-4 h-0 border-t border-amber-500 inline-block" />
-                        Cross-cluster
-                      </span>
-                      <span className="flex items-center gap-1.5 text-2xs">
-                        <span className="w-4 h-0 border-t border-dashed border-indigo-500 inline-block" />
-                        Intra-cluster
-                      </span>
-                      <span className="flex items-center gap-1.5 text-2xs">
-                        <span className="w-3 h-3 rounded-full border-2 border-green-500 inline-block" />
-                        Installed
-                      </span>
-                      <span className="flex items-center gap-1.5 text-2xs">
-                        <span className="w-3 h-3 rounded-full border border-dashed border-slate-500 inline-block" />
-                        Needs deploy
-                      </span>
-                    </>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  {canGoBack && (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={handleBack}
-                      icon={<ChevronLeft className="w-3.5 h-3.5" />}
-                    >
-                      Back
-                    </Button>
-                  )}
-                  {state.phase === 'blueprint' ? (
-                    <>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => approvalModal.open()}
-                        icon={<GitPullRequestArrow className="w-3.5 h-3.5" />}
-                        title="Create a GitHub issue with the deployment plan for team approval"
-                      >
-                        Request Approval
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => showToast('Local cluster simulation is not yet available', 'info')}
-                        icon={<Monitor className="w-3.5 h-3.5" />}
-                        title="Create local clusters to simulate the deployment"
-                      >
-                        Deploy Local
-                      </Button>
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        data-testid="mission-control-launch"
-                        onClick={() => handleLaunch(false)}
-                        disabled={isSubmittingLaunch}
-                        className="bg-linear-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white border-0 shadow-lg shadow-purple-500/25"
-                        icon={isSubmittingLaunch ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
-                      >
-                        {isSubmittingLaunch ? 'Starting…' : 'Deploy to Clusters'}
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => handleLaunch(true)}
-                        disabled={isSubmittingLaunch}
-                        icon={isSubmittingLaunch ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FlaskConical className="w-3.5 h-3.5" />}
-                        title="Run against live clusters without deploying — report only"
-                      >
-                        {isSubmittingLaunch ? 'Starting…' : 'Dry Run'}
-                      </Button>
-                    </>
-                  ) : (
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={handleNext}
-                      disabled={!canAdvance}
-                    >
-                      Next
-                      <ChevronRight className="w-3.5 h-3.5 ml-1" />
-                    </Button>
-                  )}
-                </div>
-              </footer>
+              <MissionControlDialogFooter
+                state={state}
+                canGoBack={canGoBack}
+                canAdvance={canAdvance}
+                isSubmittingLaunch={isSubmittingLaunch}
+                onBack={handleBack}
+                onNext={handleNext}
+                onLaunch={handleLaunch}
+                onRequestApproval={() => approvalModal.open()}
+                onDeployLocal={() => showToast('Local cluster simulation is not yet available', 'info')}
+              />
             )}
           </motion.div>
 
