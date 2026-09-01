@@ -1,9 +1,12 @@
 import React from 'react'
 import { vi } from 'vitest'
 import type { DynamicCardDefinition, DynamicCardDefinition_T1 } from '../../../lib/dynamic-cards/types'
+import { BTN } from '../../../test-utils/buttonLabels'
 
-vi.mock('../../../lib/cache', () => {
-  const React = require('react')
+vi.mock('../../../lib/cache', async () => {
+  // Typed dynamic import (not require()) so this file — which is compiled by the
+  // strict app build, unlike *.test.tsx files — type-checks and stays lint-clean.
+  const React = await import('react')
   return {
     useCache: ({ fetcher, initialData, enabled = true }: { fetcher: () => Promise<unknown>; initialData: unknown; enabled?: boolean; [k: string]: unknown }) => {
       const [data, setData] = React.useState(initialData)
@@ -73,7 +76,7 @@ vi.mock('../../ui/Pagination', () => ({
   }) => (
     <div data-testid="pagination">
       <span>Page {currentPage} of {totalPages}</span>
-      <button onClick={() => onPageChange(currentPage + 1)}>Next</button>
+      <button onClick={() => onPageChange(currentPage + 1)}>{BTN.next}</button>
     </div>
   ),
 }))

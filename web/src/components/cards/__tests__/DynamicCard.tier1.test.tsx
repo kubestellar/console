@@ -261,7 +261,7 @@ describe('Tier1CardRuntime', () => {
         expect(global.fetch).toHaveBeenCalledWith(
           '/api/things',
           expect.objectContaining({
-            headers: { Authorization: '******' },
+            headers: { Authorization: 'Bearer test-token' },
           }),
         )
       })
@@ -319,7 +319,7 @@ describe('Tier1CardRuntime', () => {
         expect(global.fetch).toHaveBeenCalledWith(
           sameOriginEndpoint,
           expect.objectContaining({
-            headers: { Authorization: '******' },
+            headers: { Authorization: 'Bearer test-token' },
           }),
         )
       })
