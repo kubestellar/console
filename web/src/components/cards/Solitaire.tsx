@@ -175,3 +175,4 @@ export function Solitaire(_props: CardComponentProps) {
       )}
     </div>
   )
+}
