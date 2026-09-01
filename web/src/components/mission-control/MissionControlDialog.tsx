@@ -20,7 +20,6 @@ import {
   ArrowLeft,
   RotateCcw,
 } from 'lucide-react'
-import { cn } from '../../lib/cn'
 import { Button } from '../ui/Button'
 import { useToast } from '../ui/Toast'
 import { ChunkErrorBoundary } from '../ChunkErrorBoundary'

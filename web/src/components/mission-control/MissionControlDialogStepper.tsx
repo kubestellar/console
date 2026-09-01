@@ -4,7 +4,7 @@
 
 import { ChevronRight } from 'lucide-react'
 import { cn } from '../../lib/cn'
-import { PHASE_STEPS } from './missionControlDialog.constants'
+import { PHASE_STEPS } from './MissionControlDialog.constants'
 import type { WizardPhase } from './types'
 
 interface MissionControlDialogStepperProps {
