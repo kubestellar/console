@@ -1,0 +1,101 @@
+name: Production Incident Postmortem
+description: Structured write-up for a user-impacting production incident (not CI/build breakage — see docs/INCIDENT-RESPONSE.md for that).
+title: "postmortem: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for incidents that affected running console
+        deployments or their users (outages, degraded health, data
+        issues, failed rollouts). For main-branch CI breakage, use the
+        process in `docs/INCIDENT-RESPONSE.md` instead.
+
+        Fill this out after the incident is resolved. Link any
+        relevant runbook under `docs/runbooks/` that was used or that
+        should be created/updated as a result.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One or two sentences — what broke, and who/what was affected.
+      placeholder: |
+        e.g. "/health reported degraded for all users on the hosted
+        instance for 40 minutes after a kubeconfig credential expired."
+    validations:
+      required: true
+
+  - type: input
+    id: severity
+    attributes:
+      label: Severity
+      description: Impact level (e.g. SEV1 full outage, SEV2 partial/degraded, SEV3 minor).
+      placeholder: "SEV2"
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: User impact
+      description: What could users not do? Was any data lost or corrupted? Approximate duration and blast radius.
+    validations:
+      required: true
+
+  - type: textarea
+    id: timeline
+    attributes:
+      label: Timeline
+      description: Key timestamps (UTC) — detection, escalation, mitigation, resolution.
+      placeholder: |
+        - HH:MM — alert/report received
+        - HH:MM — root cause identified
+        - HH:MM — mitigation applied
+        - HH:MM — confirmed resolved
+    validations:
+      required: true
+
+  - type: textarea
+    id: detection
+    attributes:
+      label: Detection
+      description: How was the incident detected — alert, health probe, user report? If detection was slow or missing, note that here as a gap.
+    validations:
+      required: true
+
+  - type: textarea
+    id: root-cause
+    attributes:
+      label: Root cause
+      description: The underlying cause, not just the immediate trigger.
+    validations:
+      required: true
+
+  - type: textarea
+    id: resolution
+    attributes:
+      label: Resolution / mitigation
+      description: What was done to restore service (rollback, config change, restart, etc.)? Link the PR or runbook used.
+    validations:
+      required: true
+
+  - type: textarea
+    id: action-items
+    attributes:
+      label: Action items
+      description: |
+        Concrete follow-ups with owners, e.g.:
+        - [ ] Add/update a runbook under docs/runbooks/
+        - [ ] Add an alert or tighten an existing threshold
+        - [ ] Fix the underlying bug (link issue)
+    validations:
+      required: true
+
+  - type: input
+    id: related-runbook
+    attributes:
+      label: Related runbook
+      description: Link the runbook under docs/runbooks/ this incident used or that this postmortem should add/update.
+      placeholder: "docs/runbooks/backend-health-degraded.md"
+    validations:
+      required: false
