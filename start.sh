@@ -256,18 +256,86 @@ resolve_version() {
     echo "$latest"
 }
 
+# --- Download checksums.txt for a release, once per version ---
+# Sets CHECKSUMS_FILE to the path of a cached checksums.txt for $1 (version).
+# Returns non-zero if the release doesn't ship one — callers treat that as fatal
+# so a compromised or malformed release can't silently fall through.
+CHECKSUMS_FILE=""
+fetch_checksums() {
+    local version="$1"
+    local cache="/tmp/kubestellar-console-checksums-${version}.txt"
+    if [ -s "$cache" ]; then
+        CHECKSUMS_FILE="$cache"
+        return 0
+    fi
+    local url="https://github.com/${REPO}/releases/download/${version}/checksums.txt"
+    if ! curl -sSL --fail -o "$cache" "$url" 2>/dev/null; then
+        echo "  Error: could not download release checksums.txt from ${url}" >&2
+        rm -f "$cache"
+        return 1
+    fi
+    CHECKSUMS_FILE="$cache"
+    return 0
+}
+
+# --- Verify a downloaded artifact against release checksums.txt ---
+# Args: $1 = path to file, $2 = base name recorded in checksums.txt.
+# Returns 0 iff sha256(file) matches an entry for $2 in $CHECKSUMS_FILE.
+verify_sha256() {
+    local file="$1" want_name="$2"
+    if [ -z "$CHECKSUMS_FILE" ] || [ ! -s "$CHECKSUMS_FILE" ]; then
+        echo "  Error: no checksums.txt available for verification" >&2
+        return 1
+    fi
+    local expected actual
+    expected=$(awk -v name="$want_name" '$2 == name || $2 == "*"name {print $1; exit}' "$CHECKSUMS_FILE")
+    if [ -z "$expected" ]; then
+        echo "  Error: ${want_name} not listed in release checksums.txt" >&2
+        return 1
+    fi
+    if command -v sha256sum &>/dev/null; then
+        actual=$(sha256sum "$file" | awk '{print $1}')
+    elif command -v shasum &>/dev/null; then
+        actual=$(shasum -a 256 "$file" | awk '{print $1}')
+    else
+        echo "  Error: no sha256sum / shasum tool available to verify ${want_name}" >&2
+        return 1
+    fi
+    if [ "$actual" != "$expected" ]; then
+        echo "  Error: sha256 mismatch for ${want_name}" >&2
+        echo "         expected: $expected" >&2
+        echo "         actual:   $actual" >&2
+        return 1
+    fi
+    return 0
+}
+
 # --- Download and extract ---
-# Downloads to a temp file then atomically moves into place to prevent
-# partial writes from corrupting a running binary.
+# Downloads to a temp file, verifies its sha256 against the release's
+# cosign-signed checksums.txt, then atomically moves the binary into place.
+# Any verification failure aborts the install so a tampered artifact can never
+# reach $INSTALL_DIR.
 download_binary() {
     local name="$1" version="$2" platform="$3"
-    local url="https://github.com/${REPO}/releases/download/${version}/${name}_${version#v}_${platform}.tar.gz"
+    local tarball="${name}_${version#v}_${platform}.tar.gz"
+    local url="https://github.com/${REPO}/releases/download/${version}/${tarball}"
     local tmp_extract_dir
     tmp_extract_dir=$(mktemp -d)
+
+    if ! fetch_checksums "$version"; then
+        rm -rf "$tmp_extract_dir"
+        return 1
+    fi
 
     echo "  Downloading ${name} ${version} (${platform})..."
     if ! curl -sSL --fail -o "/tmp/${name}.tar.gz" "$url" 2>/dev/null; then
         echo "  Warning: Failed to download ${name} from ${url}"
+        rm -rf "$tmp_extract_dir"
+        return 1
+    fi
+
+    if ! verify_sha256 "/tmp/${name}.tar.gz" "$tarball"; then
+        rm -f "/tmp/${name}.tar.gz"
         rm -rf "$tmp_extract_dir"
         return 1
     fi
