@@ -72,8 +72,8 @@ test('cluster dashboard can be checked against live Kubernetes ground truth @int
   await expectGroundTruthField(page, 'clusters-total', groundTruth.contexts.reachable)
   await expectGroundTruthField(page, 'nodes-ready', groundTruth.nodes.ready)
   await expectGroundTruthField(page, 'nodes-total', groundTruth.nodes.total)
+  // The /clusters summary only attests the all-phase pod total (backend
+  // ClusterHealth.PodCount has no phase breakdown); running/pending/crashloop
+  // are attested and compared on the pods page instead.
   await expectGroundTruthField(page, 'pods-total', groundTruth.pods.total)
-  await expectGroundTruthField(page, 'pods-running', groundTruth.pods.running)
-  await expectGroundTruthField(page, 'pods-pending', groundTruth.pods.pending)
-  await expectGroundTruthField(page, 'pods-crashloop', groundTruth.pods.crashLoopBackOff)
 })

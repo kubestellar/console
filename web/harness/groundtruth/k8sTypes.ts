@@ -1,6 +1,16 @@
+export interface K8sListingFailure {
+  context: string
+  resource: string
+  error: string
+}
+
 export interface K8sGroundTruth {
   runId: string
   skipped?: string
+  /** kubectl listings that failed even after fallback — counts derived from a
+   *  run with failures here are incomplete and must not be compared as exact
+   *  ground truth. Absent on reports written before this field existed. */
+  listingFailures?: K8sListingFailure[]
   contexts: {
     configured: number
     reachable: number
