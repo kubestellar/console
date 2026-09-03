@@ -8,6 +8,7 @@ import { useToast } from '../ui/Toast'
 import { useBackendHealth } from '../../hooks/useBackendHealth'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import type { PodIssue } from '../../hooks/mcp/types.workloads'
+import { isPendingPhasePodIssue } from './podPhaseClassification'
 import type { ClusterInfo } from '../../hooks/mcp/types'
 import type { StatBlockValue } from '../ui/StatsOverview'
 
@@ -208,7 +209,7 @@ export function usePodsView({
     // Dedup issue rows by pod name to avoid under-counting healthy pods (#7348)
     const uniqueIssuePods = new Set(filteredPodIssues.map(p => `${p.cluster}/${p.namespace}/${p.name}`))
     const issueCount = filteredPodIssues.length
-    const pendingCount = filteredPodIssues.filter(p => p.reason === 'Pending' || p.status === 'Pending').length
+    const pendingCount = filteredPodIssues.filter(isPendingPhasePodIssue).length
     const crashLoopCount = filteredPodIssues.filter(p =>
       /crashloop|crash loop/i.test([p.reason, p.status].filter(Boolean).join(' '))
     ).length
