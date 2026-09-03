@@ -144,14 +144,19 @@ describe('Deployments groundtruth attestation', () => {
     })
   }, IMPORT_TIMEOUT_MS)
 
-  it.each(ATTESTING_BLOCKS)('block %s attests nothing rather than a zero when no deployments are loaded', async blockId => {
-    // With no data there is nothing to attest. Emitting 0 here would assert
-    // "the cluster genuinely has 0 deployments", which we cannot know yet;
-    // omitting the fields lets the harness poll until data arrives.
+  it.each(ATTESTING_BLOCKS)('block %s attests a real zero when no deployments are loaded', async blockId => {
+    // Attest 0 rather than suppressing the markers. An earlier revision omitted
+    // the fields here, which made the live harness report markerCount: 0 /
+    // reason "missing" — strictly less informative than a rendered 0, which
+    // states plainly that the page believes there are no deployments. That is
+    // the exact condition worth failing on when the listing feed is broken.
     mockDeployments = []
     const { Deployments } = await import('../Deployments')
     render(<Deployments />)
     expect(capturedGetStatValue).not.toBeNull()
-    expect(capturedGetStatValue!(blockId).groundtruthFields).toBeUndefined()
+    expect(capturedGetStatValue!(blockId).groundtruthFields).toEqual({
+      'deployments-total': 0,
+      'deployments-available': 0,
+    })
   }, IMPORT_TIMEOUT_MS)
 })
