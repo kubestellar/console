@@ -12,6 +12,7 @@ import {
   useOperators,
   useGPUNodes } from './useMCP'
 import { useIngresses } from './mcp/networking'
+import { isPendingPhasePodIssue } from '../components/pods/podPhaseClassification'
 import { useCachedPVCs, useCachedWarningEvents } from './useCachedData'
 import { useAlerts, useAlertRules } from './useAlerts'
 import { StatBlockValue } from '../components/ui/StatsOverview'
@@ -93,7 +94,10 @@ export function useUniversalStats() {
   // ─── Pod-derived values ───
   const podIssuesList = podIssues || []
   const { pendingPods, crashLoopPods, highRestartPods } = useMemo(() => ({
-    pendingPods: podIssuesList.filter(p => p.status === 'Pending').length,
+    // Unschedulable pods are still in the Kubernetes Pending phase; matching
+    // only the literal 'Pending' label under-counts them. See
+    // podPhaseClassification.
+    pendingPods: podIssuesList.filter(isPendingPhasePodIssue).length,
     crashLoopPods: podIssuesList.filter(p => /crashloop|crash loop/i.test([p.status, p.reason, ...(p.issues || [])].filter(Boolean).join(' '))).length,
     highRestartPods: podIssuesList.filter(p => p.restarts > HIGH_RESTART_THRESHOLD).length,
   }), [podIssuesList])
