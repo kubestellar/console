@@ -28,7 +28,11 @@ type ClusterInfo struct {
 	NodeCount      int    `json:"nodeCount,omitempty"`
 	ReadyNodes     int    `json:"readyNodes,omitempty"`
 	PodCount       int    `json:"podCount,omitempty"`
-	IsCurrent      bool   `json:"isCurrent,omitempty"`
+	// PodPhases is the ungated phase breakdown of the same pods PodCount
+	// totals. Phase stats are sourced from here rather than from the
+	// pod-issues feed, which suppresses freshly-created Pending pods (#23097).
+	PodPhases *PodPhaseCensus `json:"podPhases,omitempty"`
+	IsCurrent bool            `json:"isCurrent,omitempty"`
 }
 
 // ClusterHealth represents cluster health status
@@ -43,6 +47,9 @@ type ClusterHealth struct {
 	NodeCount    int    `json:"nodeCount"`
 	ReadyNodes   int    `json:"readyNodes"`
 	PodCount     int    `json:"podCount"`
+	// PodPhases is the ungated phase breakdown of the same pod listing that
+	// produced PodCount — see PodPhaseCensus (#23097).
+	PodPhases *PodPhaseCensus `json:"podPhases,omitempty"`
 	// Total allocatable resources (capacity)
 	CpuCores     int     `json:"cpuCores"`
 	MemoryBytes  int64   `json:"memoryBytes"`  // Total allocatable memory in bytes

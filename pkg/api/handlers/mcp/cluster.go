@@ -82,6 +82,10 @@ func (h *MCPHandlers) ListClusters(c *fiber.Ctx) error {
 				clusters[i].NodeCount = health.NodeCount
 				clusters[i].ReadyNodes = health.ReadyNodes
 				clusters[i].PodCount = health.PodCount
+				// Ungated phase breakdown of the same pods PodCount totals —
+				// the source for pod phase stats, which must not inherit the
+				// pod-issues feed's Pending age gate (#23097).
+				clusters[i].PodPhases = health.PodPhases
 				// Surface the stale-kubeconfig signal: a cluster that has
 				// a health cache entry but has never been successfully
 				// reached (empty LastSeen) drives the "never connected"

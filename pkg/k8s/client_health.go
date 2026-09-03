@@ -256,6 +256,12 @@ func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName s
 	// Process pods - non-fatal, fall back to cached values on timeout
 	if podsErr == nil && pods != nil {
 		health.PodCount = len(pods.Items)
+		// Phase census from the same unfiltered listing that produced PodCount.
+		// Stats read this instead of the pod-issues feed, whose Pending rows are
+		// gated on podPendingAgeThreshold and so under-count for the first two
+		// minutes of a pod's life (#23097).
+		census := CountPodPhases(pods.Items)
+		health.PodPhases = &census
 		var totalCPURequests int64
 		var totalMemoryRequests int64
 		for _, pod := range pods.Items {
@@ -280,6 +286,7 @@ func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName s
 	} else if prevCached != nil {
 		// Pod listing timed out — preserve previous cached pod data instead of showing 0
 		health.PodCount = prevCached.PodCount
+		health.PodPhases = prevCached.PodPhases
 		health.CpuRequestsMillicores = prevCached.CpuRequestsMillicores
 		health.CpuRequestsCores = prevCached.CpuRequestsCores
 		health.MemoryRequestsBytes = prevCached.MemoryRequestsBytes

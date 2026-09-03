@@ -1,4 +1,5 @@
 import type { PodIssue } from '../../hooks/mcp/types.workloads'
+import type { ClusterInfo } from '../../hooks/mcp/types'
 
 /**
  * Backend `FindPodIssues` labels an unschedulable pod with the raw issue string
@@ -32,4 +33,31 @@ function isUnschedulableLabel(value: string | undefined): boolean {
 export function isPendingPhasePodIssue(issue: Pick<PodIssue, 'status' | 'reason'>): boolean {
   if (issue.reason === 'Pending' || issue.status === 'Pending') return true
   return isUnschedulableLabel(issue.reason) || isUnschedulableLabel(issue.status)
+}
+
+/**
+ * Number of pods in the Kubernetes `Pending` phase across the given clusters.
+ *
+ * Prefers the backend phase census (`cluster.podPhases`), which is tallied from
+ * the same unfiltered pod listing that produces `podCount` and applies no
+ * gating whatsoever. The pod-issues feed deliberately withholds a Pending pod
+ * until it is older than the backend's 2-minute `podPendingAgeThreshold` — the
+ * right call for an alarm feed, but a stat derived from that feed inherits the
+ * suppression and under-reports for the first two minutes of a pod's life
+ * (#23097). Reading the census keeps the feed's threshold intact while stopping
+ * stats from borrowing a UI heuristic.
+ *
+ * Falls back to classifying issue rows (#23096) when no cluster reports a
+ * census — an older backend, or health data not yet collected. The fallback is
+ * the previous behaviour, so it can under-count, but it never over-counts.
+ */
+export function countPendingPods(
+  clusters: Pick<ClusterInfo, 'podPhases'>[],
+  podIssues: Pick<PodIssue, 'status' | 'reason'>[],
+): number {
+  const withCensus = clusters.filter(cluster => cluster.podPhases)
+  if (withCensus.length > 0) {
+    return withCensus.reduce((sum, cluster) => sum + (cluster.podPhases?.pending || 0), 0)
+  }
+  return podIssues.filter(isPendingPhasePodIssue).length
 }

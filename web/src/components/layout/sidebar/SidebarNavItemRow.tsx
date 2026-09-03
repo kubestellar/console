@@ -235,12 +235,12 @@ export function SidebarNavItemRow({
               })()}
             </NavLink>
             {!isCollapsed && canDrag && (
-              <span className="absolute right-5 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-100 pointer-events-auto md:opacity-0 md:pointer-events-none md:group-hover:opacity-100 md:group-hover:pointer-events-auto transition-opacity bg-background/80 backdrop-blur-xs rounded px-1 z-10">
+              <span className="absolute right-5 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-100 pointer-events-none md:opacity-0 md:group-hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-xs rounded px-1 z-10">
                 {!PROTECTED_SIDEBAR_IDS.includes(item.id) && (
                   <button
                     type="button"
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRemove(item.id) }}
-                    className="min-h-11 min-w-11 p-1 rounded hover:bg-red-500/20 hover:text-red-400 text-muted-foreground/50 transition-colors"
+                    className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 p-1 rounded hover:bg-red-500/20 hover:text-red-400 text-muted-foreground/50 transition-colors pointer-events-auto md:pointer-events-none md:group-hover:pointer-events-auto"
                     title={t('sidebar.removeFromSidebar')}
                     aria-label={t('sidebar.removeFromSidebar')}
                   >
@@ -248,7 +248,7 @@ export function SidebarNavItemRow({
                   </button>
                 )}
                 <span
-                  className="min-h-11 min-w-11 p-1 rounded hover:bg-secondary text-muted-foreground/50 hover:text-muted-foreground cursor-grab active:cursor-grabbing transition-colors"
+                  className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 p-1 rounded hover:bg-secondary text-muted-foreground/50 hover:text-muted-foreground cursor-grab active:cursor-grabbing transition-colors pointer-events-auto md:pointer-events-none md:group-hover:pointer-events-auto"
                   aria-hidden="true"
                   onMouseDown={(e) => e.stopPropagation()}
                 >

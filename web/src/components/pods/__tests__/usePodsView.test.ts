@@ -149,6 +149,91 @@ describe('usePodsView', () => {
     expect(result.current.stats.healthy).toBe(7)
   })
 
+  // #23097: the pending stat is a phase count and must come from the backend
+  // phase census, not the pod-issues feed. The feed withholds Pending pods
+  // younger than podPendingAgeThreshold, so deriving the stat from it
+  // under-counted for the first two minutes of a pod's life.
+  it('counts freshly-created Pending pods from the phase census even when the issues feed is empty', () => {
+    const clusters = [makeCluster({
+      podCount: 10,
+      podPhases: { running: 7, pending: 3, failed: 0, succeeded: 0, unknown: 0 },
+    })]
+    // No issue rows at all: every Pending pod is younger than the age gate.
+    const { result } = renderUsePodsView({ podIssues: [], clusters })
+
+    expect(result.current.stats.pending).toBe(3)
+    // The feed itself is untouched — no phantom rows were invented for them.
+    expect(result.current.filteredPodIssues).toEqual([])
+    expect(result.current.stats.issues).toBe(0)
+  })
+
+  it('prefers the census over the issue rows when both are present', () => {
+    const clusters = [makeCluster({
+      podCount: 20,
+      // 5 Pending pods; only 2 are old enough to have surfaced as issues.
+      podPhases: { running: 15, pending: 5, failed: 0, succeeded: 0, unknown: 0 },
+    })]
+    const issues = [
+      makeIssue({ name: 'p1', reason: 'Pending', status: 'Pending' }),
+      makeIssue({ name: 'p2', reason: 'Pending', status: 'Pending' }),
+    ]
+    const { result } = renderUsePodsView({ podIssues: issues, clusters })
+
+    expect(result.current.stats.pending).toBe(5)
+  })
+
+  it('scopes the census to the globally selected clusters', () => {
+    mockIsAllClustersSelected = false
+    mockSelectedClusters = ['cluster-a']
+    const clusters = [
+      makeCluster({ name: 'cluster-a', podCount: 4, podPhases: { running: 2, pending: 2, failed: 0, succeeded: 0, unknown: 0 } }),
+      makeCluster({ name: 'cluster-b', podCount: 9, podPhases: { running: 2, pending: 7, failed: 0, succeeded: 0, unknown: 0 } }),
+    ]
+    const { result } = renderUsePodsView({ podIssues: [], clusters })
+
+    expect(result.current.stats.pending).toBe(2)
+    expect(result.current.stats.totalPods).toBe(4)
+  })
+
+  it('does not miscount running-unready or terminal pods as pending', () => {
+    const clusters = [makeCluster({
+      podCount: 12,
+      podPhases: { running: 8, pending: 0, failed: 3, succeeded: 1, unknown: 0 },
+    })]
+    const issues = [
+      makeIssue({ name: 'unready', reason: 'Not ready', status: 'Not ready' }),
+      makeIssue({ name: 'crash', reason: 'CrashLoopBackOff', status: 'CrashLoopBackOff' }),
+      makeIssue({ name: 'oom', reason: 'OOMKilled', status: 'OOMKilled' }),
+    ]
+    const { result } = renderUsePodsView({ podIssues: issues, clusters })
+
+    expect(result.current.stats.pending).toBe(0)
+    expect(result.current.stats.crashloop).toBe(1)
+  })
+
+  // #23096 must keep working: unschedulable pods are Pending. Via the census
+  // that is automatic (Kubernetes reports them as Pending); with no census the
+  // issue-row classifier still has to get it right.
+  it('counts unschedulable pods as pending via the census and via the fallback', () => {
+    const withCensus = [makeCluster({
+      podCount: 80,
+      podPhases: { running: 4, pending: 76, failed: 0, succeeded: 0, unknown: 0 },
+    })]
+    const unschedulableIssues = [
+      makeIssue({ name: 'u1', reason: 'Unschedulable: insufficient cpu', status: 'Unschedulable: insufficient cpu' }),
+      makeIssue({ name: 'u2', reason: 'Unschedulable: insufficient cpu', status: 'Unschedulable: insufficient cpu' }),
+    ]
+    const censusResult = renderUsePodsView({ podIssues: unschedulableIssues, clusters: withCensus })
+    expect(censusResult.result.current.stats.pending).toBe(76)
+
+    // No census reported (older backend / health not yet collected).
+    const fallbackResult = renderUsePodsView({
+      podIssues: unschedulableIssues,
+      clusters: [makeCluster({ podCount: 80 })],
+    })
+    expect(fallbackResult.result.current.stats.pending).toBe(2)
+  })
+
   it('filters pod issues by the customFilter text search (name/namespace/cluster/reason)', () => {
     mockCustomFilter = 'crash'
     const issues = [
