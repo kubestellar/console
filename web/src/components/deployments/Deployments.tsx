@@ -62,6 +62,23 @@ function DeploymentsContent() {
   const currentHealthyDeployments = filteredDeployments.filter(d => d.readyReplicas === d.replicas && d.replicas > 0).length
   const currentIssueCount = filteredDeploymentIssues.length
 
+  // Cluster-wide counts for groundtruth attestation. The stat tiles above are
+  // scoped to the global cluster filter and fall back to a cached value during
+  // refresh, so they are the wrong source for an attested field: a filtered or
+  // mid-refresh render legitimately reads 0, and `createMergedStatValueGetter`
+  // treats 0 as a real value, so it wins over the unfiltered universal stats
+  // instead of falling through to them. Attest from the same unfiltered listing
+  // the harness compares against, using the harness's availability predicate
+  // (availableReplicas >= replicas) rather than the tiles' readiness predicate.
+  const attestedDeployments = deployments || []
+  const attestedTotal = attestedDeployments.length
+  const attestedAvailable = attestedDeployments.filter(
+    d => Number(d.availableReplicas || 0) >= Number(d.replicas || 0),
+  ).length
+  const deploymentGroundtruthFields = attestedTotal > 0
+    ? { 'deployments-total': attestedTotal, 'deployments-available': attestedAvailable }
+    : undefined
+
   // Cache stats to prevent showing 0 during refresh
   const cachedStats = useRef({ total: 0, healthy: 0, issues: 0 })
   useEffect(() => {
@@ -94,10 +111,7 @@ function DeploymentsContent() {
           sublabel: 'total deployments',
           onClick: () => drillToAllDeployments(),
           isClickable: totalDeployments > 0,
-          groundtruthFields: {
-            'deployments-total': totalDeployments,
-            'deployments-available': healthyDeployments,
-          },
+          groundtruthFields: deploymentGroundtruthFields,
         }
       case 'healthy':
         return { value: healthyDeployments, sublabel: 'healthy', onClick: () => drillToAllDeployments('healthy'), isClickable: healthyDeployments > 0 }
@@ -111,10 +125,7 @@ function DeploymentsContent() {
           sublabel: 'deployments',
           onClick: () => drillToAllDeployments(),
           isClickable: totalDeployments > 0,
-          groundtruthFields: {
-            'deployments-total': totalDeployments,
-            'deployments-available': healthyDeployments,
-          },
+          groundtruthFields: deploymentGroundtruthFields,
         }
       case 'pod_issues':
         return { value: filteredPodIssues.length, sublabel: 'pod issues', onClick: () => drillToAllPods('issues'), isClickable: filteredPodIssues.length > 0 }
