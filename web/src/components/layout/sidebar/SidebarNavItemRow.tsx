@@ -240,7 +240,7 @@ export function SidebarNavItemRow({
                   <button
                     type="button"
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRemove(item.id) }}
-                    className="min-h-11 min-w-11 p-1 rounded hover:bg-red-500/20 hover:text-red-400 text-muted-foreground/50 transition-colors pointer-events-auto md:pointer-events-none md:group-hover:pointer-events-auto"
+                    className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 p-1 rounded hover:bg-red-500/20 hover:text-red-400 text-muted-foreground/50 transition-colors pointer-events-auto md:pointer-events-none md:group-hover:pointer-events-auto"
                     title={t('sidebar.removeFromSidebar')}
                     aria-label={t('sidebar.removeFromSidebar')}
                   >
@@ -248,7 +248,7 @@ export function SidebarNavItemRow({
                   </button>
                 )}
                 <span
-                  className="min-h-11 min-w-11 p-1 rounded hover:bg-secondary text-muted-foreground/50 hover:text-muted-foreground cursor-grab active:cursor-grabbing transition-colors pointer-events-auto md:pointer-events-none md:group-hover:pointer-events-auto"
+                  className="min-h-11 min-w-11 md:min-h-0 md:min-w-0 p-1 rounded hover:bg-secondary text-muted-foreground/50 hover:text-muted-foreground cursor-grab active:cursor-grabbing transition-colors pointer-events-auto md:pointer-events-none md:group-hover:pointer-events-auto"
                   aria-hidden="true"
                   onMouseDown={(e) => e.stopPropagation()}
                 >
