@@ -606,6 +606,27 @@ jobs:
               value: "true"
             - name: WATCHDOG_RUNTIME_FILE
               value: /tmp/kc-watcher-runtime.env
+            # The 'production live signed session' smoke (#23089) validates a
+            # CI-minted kc_auth JWT against this release. JWTAuth's
+            # ValidateUserActive requires the user row encoded in the JWT to
+            # exist in THIS pod's store with a matching role — but only the
+            # private canary release ever set these bootstrap envs, so the
+            # live pod's /api/me always answered 401 "Invalid token"
+            # (rejected stale user token: user is no longer active), the SPA
+            # showed "Session expired" and hard-redirected to /login, and the
+            # promote gate failed on every run. Mirror the canary bootstrap
+            # here so the signed-session invariant can actually be exercised
+            # against the promoted release. The user is only reachable with a
+            # JWT signed by this release's jwt-secret (same trust boundary as
+            # every real session).
+            - name: CONSOLE_LIVE_TEST_USER_BOOTSTRAP
+              value: "true"
+            - name: CONSOLE_LIVE_TEST_USER_ID
+              value: "$CONSOLE_LIVE_TEST_USER_ID"
+            - name: CONSOLE_LIVE_TEST_GITHUB_LOGIN
+              value: "$CONSOLE_LIVE_TEST_GITHUB_LOGIN"
+            - name: CONSOLE_LIVE_TEST_USER_ROLE
+              value: "$CONSOLE_LIVE_TEST_USER_ROLE"
           EOF
 
           # Dumps the pre-upgrade PVC-migration hook Job's diagnostics.
