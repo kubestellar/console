@@ -1,0 +1,27 @@
+{{- if .Values.metrics.serviceMonitor.enabled }}
+{{- /*
+ServiceMonitor for the Prometheus Operator (https://prometheus-operator.dev/).
+Disabled by default (opt-in) — this only configures Prometheus Operator to
+scrape the console's own /metrics endpoint (see pkg/api/metrics); it does not
+send any data anywhere. Enable it only when the cluster already runs
+Prometheus Operator and the ServiceMonitor CRD is installed.
+*/}}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "kubestellar-console.fullname" . }}
+  labels:
+    {{- include "kubestellar-console.labels" . | nindent 4 }}
+    {{- with .Values.metrics.serviceMonitor.additionalLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "kubestellar-console.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: server
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: {{ .Values.metrics.serviceMonitor.interval }}
+{{- end }}

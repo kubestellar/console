@@ -9,11 +9,19 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+
+	"github.com/kubestellar/console/pkg/api/metrics"
 )
 
 func (s *Server) setupMiddleware() {
 	// Recovery middleware
 	s.app.Use(recover.New())
+
+	// Self-observability: bounded HTTP request count/duration metrics,
+	// scraped by an operator's own Prometheus via /metrics (see
+	// pkg/api/metrics and pkg/api/routes_health.go). No data leaves the
+	// process; nothing is pushed anywhere.
+	s.app.Use(metrics.Middleware())
 
 	// Gzip/Brotli compression for API responses only — static assets are pre-compressed at build time.
 	// The handler is created once and reused across requests (#7575).
