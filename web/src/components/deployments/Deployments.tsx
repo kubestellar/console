@@ -75,9 +75,15 @@ function DeploymentsContent() {
   const attestedAvailable = attestedDeployments.filter(
     d => Number(d.availableReplicas || 0) >= Number(d.replicas || 0),
   ).length
-  const deploymentGroundtruthFields = attestedTotal > 0
-    ? { 'deployments-total': attestedTotal, 'deployments-available': attestedAvailable }
-    : undefined
+  // Always attest, even at zero. Suppressing the markers when the list is
+  // empty makes the harness report `markerCount: 0` / reason "missing", which
+  // is strictly less informative than attesting the real value: a rendered 0
+  // says "the page believes there are no deployments", which is exactly the
+  // condition worth failing on when the listing feed is broken.
+  const deploymentGroundtruthFields = {
+    'deployments-total': attestedTotal,
+    'deployments-available': attestedAvailable,
+  }
 
   // Cache stats to prevent showing 0 during refresh
   const cachedStats = useRef({ total: 0, healthy: 0, issues: 0 })
