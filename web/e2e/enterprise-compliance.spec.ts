@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test'
 import { setupDemoMode, mockApiFallback } from './helpers/setup'
 
+// Click near the top-left corner of sidebar items: the right side hosts a
+// hover-action overlay (pin/close icons) that intercepts centered clicks.
+const SIDEBAR_ITEM_CLICK_OFFSET_PX = 8
+
 test.describe('Enterprise Compliance Portal', () => {
   test.beforeEach(async ({ page }) => {
     // Standard setup for authenticated demo state
@@ -75,9 +79,12 @@ test.describe('Enterprise Compliance Portal', () => {
         // collapsible and the list is scrollable, so the target item may be
         // rendered outside the viewport — scroll it into view before clicking
         // to avoid selector-drift timeouts.
+        // Click near the left edge: sidebar items render a right-aligned
+        // hover-action overlay (pin/close icons) with pointer-events-auto
+        // that intercepts center clicks on narrow viewports.
         const navItem = page.locator(`[data-testid="sidebar-item"][data-test-label="${vertical.label}"]`)
         await navItem.scrollIntoViewIfNeeded()
-        await navItem.click()
+        await navItem.click({ position: { x: SIDEBAR_ITEM_CLICK_OFFSET_PX, y: SIDEBAR_ITEM_CLICK_OFFSET_PX } })
         
         // Wait for navigation and header update
         await expect(page.getByTestId('dashboard-title')).toHaveText(vertical.title, { timeout: 15000 })
@@ -96,7 +103,7 @@ test.describe('Enterprise Compliance Portal', () => {
     // Click 'Frameworks' and verify navigation
     const frameworksItem = sidebar.locator('[data-testid="sidebar-item"][data-test-label="Frameworks"]')
     await frameworksItem.scrollIntoViewIfNeeded()
-    await frameworksItem.click()
+    await frameworksItem.click({ position: { x: SIDEBAR_ITEM_CLICK_OFFSET_PX, y: SIDEBAR_ITEM_CLICK_OFFSET_PX } })
     await expect(page.getByTestId('dashboard-title')).toHaveText(/Compliance Frameworks/i)
   })
 
