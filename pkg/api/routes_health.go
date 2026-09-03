@@ -5,6 +5,8 @@ import (
 	"sync/atomic"
 
 	"github.com/gofiber/fiber/v2"
+
+	"github.com/kubestellar/console/pkg/api/metrics"
 )
 
 // isQuantumWorkloadRunning detects if quantum-kc-demo is running in any cluster.
@@ -19,6 +21,12 @@ func (s *Server) isQuantumWorkloadRunning() bool {
 // endpoints. These are unauthenticated and used by load balancers,
 // liveness probes, and the frontend boot sequence.
 func (s *Server) setupHealthRoutes() {
+	// Prometheus self-metrics — request counts/latency (bounded labels: method,
+	// registered route pattern, status). Unauthenticated, matching the /health
+	// and /healthz convention; pulled only by an operator's own Prometheus.
+	// See pkg/api/metrics for the metric definitions and issue #23055.
+	s.app.Get("/metrics", metrics.Handler())
+
 	// Minimal probe endpoint for load balancers and k8s liveness checks.
 	// Returns only status — no configuration metadata.
 	s.app.Get("/healthz", func(c *fiber.Ctx) error {

@@ -121,6 +121,17 @@ service:
   type: ClusterIP
   port: 8080
 
+metrics:
+  # ServiceMonitor for the Prometheus Operator, scraping the console's
+  # own /metrics endpoint (bounded request count/latency metrics — see
+  # pkg/api/metrics). Disabled by default: no backend is confirmed for
+  # this deployment, and the ServiceMonitor CRD may not be installed.
+  # Enable only if the cluster already runs Prometheus Operator.
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    additionalLabels: {}
+
 ingress:
   enabled: false
   className: ""
