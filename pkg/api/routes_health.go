@@ -23,7 +23,12 @@ func (s *Server) setupHealthRoutes() {
 	// Returns only status — no configuration metadata.
 	s.app.Get("/healthz", func(c *fiber.Ctx) error {
 		if s.lifecycle != nil && atomic.LoadInt32(&s.lifecycle.shuttingDown) == 1 {
-			return c.JSON(fiber.Map{"status": "shutting_down"})
+			// Kubernetes readiness probes gate traffic on the HTTP status code alone,
+			// not the JSON body, so a draining pod must fail the probe with a non-2xx
+			// status to stop receiving new requests. This matters when
+			// watchdog.enabled=false, since /watchdog/ready is otherwise used as the
+			// readiness path instead of /healthz.
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"status": "shutting_down"})
 		}
 		return c.JSON(fiber.Map{"status": "ok"})
 	})
@@ -32,7 +37,9 @@ func (s *Server) setupHealthRoutes() {
 	// Build metadata (go_version, git_commit, etc.) lives in /api/version.
 	s.app.Get("/health", func(c *fiber.Ctx) error {
 		if s.lifecycle != nil && atomic.LoadInt32(&s.lifecycle.shuttingDown) == 1 {
-			return c.JSON(fiber.Map{"status": "shutting_down", "version": Version})
+			// See the /healthz handler above: the status code, not the body, is what
+			// stops a draining pod from receiving new traffic.
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"status": "shutting_down", "version": Version})
 		}
 		inCluster := s.k8sClient != nil && s.k8sClient.IsInCluster()
 

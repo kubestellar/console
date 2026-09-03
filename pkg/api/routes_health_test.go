@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
@@ -94,6 +95,41 @@ func TestHealthRoutes_StatusEndpoints(t *testing.T) {
 				assert.Equal(t, "multi-cluster first", branding["tagline"])
 				assert.Equal(t, true, branding["showStarDecoration"])
 			}
+		})
+	}
+}
+
+func TestHealthRoutes_ShuttingDownFailsReadinessProbe(t *testing.T) {
+	// Kubernetes readiness/liveness probes only look at the HTTP status code, so a
+	// draining pod (watchdog.enabled=false, using /healthz as the readiness path)
+	// must return a non-2xx status once shutdown has started — the JSON body alone
+	// is not enough to stop traffic from being routed to it.
+	server := newHealthTestServer(t, Config{})
+	atomic.StoreInt32(&server.lifecycle.shuttingDown, 1)
+
+	tests := []struct {
+		name       string
+		path       string
+		wantStatus string
+	}{
+		{name: "healthz fails readiness while shutting down", path: "/healthz", wantStatus: "shutting_down"},
+		{name: "health fails readiness while shutting down", path: "/health", wantStatus: "shutting_down"},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.path, nil)
+			req.Host = "localhost"
+			resp, err := server.app.Test(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			require.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
+
+			var body map[string]any
+			require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+			assert.Equal(t, tt.wantStatus, body["status"])
 		})
 	}
 }
