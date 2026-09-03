@@ -156,6 +156,9 @@
     "@react-three/drei": {
       "three-mesh-bvh": "^0.8.0"
     },
+    "three-stdlib": {
+      "fflate": "^0.8.3"
+    },
     "@istanbuljs/load-nyc-config": {
       "js-yaml": "^5.2.1"
     },
