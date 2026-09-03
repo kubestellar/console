@@ -131,6 +131,19 @@ metrics:
     enabled: false
     interval: 30s
     additionalLabels: {}
+  # PrometheusRule alerting on the same bounded self-metrics the
+  # ServiceMonitor above scrapes. Disabled by default: only meaningful once
+  # a Prometheus Operator with the PrometheusRule CRD is scraping this
+  # console instance (i.e. serviceMonitor.enabled is also true).
+  prometheusRule:
+    enabled: false
+    additionalLabels: {}
+    errorRateThreshold: "0.05"
+    errorRateFor: 10m
+    errorRateSeverity: warning
+    p95LatencySeconds: "2"
+    p95LatencyFor: 10m
+    p95LatencySeverity: warning
 
 ingress:
   enabled: false

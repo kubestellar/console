@@ -1,0 +1,52 @@
+{{- if .Values.metrics.prometheusRule.enabled }}
+{{- /*
+PrometheusRule for the Prometheus Operator (https://prometheus-operator.dev/).
+Disabled by default (opt-in) — this only defines alerting rules evaluated by
+an operator-controlled Prometheus against the console's own bounded
+self-metrics (see pkg/api/metrics); it does not send any data anywhere.
+Enable it only when the cluster already runs Prometheus Operator with the
+PrometheusRule CRD installed, and metrics.serviceMonitor.enabled is also true
+so the metrics these rules reference are actually being scraped.
+*/}}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "kubestellar-console.fullname" . }}
+  labels:
+    {{- include "kubestellar-console.labels" . | nindent 4 }}
+    {{- with .Values.metrics.prometheusRule.additionalLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  groups:
+    - name: {{ include "kubestellar-console.fullname" . }}.rules
+      rules:
+        - alert: ConsoleHighErrorRate
+          expr: >-
+            sum(rate(console_http_requests_total{status=~"5.."}[5m]))
+            /
+            sum(rate(console_http_requests_total[5m]))
+            > {{ .Values.metrics.prometheusRule.errorRateThreshold }}
+          for: {{ .Values.metrics.prometheusRule.errorRateFor }}
+          labels:
+            severity: {{ .Values.metrics.prometheusRule.errorRateSeverity }}
+          annotations:
+            summary: "Console backend 5xx rate is above threshold"
+            description: >-
+              More than {{ "{{" }} $value | humanizePercentage {{ "}}" }} of requests to the
+              console backend have returned a 5xx status over the last 5 minutes.
+        - alert: ConsoleHighRequestLatency
+          expr: >-
+            histogram_quantile(0.95,
+              sum(rate(console_http_request_duration_seconds_bucket[5m])) by (le)
+            ) > {{ .Values.metrics.prometheusRule.p95LatencySeconds }}
+          for: {{ .Values.metrics.prometheusRule.p95LatencyFor }}
+          labels:
+            severity: {{ .Values.metrics.prometheusRule.p95LatencySeverity }}
+          annotations:
+            summary: "Console backend p95 request latency is elevated"
+            description: >-
+              The 95th percentile request latency for the console backend has
+              exceeded {{ .Values.metrics.prometheusRule.p95LatencySeconds }}s
+              over the last 5 minutes (current value: {{ "{{" }} $value | humanizeDuration {{ "}}" }}).
+{{- end }}
