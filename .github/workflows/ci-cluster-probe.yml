@@ -1,0 +1,217 @@
+# Disposable, read-only diagnostic probe.
+#
+# Purpose: identify the clusters behind LIVE_CLUSTER_CONTEXTS (ks-console-ci-1/2/3)
+# and determine whether a hive hub runs on any of them. This settles the remaining
+# root-cause question on hivecommons/hive#5768: a hub provisioning into its own
+# cluster with test fixtures would explain the leaked `hive-hosted-hosted-*`
+# namespaces, and that is invisible from outside the cluster.
+#
+# Every kubectl call here is read-only (get/describe/version only). No apply,
+# delete, patch, edit, create, or scale anywhere in this file.
+#
+# DELETE THIS WORKFLOW once the question is answered.
+name: CI Cluster Probe (disposable)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-cluster-probe
+  cancel-in-progress: true
+
+env:
+  LIVE_CLUSTER_CONTEXTS: ${{ vars.LIVE_CLUSTER_CONTEXTS }}
+
+jobs:
+  probe:
+    name: Probe live CI clusters (read-only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.repository == 'kubestellar/console'
+    environment: console-live
+
+    steps:
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@829323503d1be3d00ca8346e5391ca0b07a9ab0d # v5.1.0
+
+      - name: Configure groundtruth kubeconfig
+        id: groundtruth-kubeconfig
+        env:
+          GROUNDTRUTH_KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${GROUNDTRUTH_KUBECONFIG_B64:-}" ]; then
+            echo "::error::Missing required secret: KUBECONFIG_B64"
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/console-live"
+          groundtruth_kubeconfig="$RUNNER_TEMP/console-live/groundtruth-kubeconfig"
+          printf '%s' "$GROUNDTRUTH_KUBECONFIG_B64" | base64 -d > "$groundtruth_kubeconfig"
+          chmod 600 "$groundtruth_kubeconfig"
+          echo "path=$groundtruth_kubeconfig" >> "$GITHUB_OUTPUT"
+
+      - name: Probe clusters
+        shell: bash
+        env:
+          KUBECONFIG: ${{ steps.groundtruth-kubeconfig.outputs.path }}
+        run: |
+          set -uo pipefail
+
+          # The kubeconfig itself is never printed, echoed, or uploaded. Only the
+          # fields explicitly selected below reach the log. The API server host is
+          # infrastructure identity, not a credential, so it is printed on purpose.
+
+          contexts_raw="${LIVE_CLUSTER_CONTEXTS:-}"
+          if [ -z "$contexts_raw" ]; then
+            echo "::error::LIVE_CLUSTER_CONTEXTS is empty; nothing to probe"
+            exit 1
+          fi
+          IFS=',' read -r -a contexts <<< "$contexts_raw"
+
+          summary="$GITHUB_STEP_SUMMARY"
+          {
+            echo "# CI cluster probe (read-only)"
+            echo
+            echo "Diagnostic for hivecommons/hive#5768. Contexts probed: \`${contexts_raw}\`"
+            echo
+            echo "| Context | API server | Server version | Nodes | Namespaces | hive/hub workloads | \`hive-hosted\` namespaces |"
+            echo "| --- | --- | --- | --- | --- | --- | --- |"
+          } >> "$summary"
+
+          for ctx in "${contexts[@]}"; do
+            ctx="$(echo "$ctx" | tr -d '[:space:]')"
+            [ -n "$ctx" ] || continue
+
+            echo "::group::Context ${ctx}"
+
+            # ---- 1. Infrastructure identity -------------------------------------
+            api_server="$(kubectl --context "$ctx" config view --minify \
+              -o jsonpath='{.clusters[0].cluster.server}' 2>/dev/null || true)"
+            [ -n "$api_server" ] || api_server="(unresolved)"
+            echo "api-server: ${api_server}"
+
+            server_version="$(kubectl --context "$ctx" version -o json 2>/dev/null \
+              | jq -c '.serverVersion // {}' 2>/dev/null || true)"
+            [ -n "$server_version" ] || server_version="{}"
+            echo "server-version: ${server_version}"
+            git_version="$(echo "$server_version" | jq -r '.gitVersion // "unknown"' 2>/dev/null || echo unknown)"
+
+            echo "--- nodes (provider/instance labels reveal the platform) ---"
+            kubectl --context "$ctx" get nodes -o wide 2>&1 || true
+            echo "--- node providerIDs / instance types ---"
+            kubectl --context "$ctx" get nodes \
+              -o custom-columns='NAME:.metadata.name,PROVIDER:.spec.providerID,INSTANCE:.metadata.labels.node\.kubernetes\.io/instance-type,REGION:.metadata.labels.topology\.kubernetes\.io/region,ZONE:.metadata.labels.topology\.kubernetes\.io/zone' \
+              2>&1 || true
+            node_count="$(kubectl --context "$ctx" get nodes --no-headers 2>/dev/null | wc -l | tr -d ' ')"
+            [ -n "$node_count" ] || node_count=0
+
+            ns_count="$(kubectl --context "$ctx" get ns --no-headers 2>/dev/null | wc -l | tr -d ' ')"
+            [ -n "$ns_count" ] || ns_count=0
+            echo "namespace-count: ${ns_count}"
+
+            # ---- 2. Hub detection -----------------------------------------------
+            echo "--- deployments/statefulsets matching hive|hub ---"
+            hub_hits="$(kubectl --context "$ctx" get deploy,statefulset -A --no-headers 2>/dev/null \
+              | grep -iE 'hive|hub' || true)"
+            if [ -n "$hub_hits" ]; then
+              echo "$hub_hits"
+              hub_count="$(echo "$hub_hits" | wc -l | tr -d ' ')"
+            else
+              echo "(no hive/hub workloads found)"
+              hub_count=0
+            fi
+
+            # ---- 3. Leak census --------------------------------------------------
+            leak_count="$(kubectl --context "$ctx" get ns -o name 2>/dev/null \
+              | grep -c 'hive-hosted' || true)"
+            [ -n "$leak_count" ] || leak_count=0
+            echo "hive-hosted-namespace-count: ${leak_count}"
+
+            echo "--- namespaces with hive ownership labels (if any) ---"
+            for sel in 'hive.io/owner' 'hive/owner' 'app.kubernetes.io/managed-by=hive' 'hive.hivecommons.org/spoke'; do
+              out="$(kubectl --context "$ctx" get ns -l "$sel" --no-headers 2>/dev/null || true)"
+              if [ -n "$out" ]; then
+                echo "selector ${sel}:"
+                echo "$out"
+              fi
+            done
+
+            {
+              printf '| `%s` | `%s` | %s | %s | %s | %s | %s |\n' \
+                "$ctx" "$api_server" "$git_version" "$node_count" "$ns_count" "$hub_count" "$leak_count"
+            } >> "$summary"
+
+            echo "::endgroup::"
+          done
+
+      - name: Deep probe ci-3 (pending pods, leaked namespace provenance)
+        shell: bash
+        env:
+          KUBECONFIG: ${{ steps.groundtruth-kubeconfig.outputs.path }}
+        run: |
+          set -uo pipefail
+
+          ctx="$(echo "${LIVE_CLUSTER_CONTEXTS:-}" | tr ',' '\n' | tr -d '[:space:]' | grep -E 'ci-3$' | head -1 || true)"
+          if [ -z "$ctx" ]; then
+            echo "No ci-3 context found in LIVE_CLUSTER_CONTEXTS; skipping deep probe"
+            echo "_No \`ci-3\` context found; deep probe skipped._" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "Deep probe context: ${ctx}"
+
+          echo "::group::Pending pods on ${ctx}"
+          pending="$(kubectl --context "$ctx" get pods -A --field-selector=status.phase=Pending -o wide 2>/dev/null | head -40 || true)"
+          if [ -n "$pending" ]; then echo "$pending"; else echo "(none pending)"; fi
+          echo "::endgroup::"
+
+          sample_ns="$(kubectl --context "$ctx" get ns -o name 2>/dev/null \
+            | grep 'hive-hosted' | head -1 | sed 's|^namespace/||' || true)"
+
+          {
+            echo
+            echo "## Provenance hunt on \`${ctx}\`"
+            echo
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ -z "$sample_ns" ]; then
+            echo "No hive-hosted namespaces present on ${ctx}"
+            echo "_No \`hive-hosted*\` namespaces present._" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          echo "Sample leaked namespace: ${sample_ns}"
+          echo "Sample leaked namespace: \`${sample_ns}\`" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "::group::Namespace manifest ${sample_ns} (labels/annotations record the creator)"
+          kubectl --context "$ctx" get ns "$sample_ns" -o yaml 2>&1 || true
+          echo "::endgroup::"
+
+          echo "::group::Namespace description ${sample_ns}"
+          kubectl --context "$ctx" describe ns "$sample_ns" 2>&1 || true
+          echo "::endgroup::"
+
+          echo "::group::Events in ${sample_ns} (if any remain)"
+          kubectl --context "$ctx" get events -n "$sample_ns" --sort-by=.lastTimestamp 2>/dev/null | head -20 || true
+          echo "::endgroup::"
+
+          {
+            echo
+            echo "Namespace labels/annotations and remaining events are in the step logs"
+            echo "under the collapsed \`Namespace manifest\` and \`Events\` groups."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Note disposability
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo
+            echo "---"
+            echo
+            echo "This workflow is **disposable diagnostics** for hivecommons/hive#5768."
+            echo "Delete \`.github/workflows/ci-cluster-probe.yml\` once the root cause is settled."
+          } >> "$GITHUB_STEP_SUMMARY"
