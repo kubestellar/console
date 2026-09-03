@@ -95,13 +95,17 @@ export function getClusterDashboardStatValue(
     case 'pods':
       return {
         value: hasData ? stats.totalPods : '-',
+        // The clusters summary only knows each cluster's total pod count
+        // (backend ClusterHealth.PodCount counts every phase). Do NOT attest
+        // running/pending/crashloop here — those markers previously mirrored
+        // the total (and hardcoded zeros), which broke the live groundtruth
+        // canary once a monitored cluster had non-running pods. Phase
+        // breakdowns are attested by the pods page, which has real per-pod
+        // data (usePodsView).
         groundtruthFields: {
           'pods-total': hasData ? stats.totalPods : '-',
-          'pods-running': hasData ? stats.totalPods : '-',
-          'pods-pending': 0,
-          'pods-crashloop': 0,
         },
-        sublabel: 'running pods',
+        sublabel: 'total pods',
         onClick: () => { emitClusterStatsDrillDown('pods'); navigate(ROUTES.WORKLOADS) },
         isClickable: hasData }
     default:

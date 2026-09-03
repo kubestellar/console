@@ -12,6 +12,7 @@ import {
   useOperators,
   useGPUNodes } from './useMCP'
 import { useIngresses } from './mcp/networking'
+import { isPendingPhasePodIssue } from '../components/pods/podPhaseClassification'
 import { useCachedPVCs, useCachedWarningEvents } from './useCachedData'
 import { useAlerts, useAlertRules } from './useAlerts'
 import { StatBlockValue } from '../components/ui/StatsOverview'
@@ -93,7 +94,10 @@ export function useUniversalStats() {
   // ─── Pod-derived values ───
   const podIssuesList = podIssues || []
   const { pendingPods, crashLoopPods, highRestartPods } = useMemo(() => ({
-    pendingPods: podIssuesList.filter(p => p.status === 'Pending').length,
+    // Unschedulable pods are still in the Kubernetes Pending phase; matching
+    // only the literal 'Pending' label under-counts them. See
+    // podPhaseClassification.
+    pendingPods: podIssuesList.filter(isPendingPhasePodIssue).length,
     crashLoopPods: podIssuesList.filter(p => /crashloop|crash loop/i.test([p.status, p.reason, ...(p.issues || [])].filter(Boolean).join(' '))).length,
     highRestartPods: podIssuesList.filter(p => p.restarts > HIGH_RESTART_THRESHOLD).length,
   }), [podIssuesList])
@@ -227,8 +231,11 @@ export function useUniversalStats() {
         return {
           value: totalPods,
           groundtruthFields: {
+            // totalPods is the all-phase cluster total; do not attest it as
+            // 'pods-running' (it previously did, breaking the live canary
+            // whenever monitored clusters had non-running pods). pending and
+            // crashloop come from real pod-issue data and stay attested.
             'pods-total': totalPods,
-            'pods-running': totalPods,
             'pods-pending': pendingPods,
             'pods-crashloop': crashLoopPods,
           },

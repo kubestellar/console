@@ -32,17 +32,99 @@ function writeTempKubeconfig(): TempKubeconfig {
   }
 }
 
-function jsonList<T>(args: string[], kubeconfigPath?: string): T[] {
+const KUBECTL_LIST_REQUEST_TIMEOUT = '20s'
+const KUBECTL_LIST_RETRY_CHUNK_SIZE = '100'
+const PER_NAMESPACE_FALLBACK_BUDGET_MS = 30_000
+const LISTING_ERROR_SNIPPET_LENGTH = 300
+
+function describeKubectlError(error: unknown): string {
+  const stderr = (error as { stderr?: unknown })?.stderr
+  const message = typeof stderr === 'string' && stderr.trim()
+    ? stderr.trim()
+    : error instanceof Error ? error.message : String(error)
+  // Keep the first line and strip URLs/IPs so evidence reports never leak
+  // API server endpoints.
+  return message.split(/\r?\n/)[0]
+    .replace(/https?:\/\/\S+/g, '<url>')
+    .replace(/\b\d{1,3}(\.\d{1,3}){3}(:\d+)?\b/g, '<ip>')
+    .slice(0, LISTING_ERROR_SNIPPET_LENGTH)
+}
+
+function jsonListWithError<T>(args: string[], kubeconfigPath?: string): { items: T[]; error?: string } {
   try {
     const parsed = JSON.parse(kubectl([...args, '-o', 'json'], kubeconfigPath)) as KubectlJsonList<T>
-    return parsed.items || []
-  } catch {
-    return []
+    return { items: parsed.items || [] }
+  } catch (error) {
+    return { items: [], error: describeKubectlError(error) }
   }
 }
 
-function jsonListAcrossContexts<T>(contexts: string[], args: string[], kubeconfigPath?: string): T[] {
-  return contexts.flatMap(context => jsonList<T>(['--context', context, ...args], kubeconfigPath))
+// A silently-truncated listing is worse than a loud failure: run 33725278436
+// compared UI totals against kubectl ground truth that was missing one whole
+// context's pods (36 vs a truthful 127) because errors were swallowed here.
+// Failures now retry cluster-scoped listing once (with pagination and a
+// request timeout), then fall back to per-namespace listing under a time
+// budget, and anything still incomplete is recorded so callers can refuse to
+// treat the counts as exact.
+function jsonListAcrossContexts<T>(
+  contexts: string[],
+  args: string[],
+  kubeconfigPath: string | undefined,
+  failures: Array<{ context: string; resource: string; error: string }>,
+  resource: string,
+  namespacedFallbackResource?: string,
+): T[] {
+  return contexts.flatMap(context => {
+    const contextArgs = ['--context', context, ...args, `--request-timeout=${KUBECTL_LIST_REQUEST_TIMEOUT}`]
+    const direct = jsonListWithError<T>(contextArgs, kubeconfigPath)
+    if (!direct.error) return direct.items
+
+    const retried = jsonListWithError<T>([...contextArgs, `--chunk-size=${KUBECTL_LIST_RETRY_CHUNK_SIZE}`], kubeconfigPath)
+    if (!retried.error) return retried.items
+
+    if (!namespacedFallbackResource) {
+      failures.push({ context, resource, error: retried.error })
+      return []
+    }
+
+    const namespaces = jsonListWithError<{ metadata?: { name?: string } }>(
+      ['--context', context, 'get', 'namespaces', `--request-timeout=${KUBECTL_LIST_REQUEST_TIMEOUT}`],
+      kubeconfigPath,
+    )
+    if (namespaces.error) {
+      failures.push({ context, resource, error: `${retried.error}; namespace fallback unavailable: ${namespaces.error}` })
+      return []
+    }
+
+    const items: T[] = []
+    const fallbackErrors: string[] = []
+    const fallbackStartedAt = Date.now()
+    let ranOutOfBudget = false
+    for (const namespace of namespaces.items) {
+      const name = namespace.metadata?.name
+      if (!name) continue
+      if (Date.now() - fallbackStartedAt > PER_NAMESPACE_FALLBACK_BUDGET_MS) {
+        ranOutOfBudget = true
+        break
+      }
+      const scoped = jsonListWithError<T>(
+        ['--context', context, 'get', namespacedFallbackResource, '-n', name, '--request-timeout=10s'],
+        kubeconfigPath,
+      )
+      if (scoped.error) fallbackErrors.push(`${name}: ${scoped.error}`)
+      else items.push(...scoped.items)
+    }
+
+    if (ranOutOfBudget || fallbackErrors.length > 0) {
+      const reasons = [
+        `cluster-scoped list failed: ${retried.error}`,
+        ranOutOfBudget ? `per-namespace fallback exceeded ${PER_NAMESPACE_FALLBACK_BUDGET_MS}ms budget` : '',
+        fallbackErrors.length > 0 ? `fallback failed for ${fallbackErrors.length} namespace(s): ${fallbackErrors.slice(0, 3).join('; ')}` : '',
+      ].filter(Boolean).join('; ')
+      failures.push({ context, resource, error: reasons })
+    }
+    return items
+  })
 }
 
 function configuredContexts(kubeconfigPath?: string): string[] {
@@ -97,16 +179,20 @@ export function collectK8sGroundTruth(runId = process.env.GITHUB_RUN_ID || Strin
       }
     })
 
-    const groundTruth = normalizeK8sState({
-      runId,
-      contextNames: contexts,
-      reachableContexts: reachable,
-      nodes: jsonListAcrossContexts<K8sNode>(reachable, ['get', 'nodes'], kubeconfigPath),
-      pods: jsonListAcrossContexts<K8sPod>(reachable, ['get', 'pods', '-A'], kubeconfigPath),
-      namespaces: jsonListAcrossContexts<unknown>(reachable, ['get', 'namespaces'], kubeconfigPath),
-      deployments: jsonListAcrossContexts<K8sDeployment>(reachable, ['get', 'deployments', '-A'], kubeconfigPath),
-      createdNamespaces: [],
-    })
+    const listingFailures: Array<{ context: string; resource: string; error: string }> = []
+    const groundTruth = {
+      ...normalizeK8sState({
+        runId,
+        contextNames: contexts,
+        reachableContexts: reachable,
+        nodes: jsonListAcrossContexts<K8sNode>(reachable, ['get', 'nodes'], kubeconfigPath, listingFailures, 'nodes'),
+        pods: jsonListAcrossContexts<K8sPod>(reachable, ['get', 'pods', '-A'], kubeconfigPath, listingFailures, 'pods', 'pods'),
+        namespaces: jsonListAcrossContexts<unknown>(reachable, ['get', 'namespaces'], kubeconfigPath, listingFailures, 'namespaces'),
+        deployments: jsonListAcrossContexts<K8sDeployment>(reachable, ['get', 'deployments', '-A'], kubeconfigPath, listingFailures, 'deployments', 'deployments'),
+        createdNamespaces: [],
+      }),
+      listingFailures,
+    }
 
     const redacted = redactK8sGroundTruth(groundTruth)
     const outDir = path.resolve(process.cwd(), 'test-results/reports')
