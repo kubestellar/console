@@ -110,14 +110,21 @@ test('live canary UI matches Kubernetes groundtruth without screenshot baselines
       'nodes-total': clusterApiFacts.clusters.nodesTotal,
       'pods-total': clusterApiFacts.clusters.podsTotal,
     })
+    // Truncated kubectl ground truth must never silently pass as a smaller
+    // "expected" value (run 33725278436: `get pods -A` failed silently on one
+    // context, producing expected=36 vs a truthful UI total of 127).
+    expect(
+      groundTruth.listingFailures ?? [],
+      'kubectl groundtruth listing must be complete before comparing cluster stats',
+    ).toEqual([])
+    // The /clusters summary only attests the all-phase pod total (backend
+    // ClusterHealth.PodCount); phase breakdowns (running/pending/crashloop)
+    // are attested and compared on the pods page, which has per-pod data.
     await assertGroundtruthFields(page, {
       'clusters-total': groundTruth.contexts.reachable,
       'nodes-ready': groundTruth.nodes.ready,
       'nodes-total': groundTruth.nodes.total,
       'pods-total': groundTruth.pods.total,
-      'pods-running': groundTruth.pods.running,
-      'pods-pending': groundTruth.pods.pending,
-      'pods-crashloop': groundTruth.pods.crashLoopBackOff,
     }, route)
     await assertLiveLayoutStable(page)
     await assertNoVisibleTextCollisions(page)

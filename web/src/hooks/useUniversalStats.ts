@@ -227,8 +227,11 @@ export function useUniversalStats() {
         return {
           value: totalPods,
           groundtruthFields: {
+            // totalPods is the all-phase cluster total; do not attest it as
+            // 'pods-running' (it previously did, breaking the live canary
+            // whenever monitored clusters had non-running pods). pending and
+            // crashloop come from real pod-issue data and stay attested.
             'pods-total': totalPods,
-            'pods-running': totalPods,
             'pods-pending': pendingPods,
             'pods-crashloop': crashLoopPods,
           },

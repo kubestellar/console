@@ -195,10 +195,11 @@ export function useClustersView(): ClustersViewState {
     'clusters-unreachable': stats.unreachable,
     'nodes-total': stats.totalNodes,
     'nodes-ready': stats.healthyNodes,
+    // Only the all-phase total is known at the clusters-summary level; pod
+    // phase breakdowns are attested by the pods page (usePodsView), which has
+    // real per-pod data. The removed running/pending/crashloop entries used
+    // to mirror the total and hardcode zeros, which was untruthful.
     'pods-total': stats.totalPods,
-    'pods-running': stats.totalPods,
-    'pods-pending': 0,
-    'pods-crashloop': 0,
   }
 
   return {
