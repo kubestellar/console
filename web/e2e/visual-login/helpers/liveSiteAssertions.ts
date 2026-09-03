@@ -26,7 +26,27 @@ const LIVE_CANARY_TEST_USER = {
 
 const LIVE_NAVIGATION_ATTEMPTS = 3
 const TEXT_COLLISION_RATIO_LIMIT = 0.30
+// Sentinel returned when a page.evaluate poll iteration is torn down by an
+// in-flight navigation ("Execution context was destroyed"). Returning it keeps
+// expect.poll retrying across the navigation instead of aborting the whole
+// test with a cryptic evaluate error (#23089).
+const POLL_EVAL_CONTEXT_DESTROYED = -1
 let lastLiveRouteNavigationAt = 0
+
+// Runs fetch('/api/me') inside the page so the check exercises the real
+// browser cookie jar + same-origin credentials path. fetch() rejections inside
+// the page map to 0; an evaluate torn down by a navigation maps to the
+// POLL_EVAL_CONTEXT_DESTROYED sentinel so expect.poll keeps retrying.
+function pollApiMeStatus(page: Page): Promise<number> {
+  return page.evaluate(async () => {
+    try {
+      const response = await fetch('/api/me', { credentials: 'same-origin' })
+      return response.status
+    } catch {
+      return 0
+    }
+  }).catch(() => POLL_EVAL_CONTEXT_DESTROYED)
+}
 
 type LiveApiEndpointFact = {
   status: number | null
@@ -336,14 +356,7 @@ export async function establishLiveCanarySession(page: Page, baseUrl: string) {
     await gotoLiveCanaryRoute(page, baseUrl, '/')
     await dismissOptionalLiveOverlays(page)
     await expect
-      .poll(() => page.evaluate(async () => {
-        try {
-          const response = await fetch('/api/me', { credentials: 'same-origin' })
-          return response.status
-        } catch {
-          return 0
-        }
-      }), {
+      .poll(() => pollApiMeStatus(page), {
         message: 'signed live canary cookie must validate against /api/me before dashboard navigation',
         timeout: 20_000,
       })
@@ -357,20 +370,13 @@ export async function establishLiveCanarySession(page: Page, baseUrl: string) {
   await gotoLiveCanaryRoute(page, baseUrl, '/auth/github', 'commit')
   await page.waitForURL(url => !url.pathname.startsWith('/auth/callback'), { timeout: 15_000 }).catch(() => undefined)
   await expect
-    .poll(() => page.evaluate(async () => {
-      try {
-        const response = await fetch('/api/me', { credentials: 'same-origin' })
-        return response.status
-      } catch {
-        return 0
-      }
-    }), {
+    .poll(() => pollApiMeStatus(page), {
       message: 'live canary dev session must validate against /api/me before dashboard navigation',
       timeout: 20_000,
     })
     .toBe(200)
   await expect
-    .poll(() => page.evaluate(() => localStorage.getItem('token')), {
+    .poll(() => page.evaluate(() => localStorage.getItem('token')).catch(() => 'poll-eval-context-destroyed'), {
       message: 'live canary dev login should settle into cookie-only auth before loading live data',
       timeout: 20_000,
     })
