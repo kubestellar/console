@@ -509,21 +509,57 @@ export async function assertNoForbiddenLiveUi(page: Page) {
       })
       .filter((entry): entry is { text: string; count: number } => Boolean(entry && entry.count > 0))
 
+    // Count firing, unacknowledged warning-severity alerts whose provenance is
+    // the external nightly-E2E CI monitoring feed. The alert rules engine tags
+    // exactly those alerts with resourceKind 'WorkflowRun'
+    // (alertRulesEngine.ts evaluateNightlyE2EFailure); every infrastructure
+    // evaluator uses 'Cluster'/'Pod'/'Node' kinds. These alerts reflect the
+    // health of monitored EXTERNAL CI (llm-d nightly runs), not the health of
+    // this live deployment, so the navbar "N warnings" pill legitimately shows
+    // them (#23089 follow-up: 76 failed llm-d nightly runs blocked promotion).
+    let externalCiWarningAlerts = 0
+    try {
+      const rawAlerts = localStorage.getItem('kc_alerts')
+      const parsedAlerts: unknown = rawAlerts ? JSON.parse(rawAlerts) : []
+      if (Array.isArray(parsedAlerts)) {
+        externalCiWarningAlerts = parsedAlerts.filter((alert) => {
+          const candidate = alert as { status?: string; acknowledgedAt?: string; severity?: string; resourceKind?: string } | null
+          return Boolean(candidate)
+            && candidate!.status === 'firing'
+            && !candidate!.acknowledgedAt
+            && candidate!.severity === 'warning'
+            && candidate!.resourceKind === 'WorkflowRun'
+        }).length
+      }
+    } catch {
+      // Unparseable alert storage — treat as zero external alerts so every
+      // warning badge stays infra-attributed (fail closed).
+    }
+
     return {
       demoModeStorage: localStorage.getItem('kc-demo-mode'),
       forbiddenMatches,
       warningBadges,
+      externalCiWarningAlerts,
     }
   }, forbiddenLiveUiPatterns)
 
+  // A warning badge is infrastructure-attributable unless its full count is
+  // explained by external-CI monitoring alerts. Any excess means clusters,
+  // pods, or the agent contributed warnings — that still fails the gate.
+  const infraWarningBadges = state.warningBadges.filter(badge => badge.count > state.externalCiWarningAlerts)
+
   await recordLiveUiFailures(page, {
     forbiddenMatches: state.forbiddenMatches,
-    warningBadges: process.env.LIVE_UI_ALLOW_WARNING_BADGES === 'true' ? [] : state.warningBadges,
+    warningBadges: process.env.LIVE_UI_ALLOW_WARNING_BADGES === 'true' ? [] : infraWarningBadges,
   })
   expect(state.demoModeStorage, 'live UI must not keep demo mode enabled in localStorage').not.toBe('true')
   expect(state.forbiddenMatches, 'live UI must not show demo/local-agent/error drawer artifacts').toEqual([])
   if (process.env.LIVE_UI_ALLOW_WARNING_BADGES !== 'true') {
-    expect(state.warningBadges, 'live UI must not show nonzero warning badges after settling').toEqual([])
+    expect(
+      infraWarningBadges,
+      `live UI must not show warning badges beyond external nightly-E2E CI alerts after settling (external CI warning alerts: ${state.externalCiWarningAlerts})`,
+    ).toEqual([])
   }
 }
 
