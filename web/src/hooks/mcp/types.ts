@@ -7,6 +7,17 @@
 //   - types.resources.ts  (ConfigMap/Secret/ServiceAccount/PVC/PV/ResourceQuota/LimitRange/RBAC)
 // Public exports are preserved — external callers keep importing from './types'.
 
+/** Straight tally of Kubernetes pod phases with no issue-suitability gating
+ *  applied — the backend's `PodPhaseCensus` (pkg/k8s/client_pods.go). Buckets
+ *  always partition the cluster's pod listing, so they sum to `podCount`. */
+export interface PodPhaseCensus {
+  running: number
+  pending: number
+  failed: number
+  succeeded: number
+  unknown: number
+}
+
 export interface ClusterInfo {
   name: string
   context: string
@@ -22,6 +33,10 @@ export interface ClusterInfo {
   nodeCount?: number
   readyNodes?: number
   podCount?: number
+  /** Ungated Kubernetes phase breakdown of the same pods `podCount` totals.
+   *  Phase stats read this instead of the pod-issues feed, which suppresses
+   *  Pending pods younger than the backend's 2-minute threshold (#23097). */
+  podPhases?: PodPhaseCensus
   // Total allocatable resources (capacity)
   cpuCores?: number
   memoryBytes?: number

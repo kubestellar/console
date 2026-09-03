@@ -36,6 +36,56 @@ type ContainerInfo struct {
 	GPURequested int    `json:"gpuRequested,omitempty"` // Number of GPUs requested by this container
 }
 
+// PodPhaseCensus is a straight tally of Kubernetes pod phases, with no
+// issue-suitability gating applied.
+//
+// It exists because pod *phase* stats used to be derived from the pod-issues
+// feed (FindPodIssues), which deliberately suppresses a Pending pod until it is
+// older than podPendingAgeThreshold. That suppression is correct for an issues
+// feed — an operator should not see an alarm row for a pod that is merely
+// starting — but any count derived from that feed inherits the suppression, so
+// `pods-pending` under-reported for up to two minutes after pods were created
+// (#23097). Kubernetes counts a pod as Pending the instant it is created, so
+// the console disagreed with ground truth on any cluster churning pods.
+//
+// The census is computed from the same unfiltered pod listing that produces
+// PodCount, so it is a phase breakdown of exactly the pods PodCount totals.
+// The issues feed keeps its own threshold; stats no longer borrow it.
+type PodPhaseCensus struct {
+	Running   int `json:"running"`
+	Pending   int `json:"pending"`
+	Failed    int `json:"failed"`
+	Succeeded int `json:"succeeded"`
+	Unknown   int `json:"unknown"`
+}
+
+// CountPodPhases tallies pods by their raw Kubernetes phase. Every pod lands in
+// exactly one bucket, so the buckets always sum to len(pods).
+//
+// No age gate, no readiness heuristic, no schedulability special case: an
+// unschedulable pod is Pending because Kubernetes reports it as Pending (it
+// never got a node), and a Running-but-unready pod is Running because that is
+// its phase. Those are precisely the cases a stat derived from issue *reasons*
+// gets wrong.
+func CountPodPhases(pods []corev1.Pod) PodPhaseCensus {
+	var census PodPhaseCensus
+	for _, pod := range pods {
+		switch pod.Status.Phase {
+		case corev1.PodRunning:
+			census.Running++
+		case corev1.PodPending:
+			census.Pending++
+		case corev1.PodFailed:
+			census.Failed++
+		case corev1.PodSucceeded:
+			census.Succeeded++
+		default:
+			census.Unknown++
+		}
+	}
+	return census
+}
+
 // PodIssue represents a pod with issues
 type PodIssue struct {
 	Name      string   `json:"name"`

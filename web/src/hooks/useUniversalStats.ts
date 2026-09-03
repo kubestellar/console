@@ -12,7 +12,7 @@ import {
   useOperators,
   useGPUNodes } from './useMCP'
 import { useIngresses } from './mcp/networking'
-import { isPendingPhasePodIssue } from '../components/pods/podPhaseClassification'
+import { countPendingPods } from '../components/pods/podPhaseClassification'
 import { useCachedPVCs, useCachedWarningEvents } from './useCachedData'
 import { useAlerts, useAlertRules } from './useAlerts'
 import { StatBlockValue } from '../components/ui/StatsOverview'
@@ -69,7 +69,10 @@ export function useUniversalStats() {
   const { rules: alertRules } = useAlertRules()
 
   // ─── Cluster-derived values (memoized) ───
-  const safeClusters = deduplicatedClusters || []
+  // Memoized so the `|| []` fallback does not mint a fresh array identity on
+  // every render and invalidate every downstream cluster memo — including the
+  // pending phase count, which now depends on it (#23097).
+  const safeClusters = useMemo(() => deduplicatedClusters || [], [deduplicatedClusters])
   const {
     totalClusters, healthyClusters, unhealthyClusters, unreachableClusters,
     healthyNodes, totalNodes, totalPods, totalCPUs, totalMemoryGB, totalStorageGB, uniqueNamespaces,
@@ -94,13 +97,16 @@ export function useUniversalStats() {
   // ─── Pod-derived values ───
   const podIssuesList = podIssues || []
   const { pendingPods, crashLoopPods, highRestartPods } = useMemo(() => ({
-    // Unschedulable pods are still in the Kubernetes Pending phase; matching
-    // only the literal 'Pending' label under-counts them. See
-    // podPhaseClassification.
-    pendingPods: podIssuesList.filter(isPendingPhasePodIssue).length,
+    // Pending is a *phase*, so it comes from the backend phase census rather
+    // than the pod-issues feed. The feed withholds Pending pods younger than
+    // its 2-minute alarm threshold, and a stat derived from it inherited that
+    // suppression (#23097). The census also gets unschedulable pods right for
+    // free — Kubernetes reports them as Pending — which is the case #23096 had
+    // to reconstruct from issue reasons, and which the fallback still handles.
+    pendingPods: countPendingPods(safeClusters, podIssuesList),
     crashLoopPods: podIssuesList.filter(p => /crashloop|crash loop/i.test([p.status, p.reason, ...(p.issues || [])].filter(Boolean).join(' '))).length,
     highRestartPods: podIssuesList.filter(p => p.restarts > HIGH_RESTART_THRESHOLD).length,
-  }), [podIssuesList])
+  }), [podIssuesList, safeClusters])
 
   // ─── Deployment-derived values ───
   const allDeployments = deployments || []
