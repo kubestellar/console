@@ -54,8 +54,10 @@ This index covers the Markdown and YAML documentation files in `docs/` and group
 | [kagenti-deployment-guide.md](kagenti-deployment-guide.md) | Deployment guide for Kagenti controller and agent topologies. |
 | [kagenti-tools.md](kagenti-tools.md) | Overview of Kagenti tool integration and supported tooling. |
 | [runbooks/bot-roundtrip-failures.md](runbooks/bot-roundtrip-failures.md) | Runbook for diagnosing `kubestellar-console-bot` roundtrip failures. |
+| [runbooks/console-live-promote-no-alert.md](runbooks/console-live-promote-no-alert.md) | Runbook for detecting a silently-failing Console Live Promote canary (no alert on scheduled failure). |
 | [runbooks/dast-scan-pipeline-failure.md](runbooks/dast-scan-pipeline-failure.md) | Runbook for detecting/triaging a silently-failing nightly DAST (ZAP/Nuclei) scan. |
 | [runbooks/llmd-guide-e2e-silent-failure.md](runbooks/llmd-guide-e2e-silent-failure.md) | Runbook for detecting/triaging masked guide failures in the nightly llm-d Guide E2E workflow. |
+| [runbooks/stale-workflow-no-alert.md](runbooks/stale-workflow-no-alert.md) | Runbook for detecting a silently-failing daily Stale Issues workflow (no alert on scheduled failure). |
 | [runbooks/upgrade-smoke-no-alert.md](runbooks/upgrade-smoke-no-alert.md) | Runbook for detecting a silently-failing In-Place Upgrade Smoke canary (no alert on scheduled failure). |
 | [security/SECURITY-MODEL.md](security/SECURITY-MODEL.md) | Explains the security model, air-gapped deployment posture, and local/self-hosted LLM paths. |
 | [stellar/architecture.md](stellar/architecture.md) | Architecture notes for the Stellar persistent AI operations assistant. |
