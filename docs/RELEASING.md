@@ -135,6 +135,58 @@ For production releases, the appropriate version component is bumped:
 - `minor`: 0.1.0 → 0.2.0
 - `major`: 0.1.0 → 1.0.0
 
+## Rollback Procedures
+
+This section covers how to revert a bad release for each distribution path
+above. There was previously no rollback guidance in this document.
+
+### Helm repository / OCI registry deployments
+
+Helm keeps a revision history for the release (see `--history-max` on
+`helm install`/`helm upgrade`, default 10):
+
+```bash
+# List revisions and find the last known-good one
+helm history kc -n <namespace>
+
+# Roll back to a specific revision
+helm rollback kc <revision> -n <namespace> --wait --timeout 5m
+```
+
+This is the same mechanism `.github/workflows/console-live-promote.yml` uses
+to automatically revert `console-live` on a failed canary deploy or smoke
+test (`helm rollback "$LIVE_RELEASE" ... --wait --timeout 5m`).
+
+### Kustomize deployments
+
+`deploy/kustomize` pins an explicit image tag rather than tracking a Helm
+release. Roll back by re-applying the manifests with the previous known-good
+tag (or, if the Deployment's rollout history is intact and no other spec
+fields changed since, `kubectl rollout undo deployment/<name> -n <namespace>`).
+
+### In-place self-upgrade (`POST /api/self-upgrade/trigger`)
+
+The self-upgrade feature (`pkg/api/handlers/self_upgrade.go`) patches the
+running Deployment's container image directly — it does **not** call Helm
+and has **no dedicated rollback endpoint or automatic revert on failure**.
+Because it is a plain `Deployment` image patch, standard Kubernetes rollout
+history still applies:
+
+```bash
+# Revert the most recent self-upgrade
+kubectl rollout undo deployment/<deploymentName> -n <namespace>
+
+# Or check history and pick a specific revision
+kubectl rollout history deployment/<deploymentName> -n <namespace>
+kubectl rollout undo deployment/<deploymentName> -n <namespace> --to-revision=<n>
+```
+
+`GET /api/self-upgrade/status` returns the deployment's `currentImage` before
+and after a trigger, so confirm the image tag reverted after running
+`rollout undo`. If the pod fails to reach ready state post-rollback, see
+[`runbooks/backend-health-degraded.md`](runbooks/backend-health-degraded.md)
+to triage `/health` vs `/healthz` vs `/watchdog/ready` signals.
+
 ## Notifications
 
 Release notifications are sent to:
