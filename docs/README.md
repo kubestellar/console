@@ -53,10 +53,12 @@ This index covers the Markdown and YAML documentation files in `docs/` and group
 | [integrations/kagenti-tool-integration.md](integrations/kagenti-tool-integration.md) | Explains Kagenti tool integration and cluster context injection. |
 | [kagenti-deployment-guide.md](kagenti-deployment-guide.md) | Deployment guide for Kagenti controller and agent topologies. |
 | [kagenti-tools.md](kagenti-tools.md) | Overview of Kagenti tool integration and supported tooling. |
+| [runbooks/backend-health-degraded.md](runbooks/backend-health-degraded.md) | Runbook for triaging `/health` `degraded` status and `/watchdog/ready` `not_ready` responses. |
 | [runbooks/bot-roundtrip-failures.md](runbooks/bot-roundtrip-failures.md) | Runbook for diagnosing `kubestellar-console-bot` roundtrip failures. |
 | [runbooks/dast-scan-pipeline-failure.md](runbooks/dast-scan-pipeline-failure.md) | Runbook for detecting/triaging a silently-failing nightly DAST (ZAP/Nuclei) scan. |
 | [runbooks/llmd-guide-e2e-silent-failure.md](runbooks/llmd-guide-e2e-silent-failure.md) | Runbook for detecting/triaging masked guide failures in the nightly llm-d Guide E2E workflow. |
 | [runbooks/upgrade-smoke-no-alert.md](runbooks/upgrade-smoke-no-alert.md) | Runbook for detecting a silently-failing In-Place Upgrade Smoke canary (no alert on scheduled failure). |
+| [../.github/ISSUE_TEMPLATE/postmortem.yaml](../.github/ISSUE_TEMPLATE/postmortem.yaml) | Incident postmortem issue template used after resolving a production incident. |
 | [security/SECURITY-MODEL.md](security/SECURITY-MODEL.md) | Explains the security model, air-gapped deployment posture, and local/self-hosted LLM paths. |
 | [stellar/architecture.md](stellar/architecture.md) | Architecture notes for the Stellar persistent AI operations assistant. |
 | [stellar/crds-v1alpha1.yaml](stellar/crds-v1alpha1.yaml) | Reference CRD manifest for Stellar v1alpha1 resources. |
