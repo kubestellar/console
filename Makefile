@@ -7,7 +7,7 @@
 #   make restart   Restart all processes via startup-oauth.sh
 #   make help      Show available targets
 
-.PHONY: help dev build restart update pull lint analytics-ping
+.PHONY: help dev build restart update pull lint analytics-ping dashboard-lint
 
 SHELL := /bin/bash
 
@@ -60,6 +60,12 @@ dev:
 ## lint: Run frontend linter
 lint:
 	cd web && npm run lint
+
+## dashboard-lint: Lint self-observability artifacts (Grafana dashboard JSON +
+## Helm-rendered PrometheusRule). Requires jq, yq, helm, and promtool. See
+## scripts/lint-dashboards.sh; no CI workflow runs this yet (#23176).
+dashboard-lint:
+	bash scripts/lint-dashboards.sh
 
 ## test: Run all Go tests with a hard 5-minute timeout per package
 ## Prevents zombie agent.test process leaks from ad-hoc test runs
