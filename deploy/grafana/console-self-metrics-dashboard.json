@@ -1,6 +1,6 @@
 {
   "title": "KubeStellar Console — Self Metrics",
-  "description": "Recommendation-only dashboard for the console backend's bounded self-metrics (console_http_requests_total, console_http_request_duration_seconds) exposed at /metrics (see pkg/api/metrics). Import this JSON into a Grafana instance already pointed at a Prometheus that scrapes this console deployment; nothing here configures a data source or exporter automatically. No backend is confirmed for this deployment, so this file is not wired into any deployment or CI step.",
+  "description": "Recommendation-only dashboard for the console backend's bounded self-metrics (console_http_requests_total, console_http_request_duration_seconds, console_websocket_connections_active, console_websocket_connects_total, console_websocket_disconnects_total, console_websocket_rejected_total) exposed at /metrics (see pkg/api/metrics). Import this JSON into a Grafana instance already pointed at a Prometheus that scrapes this console deployment; nothing here configures a data source or exporter automatically. No backend is confirmed for this deployment, so this file is not wired into any deployment or CI step.",
   "schemaVersion": 39,
   "version": 1,
   "editable": true,
@@ -76,6 +76,40 @@
           "expr": "topk(10, sum(rate(console_http_requests_total[5m])) by (route))",
           "format": "table",
           "instant": true
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "WebSocket connections active",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "expr": "console_websocket_connections_active",
+          "legendFormat": "active"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "WebSocket connects/disconnects/rejections (rate)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [
+        {
+          "expr": "sum(rate(console_websocket_connects_total[5m]))",
+          "legendFormat": "connects"
+        },
+        {
+          "expr": "sum(rate(console_websocket_disconnects_total[5m])) by (reason)",
+          "legendFormat": "disconnects ({{reason}})"
+        },
+        {
+          "expr": "sum(rate(console_websocket_rejected_total[5m]))",
+          "legendFormat": "rejected (at capacity)"
         }
       ]
     }

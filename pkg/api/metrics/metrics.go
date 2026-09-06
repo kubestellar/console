@@ -39,6 +39,42 @@ var (
 		[]string{"method", "route"},
 	)
 
+	// websocketConnectionsActive is a single-value gauge (no labels) tracking
+	// how many WebSocket connections are currently registered in the hub
+	// (pkg/api/transport). Bounded by construction: a gauge has exactly one
+	// series regardless of connection count or user identity.
+	websocketConnectionsActive = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "console_websocket_connections_active",
+			Help: "Number of WebSocket connections currently registered in the hub.",
+		},
+	)
+
+	websocketConnectsTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "console_websocket_connects_total",
+			Help: "Total number of WebSocket connections successfully registered.",
+		},
+	)
+
+	// websocketDisconnectsTotal is labeled by "reason", a small fixed set
+	// ("normal", "slow_client") set by the caller — never a user-supplied
+	// value — so cardinality stays bounded.
+	websocketDisconnectsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "console_websocket_disconnects_total",
+			Help: "Total number of WebSocket disconnects, labeled by reason.",
+		},
+		[]string{"reason"},
+	)
+
+	websocketRejectedTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "console_websocket_rejected_total",
+			Help: "Total number of WebSocket connections rejected because the server was at its configured connection limit.",
+		},
+	)
+
 	initOnce sync.Once
 )
 
@@ -47,7 +83,36 @@ func Init() {
 	initOnce.Do(func() {
 		prometheus.MustRegister(httpRequestsTotal)
 		prometheus.MustRegister(httpRequestDuration)
+		prometheus.MustRegister(websocketConnectionsActive)
+		prometheus.MustRegister(websocketConnectsTotal)
+		prometheus.MustRegister(websocketDisconnectsTotal)
+		prometheus.MustRegister(websocketRejectedTotal)
 	})
+}
+
+// WebSocketConnected records a successfully registered WebSocket connection.
+// Call exactly once per connection, when it is added to the hub's client map.
+func WebSocketConnected() {
+	Init()
+	websocketConnectionsActive.Inc()
+	websocketConnectsTotal.Inc()
+}
+
+// WebSocketDisconnected records a WebSocket connection leaving the hub.
+// reason must be one of a small fixed set of caller-controlled values
+// (e.g. "normal", "slow_client") — never derived from user input — to keep
+// the "reason" label bounded.
+func WebSocketDisconnected(reason string) {
+	Init()
+	websocketConnectionsActive.Dec()
+	websocketDisconnectsTotal.WithLabelValues(reason).Inc()
+}
+
+// WebSocketRejected records a WebSocket connection refused because the hub
+// was already at its configured connection limit.
+func WebSocketRejected() {
+	Init()
+	websocketRejectedTotal.Inc()
 }
 
 // unmatchedRoute is the bounded label value used when Fiber has no matching
