@@ -65,13 +65,12 @@
     "size_acceptance": {},
     "type_acceptance": {},
     "common_rejection_reasons": [
-      "- PR #22794: ## 🛑 Fix loop escalated — human attention needed",
-      "This PR has failed CI on **1 distinct fix attempts** (new commits, still red). The hive has stopped dispatching further automated fixes for it.",
-      "- PR #22763: Looks like k8s.io/client-go is up-to-date now, so this is no longer needed.",
-      "- PR #22758: Looks like k8s.io/apimachinery is up-to-date now, so this is no longer needed."
+      "- PR #23006: Looks like these dependencies are up-to-date now, so this is no longer needed.",
+      "- PR #22601: OK, I won't notify you again about this release, but will get in touch when a new version is available. You can also ignore all major, minor, or patch releases for a dependency by adding an [`ignore` condition](https://docs.github.com/en/code-security/supply-chain-security/configuration-options-for-dependency-updates#ignore) with the desired `update_types` to your config file.",
+      "If you change your mind, just re-open this PR and I'll resolve any conflicts on it."
     ],
     "best_change_type": "bug_fix",
-    "last_report_date": "2026-08-30"
+    "last_report_date": "2026-09-06"
   },
   "cncf_insights": {
     "last_scan_date": "2026-09-02",
