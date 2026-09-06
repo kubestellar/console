@@ -49,4 +49,18 @@ spec:
               The 95th percentile request latency for the console backend has
               exceeded {{ .Values.metrics.prometheusRule.p95LatencySeconds }}s
               over the last 5 minutes (current value: {{ "{{" }} $value | humanizeDuration {{ "}}" }}).
+        - alert: ConsoleWebSocketRejectionsHigh
+          expr: >-
+            sum(rate(console_websocket_rejected_total[5m])) > 0
+          for: {{ .Values.metrics.prometheusRule.websocketRejectionsFor }}
+          labels:
+            severity: {{ .Values.metrics.prometheusRule.websocketRejectionsSeverity }}
+          annotations:
+            summary: "Console backend is rejecting WebSocket connections at capacity"
+            description: >-
+              The console backend has rejected at least one WebSocket
+              connection because it was at its configured connection limit
+              (WS_MAX_CONNECTIONS) over the last 5 minutes (current rate:
+              {{ "{{" }} $value | humanize {{ "}}" }}/s). Users may be unable to
+              open new dashboard sessions.
 {{- end }}
