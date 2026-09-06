@@ -144,6 +144,8 @@ metrics:
     p95LatencySeconds: "2"
     p95LatencyFor: 10m
     p95LatencySeverity: warning
+    websocketRejectionsFor: 10m
+    websocketRejectionsSeverity: warning
 
 ingress:
   enabled: false
