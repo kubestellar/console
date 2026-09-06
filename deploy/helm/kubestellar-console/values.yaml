@@ -151,6 +151,8 @@ metrics:
     notificationFailureRateSeverity: warning
     gpuDcgmErrorFor: 15m
     gpuDcgmErrorSeverity: warning
+    websocketRejectionsFor: 10m
+    websocketRejectionsSeverity: warning
 
 ingress:
   enabled: false
