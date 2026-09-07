@@ -78,6 +78,44 @@
           "instant": true
         }
       ]
+    },
+    {
+      "id": 5,
+      "title": "GPU utilization worker poll cycles (rate / p95 duration)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "expr": "rate(console_gpu_util_scrape_cycles_total[5m])",
+          "legendFormat": "poll cycles/s"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(console_gpu_util_scrape_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95 cycle duration"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "GPU reservation collection outcomes & DCGM/alert errors",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [
+        {
+          "expr": "sum(rate(console_gpu_util_reservation_collect_total[5m])) by (outcome)",
+          "legendFormat": "collect: {{outcome}}"
+        },
+        {
+          "expr": "rate(console_gpu_util_dcgm_scrape_errors_total[5m])",
+          "legendFormat": "dcgm scrape errors/s"
+        },
+        {
+          "expr": "rate(console_gpu_util_alert_send_errors_total[5m])",
+          "legendFormat": "alert send errors/s"
+        }
+      ]
     }
   ]
 }

@@ -4,6 +4,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -48,5 +49,49 @@ func TestMiddlewareAndHandler(t *testing.T) {
 	}
 	if strings.Contains(body, "abc123") {
 		t.Errorf("raw path value leaked into metrics labels (unbounded cardinality):\n%s", body)
+	}
+}
+
+// TestGPUUtilRecordFunctions verifies that the GPU utilization worker's
+// bounded self-metrics (see pkg/api/gpu_utilization_worker.go) increment
+// and surface on the /metrics scrape with the expected fixed label values.
+func TestGPUUtilRecordFunctions(t *testing.T) {
+	RecordGPUUtilScrapeCycle(250 * time.Millisecond)
+	RecordGPUUtilReservationCollect(GPUUtilOutcomeSuccess)
+	RecordGPUUtilReservationCollect(GPUUtilOutcomePodsError)
+	RecordGPUUtilReservationCollect(GPUUtilOutcomeNodesError)
+	RecordGPUUtilReservationCollect(GPUUtilOutcomeSnapshotError)
+	RecordGPUUtilDCGMScrapeError()
+	RecordGPUUtilAlertSendError()
+
+	app := fiber.New()
+	app.Get("/metrics", Handler())
+
+	req := httptest.NewRequest("GET", "/metrics", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("metrics scrape failed: %v", err)
+	}
+	if resp.StatusCode != fiber.StatusOK {
+		t.Fatalf("expected 200 from /metrics, got %d", resp.StatusCode)
+	}
+
+	buf := make([]byte, 64*1024)
+	n, _ := resp.Body.Read(buf)
+	body := string(buf[:n])
+
+	for _, want := range []string{
+		"console_gpu_util_scrape_cycles_total",
+		"console_gpu_util_scrape_duration_seconds",
+		`console_gpu_util_reservation_collect_total{outcome="success"}`,
+		`console_gpu_util_reservation_collect_total{outcome="pods_error"}`,
+		`console_gpu_util_reservation_collect_total{outcome="nodes_error"}`,
+		`console_gpu_util_reservation_collect_total{outcome="snapshot_error"}`,
+		"console_gpu_util_dcgm_scrape_errors_total",
+		"console_gpu_util_alert_send_errors_total",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("expected metrics output to contain %q, got:\n%s", want, body)
+		}
 	}
 }
