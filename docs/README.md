@@ -47,6 +47,7 @@ This index covers the Markdown and YAML documentation files in `docs/` and group
 | File | Description |
 | --- | --- |
 | [ALERT_NOTIFICATIONS.md](ALERT_NOTIFICATIONS.md) | Configures alert notification channels and delivery behavior. |
+| [SLO.md](SLO.md) | Defines SLIs and proposed SLOs for the console's health/readiness endpoints and scheduled canaries. |
 | [SUPPORT.md](SUPPORT.md) | Defines support expectations, maintenance policy, and support channels. |
 | [deploy.md](deploy.md) | Full `deploy.sh` reference with flags, environment variables, and examples. |
 | [integrations/argocd.md](integrations/argocd.md) | Integration guide for running the console with Argo CD workflows. |
