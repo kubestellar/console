@@ -54,7 +54,7 @@ This index covers the Markdown and YAML documentation files in `docs/` and group
 | [kagenti-deployment-guide.md](kagenti-deployment-guide.md) | Deployment guide for Kagenti controller and agent topologies. |
 | [kagenti-tools.md](kagenti-tools.md) | Overview of Kagenti tool integration and supported tooling. |
 | [runbooks/bot-roundtrip-failures.md](runbooks/bot-roundtrip-failures.md) | Runbook for diagnosing `kubestellar-console-bot` roundtrip failures. |
-| [runbooks/console-live-promote-no-alert.md](runbooks/console-live-promote-no-alert.md) | Runbook for detecting a silently-failing Console Live Promote canary (no alert on scheduled failure). |
+| [runbooks/console-live-promote-no-alert.md](runbooks/console-live-promote-no-alert.md) | Runbook for the Console Live Promote canary failure-alert mechanism (dedicated `workflow_run` alert already exists — no gap). |
 | [runbooks/dast-scan-pipeline-failure.md](runbooks/dast-scan-pipeline-failure.md) | Runbook for detecting/triaging a silently-failing nightly DAST (ZAP/Nuclei) scan. |
 | [runbooks/llmd-guide-e2e-silent-failure.md](runbooks/llmd-guide-e2e-silent-failure.md) | Runbook for detecting/triaging masked guide failures in the nightly llm-d Guide E2E workflow. |
 | [runbooks/stale-workflow-no-alert.md](runbooks/stale-workflow-no-alert.md) | Runbook for detecting a silently-failing daily Stale Issues workflow (no alert on scheduled failure). |
