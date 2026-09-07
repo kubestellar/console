@@ -56,6 +56,7 @@ This index covers the Markdown and YAML documentation files in `docs/` and group
 | [runbooks/bot-roundtrip-failures.md](runbooks/bot-roundtrip-failures.md) | Runbook for diagnosing `kubestellar-console-bot` roundtrip failures. |
 | [runbooks/console-live-promote-no-alert.md](runbooks/console-live-promote-no-alert.md) | Runbook for the Console Live Promote canary failure-alert mechanism (dedicated `workflow_run` alert already exists — no gap). |
 | [runbooks/dast-scan-pipeline-failure.md](runbooks/dast-scan-pipeline-failure.md) | Runbook for detecting/triaging a silently-failing nightly DAST (ZAP/Nuclei) scan. |
+| [runbooks/incident-response-automation-missing.md](runbooks/incident-response-automation-missing.md) | Runbook documenting that `docs/INCIDENT-RESPONSE.md`'s automated detection (Slack alert, `main-broken` label, on-call schedule) has no working trigger today. |
 | [runbooks/llmd-guide-e2e-silent-failure.md](runbooks/llmd-guide-e2e-silent-failure.md) | Runbook for detecting/triaging masked guide failures in the nightly llm-d Guide E2E workflow. |
 | [runbooks/stale-workflow-no-alert.md](runbooks/stale-workflow-no-alert.md) | Runbook for detecting a silently-failing daily Stale Issues workflow (no alert on scheduled failure). |
 | [runbooks/upgrade-smoke-no-alert.md](runbooks/upgrade-smoke-no-alert.md) | Runbook for detecting a silently-failing In-Place Upgrade Smoke canary (no alert on scheduled failure). |
