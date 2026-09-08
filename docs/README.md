@@ -54,6 +54,7 @@ This index covers the Markdown and YAML documentation files in `docs/` and group
 | [integrations/kagenti-tool-integration.md](integrations/kagenti-tool-integration.md) | Explains Kagenti tool integration and cluster context injection. |
 | [kagenti-deployment-guide.md](kagenti-deployment-guide.md) | Deployment guide for Kagenti controller and agent topologies. |
 | [kagenti-tools.md](kagenti-tools.md) | Overview of Kagenti tool integration and supported tooling. |
+| [runbooks/backend-health-degraded.md](runbooks/backend-health-degraded.md) | Runbook for triaging `/health` `degraded` status or `/watchdog/ready` `not_ready` responses from the console backend. |
 | [runbooks/bot-roundtrip-failures.md](runbooks/bot-roundtrip-failures.md) | Runbook for diagnosing `kubestellar-console-bot` roundtrip failures. |
 | [runbooks/console-live-promote-no-alert.md](runbooks/console-live-promote-no-alert.md) | Runbook for the Console Live Promote canary failure-alert mechanism (dedicated `workflow_run` alert already exists — no gap). |
 | [runbooks/dast-scan-pipeline-failure.md](runbooks/dast-scan-pipeline-failure.md) | Runbook for detecting/triaging a silently-failing nightly DAST (ZAP/Nuclei) scan. |
@@ -62,6 +63,7 @@ This index covers the Markdown and YAML documentation files in `docs/` and group
 | [runbooks/mttr-badge-no-alert.md](runbooks/mttr-badge-no-alert.md) | Runbook for detecting a silently-failing (or silently-skipped) hourly MTTR Badge workflow — no alert on scheduled failure. |
 | [runbooks/stale-workflow-no-alert.md](runbooks/stale-workflow-no-alert.md) | Runbook for detecting a silently-failing daily Stale Issues workflow (no alert on scheduled failure). |
 | [runbooks/upgrade-smoke-no-alert.md](runbooks/upgrade-smoke-no-alert.md) | Runbook for detecting a silently-failing In-Place Upgrade Smoke canary (no alert on scheduled failure). |
+| [../.github/ISSUE_TEMPLATE/postmortem.yaml](../.github/ISSUE_TEMPLATE/postmortem.yaml) | Incident postmortem template for user-impacting production incidents (outages, degraded health, failed rollouts). |
 | [security/SECURITY-MODEL.md](security/SECURITY-MODEL.md) | Explains the security model, air-gapped deployment posture, and local/self-hosted LLM paths. |
 | [stellar/architecture.md](stellar/architecture.md) | Architecture notes for the Stellar persistent AI operations assistant. |
 | [stellar/crds-v1alpha1.yaml](stellar/crds-v1alpha1.yaml) | Reference CRD manifest for Stellar v1alpha1 resources. |
