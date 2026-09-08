@@ -39,6 +39,52 @@ var (
 		[]string{"method", "route"},
 	)
 
+	// stellarStaleApprovalSweepCyclesTotal counts completed runs of the
+	// stale-approval review loop (pkg/api/handlers/stellar/solver_workers.go),
+	// which runs on an hourly ticker outside the HTTP request path and
+	// therefore gets no coverage from httpRequestsTotal/httpRequestDuration.
+	stellarStaleApprovalSweepCyclesTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "console_stellar_stale_approval_sweep_cycles_total",
+			Help: "Total number of completed Stellar stale-approval review sweeps.",
+		},
+	)
+
+	stellarStaleApprovalSweepDuration = prometheus.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "console_stellar_stale_approval_sweep_duration_seconds",
+			Help:    "Duration of a full Stellar stale-approval review sweep, in seconds.",
+			Buckets: prometheus.DefBuckets,
+		},
+	)
+
+	stellarStaleApprovalActionsReviewedTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "console_stellar_stale_approval_actions_reviewed_total",
+			Help: "Total pending approval actions reviewed by the stale-approval sweep, by outcome.",
+		},
+		// outcome is a fixed, bounded set ("superseded" or "bumped") — never
+		// an action ID, user ID, or other unbounded value.
+		[]string{"outcome"},
+	)
+
+	// stellarDailyDigestCyclesTotal counts completed runs of the daily-digest
+	// check loop, which also runs on an hourly ticker outside the HTTP
+	// request path.
+	stellarDailyDigestCyclesTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "console_stellar_daily_digest_cycles_total",
+			Help: "Total number of completed Stellar daily-digest check cycles.",
+		},
+	)
+
+	stellarDailyDigestSentTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "console_stellar_daily_digest_sent_total",
+			Help: "Total number of Stellar daily-digest notifications actually sent to users.",
+		},
+	)
+
 	initOnce sync.Once
 )
 
@@ -47,6 +93,11 @@ func Init() {
 	initOnce.Do(func() {
 		prometheus.MustRegister(httpRequestsTotal)
 		prometheus.MustRegister(httpRequestDuration)
+		prometheus.MustRegister(stellarStaleApprovalSweepCyclesTotal)
+		prometheus.MustRegister(stellarStaleApprovalSweepDuration)
+		prometheus.MustRegister(stellarStaleApprovalActionsReviewedTotal)
+		prometheus.MustRegister(stellarDailyDigestCyclesTotal)
+		prometheus.MustRegister(stellarDailyDigestSentTotal)
 	})
 }
 
@@ -89,4 +140,45 @@ func Middleware() fiber.Handler {
 func Handler() fiber.Handler {
 	Init()
 	return adaptor.HTTPHandler(promhttp.Handler())
+}
+
+// Stale-approval review outcomes for RecordStellarStaleApprovalActionsReviewed.
+// This is the complete, fixed set of values the "outcome" label may take —
+// never an action ID, user ID, or other unbounded value.
+const (
+	StellarApprovalOutcomeSuperseded = "superseded"
+	StellarApprovalOutcomeBumped     = "bumped"
+)
+
+// RecordStellarStaleApprovalSweep records one completed stale-approval
+// review sweep and its wall-clock duration.
+func RecordStellarStaleApprovalSweep(duration time.Duration) {
+	Init()
+	stellarStaleApprovalSweepCyclesTotal.Inc()
+	stellarStaleApprovalSweepDuration.Observe(duration.Seconds())
+}
+
+// RecordStellarStaleApprovalActionsReviewed records reviewed pending
+// approval actions from a single sweep. outcome must be one of the
+// StellarApprovalOutcome* constants above. count may be zero (no-op).
+func RecordStellarStaleApprovalActionsReviewed(outcome string, count int) {
+	if count <= 0 {
+		return
+	}
+	Init()
+	stellarStaleApprovalActionsReviewedTotal.WithLabelValues(outcome).Add(float64(count))
+}
+
+// RecordStellarDailyDigestCycle records one completed daily-digest check
+// cycle (regardless of whether any digest was actually sent).
+func RecordStellarDailyDigestCycle() {
+	Init()
+	stellarDailyDigestCyclesTotal.Inc()
+}
+
+// RecordStellarDailyDigestSent records one daily-digest notification
+// actually sent to a user.
+func RecordStellarDailyDigestSent() {
+	Init()
+	stellarDailyDigestSentTotal.Inc()
 }
