@@ -85,6 +85,43 @@ var (
 		},
 	)
 
+	// stellarSchedulerDispatchCyclesTotal counts completed runs of the
+	// Stellar action scheduler's 30s poll loop (pkg/stellar/scheduler/scheduler.go),
+	// which fetches due approved actions and dispatches them against live
+	// clusters outside the HTTP request path.
+	stellarSchedulerDispatchCyclesTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "console_stellar_scheduler_dispatch_cycles_total",
+			Help: "Total number of completed Stellar action-scheduler poll cycles (due-actions fetch succeeded).",
+		},
+	)
+
+	stellarSchedulerActionsPickedUpTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "console_stellar_scheduler_actions_picked_up_total",
+			Help: "Total number of due Stellar actions picked up for dispatch by the scheduler.",
+		},
+	)
+
+	stellarActionExecutionDuration = prometheus.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "console_stellar_action_execution_duration_seconds",
+			Help:    "Wall-clock duration of a single Stellar scheduled-action execution, in seconds.",
+			Buckets: prometheus.DefBuckets,
+		},
+	)
+
+	stellarActionOutcomesTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "console_stellar_action_outcomes_total",
+			Help: "Total Stellar scheduled-action executions, by outcome.",
+		},
+		// outcome is a fixed, bounded set (completed, failed, retry,
+		// idempotent_skip) — never an action ID, user ID, or other
+		// unbounded value.
+		[]string{"outcome"},
+	)
+
 	initOnce sync.Once
 )
 
@@ -98,6 +135,10 @@ func Init() {
 		prometheus.MustRegister(stellarStaleApprovalActionsReviewedTotal)
 		prometheus.MustRegister(stellarDailyDigestCyclesTotal)
 		prometheus.MustRegister(stellarDailyDigestSentTotal)
+		prometheus.MustRegister(stellarSchedulerDispatchCyclesTotal)
+		prometheus.MustRegister(stellarSchedulerActionsPickedUpTotal)
+		prometheus.MustRegister(stellarActionExecutionDuration)
+		prometheus.MustRegister(stellarActionOutcomesTotal)
 	})
 }
 
@@ -181,4 +222,34 @@ func RecordStellarDailyDigestCycle() {
 func RecordStellarDailyDigestSent() {
 	Init()
 	stellarDailyDigestSentTotal.Inc()
+}
+
+// Scheduled-action outcomes for RecordStellarActionOutcome. This is the
+// complete, fixed set of values the "outcome" label may take — never an
+// action ID, user ID, or other unbounded value.
+const (
+	StellarActionOutcomeCompleted      = "completed"
+	StellarActionOutcomeFailed         = "failed"
+	StellarActionOutcomeRetry          = "retry"
+	StellarActionOutcomeIdempotentSkip = "idempotent_skip"
+)
+
+// RecordStellarSchedulerDispatchCycle records one completed poll cycle of
+// the Stellar action scheduler (due-actions fetch succeeded), along with
+// how many actions it picked up for dispatch.
+func RecordStellarSchedulerDispatchCycle(actionsPickedUp int) {
+	Init()
+	stellarSchedulerDispatchCyclesTotal.Inc()
+	if actionsPickedUp > 0 {
+		stellarSchedulerActionsPickedUpTotal.Add(float64(actionsPickedUp))
+	}
+}
+
+// RecordStellarActionExecution records the outcome and wall-clock duration
+// of a single scheduled-action execution. outcome must be one of the
+// StellarActionOutcome* constants above.
+func RecordStellarActionExecution(outcome string, duration time.Duration) {
+	Init()
+	stellarActionOutcomesTotal.WithLabelValues(outcome).Inc()
+	stellarActionExecutionDuration.Observe(duration.Seconds())
 }
