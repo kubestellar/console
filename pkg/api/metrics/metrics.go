@@ -85,6 +85,87 @@ var (
 		},
 	)
 
+	// stellarSchedulerDispatchCyclesTotal counts completed runs of the
+	// Stellar action scheduler's 30s poll loop (pkg/stellar/scheduler/scheduler.go),
+	// which fetches due approved actions and dispatches them against live
+	// clusters outside the HTTP request path.
+	stellarSchedulerDispatchCyclesTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "console_stellar_scheduler_dispatch_cycles_total",
+			Help: "Total number of completed Stellar action-scheduler poll cycles (due-actions fetch succeeded).",
+		},
+	)
+
+	stellarSchedulerActionsPickedUpTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "console_stellar_scheduler_actions_picked_up_total",
+			Help: "Total number of due Stellar actions picked up for dispatch by the scheduler.",
+		},
+	)
+
+	stellarActionExecutionDuration = prometheus.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "console_stellar_action_execution_duration_seconds",
+			Help:    "Wall-clock duration of a single Stellar scheduled-action execution, in seconds.",
+			Buckets: prometheus.DefBuckets,
+		},
+	)
+
+	stellarActionOutcomesTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "console_stellar_action_outcomes_total",
+			Help: "Total Stellar scheduled-action executions, by outcome.",
+		},
+		// outcome is a fixed, bounded set (completed, failed, retry,
+		// idempotent_skip) — never an action ID, user ID, or other
+		// unbounded value.
+		[]string{"outcome"},
+	)
+
+	// gpuUtilScrapeCyclesTotal counts completed runs of the GPU utilization
+	// worker's poll loop (pkg/api/gpu_utilization_worker.go), which runs on
+	// its own ticker outside the HTTP request path and therefore gets no
+	// coverage from httpRequestsTotal/httpRequestDuration.
+	gpuUtilScrapeCyclesTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "console_gpu_util_scrape_cycles_total",
+			Help: "Total number of completed GPU utilization worker poll cycles.",
+		},
+	)
+
+	gpuUtilScrapeDuration = prometheus.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "console_gpu_util_scrape_duration_seconds",
+			Help:    "Duration of a full GPU utilization worker poll cycle, in seconds.",
+			Buckets: prometheus.DefBuckets,
+		},
+	)
+
+	gpuUtilReservationCollectTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "console_gpu_util_reservation_collect_total",
+			Help: "Total per-reservation GPU utilization collection attempts, by outcome.",
+		},
+		// outcome is a fixed, bounded set (success, pods_error, nodes_error,
+		// snapshot_error) — never a reservation ID, cluster name, or other
+		// unbounded value.
+		[]string{"outcome"},
+	)
+
+	gpuUtilDCGMScrapeErrorsTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "console_gpu_util_dcgm_scrape_errors_total",
+			Help: "Total number of failed DCGM exporter scrapes by the GPU utilization worker (opt-in feature).",
+		},
+	)
+
+	gpuUtilAlertSendErrorsTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "console_gpu_util_alert_send_errors_total",
+			Help: "Total number of failed GPU utilization threshold alert deliveries.",
+		},
+	)
+
 	initOnce sync.Once
 )
 
@@ -98,6 +179,15 @@ func Init() {
 		prometheus.MustRegister(stellarStaleApprovalActionsReviewedTotal)
 		prometheus.MustRegister(stellarDailyDigestCyclesTotal)
 		prometheus.MustRegister(stellarDailyDigestSentTotal)
+		prometheus.MustRegister(stellarSchedulerDispatchCyclesTotal)
+		prometheus.MustRegister(stellarSchedulerActionsPickedUpTotal)
+		prometheus.MustRegister(stellarActionExecutionDuration)
+		prometheus.MustRegister(stellarActionOutcomesTotal)
+		prometheus.MustRegister(gpuUtilScrapeCyclesTotal)
+		prometheus.MustRegister(gpuUtilScrapeDuration)
+		prometheus.MustRegister(gpuUtilReservationCollectTotal)
+		prometheus.MustRegister(gpuUtilDCGMScrapeErrorsTotal)
+		prometheus.MustRegister(gpuUtilAlertSendErrorsTotal)
 	})
 }
 
@@ -181,4 +271,75 @@ func RecordStellarDailyDigestCycle() {
 func RecordStellarDailyDigestSent() {
 	Init()
 	stellarDailyDigestSentTotal.Inc()
+}
+
+// Scheduled-action outcomes for RecordStellarActionOutcome. This is the
+// complete, fixed set of values the "outcome" label may take — never an
+// action ID, user ID, or other unbounded value.
+const (
+	StellarActionOutcomeCompleted      = "completed"
+	StellarActionOutcomeFailed         = "failed"
+	StellarActionOutcomeRetry          = "retry"
+	StellarActionOutcomeIdempotentSkip = "idempotent_skip"
+)
+
+// RecordStellarSchedulerDispatchCycle records one completed poll cycle of
+// the Stellar action scheduler (due-actions fetch succeeded), along with
+// how many actions it picked up for dispatch.
+func RecordStellarSchedulerDispatchCycle(actionsPickedUp int) {
+	Init()
+	stellarSchedulerDispatchCyclesTotal.Inc()
+	if actionsPickedUp > 0 {
+		stellarSchedulerActionsPickedUpTotal.Add(float64(actionsPickedUp))
+	}
+}
+
+// RecordStellarActionExecution records the outcome and wall-clock duration
+// of a single scheduled-action execution. outcome must be one of the
+// StellarActionOutcome* constants above.
+func RecordStellarActionExecution(outcome string, duration time.Duration) {
+	Init()
+	stellarActionOutcomesTotal.WithLabelValues(outcome).Inc()
+	stellarActionExecutionDuration.Observe(duration.Seconds())
+}
+
+// Per-reservation GPU utilization collection outcomes for
+// RecordGPUUtilReservationCollect. This is the complete, fixed set of
+// values the "outcome" label may take — never a reservation ID, cluster
+// name, or other unbounded value.
+const (
+	GPUUtilReservationOutcomeSuccess       = "success"
+	GPUUtilReservationOutcomePodsError     = "pods_error"
+	GPUUtilReservationOutcomeNodesError    = "nodes_error"
+	GPUUtilReservationOutcomeSnapshotError = "snapshot_error"
+)
+
+// RecordGPUUtilScrapeCycle records one completed GPU utilization worker
+// poll cycle and its wall-clock duration.
+func RecordGPUUtilScrapeCycle(duration time.Duration) {
+	Init()
+	gpuUtilScrapeCyclesTotal.Inc()
+	gpuUtilScrapeDuration.Observe(duration.Seconds())
+}
+
+// RecordGPUUtilReservationCollect records one per-reservation utilization
+// collection attempt. outcome must be one of the GPUUtilReservationOutcome*
+// constants above.
+func RecordGPUUtilReservationCollect(outcome string) {
+	Init()
+	gpuUtilReservationCollectTotal.WithLabelValues(outcome).Inc()
+}
+
+// RecordGPUUtilDCGMScrapeError records one failed DCGM exporter scrape by
+// the GPU utilization worker (opt-in feature).
+func RecordGPUUtilDCGMScrapeError() {
+	Init()
+	gpuUtilDCGMScrapeErrorsTotal.Inc()
+}
+
+// RecordGPUUtilAlertSendError records one failed GPU utilization threshold
+// alert delivery.
+func RecordGPUUtilAlertSendError() {
+	Init()
+	gpuUtilAlertSendErrorsTotal.Inc()
 }
