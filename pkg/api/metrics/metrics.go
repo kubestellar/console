@@ -197,6 +197,30 @@ var (
 		[]string{"verb", "host"},
 	)
 
+	// notificationSendsTotal counts alert-delivery attempts made by
+	// pkg/notifications (Slack/Email/PagerDuty/OpsGenie/webhook), which is
+	// invoked outside the HTTP request path and previously had zero
+	// observability — a broken alert channel failed silently except in logs.
+	notificationSendsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "console_notification_sends_total",
+			Help: "Total alert-notification delivery attempts by channel type and outcome.",
+		},
+		// channel_type is the fixed, bounded NotificationType enum
+		// (slack, email, webhook, pagerduty, opsgenie) — never a
+		// user-supplied notifier ID. outcome is "sent" or "failed".
+		[]string{"channel_type", "outcome"},
+	)
+
+	notificationSendDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "console_notification_send_duration_seconds",
+			Help:    "Duration of a single alert-notification delivery attempt, in seconds, by channel type.",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"channel_type"},
+	)
+
 	initOnce sync.Once
 )
 
@@ -230,6 +254,8 @@ func Init() {
 			RequestResult:  resultAdapter{counter: k8sClientRequestsTotal},
 			RequestLatency: latencyAdapter{histogram: k8sClientRequestDuration},
 		})
+		prometheus.MustRegister(notificationSendsTotal)
+		prometheus.MustRegister(notificationSendDuration)
 	})
 }
 
@@ -407,4 +433,22 @@ func RecordGPUUtilDCGMScrapeError() {
 func RecordGPUUtilAlertSendError() {
 	Init()
 	gpuUtilAlertSendErrorsTotal.Inc()
+}
+
+// Notification-send outcomes for RecordNotificationSend. This is the
+// complete, fixed set of values the "outcome" label may take.
+const (
+	NotificationOutcomeSent   = "sent"
+	NotificationOutcomeFailed = "failed"
+)
+
+// RecordNotificationSend records one alert-notification delivery attempt
+// made by pkg/notifications. channelType must be one of the
+// notifications.NotificationType values (slack, email, webhook, pagerduty,
+// opsgenie) — a fixed, bounded set, never a user-supplied notifier ID.
+// outcome must be one of the NotificationOutcome* constants above.
+func RecordNotificationSend(channelType, outcome string, duration time.Duration) {
+	Init()
+	notificationSendsTotal.WithLabelValues(channelType, outcome).Inc()
+	notificationSendDuration.WithLabelValues(channelType).Observe(duration.Seconds())
 }

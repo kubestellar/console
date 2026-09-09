@@ -174,3 +174,39 @@ func TestK8sClientAdapters(t *testing.T) {
 		t.Errorf("raw request path leaked into k8s client metrics labels (unbounded cardinality):\n%s", body)
 	}
 }
+
+// TestRecordNotificationSend verifies that alert-delivery attempts are
+// recorded per bounded channel_type/outcome pair, and that the duration
+// histogram series is populated without leaking a notifier ID into any
+// label value.
+func TestRecordNotificationSend(t *testing.T) {
+	RecordNotificationSend("slack", NotificationOutcomeSent, 0)
+	RecordNotificationSend("email", NotificationOutcomeFailed, 0)
+	RecordNotificationSend("unknown", NotificationOutcomeFailed, 0)
+
+	app := fiber.New()
+	app.Get("/metrics", Handler())
+
+	req := httptest.NewRequest("GET", "/metrics", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("metrics scrape failed: %v", err)
+	}
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("failed to read metrics body: %v", err)
+	}
+	body := string(bodyBytes)
+
+	for _, want := range []string{
+		"console_notification_send_duration_seconds",
+		`console_notification_sends_total{channel_type="slack",outcome="sent"}`,
+		`console_notification_sends_total{channel_type="email",outcome="failed"}`,
+		`console_notification_sends_total{channel_type="unknown",outcome="failed"}`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("expected metrics output to contain %q, got:\n%s", want, body)
+		}
+	}
+}
