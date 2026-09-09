@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	consolemetrics "github.com/kubestellar/console/pkg/api/metrics"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/stellar/providers"
@@ -78,6 +79,7 @@ func (s *Scheduler) Start(ctx context.Context) {
 				slog.Warn("stellar/scheduler: fetch due actions failed", "error", err)
 				continue
 			}
+			consolemetrics.RecordStellarSchedulerDispatchCycle(len(actions))
 			for _, action := range actions {
 				action := action
 				sem <- struct{}{}
@@ -91,9 +93,11 @@ func (s *Scheduler) Start(ctx context.Context) {
 }
 
 func (s *Scheduler) executeAction(ctx context.Context, a store.StellarAction) {
+	execStart := time.Now()
 	_ = s.store.UpdateStellarActionStatus(ctx, a.ID, "running", "", "")
 	if a.IdempotencyKey != "" && s.store.ActionCompletedByIdempotencyKey(ctx, a.IdempotencyKey) {
 		_ = s.store.UpdateStellarActionStatus(ctx, a.ID, "completed", "Already completed (idempotency key match)", "")
+		consolemetrics.RecordStellarActionExecution(consolemetrics.StellarActionOutcomeIdempotentSkip, time.Since(execStart))
 		return
 	}
 	execCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
@@ -103,6 +107,7 @@ func (s *Scheduler) executeAction(ctx context.Context, a store.StellarAction) {
 		slog.Error("stellar/scheduler: action failed", "action_id", a.ID, "error", err)
 		if a.RetryCount < a.MaxRetries {
 			_ = s.store.IncrementRetry(ctx, a.ID)
+			consolemetrics.RecordStellarActionExecution(consolemetrics.StellarActionOutcomeRetry, time.Since(execStart))
 			return
 		}
 		_ = s.store.UpdateStellarActionStatus(ctx, a.ID, "failed", "", sanitizeError(err))
@@ -123,6 +128,7 @@ func (s *Scheduler) executeAction(ctx context.Context, a store.StellarAction) {
 			Importance: 7,
 			ExpiresAt:  ptr(time.Now().AddDate(0, 0, 60)),
 		})
+		consolemetrics.RecordStellarActionExecution(consolemetrics.StellarActionOutcomeFailed, time.Since(execStart))
 		return
 	}
 	_ = s.store.UpdateStellarActionStatus(ctx, a.ID, "completed", outcome, "")
@@ -143,6 +149,7 @@ func (s *Scheduler) executeAction(ctx context.Context, a store.StellarAction) {
 		Importance: 7,
 		ExpiresAt:  ptr(time.Now().AddDate(0, 0, 60)),
 	})
+	consolemetrics.RecordStellarActionExecution(consolemetrics.StellarActionOutcomeCompleted, time.Since(execStart))
 }
 
 func ptr[T any](v T) *T { return &v }
