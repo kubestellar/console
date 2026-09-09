@@ -11,6 +11,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	consolemetrics "github.com/kubestellar/console/pkg/api/metrics"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/store"
 )
@@ -63,6 +64,11 @@ func (h *Handler) staleApprovalReviewLoop(ctx context.Context) {
 }
 
 func (h *Handler) runStaleApprovalSweep(ctx context.Context) {
+	sweepStart := time.Now()
+	defer func() {
+		consolemetrics.RecordStellarStaleApprovalSweep(time.Since(sweepStart))
+	}()
+
 	full, ok := h.fullStore()
 	if !ok {
 		return
@@ -119,6 +125,14 @@ func (h *Handler) runStaleApprovalSweep(ctx context.Context) {
 		}
 		perUser[action.UserID] = entry
 	}
+
+	var totalSuperseded, totalBumped int
+	for _, counts := range perUser {
+		totalSuperseded += counts.superseded
+		totalBumped += counts.bumped
+	}
+	consolemetrics.RecordStellarStaleApprovalActionsReviewed(consolemetrics.StellarApprovalOutcomeSuperseded, totalSuperseded)
+	consolemetrics.RecordStellarStaleApprovalActionsReviewed(consolemetrics.StellarApprovalOutcomeBumped, totalBumped)
 
 	for userID, counts := range perUser {
 		if counts.superseded+counts.bumped == 0 {
@@ -178,6 +192,8 @@ func (h *Handler) dailyDigestLoop(ctx context.Context) {
 }
 
 func (h *Handler) maybeFireDigests(ctx context.Context) {
+	consolemetrics.RecordStellarDailyDigestCycle()
+
 	full, ok := h.fullStore()
 	if !ok {
 		return
@@ -246,6 +262,7 @@ func (h *Handler) fireDigestForUser(ctx context.Context, full solveFullStore, us
 		slog.Warn("stellar: digest create notification failed", "user", userID, "error", err)
 		return
 	}
+	consolemetrics.RecordStellarDailyDigestSent()
 	if err := full.SetMemoryDedupeKey(ctx, userID, digestMemCategory, dedup); err != nil {
 		slog.Warn("stellar: digest set dedup key failed", "user", userID, "error", err)
 	}
