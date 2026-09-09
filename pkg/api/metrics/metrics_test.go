@@ -91,3 +91,46 @@ func TestStellarSchedulerMetrics(t *testing.T) {
 		}
 	}
 }
+
+// TestGPUUtilizationWorkerMetrics verifies that recording GPU utilization
+// worker scrape cycles, per-reservation outcomes, DCGM scrape errors, and
+// alert send errors increments the expected bounded series.
+func TestGPUUtilizationWorkerMetrics(t *testing.T) {
+	RecordGPUUtilScrapeCycle(0)
+	RecordGPUUtilReservationCollect(GPUUtilReservationOutcomeSuccess)
+	RecordGPUUtilReservationCollect(GPUUtilReservationOutcomePodsError)
+	RecordGPUUtilReservationCollect(GPUUtilReservationOutcomeNodesError)
+	RecordGPUUtilReservationCollect(GPUUtilReservationOutcomeSnapshotError)
+	RecordGPUUtilDCGMScrapeError()
+	RecordGPUUtilAlertSendError()
+
+	app := fiber.New()
+	app.Get("/metrics", Handler())
+
+	req := httptest.NewRequest("GET", "/metrics", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("metrics scrape failed: %v", err)
+	}
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("failed to read metrics body: %v", err)
+	}
+	body := string(bodyBytes)
+
+	for _, want := range []string{
+		"console_gpu_util_scrape_cycles_total",
+		"console_gpu_util_scrape_duration_seconds",
+		`console_gpu_util_reservation_collect_total{outcome="success"}`,
+		`console_gpu_util_reservation_collect_total{outcome="pods_error"}`,
+		`console_gpu_util_reservation_collect_total{outcome="nodes_error"}`,
+		`console_gpu_util_reservation_collect_total{outcome="snapshot_error"}`,
+		"console_gpu_util_dcgm_scrape_errors_total",
+		"console_gpu_util_alert_send_errors_total",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("expected metrics output to contain %q, got:\n%s", want, body)
+		}
+	}
+}
