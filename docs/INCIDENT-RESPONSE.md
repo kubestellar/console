@@ -25,7 +25,11 @@ The build sheriff is the designated owner for main branch health. Responsibiliti
 - Escalate if unable to resolve within 2 hours
 - Document root cause in incident post-mortem
 
-**Current rotation schedule**: See `.github/on-call-schedule.yml` (to be created)
+**Current rotation schedule**: See `.github/on-call-schedule.yml` (to be created).
+**Note:** this file, the `main-broken` label, and the Slack-posting step described
+below are not yet implemented — see
+[`docs/runbooks/incident-response-automation-missing.md`](runbooks/incident-response-automation-missing.md)
+for current status and detection steps.
 
 #### All Contributors
 

@@ -11,11 +11,12 @@ import (
 
 	"github.com/google/uuid"
 
+	consolemetrics "github.com/kubestellar/console/pkg/api/metrics"
 	"github.com/kubestellar/console/pkg/gpu"
 	"github.com/kubestellar/console/pkg/k8s"
-	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/notifications"
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -55,18 +56,18 @@ const (
 
 // GPUUtilizationWorker periodically collects GPU utilization data for active reservations
 type GPUUtilizationWorker struct {
-	store              store.Store
-	k8sClient          *k8s.MultiClusterClient
-	interval           time.Duration
-	stopCh             chan struct{}
-	stopOnce           sync.Once // protects stopCh from double-close panic
-	wg                 sync.WaitGroup // tracks the background polling goroutine
-	baseCtx            context.Context
-	baseCancel         context.CancelFunc
-	gpuMetricsEnabled  bool
+	store               store.Store
+	k8sClient           *k8s.MultiClusterClient
+	interval            time.Duration
+	stopCh              chan struct{}
+	stopOnce            sync.Once      // protects stopCh from double-close panic
+	wg                  sync.WaitGroup // tracks the background polling goroutine
+	baseCtx             context.Context
+	baseCancel          context.CancelFunc
+	gpuMetricsEnabled   bool
 	notificationService *notifications.Service
-	overThreshold      float64
-	underThreshold     float64
+	overThreshold       float64
+	underThreshold      float64
 	// dcgmEnabled toggles NVIDIA DCGM exporter scraping for real GPU memory
 	// metrics (Issue 9135). Defaults to false — clusters without the GPU
 	// Operator / DCGM stack should silently fall back to the legacy zero
@@ -171,6 +172,11 @@ func (w *GPUUtilizationWorker) collectUtilization() {
 		return
 	}
 
+	cycleStart := time.Now()
+	defer func() {
+		consolemetrics.RecordGPUUtilScrapeCycle(time.Since(cycleStart))
+	}()
+
 	reservations, err := w.store.ListActiveGPUReservations(w.baseCtx)
 	if err != nil {
 		slog.Error("GPU utilization worker: failed to list active reservations", "error", err)
@@ -245,8 +251,10 @@ func (w *GPUUtilizationWorker) scrapeDCGMPerCluster(
 		if err != nil {
 			// Log at debug — the feature is opt-in and a 503 / missing Service
 			// on an unconfigured cluster is a legitimate operational state,
-			// not an error worth pager-duty attention.
+			// not an error worth pager-duty attention. Still counted so
+			// operators can graph a sustained DCGM scrape failure rate.
 			slog.Debug("GPU utilization worker: DCGM scrape failed", "cluster", cluster, "error", err)
+			consolemetrics.RecordGPUUtilDCGMScrapeError()
 			continue
 		}
 		out[cluster] = metrics
@@ -270,6 +278,7 @@ func (w *GPUUtilizationWorker) collectForReservation(
 	pods, err := w.k8sClient.GetPods(ctx, cluster, namespace)
 	if err != nil {
 		slog.Error("GPU utilization worker: failed to get pods", "cluster", cluster, "namespace", namespace, "error", err)
+		consolemetrics.RecordGPUUtilReservationCollect(consolemetrics.GPUUtilReservationOutcomePodsError)
 		return
 	}
 
@@ -277,6 +286,7 @@ func (w *GPUUtilizationWorker) collectForReservation(
 	gpuNodes, err := w.k8sClient.GetGPUNodes(ctx, cluster)
 	if err != nil {
 		slog.Error("GPU utilization worker: failed to get GPU nodes", "cluster", cluster, "error", err)
+		consolemetrics.RecordGPUUtilReservationCollect(consolemetrics.GPUUtilReservationOutcomeNodesError)
 		return
 	}
 
@@ -321,41 +331,43 @@ func (w *GPUUtilizationWorker) collectForReservation(
 	if w.notificationService != nil {
 		if gpuUtilPct > w.overThreshold {
 			alert := notifications.Alert{
-				RuleName: "GPU Utilization Over Threshold",
-				Severity: notifications.SeverityWarning,
-				Message:  fmt.Sprintf("GPU utilization %.1f%% exceeds threshold %.1f%%", gpuUtilPct, w.overThreshold),
-				Cluster:  cluster,
+				RuleName:  "GPU Utilization Over Threshold",
+				Severity:  notifications.SeverityWarning,
+				Message:   fmt.Sprintf("GPU utilization %.1f%% exceeds threshold %.1f%%", gpuUtilPct, w.overThreshold),
+				Cluster:   cluster,
 				Namespace: namespace,
 				Details: map[string]interface{}{
-					"reservation_id": reservation.ID.String(),
+					"reservation_id":  reservation.ID.String(),
 					"utilization_pct": gpuUtilPct,
-					"threshold_pct": w.overThreshold,
-					"active_gpus": activeGPUCount,
-					"total_gpus": totalGPUs,
+					"threshold_pct":   w.overThreshold,
+					"active_gpus":     activeGPUCount,
+					"total_gpus":      totalGPUs,
 				},
 				FiredAt: time.Now(),
 			}
 			if err := w.notificationService.SendAlert(alert); err != nil {
 				slog.Error("GPU utilization worker: failed to send over-threshold alert", "error", err)
+				consolemetrics.RecordGPUUtilAlertSendError()
 			}
 		} else if gpuUtilPct < w.underThreshold {
 			alert := notifications.Alert{
-				RuleName: "GPU Utilization Under Threshold",
-				Severity: notifications.SeverityInfo,
-				Message:  fmt.Sprintf("GPU utilization %.1f%% below threshold %.1f%%", gpuUtilPct, w.underThreshold),
-				Cluster:  cluster,
+				RuleName:  "GPU Utilization Under Threshold",
+				Severity:  notifications.SeverityInfo,
+				Message:   fmt.Sprintf("GPU utilization %.1f%% below threshold %.1f%%", gpuUtilPct, w.underThreshold),
+				Cluster:   cluster,
 				Namespace: namespace,
 				Details: map[string]interface{}{
-					"reservation_id": reservation.ID.String(),
+					"reservation_id":  reservation.ID.String(),
 					"utilization_pct": gpuUtilPct,
-					"threshold_pct": w.underThreshold,
-					"active_gpus": activeGPUCount,
-					"total_gpus": totalGPUs,
+					"threshold_pct":   w.underThreshold,
+					"active_gpus":     activeGPUCount,
+					"total_gpus":      totalGPUs,
 				},
 				FiredAt: time.Now(),
 			}
 			if err := w.notificationService.SendAlert(alert); err != nil {
 				slog.Error("GPU utilization worker: failed to send under-threshold alert", "error", err)
+				consolemetrics.RecordGPUUtilAlertSendError()
 			}
 		}
 	}
@@ -380,7 +392,11 @@ func (w *GPUUtilizationWorker) collectForReservation(
 
 	if err := w.store.InsertUtilizationSnapshot(ctx, snapshot); err != nil {
 		slog.Error("GPU utilization worker: failed to insert snapshot", "reservation", reservation.ID, "error", err)
+		consolemetrics.RecordGPUUtilReservationCollect(consolemetrics.GPUUtilReservationOutcomeSnapshotError)
+		return
 	}
+
+	consolemetrics.RecordGPUUtilReservationCollect(consolemetrics.GPUUtilReservationOutcomeSuccess)
 }
 
 // cleanupOldSnapshots removes snapshots older than the retention period
