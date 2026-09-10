@@ -467,6 +467,7 @@ export default defineConfig(({ mode }) => ({
         'src/hooks/**',
         'src/lib/**',
         'src/contexts/**',
+        'src/services/**',
         'src/components/charts/**',
         'src/components/dashboard/customizer/**',
         'src/components/dashboard/shared/cardCatalog.ts',
