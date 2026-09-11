@@ -1,6 +1,6 @@
 {
   "title": "KubeStellar Console — Self Metrics",
-  "description": "Recommendation-only dashboard for the console backend's bounded self-metrics (console_http_requests_total, console_http_request_duration_seconds, console_k8s_client_requests_total, console_k8s_client_request_duration_seconds) exposed at /metrics (see pkg/api/metrics). Import this JSON into a Grafana instance already pointed at a Prometheus that scrapes this console deployment; nothing here configures a data source or exporter automatically. No backend is confirmed for this deployment, so this file is not wired into any deployment or CI step.",
+  "description": "Recommendation-only dashboard for the console backend's bounded self-metrics (console_http_requests_total, console_http_request_duration_seconds, console_k8s_client_requests_total, console_k8s_client_request_duration_seconds, plus the Stellar background-worker and GPU-utilization-worker metrics registered in pkg/api/metrics) exposed at /metrics. Import this JSON into a Grafana instance already pointed at a Prometheus that scrapes this console deployment; nothing here configures a data source or exporter automatically. No backend is confirmed for this deployment, so this file is not wired into any deployment or CI step.",
   "schemaVersion": 39,
   "version": 1,
   "editable": true,
@@ -102,6 +102,134 @@
         {
           "expr": "histogram_quantile(0.95, sum(rate(console_k8s_client_request_duration_seconds_bucket[5m])) by (le, host))",
           "legendFormat": "{{host}} p95"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Stellar stale-approval sweeps (rate & p95 duration)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "targets": [
+        {
+          "expr": "sum(rate(console_stellar_stale_approval_sweep_cycles_total[15m]))",
+          "legendFormat": "sweep cycles/s"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(console_stellar_stale_approval_sweep_duration_seconds_bucket[15m])) by (le))",
+          "legendFormat": "p95 duration (s)"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Stellar stale-approval actions reviewed (by outcome)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "targets": [
+        {
+          "expr": "sum(rate(console_stellar_stale_approval_actions_reviewed_total[15m])) by (outcome)",
+          "legendFormat": "{{outcome}}"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Stellar daily digest (cycles vs. sent)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 32 },
+      "targets": [
+        {
+          "expr": "sum(rate(console_stellar_daily_digest_cycles_total[1h]))",
+          "legendFormat": "check cycles/s"
+        },
+        {
+          "expr": "sum(rate(console_stellar_daily_digest_sent_total[1h]))",
+          "legendFormat": "digests sent/s"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Stellar action scheduler (dispatch cycles & actions picked up)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 32 },
+      "targets": [
+        {
+          "expr": "sum(rate(console_stellar_scheduler_dispatch_cycles_total[15m]))",
+          "legendFormat": "dispatch cycles/s"
+        },
+        {
+          "expr": "sum(rate(console_stellar_scheduler_actions_picked_up_total[15m]))",
+          "legendFormat": "actions picked up/s"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Stellar action execution (p95 duration & outcomes)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 40 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(console_stellar_action_execution_duration_seconds_bucket[15m])) by (le))",
+          "legendFormat": "p95 duration (s)"
+        },
+        {
+          "expr": "sum(rate(console_stellar_action_outcomes_total[15m])) by (outcome)",
+          "legendFormat": "{{outcome}}"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "GPU utilization worker (scrape cycles & p95 duration)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 40 },
+      "targets": [
+        {
+          "expr": "sum(rate(console_gpu_util_scrape_cycles_total[15m]))",
+          "legendFormat": "scrape cycles/s"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(console_gpu_util_scrape_duration_seconds_bucket[15m])) by (le))",
+          "legendFormat": "p95 duration (s)"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "title": "GPU utilization per-reservation collection (by outcome)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 48 },
+      "targets": [
+        {
+          "expr": "sum(rate(console_gpu_util_reservation_collect_total[15m])) by (outcome)",
+          "legendFormat": "{{outcome}}"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "title": "GPU utilization worker errors (DCGM scrape & alert send)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 48 },
+      "targets": [
+        {
+          "expr": "sum(rate(console_gpu_util_dcgm_scrape_errors_total[15m]))",
+          "legendFormat": "DCGM scrape errors/s"
+        },
+        {
+          "expr": "sum(rate(console_gpu_util_alert_send_errors_total[15m]))",
+          "legendFormat": "alert send errors/s"
         }
       ]
     }
