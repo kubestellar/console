@@ -129,13 +129,37 @@ if [ "$GITHUB_OAUTH" = true ] && [ -z "$GITHUB_CLIENT_ID" ]; then
     echo "Create an OAuth App at: https://github.com/settings/developers"
     echo ""
     read -rp "  GitHub Client ID: " GITHUB_CLIENT_ID
-    read -rp "  GitHub Client Secret: " GITHUB_CLIENT_SECRET
+    read -rsp "  GitHub Client Secret: " GITHUB_CLIENT_SECRET
+    echo ""
     echo ""
 fi
 
+# Route secrets through a temp values file rather than `--set` on the command
+# line, so client secret / API key values do not appear in `ps` output,
+# /proc/<pid>/cmdline, or shell audit logs while helm is running.
+SECRETS_VALUES_FILE=""
+if [ -n "$GITHUB_CLIENT_SECRET" ] || [ -n "$CLAUDE_API_KEY" ]; then
+    SECRETS_VALUES_FILE="$(mktemp -t kc-console-secrets.XXXXXX.yaml)"
+    chmod 600 "$SECRETS_VALUES_FILE"
+    # shellcheck disable=SC2064
+    trap "rm -f '$SECRETS_VALUES_FILE'" EXIT INT TERM
+fi
+
+emit_yaml_scalar() {
+    # Emit a YAML double-quoted scalar with backslash and double-quote escaped.
+    # Safe for arbitrary secret material (helm values files are YAML).
+    local val="$1"
+    val="${val//\\/\\\\}"
+    val="${val//\"/\\\"}"
+    printf '"%s"' "$val"
+}
+
 if [ -n "$GITHUB_CLIENT_ID" ] && [ -n "$GITHUB_CLIENT_SECRET" ]; then
-    HELM_ARGS+=("--set" "github.clientId=$GITHUB_CLIENT_ID")
-    HELM_ARGS+=("--set" "github.clientSecret=$GITHUB_CLIENT_SECRET")
+    {
+        printf 'github:\n'
+        printf '  clientId: '; emit_yaml_scalar "$GITHUB_CLIENT_ID"; printf '\n'
+        printf '  clientSecret: '; emit_yaml_scalar "$GITHUB_CLIENT_SECRET"; printf '\n'
+    } >> "$SECRETS_VALUES_FILE"
     echo "  GitHub OAuth: enabled"
 else
     echo "  GitHub OAuth: disabled (auto-login as dev-user)"
@@ -143,8 +167,15 @@ fi
 
 # Claude AI
 if [ -n "$CLAUDE_API_KEY" ]; then
-    HELM_ARGS+=("--set" "claude.apiKey=$CLAUDE_API_KEY")
+    {
+        printf 'claude:\n'
+        printf '  apiKey: '; emit_yaml_scalar "$CLAUDE_API_KEY"; printf '\n'
+    } >> "$SECRETS_VALUES_FILE"
     echo "  Claude AI:    enabled"
+fi
+
+if [ -n "$SECRETS_VALUES_FILE" ] && [ -s "$SECRETS_VALUES_FILE" ]; then
+    HELM_ARGS+=("--values" "$SECRETS_VALUES_FILE")
 fi
 
 # OpenShift Route
