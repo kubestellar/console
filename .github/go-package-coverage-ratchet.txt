@@ -29,6 +29,7 @@ pkg/safego 100.0
 pkg/fileutil 54.2
 
 # --- Tier 3: Previously untracked (have tests, need ratchet baseline) ---
+pkg/apis/v1alpha1 81.8
 pkg/ai 100.0
 pkg/gpu 86.2
 pkg/kb 100.0
