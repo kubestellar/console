@@ -319,6 +319,7 @@ function GPUInventoryChart({ displayChartData, chartMode, chartGPUTypes, t }: {
   )
 }
 
+/* eslint-disable react-refresh/only-export-components -- .parts file intentionally shares constants/helpers alongside components; flagged by eslint-plugin-react-refresh 0.5.6 */
 export {
   MIN_TREND_SNAPSHOTS, RECENT_SNAPSHOT_WINDOW, TREND_CHANGE_THRESHOLD,
   HIGH_USAGE_PCT, MEDIUM_USAGE_PCT,
@@ -330,4 +331,5 @@ export {
   generateDemoData, generateDemoTableRows, resolveGPUType, getTypeColor,
   GPUInventoryChart,
 }
+/* eslint-enable react-refresh/only-export-components */
 export type { ViewMode, ChartMode, GPUHistoryDataPoint, NodeTableRow, ChurnMetrics, TranslateFn }
