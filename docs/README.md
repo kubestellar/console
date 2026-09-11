@@ -54,6 +54,7 @@ This index covers the Markdown and YAML documentation files in `docs/` and group
 | [integrations/kagenti-tool-integration.md](integrations/kagenti-tool-integration.md) | Explains Kagenti tool integration and cluster context injection. |
 | [kagenti-deployment-guide.md](kagenti-deployment-guide.md) | Deployment guide for Kagenti controller and agent topologies. |
 | [kagenti-tools.md](kagenti-tools.md) | Overview of Kagenti tool integration and supported tooling. |
+| [runbooks/acmm-level-monitor-no-alert.md](runbooks/acmm-level-monitor-no-alert.md) | Runbook for the ACMM Level Monitor's two gaps: badge-endpoint outages misreported as false code regressions, and no failure alert if the job itself errors. |
 | [runbooks/backend-health-degraded.md](runbooks/backend-health-degraded.md) | Runbook for triaging a `/health` "degraded" status or `/watchdog/ready` "not_ready" response. |
 | [runbooks/bot-roundtrip-failures.md](runbooks/bot-roundtrip-failures.md) | Runbook for diagnosing `kubestellar-console-bot` roundtrip failures. |
 | [runbooks/console-live-promote-no-alert.md](runbooks/console-live-promote-no-alert.md) | Runbook for the Console Live Promote canary failure-alert mechanism (dedicated `workflow_run` alert already exists — no gap). |
