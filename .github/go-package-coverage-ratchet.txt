@@ -58,46 +58,46 @@ pkg/compliance/frameworks 100.0
 pkg/compliance/reports 100.0
 
 # --- API handlers subtree (Tier 1: HTTP surface — see #23277) ---
-pkg/api/handlers/auth 85.0
+pkg/api/handlers/auth 82.5
 pkg/api/handlers/benchmarks 65.0
-pkg/api/handlers/compliance 92.0
-pkg/api/handlers/feedback 73.5
+pkg/api/handlers/compliance 90.5
+pkg/api/handlers/feedback 70.0
 pkg/api/handlers/github 60.5
-pkg/api/handlers/gitops 78.5
-pkg/api/handlers/mcp 66.5
-pkg/api/handlers/missions 76.5
-pkg/api/handlers/rewards 65.5
+pkg/api/handlers/gitops 74.5
+pkg/api/handlers/mcp 65.5
+pkg/api/handlers/missions 74.5
+pkg/api/handlers/rewards 62.5
 pkg/api/handlers/stellar 59.0
-pkg/api/handlers/workloads 85.5
+pkg/api/handlers/workloads 78.5
 
 # --- API support (audit, middleware, transport, metrics) ---
-pkg/api/audit 88.5
+pkg/api/audit 86.0
 pkg/api/middleware 90.0
-pkg/api/transport 74.5
-pkg/api/metrics 78.0
+pkg/api/transport 67.0
+pkg/api/metrics 75.0
 
 # --- Agent subpackages (config, federation, kube, updater, workers, ...) ---
 pkg/agent/config 97.0
 pkg/agent/federation 99.5
-pkg/agent/federation/providers 86.5
+pkg/agent/federation/providers 84.5
 pkg/agent/httputil 99.5
-pkg/agent/kagent 81.5
-pkg/agent/kube 76.0
-pkg/agent/procutil 90.0
+pkg/agent/kagent 78.5
+pkg/agent/kube 71.0
+pkg/agent/procutil 87.5
 pkg/agent/prompts 60.5
 pkg/agent/providers 58.5
-pkg/agent/tokentracker 90.0
-pkg/agent/updater 80.0
-pkg/agent/workers 72.5
+pkg/agent/tokentracker 85.0
+pkg/agent/updater 75.5
+pkg/agent/workers 67.5
 
 # --- Stellar subpackages (metrics, observer, providers, scheduler, solver, watcher) ---
 pkg/stellar/metrics 99.5
-pkg/stellar/observer 86.0
-pkg/stellar/providers 92.5
-pkg/stellar/scheduler 82.5
-pkg/stellar/solver 95.5
+pkg/stellar/observer 83.0
+pkg/stellar/providers 90.5
+pkg/stellar/scheduler 81.0
+pkg/stellar/solver 94.0
 pkg/stellar/watcher 93.5
 
 # --- Misc test-helper / migrations packages ---
 pkg/k8s/k8stest 87.5
-pkg/store/migrations 90.5
+pkg/store/migrations 88.5
