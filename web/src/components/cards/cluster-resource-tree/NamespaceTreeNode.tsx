@@ -80,7 +80,7 @@ export function NamespaceTreeNode({
             const deploymentPods = getPodsForDeployment(namespaceResources, deployment.name, namespaceName)
             const isHealthy = deployment.readyReplicas === deployment.replicas
             return (
-              <TreeNode key={deployment.name} id={deploymentId} label={deployment.name} icon={ResourceIcon.deployment} iconColor={isHealthy ? 'text-green-400' : 'text-yellow-400'} badge={`${deployment.readyReplicas}/${deployment.replicas}`} badgeColor={isHealthy ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'} onClick={() => drillToDeployment(clusterName, namespaceName, deployment.name)} indent={5} expandedNodes={expandedNodes} toggleNode={toggleNode}>
+              <TreeNode key={deployment.name} id={deploymentId} label={deployment.name} icon={ResourceIcon.deployment} iconColor={isHealthy ? 'text-status-success' : 'text-status-warning'} badge={`${deployment.readyReplicas}/${deployment.replicas}`} badgeColor={isHealthy ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'} onClick={() => drillToDeployment(clusterName, namespaceName, deployment.name)} indent={5} expandedNodes={expandedNodes} toggleNode={toggleNode}>
                 {deploymentPods.length > 0 && deploymentPods.slice(0, renderLimit).map(pod => (
                   <TreeNode key={pod.name} id={`${deploymentId}:pod:${pod.name}`} label={pod.name} icon={ResourceIcon.pod} iconColor={pod.status === 'Running' ? 'text-green-400' : 'text-red-400'} badge={pod.status} badgeColor={pod.status === 'Running' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'} onClick={() => drillToPod(clusterName, namespaceName, pod.name, { status: pod.status, restarts: pod.restarts })} indent={6} expandedNodes={expandedNodes} toggleNode={toggleNode} />
                 ))}
@@ -170,7 +170,7 @@ export function NamespaceTreeNode({
         <TreeNode id={`${nsId}:replicasets`} label={t('resourceTree.replicaSets')} icon={ResourceIcon.replicaset} iconColor="text-blue-400" count={nsData.replicasets.length} indent={4} expandedNodes={expandedNodes} toggleNode={toggleNode}>
           {nsData.replicasets.slice(0, renderLimit).map(replicaSet => {
             const isHealthy = replicaSet.readyReplicas === replicaSet.replicas
-            return <TreeNode key={replicaSet.name} id={`${nsId}:rs:${replicaSet.name}`} label={replicaSet.name} icon={ResourceIcon.replicaset} iconColor={isHealthy ? 'text-green-400' : 'text-yellow-400'} badge={`${replicaSet.readyReplicas}/${replicaSet.replicas}`} badgeColor={isHealthy ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'} indent={5} expandedNodes={expandedNodes} toggleNode={toggleNode} />
+            return <TreeNode key={replicaSet.name} id={`${nsId}:rs:${replicaSet.name}`} label={replicaSet.name} icon={ResourceIcon.replicaset} iconColor={isHealthy ? 'text-status-success' : 'text-status-warning'} badge={`${replicaSet.readyReplicas}/${replicaSet.replicas}`} badgeColor={isHealthy ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'} indent={5} expandedNodes={expandedNodes} toggleNode={toggleNode} />
           })}
           <TruncatedIndicator total={nsData.replicasets.length} shown={renderLimit} indent={5} />
         </TreeNode>
@@ -180,7 +180,7 @@ export function NamespaceTreeNode({
         <TreeNode id={`${nsId}:statefulsets`} label={t('resourceTree.statefulSets')} icon={ResourceIcon.statefulset} iconColor="text-blue-400" count={nsData.statefulsets.length} indent={4} expandedNodes={expandedNodes} toggleNode={toggleNode}>
           {nsData.statefulsets.slice(0, renderLimit).map(statefulSet => {
             const isHealthy = statefulSet.readyReplicas === statefulSet.replicas
-            return <TreeNode key={statefulSet.name} id={`${nsId}:ss:${statefulSet.name}`} label={statefulSet.name} icon={ResourceIcon.statefulset} iconColor={isHealthy ? 'text-green-400' : 'text-yellow-400'} badge={`${statefulSet.readyReplicas}/${statefulSet.replicas}`} badgeColor={isHealthy ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'} indent={5} expandedNodes={expandedNodes} toggleNode={toggleNode} />
+            return <TreeNode key={statefulSet.name} id={`${nsId}:ss:${statefulSet.name}`} label={statefulSet.name} icon={ResourceIcon.statefulset} iconColor={isHealthy ? 'text-status-success' : 'text-status-warning'} badge={`${statefulSet.readyReplicas}/${statefulSet.replicas}`} badgeColor={isHealthy ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'} indent={5} expandedNodes={expandedNodes} toggleNode={toggleNode} />
           })}
           <TruncatedIndicator total={nsData.statefulsets.length} shown={renderLimit} indent={5} />
         </TreeNode>
@@ -190,7 +190,7 @@ export function NamespaceTreeNode({
         <TreeNode id={`${nsId}:daemonsets`} label={t('resourceTree.daemonSets')} icon={ResourceIcon.daemonset} iconColor="text-cyan-400" count={nsData.daemonsets.length} indent={4} expandedNodes={expandedNodes} toggleNode={toggleNode}>
           {nsData.daemonsets.slice(0, renderLimit).map(daemonSet => {
             const isHealthy = daemonSet.ready === daemonSet.desiredScheduled
-            return <TreeNode key={daemonSet.name} id={`${nsId}:ds:${daemonSet.name}`} label={daemonSet.name} icon={ResourceIcon.daemonset} iconColor={isHealthy ? 'text-green-400' : 'text-yellow-400'} badge={`${daemonSet.ready}/${daemonSet.desiredScheduled}`} badgeColor={isHealthy ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'} indent={5} expandedNodes={expandedNodes} toggleNode={toggleNode} />
+            return <TreeNode key={daemonSet.name} id={`${nsId}:ds:${daemonSet.name}`} label={daemonSet.name} icon={ResourceIcon.daemonset} iconColor={isHealthy ? 'text-status-success' : 'text-status-warning'} badge={`${daemonSet.ready}/${daemonSet.desiredScheduled}`} badgeColor={isHealthy ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'} indent={5} expandedNodes={expandedNodes} toggleNode={toggleNode} />
           })}
           <TruncatedIndicator total={nsData.daemonsets.length} shown={renderLimit} indent={5} />
         </TreeNode>

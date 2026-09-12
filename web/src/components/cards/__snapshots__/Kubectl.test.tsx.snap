@@ -128,7 +128,7 @@ exports[`Kubectl > matches snapshot with clusters 1`] = `
         >
           <svg
             aria-hidden="true"
-            class="lucide lucide-trash2 lucide-trash-2 w-4 h-4"
+            class="lucide lucide-trash w-4 h-4"
             fill="none"
             height="24"
             stroke="currentColor"

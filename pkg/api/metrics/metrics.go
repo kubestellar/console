@@ -4,10 +4,17 @@
 // pkg/gpu/scraper.go). No exporter or external data flow is added: metrics
 // are only ever pulled by an operator-controlled Prometheus instance that
 // scrapes the /metrics endpoint this package registers.
+//
+// In addition to the HTTP server metrics below, Init also wires client-go's
+// tools/metrics hooks so every outbound Kubernetes API call (across all
+// clusters managed via pkg/k8s) is counted and timed automatically, with no
+// changes needed at individual call sites (see issue #23055).
 package metrics
 
 import (
+	"context"
 	"net/http"
+	"net/url"
 	"strconv"
 	"sync"
 	"time"
@@ -16,6 +23,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/adaptor"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	clientgometrics "k8s.io/client-go/tools/metrics"
 )
 
 var (
@@ -166,10 +174,61 @@ var (
 		},
 	)
 
+	// k8sClientRequestsTotal and k8sClientRequestDuration instrument every
+	// outbound Kubernetes API call made by client-go across all configured
+	// clusters (see pkg/k8s), via client-go's own tools/metrics adapter
+	// hooks — no call sites need to change. host is the API server host:port
+	// (one bounded value per configured cluster), never a resource path, so
+	// cardinality stays bounded regardless of how many objects are queried.
+	k8sClientRequestsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "console_k8s_client_requests_total",
+			Help: "Total number of Kubernetes API requests made by the console backend, across all configured clusters.",
+		},
+		[]string{"code", "method", "host"},
+	)
+
+	k8sClientRequestDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "console_k8s_client_request_duration_seconds",
+			Help:    "Kubernetes API request latency for the console backend, in seconds, across all configured clusters.",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"verb", "host"},
+	)
+
+	// notificationSendsTotal counts alert-delivery attempts made by
+	// pkg/notifications (Slack/Email/PagerDuty/OpsGenie/webhook), which is
+	// invoked outside the HTTP request path and previously had zero
+	// observability — a broken alert channel failed silently except in logs.
+	notificationSendsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "console_notification_sends_total",
+			Help: "Total alert-notification delivery attempts by channel type and outcome.",
+		},
+		// channel_type is the fixed, bounded NotificationType enum
+		// (slack, email, webhook, pagerduty, opsgenie) — never a
+		// user-supplied notifier ID. outcome is "sent" or "failed".
+		[]string{"channel_type", "outcome"},
+	)
+
+	notificationSendDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "console_notification_send_duration_seconds",
+			Help:    "Duration of a single alert-notification delivery attempt, in seconds, by channel type.",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"channel_type"},
+	)
+
 	initOnce sync.Once
 )
 
-// Init registers the metrics collectors. Safe to call multiple times.
+// Init registers the metrics collectors and the client-go instrumentation
+// hooks. Safe to call multiple times; must be called before the first
+// Kubernetes API request is made (client-go reads these hooks lazily per
+// request, so registering any time before that point — e.g. before
+// k8s.NewMultiClusterClient is called — is sufficient).
 func Init() {
 	initOnce.Do(func() {
 		prometheus.MustRegister(httpRequestsTotal)
@@ -188,7 +247,39 @@ func Init() {
 		prometheus.MustRegister(gpuUtilReservationCollectTotal)
 		prometheus.MustRegister(gpuUtilDCGMScrapeErrorsTotal)
 		prometheus.MustRegister(gpuUtilAlertSendErrorsTotal)
+		prometheus.MustRegister(k8sClientRequestsTotal)
+		prometheus.MustRegister(k8sClientRequestDuration)
+
+		clientgometrics.Register(clientgometrics.RegisterOpts{
+			RequestResult:  resultAdapter{counter: k8sClientRequestsTotal},
+			RequestLatency: latencyAdapter{histogram: k8sClientRequestDuration},
+		})
+		prometheus.MustRegister(notificationSendsTotal)
+		prometheus.MustRegister(notificationSendDuration)
 	})
+}
+
+// resultAdapter bridges client-go's ResultMetric interface to the bounded
+// console_k8s_client_requests_total counter.
+type resultAdapter struct {
+	counter *prometheus.CounterVec
+}
+
+func (r resultAdapter) Increment(_ context.Context, code, method, host string) {
+	r.counter.WithLabelValues(code, method, host).Inc()
+}
+
+// latencyAdapter bridges client-go's LatencyMetric interface to the bounded
+// console_k8s_client_request_duration_seconds histogram. Only verb and host
+// are used as labels — u.Path is intentionally dropped, since it contains
+// unbounded resource names/namespaces (matching the approach used by
+// k8s.io/component-base/metrics/prometheus/clientgo).
+type latencyAdapter struct {
+	histogram *prometheus.HistogramVec
+}
+
+func (l latencyAdapter) Observe(_ context.Context, verb string, u url.URL, latency time.Duration) {
+	l.histogram.WithLabelValues(verb, u.Host).Observe(latency.Seconds())
 }
 
 // unmatchedRoute is the bounded label value used when Fiber has no matching
@@ -342,4 +433,22 @@ func RecordGPUUtilDCGMScrapeError() {
 func RecordGPUUtilAlertSendError() {
 	Init()
 	gpuUtilAlertSendErrorsTotal.Inc()
+}
+
+// Notification-send outcomes for RecordNotificationSend. This is the
+// complete, fixed set of values the "outcome" label may take.
+const (
+	NotificationOutcomeSent   = "sent"
+	NotificationOutcomeFailed = "failed"
+)
+
+// RecordNotificationSend records one alert-notification delivery attempt
+// made by pkg/notifications. channelType must be one of the
+// notifications.NotificationType values (slack, email, webhook, pagerduty,
+// opsgenie) — a fixed, bounded set, never a user-supplied notifier ID.
+// outcome must be one of the NotificationOutcome* constants above.
+func RecordNotificationSend(channelType, outcome string, duration time.Duration) {
+	Init()
+	notificationSendsTotal.WithLabelValues(channelType, outcome).Inc()
+	notificationSendDuration.WithLabelValues(channelType).Observe(duration.Seconds())
 }

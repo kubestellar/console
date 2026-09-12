@@ -63,6 +63,7 @@ This index covers the Markdown and YAML documentation files in `docs/` and group
 | [runbooks/incident-response-automation-missing.md](runbooks/incident-response-automation-missing.md) | Runbook documenting that `docs/INCIDENT-RESPONSE.md`'s automated detection (Slack alert, `main-broken` label, on-call schedule) has no working trigger today. |
 | [runbooks/llmd-guide-e2e-silent-failure.md](runbooks/llmd-guide-e2e-silent-failure.md) | Runbook for detecting/triaging masked guide failures in the nightly llm-d Guide E2E workflow. |
 | [runbooks/mttr-badge-no-alert.md](runbooks/mttr-badge-no-alert.md) | Runbook for detecting a silently-failing (or silently-skipped) hourly MTTR Badge workflow — no alert on scheduled failure. |
+| [runbooks/scheduled-workflow-alert-gap-remaining.md](runbooks/scheduled-workflow-alert-gap-remaining.md) | Runbook for detecting silent failures in the 12 remaining scheduled workflows with no failure alert (perf gates, UX/e2e canaries, hygiene jobs). |
 | [runbooks/stale-workflow-no-alert.md](runbooks/stale-workflow-no-alert.md) | Runbook for detecting a silently-failing daily Stale Issues workflow (no alert on scheduled failure). |
 | [runbooks/upgrade-smoke-no-alert.md](runbooks/upgrade-smoke-no-alert.md) | Runbook for detecting a silently-failing In-Place Upgrade Smoke canary (no alert on scheduled failure). |
 | [security/SECURITY-MODEL.md](security/SECURITY-MODEL.md) | Explains the security model, air-gapped deployment posture, and local/self-hosted LLM paths. |

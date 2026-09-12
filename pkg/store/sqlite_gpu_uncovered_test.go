@@ -94,7 +94,9 @@ func TestUpdateGPUReservation_PersistsFieldChanges(t *testing.T) {
 
 	got, err := s.GetGPUReservation(ctx, res.ID)
 	require.NoError(t, err)
-	require.NotNil(t, got)
+	if got == nil {
+		t.Fatal("expected updated GPU reservation to exist")
+	}
 	require.Equal(t, "Renamed", got.Title)
 	require.Equal(t, 4, got.GPUCount)
 	require.Equal(t, []string{"nvidia-h100", "nvidia-a100"}, got.GPUTypes)

@@ -308,7 +308,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
              aria-label={`Filter unhealthy applications (${stats.unhealthy} unhealthy)`}
              onClick={handleFilterSelect('unhealthy')}
              onKeyDown={handleFilterKeyDown('unhealthy')}>
-          <p className="text-lg font-bold text-red-400">{stats.unhealthy}</p>
+          <p className="text-lg font-bold text-status-error">{stats.unhealthy}</p>
           <p className="text-xs text-muted-foreground">{t('argoCDApplications.unhealthy')}</p>
         </div>
       </CardStatGrid>
