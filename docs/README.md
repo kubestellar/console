@@ -57,6 +57,7 @@ This index covers the Markdown and YAML documentation files in `docs/` and group
 | [runbooks/acmm-level-monitor-no-alert.md](runbooks/acmm-level-monitor-no-alert.md) | Runbook for the ACMM Level Monitor's two gaps: badge-endpoint outages misreported as false code regressions, and no failure alert if the job itself errors. |
 | [runbooks/backend-health-degraded.md](runbooks/backend-health-degraded.md) | Runbook for triaging a `/health` "degraded" status or `/watchdog/ready` "not_ready" response. |
 | [runbooks/bot-roundtrip-failures.md](runbooks/bot-roundtrip-failures.md) | Runbook for diagnosing `kubestellar-console-bot` roundtrip failures. |
+| [runbooks/codeql-scheduled-scan-alert-gap.md](runbooks/codeql-scheduled-scan-alert-gap.md) | Runbook for detecting a silently-failing nightly CodeQL Security Analysis scheduled scan — no alert on scheduled failure. |
 | [runbooks/console-live-promote-no-alert.md](runbooks/console-live-promote-no-alert.md) | Runbook for the Console Live Promote canary failure-alert mechanism (dedicated `workflow_run` alert already exists — no gap). |
 | [runbooks/dast-scan-pipeline-failure.md](runbooks/dast-scan-pipeline-failure.md) | Runbook for detecting/triaging a silently-failing nightly DAST (ZAP/Nuclei) scan. |
 | [runbooks/incident-response-automation-missing.md](runbooks/incident-response-automation-missing.md) | Runbook documenting that `docs/INCIDENT-RESPONSE.md`'s automated detection (Slack alert, `main-broken` label, on-call schedule) has no working trigger today. |
