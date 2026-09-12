@@ -11,6 +11,9 @@
  * - Keyboard navigation
  * - Header, Content, Footer, Tabs sub-components
  *
+ * Sub-components live in ./components/ (ModalHeader, ModalTabs, ModalLayout)
+ * and are attached as static properties below.
+ *
  * @example
  * ```tsx
  * <BaseModal isOpen={isOpen} onClose={onClose} size="lg">
@@ -38,18 +41,19 @@
  * ```
  */
 
-import { ReactNode, createContext, useContext, useId, useMemo, useRef } from 'react'
+import { useId, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { X, ChevronLeft } from 'lucide-react'
 import { useModalNavigation, useModalFocusTrap } from './useModalNavigation'
+import { BaseModalProps, ModalSize } from './types'
+import { ModalTitleIdContext, ModalEscapeContext } from './components/modalContexts'
+import { ModalHeader } from './components/ModalHeader'
+import { ModalTabs } from './components/ModalTabs'
 import {
-  BaseModalProps,
-  ModalHeaderProps,
-  ModalContentProps,
-  ModalFooterProps,
-  ModalTabsProps,
-  ModalSize,
-} from './types'
+  ModalContent,
+  ModalFooter,
+  ModalActionBar,
+  ModalSection,
+} from './components/ModalLayout'
 
 // ============================================================================
 // Size Configuration
@@ -70,21 +74,6 @@ const HEIGHT_CLASSES: Record<ModalSize, string> = {
   xl: 'min-h-[85vh] max-h-[min(85vh,calc(100vh-2rem))]',
   full: 'min-h-[95vh] max-h-[calc(100vh-2rem)]',
 }
-
-// React Context so ModalHeader can receive the generated title ID
-const ModalTitleIdContext = createContext<string | undefined>(undefined)
-
-// React Context so ModalHeader can read whether Escape-to-close is enabled,
-// which drives the close button's tooltip + aria-label keyboard hint.
-// Defaults to true to preserve behavior for any ModalHeader rendered outside
-// a BaseModal provider (none today, but defensive).
-const ModalEscapeContext = createContext<{ escapeEnabled: boolean }>({ escapeEnabled: true })
-
-// Tooltip/aria-label text for the close button, varying with escape enablement.
-const CLOSE_WITH_ESC_LABEL = 'Close (Esc)'
-const CLOSE_LABEL = 'Close'
-const CLOSE_WITH_ESC_ARIA = 'Close modal (Esc)'
-const CLOSE_ARIA = 'Close modal'
 
 // ============================================================================
 // BaseModal Component
@@ -203,274 +192,6 @@ export function BaseModal({
       </div>
     </div>,
     document.body
-  )
-}
-
-// ============================================================================
-// Header Sub-Component
-// ============================================================================
-
-function ModalHeader({
-  title,
-  description,
-  icon: Icon,
-  badges,
-  onClose,
-  onBack,
-  showBack = true,
-  extra,
-  children,
-  closeTestId,
-  backTestId,
-  tabsTestId,
-}: ModalHeaderProps) {
-  const titleId = useContext(ModalTitleIdContext)
-  const { escapeEnabled } = useContext(ModalEscapeContext)
-  const closeTitle = escapeEnabled ? CLOSE_WITH_ESC_LABEL : CLOSE_LABEL
-  const closeAriaLabel = escapeEnabled ? CLOSE_WITH_ESC_ARIA : CLOSE_ARIA
-
-  return (
-    <div className="flex flex-col border-b border-border" data-testid={tabsTestId}>
-      {/* Main header row */}
-      <div className="flex items-center justify-between p-4">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          {/* Back button */}
-          {showBack && onBack && (
-            <button
-              type="button"
-              onClick={onBack}
-              className="p-2 rounded-lg hover:bg-card/50 text-muted-foreground hover:text-foreground transition-colors shrink-0"
-              title="Go back (Backspace)"
-              aria-label="Go back"
-              data-testid={backTestId}
-            >
-              <ChevronLeft className="w-5 h-5" aria-hidden="true" />
-            </button>
-          )}
-
-          {/* Icon */}
-          {Icon && (
-            <div className="shrink-0">
-              <Icon className="w-6 h-6 text-purple-400" />
-            </div>
-          )}
-
-          {/* Title and description */}
-          <div className="min-w-0 flex-1">
-            <h2 id={titleId} className="text-lg font-semibold text-foreground truncate">
-              {title}
-            </h2>
-            {description && (
-              <div className="text-sm text-muted-foreground truncate">
-                {description}
-              </div>
-            )}
-          </div>
-
-          {/* Badges */}
-          {badges && (
-            <div className="flex items-center gap-2 shrink-0">
-              {badges}
-            </div>
-          )}
-        </div>
-
-        {/* Right side */}
-        <div className="flex items-center gap-2">
-          {extra}
-
-          {/* Close button */}
-          {onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-2 rounded-lg hover:bg-card/50 text-muted-foreground hover:text-foreground transition-colors"
-              title={closeTitle}
-              aria-label={closeAriaLabel}
-              data-testid={closeTestId}
-            >
-              <X className="w-5 h-5" aria-hidden="true" />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Additional header content (breadcrumbs, etc.) */}
-      {children && (
-        <div className="px-4 pb-3">
-          {children}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ============================================================================
-// Content Sub-Component
-// ============================================================================
-
-function ModalContent({
-  children,
-  noPadding = false,
-  scrollable = true,
-  className = '',
-}: ModalContentProps) {
-  return (
-    <div
-      className={`flex-1 ${scrollable ? 'overflow-y-auto overscroll-contain' : 'overflow-hidden'} ${noPadding ? '' : 'p-6'} ${className}`}
-    >
-      {children}
-    </div>
-  )
-}
-
-// ============================================================================
-// Footer Sub-Component
-// ============================================================================
-
-function ModalFooter({
-  children,
-  showKeyboardHints = false,
-  keyboardHints,
-  className = '',
-}: ModalFooterProps) {
-  const defaultHints = [
-    { key: 'Esc', label: 'close' },
-    { key: 'Space', label: 'close' },
-  ]
-
-  const hints = keyboardHints || defaultHints
-
-  // When keyboard hints are disabled, render children directly for full layout control
-  if (!showKeyboardHints) {
-    return (
-      <div className={`px-4 py-3 border-t border-border flex items-center ${className}`}>
-        {children}
-      </div>
-    )
-  }
-
-  return (
-    <div className={`px-4 py-3 border-t border-border flex items-center justify-between ${className}`}>
-      {/* Children (custom content) */}
-      <div className="flex items-center gap-2">
-        {children}
-      </div>
-
-      {/* Keyboard hints */}
-      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-        {hints.map((hint, index) => (
-          <span key={hint.key} className="flex items-center gap-1">
-            {index > 0 && <span className="mx-1">•</span>}
-            <kbd className="px-2 py-0.5 rounded bg-card border border-border font-mono">
-              {hint.key}
-            </kbd>
-            <span>{hint.label}</span>
-          </span>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ============================================================================
-// Tabs Sub-Component
-// ============================================================================
-
-function ModalTabs({
-  tabs,
-  activeTab,
-  onTabChange,
-  className = '',
-}: ModalTabsProps) {
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    const idx = tabs.findIndex(t => t.id === activeTab)
-    if (e.key === 'ArrowRight') onTabChange(tabs[Math.min(idx + 1, tabs.length - 1)].id)
-    else if (e.key === 'ArrowLeft') onTabChange(tabs[Math.max(idx - 1, 0)].id)
-  }
-  return (
-    <div role="tablist" onKeyDown={handleKeyDown} className={`flex border-b border-border ${className}`}>
-      {tabs.map((tab) => {
-        const isActive = tab.id === activeTab
-        const Icon = tab.icon
-
-        return (
-          <button
-            key={tab.id}
-            type="button"
-            role="tab"
-            aria-selected={isActive}
-            tabIndex={isActive ? 0 : -1}
-            onClick={() => onTabChange(tab.id)}
-            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
-              isActive
-                ? 'text-purple-400 border-purple-400 bg-purple-500/5'
-                : 'text-muted-foreground hover:text-foreground border-transparent'
-            }`}
-          >
-            {Icon && <Icon className="w-4 h-4" aria-hidden="true" />}
-            <span>{tab.label}</span>
-            {tab.badge !== undefined && (
-              <span
-                className={`px-1.5 py-0.5 rounded text-xs ${
-                  isActive
-                    ? 'bg-purple-500/20 text-purple-400'
-                    : 'bg-secondary text-muted-foreground'
-                }`}
-              >
-                {tab.badge}
-              </span>
-            )}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
-// ============================================================================
-// Action Bar Sub-Component
-// ============================================================================
-
-interface ModalActionBarProps {
-  children: ReactNode
-  className?: string
-}
-
-function ModalActionBar({ children, className = '' }: ModalActionBarProps) {
-  return (
-    <div className={`px-4 py-3 border-t border-border bg-secondary/30 ${className}`}>
-      {children}
-    </div>
-  )
-}
-
-// ============================================================================
-// Section Sub-Component
-// ============================================================================
-
-interface ModalSectionProps {
-  title?: string
-  children: ReactNode
-  className?: string
-  collapsible?: boolean
-  defaultCollapsed?: boolean
-}
-
-function ModalSection({
-  title,
-  children,
-  className = '',
-}: ModalSectionProps) {
-  return (
-    <div className={`${className}`}>
-      {title && (
-        <h3 className="text-sm font-medium text-muted-foreground mb-3">
-          {title}
-        </h3>
-      )}
-      {children}
-    </div>
   )
 }
 

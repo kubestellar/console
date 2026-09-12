@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 import { vi, beforeEach } from 'vitest'
 import type { CardDefinition } from '../types'
 

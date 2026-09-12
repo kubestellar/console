@@ -60,6 +60,7 @@ const {
   providerLabel: 'a DashboardProvider',
 })
 
+// eslint-disable-next-line react-refresh/only-export-components -- context + hook re-export pattern; flagged by eslint-plugin-react-refresh 0.5.6
 export { DashboardContext, useDashboardContext, useDashboardContextOptional }
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
