@@ -58,6 +58,7 @@ const {
   providerLabel: 'an AlertsProvider',
 })
 
+// eslint-disable-next-line react-refresh/only-export-components -- context + hook re-export pattern; flagged by eslint-plugin-react-refresh 0.5.6
 export { AlertsContext, useAlertsContext }
 
 export function AlertsProvider({ children }: { children: ReactNode }) {

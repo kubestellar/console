@@ -15,4 +15,4 @@ To use one:
 
 | File | Covers |
 | --- | --- |
-| `console-self-metrics-dashboard.json` | `console_http_requests_total`, `console_http_request_duration_seconds` bounded self-metrics (request rate, error ratio, latency percentiles, top routes). Pairs with the alert rules in `deploy/helm/kubestellar-console/templates/prometheusrule.yaml` (opt-in via `metrics.prometheusRule.enabled`). |
+| `console-self-metrics-dashboard.json` | `console_http_requests_total`, `console_http_request_duration_seconds`, `console_k8s_client_requests_total`, `console_k8s_client_request_duration_seconds` bounded self-metrics (HTTP request rate, error ratio, latency percentiles, top routes, plus outbound Kubernetes API call rate and p95 latency per cluster). Pairs with the alert rules in `deploy/helm/kubestellar-console/templates/prometheusrule.yaml` (opt-in via `metrics.prometheusRule.enabled`). |

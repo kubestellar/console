@@ -11,6 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/recover"
 
 	"github.com/kubestellar/console/pkg/api/metrics"
+	"github.com/kubestellar/console/pkg/api/tracing"
 )
 
 func (s *Server) setupMiddleware() {
@@ -22,6 +23,12 @@ func (s *Server) setupMiddleware() {
 	// pkg/api/metrics and pkg/api/routes_health.go). No data leaves the
 	// process; nothing is pushed anywhere.
 	s.app.Use(metrics.Middleware())
+
+	// Request-path tracing: one span per request, exported only if an
+	// operator explicitly sets OTEL_EXPORTER_OTLP_ENDPOINT (see
+	// pkg/api/tracing.Init, called from NewServer). Otherwise every call
+	// here is a cheap no-op.
+	s.app.Use(tracing.Middleware())
 
 	// Gzip/Brotli compression for API responses only — static assets are pre-compressed at build time.
 	// The handler is created once and reused across requests (#7575).
