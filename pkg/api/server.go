@@ -15,8 +15,10 @@ import (
 
 	"github.com/kubestellar/console/pkg/ai"
 	"github.com/kubestellar/console/pkg/api/audit"
-	"github.com/kubestellar/console/pkg/api/transport"
+	"github.com/kubestellar/console/pkg/api/metrics"
 	"github.com/kubestellar/console/pkg/api/middleware"
+	"github.com/kubestellar/console/pkg/api/tracing"
+	"github.com/kubestellar/console/pkg/api/transport"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/mcp"
 	"github.com/kubestellar/console/pkg/models"
@@ -51,6 +53,7 @@ type Server struct {
 	auth                *authRuntime
 	background          *backgroundServices
 	quantumCache        *quantumWorkloadCache
+	tracingShutdown     tracing.Shutdown
 }
 
 // NewServer creates a new API server. It starts a temporary loading page
@@ -154,6 +157,21 @@ func NewServer(cfg Config) (*Server, error) {
 	hub.SetDevMode(cfg.DevMode)
 	safego.GoWith("api/hub-run", func() { hub.Run() })
 
+	// Register self-metrics (including the client-go instrumentation hooks)
+	// before any Kubernetes client is constructed, so console_k8s_client_*
+	// series are visible from process startup rather than only appearing
+	// after the middleware chain is wired up later in this function.
+	metrics.Init()
+
+	// Request-path tracing is opt-in: Init only dials/exports anything if an
+	// operator has set OTEL_EXPORTER_OTLP_ENDPOINT (see pkg/api/tracing). A
+	// failure here (e.g. an unreachable configured collector) must not block
+	// server startup, so it is logged and otherwise ignored.
+	tracingShutdown, tracingErr := tracing.Init(context.Background())
+	if tracingErr != nil {
+		slog.Warn("[Server] OpenTelemetry tracing initialization failed — continuing without it", "error", tracingErr)
+	}
+
 	// Initialize Kubernetes multi-cluster client
 	k8sClient, err := k8s.NewMultiClusterClient(cfg.Kubeconfig)
 	if err != nil {
@@ -240,6 +258,7 @@ func NewServer(cfg Config) (*Server, error) {
 		auth:                newAuthRuntime(),
 		background:          newBackgroundServices(),
 		quantumCache:        newQuantumWorkloadCache(),
+		tracingShutdown:     tracingShutdown,
 	}
 
 	// Enable SQLite persistence for audit entries (#8670 Phase 3).

@@ -320,6 +320,13 @@ func (s *Server) Shutdown() error {
 			shutdownErr = err
 			return
 		}
+		if s.tracingShutdown != nil {
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), serverHealthTimeout)
+			defer cancel()
+			if err := s.tracingShutdown(shutdownCtx); err != nil {
+				slog.Warn("[Server] tracing shutdown error", "error", err)
+			}
+		}
 		shutdownErr = s.app.Shutdown()
 	})
 	return shutdownErr
