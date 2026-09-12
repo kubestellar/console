@@ -94,6 +94,25 @@ func TestSplitAndCleanRecipients(t *testing.T) {
 	}
 }
 
+func TestChannelTypeFromNotifierID(t *testing.T) {
+	cases := []struct {
+		id   string
+		want string
+	}{
+		{"slack:default", "slack"},
+		{"email:id1", "email"},
+		{"webhook:id1", "webhook"},
+		{"pagerduty:id1", "pagerduty"},
+		{"opsgenie:id1", "opsgenie"},
+		{"bogus:id1", "unknown"},
+		{"no-colon", "unknown"},
+		{"", "unknown"},
+	}
+	for _, tc := range cases {
+		require.Equal(t, tc.want, channelTypeFromNotifierID(tc.id), "id=%q", tc.id)
+	}
+}
+
 func TestService_SendAlert(t *testing.T) {
 	s := NewService()
 	// Test with no notifiers

@@ -5,6 +5,9 @@ import (
 	"log/slog"
 	"strings"
 	"sync"
+	"time"
+
+	"github.com/kubestellar/console/pkg/api/metrics"
 )
 
 // minSMTPPort / maxSMTPPort bound a valid TCP port number. Used to reject
@@ -122,7 +125,16 @@ func (s *Service) SendAlert(alert Alert) error {
 
 	var errors []string
 	for id, notifier := range notifiers {
-		if err := notifier.Send(alert); err != nil {
+		channelType := channelTypeFromNotifierID(id)
+		start := time.Now()
+		err := notifier.Send(alert)
+		outcome := metrics.NotificationOutcomeSent
+		if err != nil {
+			outcome = metrics.NotificationOutcomeFailed
+		}
+		metrics.RecordNotificationSend(channelType, outcome, time.Since(start))
+
+		if err != nil {
 			errMsg := fmt.Sprintf("failed to send notification via %s: %v", id, err)
 			slog.Error("failed to send notification", "notifier", id, "error", err)
 			errors = append(errors, errMsg)
@@ -136,6 +148,22 @@ func (s *Service) SendAlert(alert Alert) error {
 	}
 
 	return nil
+}
+
+// channelTypeFromNotifierID extracts the bounded channel-type prefix (e.g.
+// "slack") from a notifier map key of the form "type:id", as produced by
+// register(). Falls back to "unknown" — a fixed, bounded value — if the key
+// doesn't contain the expected separator, so this can never create an
+// unbounded metric label series from a malformed id.
+func channelTypeFromNotifierID(id string) string {
+	if t, _, ok := strings.Cut(id, ":"); ok {
+		switch NotificationType(t) {
+		case NotificationTypeSlack, NotificationTypeEmail, NotificationTypeWebhook,
+			NotificationTypePagerDuty, NotificationTypeOpsGenie:
+			return t
+		}
+	}
+	return "unknown"
 }
 
 // parseSMTPPortConfig extracts an SMTP port from a config map and validates
@@ -238,7 +266,15 @@ func (s *Service) SendAlertToChannels(alert Alert, channels []NotificationChanne
 		}
 
 		if notifier != nil {
-			if err := notifier.Send(alert); err != nil {
+			start := time.Now()
+			err := notifier.Send(alert)
+			outcome := metrics.NotificationOutcomeSent
+			if err != nil {
+				outcome = metrics.NotificationOutcomeFailed
+			}
+			metrics.RecordNotificationSend(string(channel.Type), outcome, time.Since(start))
+
+			if err != nil {
 				errMsg := fmt.Sprintf("failed to send notification via %s channel %s: %v", channel.Type, channelID, err)
 				slog.Error("failed to send notification", "channelType", channel.Type, "channelID", channelID, "error", err)
 				errors = append(errors, errMsg)
