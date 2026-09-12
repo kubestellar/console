@@ -100,7 +100,7 @@ describe('NamespaceQuotasModal (QuotaModal)', () => {
     renderModal()
 
     const initialRows = screen.getAllByPlaceholderText('e.g., 4, 8Gi')
-    const deleteButtons = document.querySelectorAll('svg.lucide-trash2')
+    const deleteButtons = document.querySelectorAll('svg.lucide-trash2, svg.lucide-trash')
     expect(deleteButtons.length).toBeGreaterThan(0)
     await user.click(deleteButtons[0].closest('button')!)
     const updatedRows = screen.queryAllByPlaceholderText('e.g., 4, 8Gi')
