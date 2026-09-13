@@ -135,6 +135,7 @@ func (b *Bridge) Start(ctx context.Context) error {
 				args = append(args, "install", installHint)
 			}
 			slog.Info(missingMessage, args...)
+			recordClientAvailable(errPrefix, false)
 			return
 		}
 
@@ -143,9 +144,11 @@ func (b *Bridge) Start(ctx context.Context) error {
 			defer wg.Done()
 			client, err := b.startBinaryClient(ctx, clientName, binaryPath)
 			if err != nil {
+				recordClientAvailable(errPrefix, false)
 				errCh <- fmt.Errorf("%s client: %w", errPrefix, err)
 				return
 			}
+			recordClientAvailable(errPrefix, true)
 			assign(client)
 		})
 	}
@@ -223,6 +226,7 @@ func (b *Bridge) Stop() error {
 			errs = append(errs, fmt.Errorf("ops client: %w", err))
 		}
 		b.opsClient = nil
+		recordClientAvailable(ClientOps, false)
 	}
 
 	if b.deployClient != nil {
@@ -230,6 +234,7 @@ func (b *Bridge) Stop() error {
 			errs = append(errs, fmt.Errorf("deploy client: %w", err))
 		}
 		b.deployClient = nil
+		recordClientAvailable(ClientDeploy, false)
 	}
 
 	if b.gadgetClient != nil {
@@ -237,6 +242,7 @@ func (b *Bridge) Stop() error {
 			errs = append(errs, fmt.Errorf("gadget client: %w", err))
 		}
 		b.gadgetClient = nil
+		recordClientAvailable(ClientGadget, false)
 	}
 
 	if len(errs) > 0 {
@@ -456,10 +462,14 @@ func (b *Bridge) CallOpsTool(ctx context.Context, name string, args map[string]i
 	b.mu.RUnlock()
 
 	if client == nil {
-		return nil, fmt.Errorf("ops client not available")
+		err := fmt.Errorf("ops client not available")
+		recordToolCall(ClientOps, err)
+		return nil, err
 	}
 
-	return client.CallTool(ctx, name, args)
+	result, err := client.CallTool(ctx, name, args)
+	recordToolCall(ClientOps, err)
+	return result, err
 }
 
 // GetGadgetTools returns the list of available gadget tools
@@ -480,10 +490,14 @@ func (b *Bridge) CallGadgetTool(ctx context.Context, name string, args map[strin
 	b.mu.RUnlock()
 
 	if client == nil {
-		return nil, fmt.Errorf("gadget client not available")
+		err := fmt.Errorf("gadget client not available")
+		recordToolCall(ClientGadget, err)
+		return nil, err
 	}
 
-	return client.CallTool(ctx, name, args)
+	result, err := client.CallTool(ctx, name, args)
+	recordToolCall(ClientGadget, err)
+	return result, err
 }
 
 // CallDeployTool calls any deploy tool by name
