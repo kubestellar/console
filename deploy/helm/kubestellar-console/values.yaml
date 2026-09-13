@@ -144,6 +144,13 @@ metrics:
     p95LatencySeconds: "2"
     p95LatencyFor: 10m
     p95LatencySeverity: warning
+    stellarActionFailureRateThreshold: "0.1"
+    stellarActionFailureRateFor: 15m
+    stellarActionFailureRateSeverity: warning
+    stellarSchedulerStalledFor: 15m
+    stellarSchedulerStalledSeverity: warning
+    gpuUtilDCGMScrapeErrorsFor: 15m
+    gpuUtilDCGMScrapeErrorsSeverity: warning
 
 ingress:
   enabled: false

@@ -49,4 +49,44 @@ spec:
               The 95th percentile request latency for the console backend has
               exceeded {{ .Values.metrics.prometheusRule.p95LatencySeconds }}s
               over the last 5 minutes (current value: {{ "{{" }} $value | humanizeDuration {{ "}}" }}).
+        - alert: ConsoleStellarActionFailureRate
+          expr: >-
+            sum(rate(console_stellar_action_outcomes_total{outcome="failed"}[15m]))
+            /
+            sum(rate(console_stellar_action_outcomes_total[15m]))
+            > {{ .Values.metrics.prometheusRule.stellarActionFailureRateThreshold }}
+          for: {{ .Values.metrics.prometheusRule.stellarActionFailureRateFor }}
+          labels:
+            severity: {{ .Values.metrics.prometheusRule.stellarActionFailureRateSeverity }}
+          annotations:
+            summary: "Stellar scheduled-action failure rate is above threshold"
+            description: >-
+              More than {{ "{{" }} $value | humanizePercentage {{ "}}" }} of Stellar
+              scheduled-action executions have failed over the last 15 minutes.
+        - alert: ConsoleStellarSchedulerStalled
+          expr: >-
+            rate(console_stellar_scheduler_dispatch_cycles_total[{{ .Values.metrics.prometheusRule.stellarSchedulerStalledFor }}]) == 0
+          for: {{ .Values.metrics.prometheusRule.stellarSchedulerStalledFor }}
+          labels:
+            severity: {{ .Values.metrics.prometheusRule.stellarSchedulerStalledSeverity }}
+          annotations:
+            summary: "Stellar action scheduler has not completed a poll cycle"
+            description: >-
+              The Stellar action scheduler's poll loop has recorded no completed
+              dispatch cycles for at least
+              {{ .Values.metrics.prometheusRule.stellarSchedulerStalledFor }},
+              suggesting the scheduler goroutine has stalled or crashed.
+        - alert: ConsoleGPUUtilDCGMScrapeErrors
+          expr: >-
+            rate(console_gpu_util_dcgm_scrape_errors_total[{{ .Values.metrics.prometheusRule.gpuUtilDCGMScrapeErrorsFor }}]) > 0
+          for: {{ .Values.metrics.prometheusRule.gpuUtilDCGMScrapeErrorsFor }}
+          labels:
+            severity: {{ .Values.metrics.prometheusRule.gpuUtilDCGMScrapeErrorsSeverity }}
+          annotations:
+            summary: "GPU utilization worker's DCGM exporter scrapes are failing"
+            description: >-
+              The GPU utilization worker's opt-in DCGM exporter scrape has
+              recorded errors continuously for at least
+              {{ .Values.metrics.prometheusRule.gpuUtilDCGMScrapeErrorsFor }}
+              (current rate: {{ "{{" }} $value | humanize {{ "}}" }}/s).
 {{- end }}
