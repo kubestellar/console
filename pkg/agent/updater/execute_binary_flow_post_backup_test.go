@@ -133,6 +133,84 @@ func TestExecuteBinaryUpdateFlow_RestartFails(t *testing.T) {
 	}
 }
 
+// TestExecuteBinaryUpdateFlow_Success covers the full happy path at
+// download.go:411-427: backup → chmod → swap → restart → health check
+// passes → backupPath removed, currentVersion / lastUpdateTime updated,
+// lastUpdateError cleared, "done" broadcast at Progress: 100.
+//
+// This arm is the reason the flow exists at all; a regression that
+// dropped the currentVersion update, kept a stale lastUpdateError
+// pinned, or forgot to remove the backupPath file would corrupt the
+// checker's state or leak the pre-update binary onto disk forever. It
+// was uncovered before this test.
+func TestExecuteBinaryUpdateFlow_Success(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("post-backup rollback arms exercised on Unix runners")
+	}
+
+	uc, snapshot, release := setupBackupSucceedsFlow(t)
+	// Both seams succeed: restartBackend nil, healthCheckFn nil so the
+	// `uc.healthCheckFn != nil && !uc.healthCheckFn()` guard is false
+	// via short-circuit and the flow enters the success block.
+	// (The healthCheckFn == nil arm is also the intended production
+	// default — Console does not require callers to supply one.)
+
+	uc.executeBinaryUpdateFlow(release)
+
+	payloads := snapshot()
+
+	// The flow must reach the "done" broadcast at Progress 100.
+	done := findStatus(payloads, "done")
+	if done == nil {
+		t.Fatalf("expected 'done' status broadcast on success path, got %+v", payloads)
+	}
+	if done.Progress != 100 {
+		t.Errorf("done.Progress = %d, want 100", done.Progress)
+	}
+
+	// State updates: currentVersion moves to the release tag, error clears.
+	uc.mu.Lock()
+	gotVersion := uc.currentVersion
+	gotErr := uc.lastUpdateError
+	gotTime := uc.lastUpdateTime
+	uc.mu.Unlock()
+
+	if gotVersion != release.TagName {
+		t.Errorf("currentVersion = %q, want %q", gotVersion, release.TagName)
+	}
+	if gotErr != "" {
+		t.Errorf("lastUpdateError should be cleared on success, got %q", gotErr)
+	}
+	if gotTime.IsZero() {
+		t.Errorf("lastUpdateTime should be non-zero after successful update")
+	}
+
+	// The new binary must be at ./bin/console with the "stub-new-binary"
+	// contents — the swap step's whole point.
+	newBytes, err := os.ReadFile(filepath.Join("bin", "console"))
+	if err != nil {
+		t.Fatalf("after success, ./bin/console must exist: %v", err)
+	}
+	if string(newBytes) != "stub-new-binary" {
+		t.Errorf("./bin/console = %q, want %q — swap did not install new binary",
+			newBytes, "stub-new-binary")
+	}
+
+	// backupPath must be cleaned up so we don't leak the pre-update
+	// binary onto disk indefinitely.
+	if _, err := os.Stat(filepath.Join("bin", "console.backup")); !os.IsNotExist(err) {
+		t.Errorf("backupPath should be removed on success, stat err = %v (expected IsNotExist)", err)
+	}
+
+	// Sanity: success must not emit 'failed' or 'cancelled'.
+	if p := findStatus(payloads, "failed"); p != nil {
+		t.Errorf("success path must not emit 'failed', got %+v", *p)
+	}
+	if p := findStatus(payloads, "cancelled"); p != nil {
+		t.Errorf("success path must not emit 'cancelled', got %+v", *p)
+	}
+}
+
 // TestExecuteBinaryUpdateFlow_HealthCheckFails covers the "health check
 // false + rollback + rollback-restart" arm at download.go:395-410: the
 // full swap succeeds, restartBackend returns nil, but the new binary's
