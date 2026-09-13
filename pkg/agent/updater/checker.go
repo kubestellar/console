@@ -9,9 +9,12 @@ import (
 	"github.com/kubestellar/console/pkg/safego"
 )
 
-const (
+var (
 	developerCheckInterval = 15 * time.Minute
 	releaseCheckInterval   = 60 * time.Minute
+)
+
+const (
 	healthCheckRetries     = 15
 	healthCheckDelay       = 2 * time.Second
 	// defaultGitHubRepo is the fallback GitHub owner/repo used when
