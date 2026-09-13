@@ -62,6 +62,27 @@ func TestSlackNotifier_Send(t *testing.T) {
 			wantUsername: "KubeStellar Console",
 			wantEmoji:    ":warning:",
 		},
+		{
+			// Exercises the three optional-field append branches in Send:
+			// Cluster, Namespace, and Resource. Without this, Send stays
+			// on the two-field fast path and lines 80-101 are unhit.
+			name: "critical alert with cluster/namespace/resource populated",
+			alert: Alert{
+				RuleName:     "PodCrashLooping",
+				Severity:     SeverityCritical,
+				Status:       "firing",
+				Message:      "Restart backoff exceeded",
+				Cluster:      "prod-east-1",
+				Namespace:    "payments",
+				Resource:     "checkout-api",
+				ResourceKind: "Deployment",
+				FiredAt:      time.Now(),
+			},
+			channel:      "#prod-alerts",
+			wantColor:    "danger",
+			wantUsername: "KubeStellar Console",
+			wantEmoji:    ":rotating_light:",
+		},
 	}
 
 	for _, tc := range tests {
@@ -88,6 +109,29 @@ func TestSlackNotifier_Send(t *testing.T) {
 
 			if tc.channel != "" {
 				require.Equal(t, tc.channel, captured.Channel)
+			}
+
+			// When Cluster/Namespace/Resource are populated on the
+			// alert, Send appends one slackAttachField per non-empty
+			// value; verify each surfaces in the captured payload.
+			fieldTitles := make([]string, 0, len(captured.Attachments[0].Fields))
+			for _, f := range captured.Attachments[0].Fields {
+				fieldTitles = append(fieldTitles, f.Title)
+			}
+			if tc.alert.Cluster != "" {
+				require.Contains(t, fieldTitles, "Cluster")
+			} else {
+				require.NotContains(t, fieldTitles, "Cluster")
+			}
+			if tc.alert.Namespace != "" {
+				require.Contains(t, fieldTitles, "Namespace")
+			} else {
+				require.NotContains(t, fieldTitles, "Namespace")
+			}
+			if tc.alert.Resource != "" {
+				require.Contains(t, fieldTitles, "Resource")
+			} else {
+				require.NotContains(t, fieldTitles, "Resource")
 			}
 		})
 	}
