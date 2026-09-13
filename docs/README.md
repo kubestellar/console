@@ -66,6 +66,7 @@ This index covers the Markdown and YAML documentation files in `docs/` and group
 | [runbooks/scheduled-workflow-alert-gap-remaining.md](runbooks/scheduled-workflow-alert-gap-remaining.md) | Runbook for detecting silent failures in the 12 remaining scheduled workflows with no failure alert (perf gates, UX/e2e canaries, hygiene jobs). |
 | [runbooks/stale-workflow-no-alert.md](runbooks/stale-workflow-no-alert.md) | Runbook for detecting a silently-failing daily Stale Issues workflow (no alert on scheduled failure). |
 | [runbooks/upgrade-smoke-no-alert.md](runbooks/upgrade-smoke-no-alert.md) | Runbook for detecting a silently-failing In-Place Upgrade Smoke canary (no alert on scheduled failure). |
+| [../.github/ISSUE_TEMPLATE/postmortem.yaml](../.github/ISSUE_TEMPLATE/postmortem.yaml) | Incident postmortem template for user-impacting production incidents (outages, degraded health, failed rollouts). |
 | [security/SECURITY-MODEL.md](security/SECURITY-MODEL.md) | Explains the security model, air-gapped deployment posture, and local/self-hosted LLM paths. |
 | [stellar/architecture.md](stellar/architecture.md) | Architecture notes for the Stellar persistent AI operations assistant. |
 | [stellar/crds-v1alpha1.yaml](stellar/crds-v1alpha1.yaml) | Reference CRD manifest for Stellar v1alpha1 resources. |

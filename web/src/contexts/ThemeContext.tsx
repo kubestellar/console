@@ -135,14 +135,20 @@ function applyTheme(theme: Theme) {
     root.style.setProperty('--chart-color-8', colors.chartColors[7] || colors.brandSecondary)
 
     // Font — lazy-load non-default Google Fonts on theme switch
-    loadThemeFont(theme.font.family)
-    loadThemeFont(theme.font.monoFamily)
-    root.style.setProperty('--font-family', theme.font.family)
-    root.style.setProperty('--font-mono', theme.font.monoFamily)
-    root.style.setProperty('--font-weight-normal', String(theme.font.weight.normal))
-    root.style.setProperty('--font-weight-medium', String(theme.font.weight.medium))
-    root.style.setProperty('--font-weight-semibold', String(theme.font.weight.semibold))
-    root.style.setProperty('--font-weight-bold', String(theme.font.weight.bold))
+    if (theme.font?.family) {
+      loadThemeFont(theme.font.family)
+      root.style.setProperty('--font-family', theme.font.family)
+    }
+    if (theme.font?.monoFamily) {
+      loadThemeFont(theme.font.monoFamily)
+      root.style.setProperty('--font-mono', theme.font.monoFamily)
+    }
+    if (theme.font?.weight) {
+      if (theme.font.weight.normal != null) root.style.setProperty('--font-weight-normal', String(theme.font.weight.normal))
+      if (theme.font.weight.medium != null) root.style.setProperty('--font-weight-medium', String(theme.font.weight.medium))
+      if (theme.font.weight.semibold != null) root.style.setProperty('--font-weight-semibold', String(theme.font.weight.semibold))
+      if (theme.font.weight.bold != null) root.style.setProperty('--font-weight-bold', String(theme.font.weight.bold))
+    }
 
     // Special effects classes
     if (theme.starField) {

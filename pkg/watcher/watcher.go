@@ -153,6 +153,7 @@ func Run(cfg Config) error {
 			strings.Contains(errMsg, "write: broken pipe")
 		if isClientGone {
 			slog.Info("[Watcher] client disconnected (backend still healthy)", "error", err)
+			recordProxyError(ProxyErrorReasonClientDisconnect)
 			return
 		}
 
@@ -160,11 +161,13 @@ func Run(cfg Config) error {
 			strings.Contains(errMsg, "context deadline exceeded")
 		if isTimeout {
 			slog.Info("[Watcher] proxy timeout (backend still healthy)", "error", err)
+			recordProxyError(ProxyErrorReasonTimeout)
 			http.Error(w, "Gateway Timeout", http.StatusGatewayTimeout)
 			return
 		}
 
 		slog.Error("[Watcher] proxy error (backend down)", "error", err)
+		recordProxyError(ProxyErrorReasonBackendDown)
 		atomic.StoreInt32(&backendHealthy, 0)
 		ServeFallback(w, r, cachedVersion, cachedGitCommitShort)
 	}
@@ -177,6 +180,8 @@ func Run(cfg Config) error {
 	})
 
 	mux := http.NewServeMux()
+
+	mux.Handle("/watchdog/metrics", MetricsHandler())
 
 	mux.HandleFunc("/watchdog/health", func(w http.ResponseWriter, r *http.Request) {
 		beStatus := "down"
@@ -216,6 +221,7 @@ func Run(cfg Config) error {
 			return
 		}
 		atomic.AddInt64(&fallbacksServed, 1)
+		recordFallbackServed()
 		ServeFallback(w, r, cachedVersion, cachedGitCommitShort)
 	})
 
@@ -473,11 +479,13 @@ func PollBackendHealth(ctx context.Context, backendBase string, healthy *int32, 
 				slog.Info("[Watcher] Backend is healthy")
 			}
 			atomic.StoreInt32(healthy, 1)
+			recordBackendHealthy(true)
 		} else {
 			if wasHealthy {
 				slog.Info("[Watcher] Backend unreachable")
 			}
 			atomic.StoreInt32(healthy, 0)
+			recordBackendHealthy(false)
 		}
 
 		select {
