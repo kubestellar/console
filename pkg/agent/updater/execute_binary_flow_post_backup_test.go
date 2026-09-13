@@ -133,6 +133,83 @@ func TestExecuteBinaryUpdateFlow_RestartFails(t *testing.T) {
 	}
 }
 
+// TestExecuteBinaryUpdateFlow_ChmodFails covers the ChmodIfSupported-
+// failure rollback arm at download.go:359-372: extraction succeeds but
+// writes something OTHER than "console" into stagingDir, so
+// stagedBinary := filepath.Join(stagingDir, "console") does not exist,
+// os.Chmod returns ENOENT, and the flow must roll back the backup and
+// broadcast "Failed to set binary permissions, rolled back".
+//
+// A regression that swallowed the chmod error would leave the flow
+// proceeding into renameOrCopy(stagedBinary, consolePath) — which would
+// then also fail, but the failure would surface with the WRONG error
+// message ("Failed to install new binary"), misleading operators.
+func TestExecuteBinaryUpdateFlow_ChmodFails(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("post-backup rollback arms exercised on Unix runners")
+	}
+
+	// Same setup as setupBackupSucceedsFlow BUT with a tarball whose only
+	// regular file entry is "notconsole", not "console", so extraction
+	// succeeds and produces stagingDir/notconsole. When the flow then
+	// tries to chmod stagingDir/console, os.Chmod returns ENOENT.
+	t.Setenv("PATH", "")
+	dir := t.TempDir()
+	t.Chdir(dir)
+	if err := os.MkdirAll(filepath.Join(dir, "bin"), 0o755); err != nil {
+		t.Fatalf("mkdir bin: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "bin", "console"),
+		[]byte("stub-current-binary"), 0o755); err != nil {
+		t.Fatalf("write ./bin/console: %v", err)
+	}
+
+	payload := buildValidTarGz(t, "notconsole", []byte("wrong-entry-name"))
+	platform := fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH)
+	assetName := fmt.Sprintf("console_1.2.3_%s.tar.gz", platform)
+
+	srv := serveTarballAndChecksums(payload, assetName)
+	defer srv.Close()
+
+	uc, snapshot := newRecordingUpdateChecker()
+	uc.executeBinaryUpdateFlow(releaseWith(srv, assetName))
+
+	payloads := snapshot()
+
+	failed := findStatus(payloads, "failed")
+	if failed == nil {
+		t.Fatalf("expected 'failed' broadcast after chmod failure, got %+v", payloads)
+	}
+	if failed.Message != "Failed to set binary permissions, rolled back" {
+		t.Errorf("failed message = %q, want %q", failed.Message,
+			"Failed to set binary permissions, rolled back")
+	}
+	if uc.lastUpdateError == "" {
+		t.Errorf("recordError should have populated lastUpdateError after chmod failure")
+	}
+
+	// Rollback contract: backup must have been renamed back over consolePath.
+	got, err := os.ReadFile(filepath.Join("bin", "console"))
+	if err != nil {
+		t.Fatalf("after rollback, ./bin/console must exist: %v", err)
+	}
+	if string(got) != "stub-current-binary" {
+		t.Errorf("rollback did not restore original binary; got %q, want %q",
+			got, "stub-current-binary")
+	}
+
+	// Sanity: flow must not proceed past chmod to restart or reach done.
+	if p := findStatus(payloads, "restarting"); p != nil {
+		t.Errorf("flow must not reach 'restarting' after chmod failure, got %+v", *p)
+	}
+	if p := findStatus(payloads, "done"); p != nil {
+		t.Errorf("flow must not emit 'done' after chmod failure, got %+v", *p)
+	}
+	if p := findStatus(payloads, "cancelled"); p != nil {
+		t.Errorf("chmod failure must not emit 'cancelled', got %+v", *p)
+	}
+}
+
 // TestExecuteBinaryUpdateFlow_Success covers the full happy path at
 // download.go:411-427: backup → chmod → swap → restart → health check
 // passes → backupPath removed, currentVersion / lastUpdateTime updated,
