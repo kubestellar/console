@@ -10,6 +10,12 @@ import (
 	"github.com/kubestellar/console/pkg/sanitize"
 )
 
+var (
+	initialStartupDelay      = 30 * time.Second
+	fetchLatestMainSHAFn     = fetchLatestMainSHAWithRepo
+	detectCurrentSHAFn       = detectCurrentSHA
+)
+
 func (uc *UpdateChecker) run(ctx context.Context) {
 	uc.mu.Lock()
 	interval := releaseCheckInterval
@@ -22,7 +28,7 @@ func (uc *UpdateChecker) run(ctx context.Context) {
 	select {
 	case <-ctx.Done():
 		return
-	case <-time.After(30 * time.Second):
+	case <-time.After(initialStartupDelay):
 	}
 
 	ticker := time.NewTicker(interval)
@@ -72,14 +78,14 @@ func (uc *UpdateChecker) checkDeveloperChannel() {
 		return
 	}
 
-	latestSHA, err := fetchLatestMainSHAWithRepo(repoPath)
+	latestSHA, err := fetchLatestMainSHAFn(repoPath)
 	if err != nil {
 		slog.Error("[AutoUpdate] failed to check main SHA", "error", err)
 		return
 	}
 
 	// Re-read currentSHA from repo in case it was updated externally
-	if freshSHA := detectCurrentSHA(repoPath); freshSHA != "" {
+	if freshSHA := detectCurrentSHAFn(repoPath); freshSHA != "" {
 		uc.mu.Lock()
 		uc.currentSHA = freshSHA
 		currentSHA = freshSHA
