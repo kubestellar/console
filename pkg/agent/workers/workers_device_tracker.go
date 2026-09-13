@@ -139,11 +139,15 @@ func (t *DeviceTracker) scanDevices() {
 		return
 	}
 
+	scanStart := time.Now()
+	defer func() { recordDeviceTrackerScanCycle(time.Since(scanStart)) }()
+
 	ctx, cancel := context.WithTimeout(context.Background(), deviceTrackerTimeout)
 	defer cancel()
 
 	clusters, err := t.k8sClient.ListClusters(ctx)
 	if err != nil {
+		recordDeviceTrackerScanError("list_clusters")
 		if !t.loggedClusterError {
 			t.loggedClusterError = true
 			slog.Info("[DeviceTracker] cluster data unavailable (will retry silently)", "error", err)
@@ -170,6 +174,7 @@ func (t *DeviceTracker) scanDevices() {
 
 			nodes, err := t.k8sClient.GetNodes(clusterCtx, cl.Context)
 			if err != nil {
+				recordDeviceTrackerScanError("get_nodes")
 				return
 			}
 
