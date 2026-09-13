@@ -30,8 +30,13 @@ GitHub before a PR could even be opened:
 ```
 
 Until a maintainer with that permission applies the fix manually, treat every
-`✅ PASS` result from this workflow as unverified. See tracking issue
-[#23142](https://github.com/kubestellar/console/issues/23142).
+`✅ PASS` result from this workflow as unverified. The original tracking issue,
+[#23142](https://github.com/kubestellar/console/issues/23142), was closed as
+completed once this runbook was merged, even though the underlying exit-code
+propagation fix described below was never applied — see
+[#23367](https://github.com/kubestellar/console/issues/23367) for the still-open
+tracker on both the doc-accuracy gap and (via [Proposed Fix](#proposed-fix)) the
+unresolved workflow fix.
 
 ## Why This Can Happen Silently
 
@@ -88,7 +93,7 @@ opened for it today.
 |---|---|---|
 | Dedicated alert issue | Issues labeled `nightly-llmd-guides:silent-failure` | Not yet available — see [Current Status](#current-status) |
 | Workflow run log | Actions → `Nightly llm-d Guide E2E` → each `run-guides (<guide>)` job → `Execute guide: <guide>` log group | Works today, but requires manually opening every run and job |
-| Tracking issue comment vs. log mismatch | Compare the `✅ PASS` table in the `Nightly llm-d Guide E2E Results` tracking issue against the actual guide script output/exit code in the run log | The only reliable signal today — a suspiciously long unbroken PASS streak (9+ days, per the confirmation in issue #23142) across a live OpenShift cluster and self-hosted runner warrants manual log review |
+| Tracking issue comment vs. log mismatch | Compare the `✅ PASS` table in the `Nightly llm-d Guide E2E Results` tracking issue against the actual guide script output/exit code in the run log | The only reliable signal today — a suspiciously long unbroken PASS streak (9+ days, per the confirmation in the now-closed issue #23142 — see #23367) across a live OpenShift cluster and self-hosted runner warrants manual log review |
 | Artifact logs | Download the `guide-result-<guide>` artifacts (retained 30 days) and check for errors that contradict a reported PASS | Available for guides that ran; not useful if the runner itself was unavailable |
 
 ## Triage

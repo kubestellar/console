@@ -14,8 +14,13 @@ against `nightly-dast.yml` and `upgrade-smoke.yml`; see
 `docs/runbooks/upgrade-smoke-no-alert.md`). Naming an actual on-call rotation also
 requires maintainer input this agent cannot supply. Until a maintainer applies the
 fixes below, the "Main Branch Build Recovery SLA" has no automated trigger and no
-named owner. See tracking issue
-[#23265](https://github.com/kubestellar/console/issues/23265).
+named owner. The original tracking issue,
+[#23265](https://github.com/kubestellar/console/issues/23265), was closed as
+completed once this runbook was merged (in #23266), even though the automation gap
+it describes was never fixed — see
+[#23367](https://github.com/kubestellar/console/issues/23367) for the still-open
+tracker on both the doc-accuracy gap and (via [Proposed Fix](#proposed-fix)) the
+unresolved automation.
 
 ## Why This Matters
 
