@@ -2,9 +2,11 @@
 {{- /*
 ServiceMonitor for the Prometheus Operator (https://prometheus-operator.dev/).
 Disabled by default (opt-in) — this only configures Prometheus Operator to
-scrape the console's own /metrics endpoint (see pkg/api/metrics); it does not
-send any data anywhere. Enable it only when the cluster already runs
-Prometheus Operator and the ServiceMonitor CRD is installed.
+scrape the console's own /metrics endpoint (see pkg/api/metrics) and the
+watcher reverse-proxy's /watchdog/metrics endpoint (see pkg/watcher/metrics.go,
+same "http" port); it does not send any data anywhere. Enable it only when
+the cluster already runs Prometheus Operator and the ServiceMonitor CRD is
+installed.
 */}}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
@@ -23,5 +25,8 @@ spec:
   endpoints:
     - port: http
       path: /metrics
+      interval: {{ .Values.metrics.serviceMonitor.interval }}
+    - port: http
+      path: /watchdog/metrics
       interval: {{ .Values.metrics.serviceMonitor.interval }}
 {{- end }}
