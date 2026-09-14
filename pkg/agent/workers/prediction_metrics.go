@@ -76,6 +76,9 @@ func InitPredictionMetrics() {
 		prometheus.MustRegister(aiAnalysisDuration)
 		prometheus.MustRegister(aiAnalysisErrors)
 		prometheus.MustRegister(metricsSnapshotsTotal)
+		prometheus.MustRegister(deviceTrackerScanCyclesTotal)
+		prometheus.MustRegister(deviceTrackerScanDuration)
+		prometheus.MustRegister(deviceTrackerScanErrorsTotal)
 	})
 }
 
