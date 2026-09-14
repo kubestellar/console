@@ -1,6 +1,6 @@
 // Pure utility module — mission card utilities: types, hooks, formatters, and UI components.
 // Demo data support provided by individual mission card implementations via useCachedOfflineDetection.
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Bot } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useMissions } from '../../../hooks/useMissions'
@@ -131,17 +131,24 @@ export function useApiKeyCheck() {
     })
   }
 
-  const goToSettings = () => {
+  // #23395/#23397 — goToSettings/dismissPrompt must keep a stable identity
+  // across re-renders. ApiKeyPromptModal's useEffect (which logs the GA4
+  // `config` error) depends on `onDismiss`; when these were plain functions
+  // recreated on every render, any background re-render of the host
+  // component (e.g. cluster polling on /settings) changed their identity and
+  // re-ran the effect while the modal stayed open, re-emitting the same
+  // config error dozens of times per session (retry-cascade style spike).
+  const goToSettings = useCallback(() => {
     setShowKeyPrompt(false)
     // #8093 — Previously this opened the AI Missions sidebar, which has no
     // agent selector. Route directly to Settings → API Keys instead so users
     // can configure a provider when no agent is detected.
     navigate(getSettingsWithHash(SETTINGS_API_KEYS_HASH))
-  }
+  }, [navigate])
 
-  const dismissPrompt = () => {
+  const dismissPrompt = useCallback(() => {
     setShowKeyPrompt(false)
-  }
+  }, [])
 
   return {
     showKeyPrompt,
