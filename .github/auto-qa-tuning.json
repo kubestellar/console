@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_updated": "2026-09-13T03:07:22Z",
+  "last_updated": "2026-09-14T03:08:12Z",
   "rolling_window_days": 30,
   "categories": {
     "performance": {
@@ -25,11 +25,11 @@
       "last_evaluated": "2026-09-13T03:07:22Z"
     },
     "operator": {
-      "merged": 976,
-      "closed": 275,
+      "merged": 983,
+      "closed": 276,
       "acceptance_rate": 0.78,
       "status": "normal",
-      "last_evaluated": "2026-09-13T03:07:22Z"
+      "last_evaluated": "2026-09-14T03:08:12Z"
     },
     "sre": {
       "merged": 648,
@@ -46,11 +46,11 @@
       "last_evaluated": "2026-09-12T03:06:46Z"
     },
     "resilience": {
-      "merged": 127,
+      "merged": 128,
       "closed": 66,
       "acceptance_rate": 0.66,
       "status": "normal",
-      "last_evaluated": "2026-09-13T03:07:22Z"
+      "last_evaluated": "2026-09-14T03:08:12Z"
     },
     "consistency": {
       "merged": 39,
@@ -95,15 +95,6 @@
     ]
   },
   "history": [
-    {
-      "date": "2026-07-31",
-      "total_merged": 1659,
-      "total_closed": 576,
-      "categories_blocked": [],
-      "categories_boosted": [
-        "sre"
-      ]
-    },
     {
       "date": "2026-08-01",
       "total_merged": 1692,
@@ -384,6 +375,16 @@
         "sre",
         "features"
       ]
+    },
+    {
+      "date": "2026-09-14",
+      "total_merged": 2085,
+      "total_closed": 585,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "sre",
+        "features"
+      ]
     }
   ],
   "rotation_weights": {
@@ -397,7 +398,7 @@
     "consistency": 0.98
   },
   "max_issues_override": 5,
-  "pr_guidance": "Keep changes under 50 lines (size S) for best acceptance rate. Split larger fixes into multiple PRs.",
+  "pr_guidance": "Keep changes under 10 lines for best acceptance rate.",
   "regression_insights": {
     "focus_overrides": [],
     "repeat_issue_patterns": [],
