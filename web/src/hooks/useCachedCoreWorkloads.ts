@@ -555,6 +555,10 @@ export function useCachedDeployments(
               ...d,
               cluster: cluster }))
           }
+          // Agent errored for the requested cluster — return no data instead
+          // of incorrectly falling through to the multi-cluster agent fetch
+          // below, which ignores the requested `cluster` entirely.
+          return []
         }
         const agentDeployments = await fetchDeploymentsViaAgent(namespace)
         // null means the agent was unreachable (e.g. no local kc-agent on
