@@ -61,8 +61,9 @@ markdown-it-py==4.2.0 \
 mdurl==0.1.2 \
     --hash=sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8
 
-opentelemetry-api==1.25.0 \
-    --hash=sha256:757fa1aa020a0f8fa139f8959e53dec2051cc26b832e76fa839a6d76ecefd737
+opentelemetry-api==1.44.0 \
+    --hash=sha256:67647e5e9566edcf421166fdf022b3537f818635daa852b289e34604dc6fb33a \
+    --hash=sha256:94b98c893a91b88657eaac1e3ba89618cdb85be6918196705354f34728b2cdef
 
 opentelemetry-exporter-otlp-proto-common==1.25.0 \
     --hash=sha256:15637b7d580c2675f70246563363775b4e6de947871e01d0f4e3881d1848d693
