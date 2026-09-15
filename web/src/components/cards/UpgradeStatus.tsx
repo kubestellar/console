@@ -263,9 +263,10 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
           variant="ghost"
           size="sm"
           onClick={() => refetch()}
-          className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+          disabled={isRefreshing}
+          className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 disabled:opacity-50"
         >
-          <RefreshCw className="w-3 h-3" />
+          <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
           {t('common.retry', 'Retry')}
         </Button>
       </div>
