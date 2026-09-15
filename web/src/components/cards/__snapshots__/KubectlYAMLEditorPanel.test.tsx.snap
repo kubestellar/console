@@ -126,7 +126,7 @@ metadata:
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-circle-check-big w-3.5 h-3.5"
+        class="lucide lucide-circle-check-big lucide-check-circle w-3.5 h-3.5"
         fill="none"
         height="24"
         stroke="currentColor"
