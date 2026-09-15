@@ -67,7 +67,7 @@
     "test:visual:macos-popup": "playwright test --config e2e/visual-login/macos-popup.config.ts"
   },
   "dependencies": {
-    "@codemirror/legacy-modes": "^6.5.3",
+    "@codemirror/legacy-modes": "^6.5.4",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
