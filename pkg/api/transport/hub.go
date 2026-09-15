@@ -14,7 +14,17 @@ import (
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/api/metrics"
 	"github.com/kubestellar/console/pkg/api/middleware"
+)
+
+// disconnectReasonNormal and disconnectReasonSlowClient are the only two
+// values ever passed to metrics.WebSocketDisconnected as the "reason" label,
+// keeping that label's cardinality fixed regardless of how many clients
+// disconnect or why a given client was on the slow path.
+const (
+	disconnectReasonNormal     = "normal"
+	disconnectReasonSlowClient = "slow_client"
 )
 
 // getEnvInt reads an integer from the environment, falling back to defaultVal.
@@ -74,6 +84,13 @@ type Client struct {
 	// WriteMessage call. gorilla/websocket documents that Close must not be
 	// called concurrently with Write.
 	writeMu sync.Mutex
+	// disconnectReason labels the console_websocket_disconnects_total metric
+	// when this client is unregistered. It defaults to "" (read as "normal")
+	// and is only ever set to disconnectReasonSlowClient, from a single
+	// goroutine, before the client is sent on h.unregister — the channel
+	// send/receive provides the happens-before edge that makes the later
+	// read in Run's unregister case safe without extra synchronization.
+	disconnectReason string
 }
 
 // closeConn closes the underlying network connection exactly once (#6584).
@@ -199,6 +216,7 @@ func (h *Hub) Run() {
 			h.clients[client] = true
 			h.userIndex[client.userID] = append(h.userIndex[client.userID], client)
 			h.mu.Unlock()
+			metrics.WebSocketConnected()
 			slog.Info("[WebSocket] client connected", "user", client.userID)
 
 		case client := <-h.unregister:
@@ -221,6 +239,11 @@ func (h *Hub) Run() {
 				}
 			}
 			h.mu.Unlock()
+			reason := client.disconnectReason
+			if reason == "" {
+				reason = disconnectReasonNormal
+			}
+			metrics.WebSocketDisconnected(reason)
 			slog.Info("[WebSocket] client disconnected", "user", client.userID)
 
 		case msg := <-h.broadcast:
@@ -242,6 +265,7 @@ func (h *Hub) Run() {
 					slog.Warn("[WebSocket] slow client buffer full, disconnecting",
 						"user", client.userID)
 					c := client
+					c.disconnectReason = disconnectReasonSlowClient
 					safego.Go(func() {
 						// #11877 — Use a timeout instead of default case so
 						// the unregister is never silently dropped. If the
@@ -463,6 +487,7 @@ func (h *Hub) BroadcastAll(msg Message) {
 			slog.Warn("[WebSocket] slow client buffer full, disconnecting",
 				"user", client.userID, "type", msg.Type)
 			c := client
+			c.disconnectReason = disconnectReasonSlowClient
 			safego.Go(func() {
 				// #12112 — Use a timeout instead of default case so
 				// the unregister is never silently dropped. If the
@@ -590,6 +615,7 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 	currentConns := atomic.AddInt64(&h.activeConns, 1)
 	if int(currentConns) > h.maxConnections {
 		atomic.AddInt64(&h.activeConns, -1)
+		metrics.WebSocketRejected()
 		slog.Warn("[WebSocket] SECURITY: rejected connection - limit reached",
 			"user", userID, "current", currentConns-1, "limit", h.maxConnections)
 		if err := conn.WriteJSON(Message{Type: "error", Data: map[string]string{"message": "server at capacity"}}); err != nil {

@@ -1,6 +1,6 @@
 {
   "title": "KubeStellar Console — Self Metrics",
-  "description": "Recommendation-only dashboard for the console backend's bounded self-metrics (console_http_requests_total, console_http_request_duration_seconds, console_k8s_client_requests_total, console_k8s_client_request_duration_seconds, console_stellar_*, console_gpu_util_*, console_notification_*) exposed at /metrics (see pkg/api/metrics). Import this JSON into a Grafana instance already pointed at a Prometheus that scrapes this console deployment; nothing here configures a data source or exporter automatically. No backend is confirmed for this deployment, so this file is not wired into any deployment or CI step.",
+  "description": "Recommendation-only dashboard for the console backend's bounded self-metrics (console_http_requests_total, console_http_request_duration_seconds, console_k8s_client_requests_total, console_k8s_client_request_duration_seconds, console_stellar_*, console_gpu_util_*, console_notification_*, console_websocket_connections_active, console_websocket_connects_total, console_websocket_disconnects_total, console_websocket_rejected_total) exposed at /metrics (see pkg/api/metrics). Import this JSON into a Grafana instance already pointed at a Prometheus that scrapes this console deployment; nothing here configures a data source or exporter automatically. No backend is confirmed for this deployment, so this file is not wired into any deployment or CI step.",
   "schemaVersion": 39,
   "version": 1,
   "editable": true,
@@ -274,6 +274,40 @@
         {
           "expr": "histogram_quantile(0.95, sum(rate(console_gpu_util_scrape_duration_seconds_bucket[15m])) by (le))",
           "legendFormat": "p95"
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "title": "WebSocket connections active",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 80 },
+      "targets": [
+        {
+          "expr": "console_websocket_connections_active",
+          "legendFormat": "active"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "title": "WebSocket connects/disconnects/rejections (rate)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 80 },
+      "targets": [
+        {
+          "expr": "sum(rate(console_websocket_connects_total[5m]))",
+          "legendFormat": "connects"
+        },
+        {
+          "expr": "sum(rate(console_websocket_disconnects_total[5m])) by (reason)",
+          "legendFormat": "disconnects ({{reason}})"
+        },
+        {
+          "expr": "sum(rate(console_websocket_rejected_total[5m]))",
+          "legendFormat": "rejected (at capacity)"
         }
       ]
     }
