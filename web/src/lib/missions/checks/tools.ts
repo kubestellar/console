@@ -7,13 +7,11 @@
  */
 import i18n from '../../i18n'
 import type { ToolCheckResult, ToolPreflightResult } from './types'
+import { HTTP_UNAUTHORIZED, HTTP_FORBIDDEN, HTTP_SERVICE_UNAVAILABLE } from '../../constants'
 
 /** Default tools every mission needs. */
 const DEFAULT_REQUIRED_TOOLS = ['kubectl']
 
-const HTTP_UNAUTHORIZED = 401
-const HTTP_FORBIDDEN = 403
-const HTTP_SERVICE_UNAVAILABLE = 503
 const TOOL_CHECK_TIMEOUT_MS = 10_000
 const AGENT_UNREACHABLE_ERROR_PATTERNS = [
   'failed to fetch',
