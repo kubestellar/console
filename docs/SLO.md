@@ -8,6 +8,9 @@ their own Prometheus/Alertmanager scraping `/metrics`) — this document does no
 wire up an exporter or external data flow, and no target here should be read as
 already enforced.
 
+See [`docs/runbooks/README.md`](runbooks/README.md) for the full index of
+triage runbooks referenced throughout this document.
+
 ## Service Description
 
 `kubestellar/console` is a Fiber-based Go API server (`pkg/api`) plus a React
