@@ -50,7 +50,7 @@ RUN set -eux; \
     chmod +x /out/kubestellar-ops /out/kubestellar-deploy
 
 # Build stage - Frontend
-FROM node:22-alpine@sha256:8ea2348b068a9544dae7317b4f3aafcdc032df1647bb7d768a05a5cad1a7683f AS frontend-builder
+FROM node:26-alpine@sha256:ef24c5053d50fdc3e4e56eb4e7ddb7861874ab0fdc797046ba897581deb8e868 AS frontend-builder
 
 WORKDIR /app
 
