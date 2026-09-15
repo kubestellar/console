@@ -107,7 +107,7 @@ describe('Nodes Component', () => {
         { name: 'gpu-safe', cluster: 'c1', gpuCount: 4, gpuAllocated: 0, taints: [], acceleratorType: 'GPU' },
         { name: 'gpu-tainted', cluster: 'c1', gpuCount: 4, gpuAllocated: 0, taints: [{ key: 'special', value: 'yes', effect: 'NoSchedule' }], acceleratorType: 'GPU' },
       ],
-    } as any)
+    } as ReturnType<typeof useGPUNodes>)
 
     renderNodes()
     // By default, only untainted GPUs should be counted (4)
@@ -125,7 +125,7 @@ describe('Nodes Component', () => {
       lastUpdated: null,
       refetch: vi.fn(),
       error: null,
-    } as any)
+    } as ReturnType<typeof useClusters>)
 
     renderNodes()
     expect(screen.getByTestId('stat-nodes-progress').textContent).toBe('1')

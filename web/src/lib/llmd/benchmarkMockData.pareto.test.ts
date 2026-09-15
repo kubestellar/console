@@ -20,7 +20,9 @@ import {
 } from './benchmarkMockData.pareto'
 import type {
   BenchmarkReport,
+  LoadConfig,
   ParetoPoint,
+  StackComponent,
 } from './benchmarkMockData.types'
 
 // ---------------------------------------------------------------------------
@@ -63,15 +65,28 @@ function makeReport(overrides: FakeReportOverrides = {}): BenchmarkReport {
     memory = 80,
   } = overrides
 
-  const stack = roles.map((role) => ({
+  const stack: StackComponent[] = roles.map((role) => ({
+    metadata: { label: role, cfg_id: role },
     standardized: {
       kind: role === 'inference_engine' ? 'inference_engine' : 'other',
-      role,
+      role: role as StackComponent['standardized']['role'],
       tool,
+      tool_version: '1',
       model: { name: model },
       accelerator: { model: hardware, count: gpuCount, memory },
     },
   }))
+
+  const load: LoadConfig = {
+    metadata: { cfg_id: 'load-1' },
+    standardized: {
+      tool: 'synthetic',
+      tool_version: '1',
+      source: 'random',
+      input_seq_len: { distribution: 'fixed', value: isl },
+      output_seq_len: { distribution: 'fixed', value: osl },
+    },
+  }
 
   return {
     version: '1',
@@ -82,16 +97,13 @@ function makeReport(overrides: FakeReportOverrides = {}): BenchmarkReport {
       user: 'tester',
     },
     scenario: {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      stack: stack as any,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      load: { standardized: { input_seq_len: { value: isl }, output_seq_len: { value: osl } } } as any,
+      stack,
+      load,
     },
     results: {
       request_performance: {
         aggregate: {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          requests: {} as any,
+          requests: { total: 0, failures: 0 },
           latency: {
             time_to_first_token: { p50: ttft },
             time_per_output_token: { p50: tpot },
@@ -192,8 +204,7 @@ describe('extractParetoPoints', () => {
   it('uses "?" for missing output-seq-len in the seqLen label', () => {
     const report = makeReport({ isl: 1024 })
     // Remove output_seq_len entirely from the load standardization.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    delete (report.scenario.load as any).standardized.output_seq_len
+    delete report.scenario.load.standardized.output_seq_len
     const [point] = extractParetoPoints([report])
     expect(point.seqLen).toBe('1024/?')
   })

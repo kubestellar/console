@@ -100,7 +100,7 @@ vi.mock('../../../../hooks/useTokenUsage', () => ({
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
-  useTranslation: () => ({ t: (key: string, options?: any) => {
+  useTranslation: () => ({ t: (key: string, options?: Record<string, unknown>) => {
     if (key === 'drilldown.confirmDelete.managedPod') return `managed-delete-msg-${options?.name}`
     if (key === 'drilldown.confirmDelete.unmanagedPod') return `unmanaged-delete-msg-${options?.name}`
     return key
