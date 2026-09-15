@@ -101,7 +101,7 @@ export const stellarApi = {
       if (isAuthError(err)) {
         console.debug('stellar: getState skipped (no auth token)')
       } else {
-        console.error('stellar: getState failed:', err)
+        reportStellarError('getState', err)
       }
       if (!fallbackOnError) {
         throw err
@@ -285,7 +285,7 @@ export const stellarApi = {
       if (isAuthError(err)) {
         console.debug('stellar: getProviders skipped (no auth token)')
       } else {
-        console.error('stellar: getProviders failed:', err)
+        reportStellarError('getProviders', err)
       }
       if (!fallbackOnError) {
         throw err
@@ -380,7 +380,7 @@ export const stellarApi = {
       if (isAuthError(err)) {
         console.debug('stellar: listActivity skipped (no auth token)')
       } else {
-        console.error('stellar: listActivity failed:', err)
+        reportStellarError('listActivity', err)
       }
       return []
     }
