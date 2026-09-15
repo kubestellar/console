@@ -71,11 +71,20 @@ export async function fetchPodIssuesViaAgent(namespace?: string, onProgress?: (p
 // Deployment fetcher
 // ============================================================================
 
-/** Fetch deployments from all clusters via agent HTTP endpoint */
-export async function fetchDeploymentsViaAgent(namespace?: string, onProgress?: (partial: Deployment[]) => void): Promise<Deployment[]> {
-  if (isAgentUnavailable()) return []
+/**
+ * Fetch deployments from all clusters via agent HTTP endpoint.
+ *
+ * Returns `null` (rather than `[]`) when the agent is unreachable — either
+ * because there are no candidate clusters, or because every per-cluster
+ * request rejected (e.g. no local kc-agent running, as on the hosted
+ * console). An empty array is reserved for a genuine "zero deployments"
+ * result so callers can tell the difference and fall through to the
+ * REST/SSE backend path instead of silently caching a false zero (#23107).
+ */
+export async function fetchDeploymentsViaAgent(namespace?: string, onProgress?: (partial: Deployment[]) => void): Promise<Deployment[] | null> {
+  if (isAgentUnavailable()) return null
   const clusters = getAgentClusters()
-  if (clusters.length === 0) return []
+  if (clusters.length === 0) return null
 
   const tasks = clusters.map(({ name, context }) => async () => {
     const params = new URLSearchParams()
@@ -103,13 +112,24 @@ export async function fetchDeploymentsViaAgent(namespace?: string, onProgress?: 
   })
 
   const accumulated: Deployment[] = []
+  let failedCount = 0
   function handleSettled(result: PromiseSettledResult<Deployment[]>) {
     if (result.status === 'fulfilled') {
       accumulated.push(...result.value)
       onProgress?.([...accumulated])
+    } else {
+      failedCount++
     }
   }
   await settledWithConcurrency(tasks, undefined, handleSettled)
+
+  // Every per-cluster request rejected (e.g. no local kc-agent reachable) —
+  // signal "agent unusable" via null instead of an empty array so callers
+  // fall through to the REST/SSE backend path. See #23107.
+  if (failedCount > 0 && failedCount === clusters.length) {
+    return null
+  }
+
   return accumulated
 }
 
