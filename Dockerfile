@@ -1,5 +1,5 @@
 # Build stage - Backend
-FROM golang:1.26.6-alpine@sha256:af8d6740070b8906d12eae1c3e3ea0957fb63f492051ea05e354c38ef9fe88df AS backend-builder
+FROM golang:1.27.1-alpine@sha256:cf6fca6641884b8433441b2b0652976f975e1d0fdd26d177eaaf8596087f3125 AS backend-builder
 
 WORKDIR /app
 
@@ -19,7 +19,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -ldflags="-s -w -X gi
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -ldflags="-s -w -X main.version=${APP_VERSION}" -o kc-watcher ./cmd/watcher
 
 # Build stage - MCP binaries
-FROM alpine:3.22@sha256:310c62b5e7ca5b08167e4384c68db0fd2905dd9c7493756d356e893909057601 AS mcp-binaries
+FROM alpine:3.24@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b AS mcp-binaries
 
 ARG TARGETARCH
 ARG KUBESTELLAR_MCP_RELEASE_TAG=v0.8.18-nightly.20260509
@@ -50,7 +50,7 @@ RUN set -eux; \
     chmod +x /out/kubestellar-ops /out/kubestellar-deploy
 
 # Build stage - Frontend
-FROM node:22-alpine@sha256:8ea2348b068a9544dae7317b4f3aafcdc032df1647bb7d768a05a5cad1a7683f AS frontend-builder
+FROM node:26-alpine@sha256:ef24c5053d50fdc3e4e56eb4e7ddb7861874ab0fdc797046ba897581deb8e868 AS frontend-builder
 
 WORKDIR /app
 
@@ -86,7 +86,7 @@ RUN if [ -d dist ] && [ -n "$(ls -A dist 2>/dev/null)" ]; then \
     fi
 
 # Final stage
-FROM alpine:3.22@sha256:310c62b5e7ca5b08167e4384c68db0fd2905dd9c7493756d356e893909057601
+FROM alpine:3.24@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
 
 WORKDIR /app
 

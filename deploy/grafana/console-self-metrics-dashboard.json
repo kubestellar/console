@@ -211,6 +211,71 @@
           "legendFormat": "{{channel_type}} p95"
         }
       ]
+    },
+    {
+      "id": 14,
+      "title": "Stellar stale-approval sweep duration (p95)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 56 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(console_stellar_stale_approval_sweep_duration_seconds_bucket[15m])) by (le))",
+          "legendFormat": "p95"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "title": "Stellar stale-approval actions reviewed by outcome",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 56 },
+      "targets": [
+        {
+          "expr": "sum(rate(console_stellar_stale_approval_actions_reviewed_total[15m])) by (outcome)",
+          "legendFormat": "{{outcome}}"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "title": "Stellar daily-digest notifications sent",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 64 },
+      "targets": [
+        {
+          "expr": "sum(rate(console_stellar_daily_digest_sent_total[15m]))",
+          "legendFormat": "digests sent"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "title": "Stellar scheduler due-actions picked up",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 64 },
+      "targets": [
+        {
+          "expr": "sum(rate(console_stellar_scheduler_actions_picked_up_total[15m]))",
+          "legendFormat": "actions picked up"
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "title": "GPU utilization worker scrape duration (p95)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 72 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(console_gpu_util_scrape_duration_seconds_bucket[15m])) by (le))",
+          "legendFormat": "p95"
+        }
+      ]
     }
   ]
 }

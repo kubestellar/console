@@ -22,6 +22,15 @@ const (
 	SMTPOpTimeout = 30 * time.Second
 )
 
+// tlsConfigForTests, when non-nil, replaces the *tls.Config that sendWithTLS
+// builds for its STARTTLS upgrade. This is a package-private test hook (same
+// pattern as pkg/agent/providers.AllowLoopbackForTests) used exclusively by
+// email_sendwithtls_tls_branches_test.go to make the client trust a
+// per-test self-signed mock server certificate. It MUST remain unexported
+// and MUST NEVER be set from production code — a nil check is the only
+// runtime cost in production callers.
+var tlsConfigForTests *tls.Config
+
 // setSMTPDeadline arms a fresh per-operation deadline on conn. Called before
 // each SMTP phase so a stalled phase doesn't consume the entire budget of the
 // next one. Returns any error from SetDeadline so callers can surface it.
@@ -131,6 +140,9 @@ func (e *EmailNotifier) sendWithTLS(addr string, auth smtp.Auth, msg string) err
 	tlsConfig := &tls.Config{
 		ServerName: e.SMTPHost,
 		MinVersion: tls.VersionTLS12,
+	}
+	if tlsConfigForTests != nil {
+		tlsConfig = tlsConfigForTests
 	}
 	// Reset the deadline before STARTTLS so the handshake has its full budget.
 	if err := setSMTPDeadline(conn); err != nil {
