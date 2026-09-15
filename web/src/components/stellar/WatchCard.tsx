@@ -113,7 +113,7 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
           borderRadius: '50%',
           flexShrink: 0,
           background: 'var(--s-info)',
-          boxShadow: '0 0 0 3px rgba(56,139,253,0.15)',
+          boxShadow: 'var(--shadow-info-ring)',
           animation: 's-pulse 2s ease-in-out infinite',
         }} />
         <span className="text-xs" style={{

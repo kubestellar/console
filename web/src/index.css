@@ -106,6 +106,9 @@ layer(base);
     --shadow-purple-glow: 0 0 12px rgba(139, 92, 246, 0.15);
     --shadow-purple-glow-sm: 0 0 6px rgba(139, 92, 246, 0.2);
     --shadow-purple-inset: inset 0 0 12px rgba(168, 85, 247, 0.08);
+    --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.5);
+    --shadow-info-ring: 0 0 0 3px rgba(56, 139, 253, 0.15);
+    --overlay-backdrop: rgba(0, 0, 0, 0.6);
 
     /* Scrollbar - can be overridden by theme */
     --scrollbar-thumb: rgba(255, 255, 255, 0.15);
@@ -237,6 +240,9 @@ layer(base);
     --shadow-purple-glow: 0 0 12px rgba(139, 92, 246, 0.25);
     --shadow-purple-glow-sm: 0 0 6px rgba(139, 92, 246, 0.3);
     --shadow-purple-inset: inset 0 0 12px rgba(168, 85, 247, 0.12);
+    --shadow-modal: 0 20px 60px rgba(15, 23, 42, 0.18);
+    --shadow-info-ring: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    --overlay-backdrop: rgba(15, 23, 42, 0.35);
     --scrollbar-thumb: rgba(147, 51, 234, 0.25);
     --scrollbar-thumb-hover: rgba(147, 51, 234, 0.45);
   }
