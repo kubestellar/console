@@ -86,7 +86,7 @@
     "framer-motion": "^13.2.0",
     "i18next": "^26.4.2",
     "i18next-browser-languagedetector": "^8.2.1",
-    "isomorphic-dompurify": "^3.23.0",
+    "isomorphic-dompurify": "^4.2.0",
     "jose": "^6.2.12",
     "js-yaml": "^5.4.0",
     "lucide-react": "^1.41.0",
