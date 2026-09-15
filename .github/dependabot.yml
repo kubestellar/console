@@ -45,4 +45,30 @@ updates:
   schedule:
     day: monday
     interval: weekly
+- commit-message:
+    prefix: chore(deps)
+  directory: /
+  labels:
+  - dependencies
+  - docker
+  open-pull-requests-limit: 5
+  package-ecosystem: docker
+  reviewers:
+  - clubanderson
+  schedule:
+    day: monday
+    interval: weekly
+- commit-message:
+    prefix: chore(deps)
+  directory: /cmd/kc-agent
+  labels:
+  - dependencies
+  - docker
+  open-pull-requests-limit: 5
+  package-ecosystem: docker
+  reviewers:
+  - clubanderson
+  schedule:
+    day: monday
+    interval: weekly
 version: 2
