@@ -17,17 +17,12 @@ import {
   DEFAULT_NOTIFICATION_COOLDOWN_MS,
 } from './alertStorage'
 import { logger } from '@/lib/logger'
+import { HTTP_UNAUTHORIZED, HTTP_FORBIDDEN } from '../lib/constants'
 
 /** Condition types that represent persistent cluster-level errors.
  *  These fire only once and suppress until the cluster recovers —
  *  no 5-minute cooldown repeat for ongoing connectivity failures. */
 export const PERSISTENT_CLUSTER_CONDITIONS = new Set(['certificate_error', 'cluster_unreachable'])
-
-/** HTTP status code for unauthorized requests (missing or invalid auth token). */
-const HTTP_STATUS_UNAUTHORIZED = 401
-
-/** HTTP status code for forbidden requests (insufficient permissions). */
-const HTTP_STATUS_FORBIDDEN = 403
 
 /** Parameters for the centralized browser notification dispatcher */
 export interface BrowserNotificationParams {
@@ -137,7 +132,7 @@ async function sendSingleNotification(
       signal: AbortSignal.timeout(fetchTimeout),
     })
 
-    if (response.status === HTTP_STATUS_UNAUTHORIZED || response.status === HTTP_STATUS_FORBIDDEN) return
+    if (response.status === HTTP_UNAUTHORIZED || response.status === HTTP_FORBIDDEN) return
 
     if (!response.ok) {
       const data = await response.json().catch(() => ({})) as NotificationErrorResponse
