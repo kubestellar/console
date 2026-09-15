@@ -71,4 +71,17 @@ updates:
   schedule:
     day: monday
     interval: weekly
+- commit-message:
+    prefix: chore(deps)
+  directory: /.github
+  labels:
+  - dependencies
+  - python
+  open-pull-requests-limit: 5
+  package-ecosystem: pip
+  reviewers:
+  - clubanderson
+  schedule:
+    day: monday
+    interval: weekly
 version: 2
