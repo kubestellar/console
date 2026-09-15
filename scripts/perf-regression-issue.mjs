@@ -22,6 +22,7 @@
 
 import { readFileSync, existsSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
+import { buildBody, MAX_MERGE_LOG_LINES } from './lib/perf-regression-helpers.mjs'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -29,9 +30,10 @@ import { spawnSync } from 'node:child_process'
 
 const ISSUE_TITLE_PREFIX = '[perf-regression]'
 const ISSUE_LABELS = ['kind/bug', 'priority/high', 'triage/accepted', 'perf-regression']
-// Upper bound on merge-window lines in the issue body. More than this and the
-// issue body gets noisy and less actionable.
-const MAX_MERGE_LOG_LINES = 50
+// MAX_MERGE_LOG_LINES lives with buildMergeLog in scripts/lib/
+// perf-regression-helpers.mjs; re-exported here as a no-op reference
+// so callers grepping for the constant still find it in this file.
+void MAX_MERGE_LOG_LINES
 // Exit code we always return. Non-zero would mask the workflow's own failure.
 const EXIT_OK = 0
 
@@ -104,59 +106,22 @@ function readResult(resultPath) {
   }
 }
 
-function buildMergeLog(lastSuccessfulSha, headSha) {
+function buildMergeLogFromGit(lastSuccessfulSha, headSha) {
   if (!lastSuccessfulSha || !headSha) return null
   const range = `${lastSuccessfulSha}..${headSha}`
   // `--merges` filters to merge commits only — matches the "Merges since last
   // successful run" header below and keeps the bisect window narrow enough to
   // be actionable. Without this flag we'd dump every commit in the range.
   // See #6170.
-  const { stdout, code } = sh('git', ['log', '--merges', range, '--format=- %h %s'])
-  if (code !== 0 || !stdout) return null
-  const lines = stdout.split('\n').filter(Boolean)
-  if (lines.length === 0) return null
-  const truncated = lines.length > MAX_MERGE_LOG_LINES
-  const shown = lines.slice(0, MAX_MERGE_LOG_LINES).join('\n')
-  return truncated
-    ? `${shown}\n- ... (${lines.length - MAX_MERGE_LOG_LINES} more commits truncated)`
-    : shown
+  return sh('git', ['log', '--merges', range, '--format=- %h %s'])
 }
 
-function buildBody(result) {
-  const { signal, displayName, value, budget, unit, context = {} } = result
-  const lines = []
-  lines.push(`## ${displayName} regressed`)
-  lines.push('')
-  lines.push(`**Signal:** \`${signal}\``)
-  lines.push(`**Measured:** ${value} ${unit}`)
-  lines.push(`**Budget:** ${budget} ${unit}`)
-  lines.push(`**Delta:** ${value - budget} ${unit} over budget`)
-  lines.push('')
-  if (context.runUrl) {
-    lines.push(`**Run:** ${context.runUrl}`)
-  } else if (context.runId) {
-    lines.push(`**Run ID:** ${context.runId}`)
-  }
-  if (context.headSha) {
-    lines.push(`**Head SHA:** \`${context.headSha}\``)
-  }
-  if (context.navigatedTo) {
-    lines.push(`**Navigated to:** \`${context.navigatedTo}\``)
-  }
-  lines.push('')
-
-  const mergeLog = buildMergeLog(context.lastSuccessfulSha, context.headSha)
-  if (mergeLog) {
-    lines.push(`### Merges since last successful run (\`${String(context.lastSuccessfulSha).slice(0, 7)}..${String(context.headSha).slice(0, 7)}\`)`)
-    lines.push('')
-    lines.push(mergeLog)
-    lines.push('')
-  }
-
-  lines.push('---')
-  lines.push('_Auto-filed by `scripts/perf-regression-issue.mjs`. Dedupes on title prefix._')
-  return lines.join('\n')
+function buildBodyLocal(result) {
+  return buildBody(result, (range) =>
+    sh('git', ['log', '--merges', range, '--format=- %h %s'])
+  )
 }
+void buildMergeLogFromGit
 
 function findExistingIssue(signal, repoFlag) {
   // gh issue list --search uses GitHub search syntax; the literal title prefix
@@ -234,7 +199,7 @@ function main() {
   }
 
   const repoFlag = process.env.GH_REPO || ''
-  const body = buildBody(result)
+  const body = buildBodyLocal(result)
   const existing = findExistingIssue(result.signal, repoFlag)
   if (existing) {
     commentIssue(existing, body, repoFlag)
