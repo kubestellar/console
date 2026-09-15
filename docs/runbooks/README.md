@@ -24,6 +24,7 @@ incident process.
 | [`mttr-badge-no-alert.md`](mttr-badge-no-alert.md) | `.github/workflows/mttr-badge.yml` |
 | [`acmm-level-monitor-no-alert.md`](acmm-level-monitor-no-alert.md) | `.github/workflows/acmm-level-monitor.yml` |
 | [`llmd-guide-e2e-silent-failure.md`](llmd-guide-e2e-silent-failure.md) | `.github/workflows/nightly-llmd-guides.yml` |
+| [`ga4-regression-no-alert.md`](ga4-regression-no-alert.md) | `.github/workflows/ga4-error-regression.yml`, `.github/workflows/ga4-mobile-monitor.yml` |
 
 ## Adding a new runbook
 
