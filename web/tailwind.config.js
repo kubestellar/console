@@ -147,12 +147,16 @@ export default {
        * - shadow-purple-glow   — Purple glow for recommended cards
        * - shadow-purple-glow-sm — Smaller purple glow for filter badges
        * - shadow-purple-inset  — Purple inset glow for active sidebar items
+       * - shadow-modal         — Modal panel drop shadow (theme-aware)
+       * - shadow-info-ring     — Info-colored focus/pulse ring (theme-aware)
        */
       boxShadow: {
         'tour-overlay': 'var(--shadow-tour-overlay)',
         'purple-glow': 'var(--shadow-purple-glow)',
         'purple-glow-sm': 'var(--shadow-purple-glow-sm)',
         'purple-inset': 'var(--shadow-purple-inset)',
+        modal: 'var(--shadow-modal)',
+        'info-ring': 'var(--shadow-info-ring)',
       },
       keyframes: {
         'roll-up': {

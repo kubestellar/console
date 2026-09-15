@@ -93,7 +93,7 @@ export function WatchDetailModal({
       className="p-5"
       style={{
         position: 'fixed', inset: 0, zIndex: 1000,
-        background: 'rgba(0, 0, 0, 0.6)',
+        background: 'var(--overlay-backdrop)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         backdropFilter: 'blur(4px)',
       }}
@@ -108,7 +108,7 @@ export function WatchDetailModal({
           borderRadius: 'var(--s-r)',
           display: 'flex', flexDirection: 'column',
           fontFamily: 'var(--s-sans)', color: 'var(--s-text)',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+          boxShadow: 'var(--shadow-modal)',
         }}
       >
         <WatchDetailHeader
