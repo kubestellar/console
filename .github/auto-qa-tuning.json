@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_updated": "2026-09-14T03:08:12Z",
+  "last_updated": "2026-09-15T03:07:39Z",
   "rolling_window_days": 30,
   "categories": {
     "performance": {
@@ -18,25 +18,25 @@
       "last_evaluated": "2026-09-03T04:23:35Z"
     },
     "a11y": {
-      "merged": 93,
+      "merged": 94,
       "closed": 29,
       "acceptance_rate": 0.76,
       "status": "normal",
-      "last_evaluated": "2026-09-13T03:07:22Z"
+      "last_evaluated": "2026-09-15T03:07:39Z"
     },
     "operator": {
-      "merged": 983,
+      "merged": 1004,
       "closed": 276,
       "acceptance_rate": 0.78,
       "status": "normal",
-      "last_evaluated": "2026-09-14T03:08:12Z"
+      "last_evaluated": "2026-09-15T03:07:39Z"
     },
     "sre": {
-      "merged": 648,
+      "merged": 650,
       "closed": 101,
       "acceptance_rate": 0.87,
       "status": "boosted",
-      "last_evaluated": "2026-09-13T03:07:22Z"
+      "last_evaluated": "2026-09-15T03:07:39Z"
     },
     "features": {
       "merged": 50,
@@ -46,11 +46,11 @@
       "last_evaluated": "2026-09-12T03:06:46Z"
     },
     "resilience": {
-      "merged": 128,
+      "merged": 129,
       "closed": 66,
       "acceptance_rate": 0.66,
       "status": "normal",
-      "last_evaluated": "2026-09-14T03:08:12Z"
+      "last_evaluated": "2026-09-15T03:07:39Z"
     },
     "consistency": {
       "merged": 39,
@@ -95,15 +95,6 @@
     ]
   },
   "history": [
-    {
-      "date": "2026-08-01",
-      "total_merged": 1692,
-      "total_closed": 576,
-      "categories_blocked": [],
-      "categories_boosted": [
-        "sre"
-      ]
-    },
     {
       "date": "2026-08-03",
       "total_merged": 1700,
@@ -379,6 +370,16 @@
     {
       "date": "2026-09-14",
       "total_merged": 2085,
+      "total_closed": 585,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "sre",
+        "features"
+      ]
+    },
+    {
+      "date": "2026-09-15",
+      "total_merged": 2110,
       "total_closed": 585,
       "categories_blocked": [],
       "categories_boosted": [
