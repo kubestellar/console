@@ -293,6 +293,9 @@ export function useQuantumControls() {
           timestamp: new Date().toISOString(),
         },
       }))
+      // #23189 — execution was previously a silent form submit with no
+      // success feedback beyond the status panel updating.
+      showToast(t('quantumControlPanel.executionSubmitted'), 'success')
 
       setTimeout(async () => {
         try {
