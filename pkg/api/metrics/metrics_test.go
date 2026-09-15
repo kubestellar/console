@@ -230,9 +230,11 @@ func TestWebSocketMetrics(t *testing.T) {
 		t.Fatalf("metrics scrape failed: %v", err)
 	}
 
-	buf := make([]byte, 64*1024)
-	n, _ := resp.Body.Read(buf)
-	body := string(buf[:n])
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("failed to read metrics body: %v", err)
+	}
+	body := string(bodyBytes)
 
 	if !strings.Contains(body, "console_websocket_connects_total 2") {
 		t.Errorf("expected 2 recorded connects, got:\n%s", body)
