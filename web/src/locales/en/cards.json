@@ -229,6 +229,7 @@
     "clearCredentialsTitle": "Clear credentials?",
     "clearCredentialsMessage": "Are you sure you want to delete your IBM Quantum credentials? You'll need to enter them again to run circuits on IBM hardware.",
     "clearCredentialsFailed": "Failed to clear credentials",
+    "executionSubmitted": "Circuit execution submitted",
     "executionRefreshFailed": "Execution started, but status refresh failed",
     "executionError": "Execution error",
     "loopModeToggleFailed": "Failed to toggle loop mode",
