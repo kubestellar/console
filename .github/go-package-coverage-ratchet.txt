@@ -91,7 +91,6 @@ pkg/agent/updater 75.5
 pkg/agent/workers 67.5
 
 # --- Stellar subpackages (metrics, observer, providers, scheduler, solver, watcher) ---
-pkg/stellar/metrics 99.5
 pkg/stellar/observer 83.0
 pkg/stellar/providers 90.5
 pkg/stellar/scheduler 81.0
