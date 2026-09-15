@@ -23,6 +23,9 @@ export function useMissionRecommendations(isOpen: boolean, clusterContext: Clust
   const [installerMissions, setInstallerMissions] = useState<MissionExport[]>(missionCache.installers)
   const [fixerMissions, setFixerMissions] = useState<MissionExport[]>(missionCache.fixes)
   const [missionFetchError, setMissionFetchError] = useState<string | null>(missionCache.fetchError)
+  const [lastUpdated, setLastUpdated] = useState<number | null>(
+    missionCache.fetchedAt > 0 ? missionCache.fetchedAt : null,
+  )
   const [recommendations, setRecommendations] = useState<MissionMatch[]>([])
   const [loadingRecommendations, setLoadingRecommendations] = useState(false)
   const [searchProgress, setSearchProgress] = useState<SearchProgress>({
@@ -89,11 +92,13 @@ export function useMissionRecommendations(isOpen: boolean, clusterContext: Clust
 
     setInstallerMissions([...missionCache.installers])
     setFixerMissions([...missionCache.fixes])
+    setLastUpdated(missionCache.fetchedAt > 0 ? missionCache.fetchedAt : null)
 
     const listener = () => {
       setInstallerMissions([...missionCache.installers])
       setFixerMissions([...missionCache.fixes])
       setMissionFetchError(missionCache.fetchError)
+      setLastUpdated(missionCache.fetchedAt > 0 ? missionCache.fetchedAt : null)
     }
 
     missionCache.listeners.add(listener)
@@ -115,5 +120,6 @@ export function useMissionRecommendations(isOpen: boolean, clusterContext: Clust
     searchProgress,
     tokenError,
     hasCluster,
+    lastUpdated,
   }
 }

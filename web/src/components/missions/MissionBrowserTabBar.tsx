@@ -9,6 +9,7 @@
 
 import { RefreshCw } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { formatTimeAgo } from '../../lib/formatters'
 import { BROWSER_TABS, missionCache, resetMissionCache } from './browser'
 import type { BrowserTab } from './browser'
 
@@ -17,6 +18,8 @@ interface MissionBrowserTabBarProps {
   onTabChange: (tab: BrowserTab) => void
   installerCount: number
   fixerCount: number
+  /** Timestamp (ms since epoch) of the last successful mission data fetch, or null if not yet loaded */
+  lastUpdated?: number | null
 }
 
 export function MissionBrowserTabBar({
@@ -24,6 +27,7 @@ export function MissionBrowserTabBar({
   onTabChange,
   installerCount,
   fixerCount,
+  lastUpdated,
 }: MissionBrowserTabBarProps) {
   const isRefreshing =
     activeTab === 'installers'
@@ -62,10 +66,23 @@ export function MissionBrowserTabBar({
         </button>
       ))}
 
+      {/* Freshness indicator — shows when the mission index was last fetched (#23069) */}
+      {!isRefreshing && lastUpdated && (
+        <span
+          className="ml-auto text-2xs text-muted-foreground whitespace-nowrap"
+          title={`Last updated ${new Date(lastUpdated).toLocaleString()}`}
+        >
+          Updated {formatTimeAgo(lastUpdated)}
+        </span>
+      )}
+
       {/* Refresh all mission data */}
       <button
         onClick={() => resetMissionCache()}
-        className="ml-auto inline-flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors"
+        className={cn(
+          'inline-flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors',
+          (!lastUpdated || isRefreshing) && 'ml-auto',
+        )}
         title={
           activeTab === 'installers'
             ? 'Refresh installers'
