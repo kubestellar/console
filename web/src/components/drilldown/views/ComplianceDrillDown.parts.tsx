@@ -266,20 +266,20 @@ export function ComplianceTable({
         <div className="rounded-lg border border-border overflow-hidden">
           {/* Table header */}
           <div className="grid grid-cols-[1fr_2fr_100px_100px_120px_120px] gap-px bg-border text-xs font-medium text-muted-foreground">
-            <button onClick={() => onSort('controlId')} className="flex min-w-11 min-h-11 items-center gap-1 px-3 py-2 bg-card/80 hover:bg-card transition-colors">
+            <button onClick={() => onSort('controlId')} className="flex items-center gap-1 px-3 py-2 bg-card/80 hover:bg-card transition-colors min-h-11 min-w-11">
               Control <SortIndicator field="controlId" sortField={sortField} sortDir={sortDir} />
             </button>
             <div className="px-3 py-2 min-h-11 bg-card/80">Description</div>
-            <button onClick={() => onSort('status')} className="flex min-w-11 min-h-11 items-center gap-1 px-3 py-2 bg-card/80 hover:bg-card transition-colors">
+            <button onClick={() => onSort('status')} className="flex items-center gap-1 px-3 py-2 bg-card/80 hover:bg-card transition-colors min-h-11 min-w-11">
               Status <SortIndicator field="status" sortField={sortField} sortDir={sortDir} />
             </button>
-            <button onClick={() => onSort('severity')} className="flex min-w-11 min-h-11 items-center gap-1 px-3 py-2 bg-card/80 hover:bg-card transition-colors">
+            <button onClick={() => onSort('severity')} className="flex items-center gap-1 px-3 py-2 bg-card/80 hover:bg-card transition-colors min-h-11 min-w-11">
               Severity <SortIndicator field="severity" sortField={sortField} sortDir={sortDir} />
             </button>
-            <button onClick={() => onSort('cluster')} className="flex min-w-11 min-h-11 items-center gap-1 px-3 py-2 bg-card/80 hover:bg-card transition-colors">
+            <button onClick={() => onSort('cluster')} className="flex items-center gap-1 px-3 py-2 bg-card/80 hover:bg-card transition-colors min-h-11 min-w-11">
               Cluster <SortIndicator field="cluster" sortField={sortField} sortDir={sortDir} />
             </button>
-            <button onClick={() => onSort('profile')} className="flex min-w-11 min-h-11 items-center gap-1 px-3 py-2 bg-card/80 hover:bg-card transition-colors">
+            <button onClick={() => onSort('profile')} className="flex items-center gap-1 px-3 py-2 bg-card/80 hover:bg-card transition-colors min-h-11 min-w-11">
               Profile <SortIndicator field="profile" sortField={sortField} sortDir={sortDir} />
             </button>
           </div>
