@@ -55,6 +55,7 @@ export function SettingsBackupSection({
 }: SettingsBackupSectionProps) {
   const { t } = useTranslation()
   const [exporting, setExporting] = useState(false)
+  const [exportError, setExportError] = useState<string | null>(null)
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
   const [importSuccess, setImportSuccess] = useState(false)
@@ -78,10 +79,11 @@ export function SettingsBackupSection({
 
   const handleExport = async () => {
     setExporting(true)
+    setExportError(null)
     try {
       await onExport()
     } catch {
-      // Error handled by hook
+      setExportError(t('settings.backup.exportFailed'))
     } finally {
       setExporting(false)
     }
@@ -193,7 +195,10 @@ export function SettingsBackupSection({
           />
         </div>
 
-        {/* Import feedback */}
+        {/* Export / Import feedback */}
+        {exportError && (
+          <p className="text-xs text-red-400 px-1">{exportError}</p>
+        )}
         {importError && (
           <p className="text-xs text-red-400 px-1">{importError}</p>
         )}
