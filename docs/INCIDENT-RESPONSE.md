@@ -1,5 +1,9 @@
 # Incident Response Playbook
 
+See [`docs/runbooks/README.md`](runbooks/README.md) for the index of
+scenario-specific triage runbooks (health-endpoint degradation, scheduled
+canary/scan failures, alerting mechanics).
+
 ## Main Branch Build Recovery SLA
 
 When the main branch CI/CD pipeline breaks (build failures, test failures, or deployment issues), this playbook defines the process for rapid recovery.
