@@ -1,180 +1,43 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useRef } from 'react'
 import {
   Cloud, Wind, Droplets, Gauge, Eye,
-  MapPin, Calendar, Search as SearchIcon, Star, X,
-  ExternalLink, ChevronRight, ChevronDown, Loader2
+  MapPin, Search as SearchIcon,
+  ExternalLink, Loader2
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { WeatherAnimation, getWeatherCondition, getConditionColor } from './WeatherAnimation'
-import { WEATHER_API } from '../../../config/externalApis'
+import { WeatherAnimation, getWeatherCondition } from './WeatherAnimation'
+import { WeatherSearch } from './WeatherSearch'
+import { WeatherForecast } from './WeatherForecast'
+import { WeatherHourly } from './WeatherHourly'
+import { useWeatherData } from './useWeatherData'
 import { useCardLoadingState } from '../CardDataContext'
 import { RefreshIndicator } from '../../ui/RefreshIndicator'
-import { useKeyboardNav } from '../../../hooks/useKeyboardNav'
-import { useCache } from '../../../lib/cache'
-import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../../lib/constants'
-import { useToast } from '../../ui/Toast'
-import type {
-  GeocodingResult,
-  ForecastDay,
-  HourlyForecast,
-  CurrentWeather,
-  WeatherConfig,
-  SavedLocation } from './types'
-import { INITIAL_WEATHER, DEFAULT_LOCATION, FORECAST_DEMO_WEATHER_CODES, HOURLY_DEMO_WEATHER_PATTERN, HOURLY_FORECAST_LENGTH, DEFAULT_FORECAST_LENGTH, type WeatherData } from './Weather.constants'
-
-// Demo weather data for demo mode (avoids external API calls)
-function getDemoWeatherData(units: 'F' | 'C'): {
-  current: CurrentWeather
-  forecast: ForecastDay[]
-  hourly: HourlyForecast[]
-} {
-  const isF = units === 'F'
-  const today = new Date()
-  const forecast: ForecastDay[] = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date(today)
-    date.setDate(date.getDate() + i)
-    return {
-      date: date.toISOString().split('T')[0],
-      dayOfWeek: i === 0 ? 'Today' : date.toLocaleDateString('en-US', { weekday: 'short' }),
-      weatherCode: FORECAST_DEMO_WEATHER_CODES[i % FORECAST_DEMO_WEATHER_CODES.length],
-      tempHigh: isF ? 72 + Math.round(Math.sin(i) * 8) : 22 + Math.round(Math.sin(i) * 4),
-      tempLow: isF ? 55 + Math.round(Math.sin(i) * 5) : 13 + Math.round(Math.sin(i) * 3),
-      precipitation: [10, 0, 20, 60, 40, 5, 15][i] }
-  })
-
-  const hourly: HourlyForecast[] = Array.from({ length: HOURLY_FORECAST_LENGTH }, (_, i) => {
-    const hour = (today.getHours() + i) % 24
-    return {
-      hour: hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`,
-      time: hour,
-      temperature: isF ? 62 + Math.round(Math.sin(i / 4) * 10) : 17 + Math.round(Math.sin(i / 4) * 5),
-      weatherCode: HOURLY_DEMO_WEATHER_PATTERN[i],
-      precipitation: i > 10 && i < 16 ? 30 + i * 2 : 5 }
-  })
-
-  return {
-    current: {
-      temperature: isF ? 68 : 20,
-      weatherCode: 2,
-      humidity: 55,
-      feelsLike: isF ? 66 : 19,
-      windSpeed: isF ? 12 : 19,
-      isDaytime: today.getHours() >= 6 && today.getHours() < 20 },
-    forecast,
-    hourly }
-}
+import type { WeatherConfig } from './types'
+import { DEFAULT_FORECAST_LENGTH } from './Weather.constants'
 
 export function Weather({ config }: { config?: WeatherConfig }) {
   const { t } = useTranslation('common')
-  const { showToast } = useToast()
   const [units, setUnits] = useState<'F' | 'C'>(config?.units || 'F')
   const [forecastLength, setForecastLength] = useState<2 | 7 | 14>(config?.forecastLength || DEFAULT_FORECAST_LENGTH)
   const [showSettings, setShowSettings] = useState(false)
   const [expandedDay, setExpandedDay] = useState<string | null>(null)
   const hourlyScrollRef = useRef<HTMLDivElement>(null)
 
-  // Current location state - restore from sessionStorage
-  // security: stored in sessionStorage, not localStorage — location preference is
-  // user-provided and only used client-side; clears on tab close to reduce exposure window
-  const [currentLocation, setCurrentLocation] = useState<SavedLocation>(() => {
-    try {
-      const saved = sessionStorage.getItem('weather-current-location')
-      if (saved) {
-        return JSON.parse(saved)
-      }
-    } catch {
-      // Fall through to default (private browsing or storage error)
-    }
-    return DEFAULT_LOCATION
-  })
-
-  // City search state
-  const [citySearchInput, setCitySearchInput] = useState('')
-  const [citySearchResults, setCitySearchResults] = useState<GeocodingResult[]>([])
-  const [isSearching, setIsSearching] = useState(false)
-  const [showCityDropdown, setShowCityDropdown] = useState(false)
-  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
-  const cityDropdownNav = useKeyboardNav({ selector: '[role="option"]:not([disabled])', orientation: 'vertical', onEscape: () => setShowCityDropdown(false) })
-
-  // security: stored in sessionStorage, not localStorage — location list is
-  // user-provided and only used client-side; clears on tab close to reduce exposure window
-  const [savedLocations, setSavedLocations] = useState<SavedLocation[]>(() => {
-    try {
-      const saved = sessionStorage.getItem('weather-saved-locations-v2')
-      return saved ? JSON.parse(saved) : []
-    } catch {
-      return []
-    }
-  })
-
-  // Weather data via useCache (persists across navigation)
-  const demoWeather = (() => {
-    const demo = getDemoWeatherData(units)
-    return { current: demo.current, forecast: demo.forecast.slice(0, forecastLength), hourly: demo.hourly }
-  })()
-
-  const weatherCacheKey = `weather:${currentLocation.latitude}:${currentLocation.longitude}:${units}:${forecastLength}`
-  const { data: weatherData, isLoading, isRefreshing, isFailed, isDemoFallback, lastRefresh, refetch } = useCache<WeatherData>({
-    key: weatherCacheKey,
-    category: 'default',
-    initialData: INITIAL_WEATHER,
-    demoData: demoWeather,
-    persist: true,
-    fetcher: async () => {
-      const tempUnit = units === 'F' ? 'fahrenheit' : 'celsius'
-      const windUnit = units === 'F' ? 'mph' : 'kmh'
-
-      const response = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${currentLocation.latitude}&longitude=${currentLocation.longitude}` +
-        `&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m` +
-        `&hourly=temperature_2m,weather_code,precipitation_probability` +
-        `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset` +
-        `&temperature_unit=${tempUnit}&wind_speed_unit=${windUnit}&forecast_days=${forecastLength}&timezone=auto`,
-        { signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) }
-      )
-
-      if (!response.ok) throw new Error('Failed to fetch weather data')
-      const data = await response.json()
-
-      const current: CurrentWeather = {
-        temperature: Math.round(data.current.temperature_2m),
-        weatherCode: data.current.weather_code,
-        humidity: data.current.relative_humidity_2m,
-        feelsLike: Math.round(data.current.apparent_temperature),
-        windSpeed: Math.round(data.current.wind_speed_10m),
-        isDaytime: data.current.is_day === 1 }
-
-      const forecast: ForecastDay[] = data.daily.time.map((date: string, i: number) => {
-        const dayDate = new Date(date)
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        const isToday = dayDate.toDateString() === today.toDateString()
-        return {
-          date,
-          dayOfWeek: isToday ? 'Today' : dayDate.toLocaleDateString('en-US', { weekday: 'short' }),
-          weatherCode: data.daily.weather_code[i],
-          tempHigh: Math.round(data.daily.temperature_2m_max[i]),
-          tempLow: Math.round(data.daily.temperature_2m_min[i]),
-          precipitation: data.daily.precipitation_probability_max[i] || 0 }
-      })
-
-      const now = new Date()
-      const currentHourIndex = data.hourly.time.findIndex((t: string) => new Date(t) >= now)
-      const hourly: HourlyForecast[] = data.hourly.time
-        .slice(currentHourIndex, currentHourIndex + 24)
-        .map((time: string, i: number) => {
-          const idx = currentHourIndex + i
-          const hour = new Date(time).getHours()
-          return {
-            hour: hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`,
-            time: hour,
-            temperature: Math.round(data.hourly.temperature_2m[idx]),
-            weatherCode: data.hourly.weather_code[idx],
-            precipitation: data.hourly.precipitation_probability[idx] || 0 }
-        })
-
-      return { current, forecast, hourly }
-    } })
+  const {
+    currentLocation,
+    savedLocations,
+    weatherData,
+    isLoading,
+    isRefreshing,
+    isFailed,
+    isDemoFallback,
+    lastRefresh,
+    refetch,
+    selectCity,
+    saveCurrentLocation,
+    removeSavedLocation,
+    loadSavedLocation,
+  } = useWeatherData(units, forecastLength)
 
   const currentWeather = weatherData.current
   const forecast = weatherData.forecast
@@ -184,112 +47,6 @@ export function Weather({ config }: { config?: WeatherConfig }) {
   // immediately on a failed fetch instead of waiting for CARD_LOADING_TIMEOUT_MS.
   const hasData = !!currentWeather
   useCardLoadingState({ isLoading: isLoading && !hasData, isRefreshing, hasAnyData: hasData, isDemoData: effectiveIsDemoData, isFailed, lastRefresh })
-
-  // Save locations to sessionStorage whenever they change.
-  // Location preferences are user-selected city names, not credentials or sensitive cluster data.
-  useEffect(() => {
-    try {
-      sessionStorage.setItem('weather-saved-locations-v2', JSON.stringify(savedLocations)) // lgtm[js/clear-text-storage-of-sensitive-data]
-    } catch {
-      // Ignore storage errors (e.g. private browsing, quota exceeded)
-    }
-  }, [savedLocations])
-
-  // Save current location to sessionStorage whenever it changes.
-  // Location preferences are user-selected city names, not credentials or sensitive cluster data.
-  useEffect(() => {
-    try {
-      sessionStorage.setItem('weather-current-location', JSON.stringify(currentLocation)) // lgtm[js/clear-text-storage-of-sensitive-data]
-    } catch {
-      // Ignore storage errors (e.g. private browsing, quota exceeded)
-    }
-  }, [currentLocation])
-
-  // City search with Open-Meteo Geocoding API
-  const searchCities = useCallback(async (query: string) => {
-    if (!query || query.length < 2) {
-      setCitySearchResults([])
-      setShowCityDropdown(false)
-      return
-    }
-
-    setIsSearching(true)
-    try {
-      const response = await fetch(
-        `${WEATHER_API.geocodingUrl}?name=${encodeURIComponent(query)}&count=5&language=en&format=json`,
-        { signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) }
-      )
-
-      if (response.ok) {
-        const data = await response.json()
-        setCitySearchResults(data.results || [])
-        setShowCityDropdown(true)
-      } else {
-        setCitySearchResults([])
-        setShowCityDropdown(false)
-      }
-    } catch (error: unknown) {
-      console.error('City search error:', error)
-      showToast(t('errors.citySearchFailed', 'City search failed. Please try again.'), 'error')
-      setCitySearchResults([])
-      setShowCityDropdown(false)
-    } finally {
-      setIsSearching(false)
-    }
-  }, [showToast, t])
-  useEffect(() => {
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current)
-    }
-
-    searchTimeoutRef.current = setTimeout(() => {
-      searchCities(citySearchInput)
-    }, 300)
-
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current)
-      }
-    }
-  }, [citySearchInput, searchCities])
-
-  useEffect(() => {
-    if (!showCityDropdown || citySearchResults.length === 0) return
-    cityDropdownNav.focusMatchingItem({ fallbackSelector: '[role="option"]:not([disabled])' })
-  }, [cityDropdownNav, citySearchResults.length, showCityDropdown])
-
-  // Select city from search results
-  const selectCity = (city: GeocodingResult) => {
-    const statePart = city.admin1 || city.country
-    const formattedName = `${city.name}, ${statePart}`
-
-    setCurrentLocation({
-      id: `${city.latitude}-${city.longitude}`,
-      cityName: formattedName,
-      latitude: city.latitude,
-      longitude: city.longitude })
-    setCitySearchInput('')
-    setShowCityDropdown(false)
-    setCitySearchResults([])
-  }
-
-  // Save current location
-  const saveCurrentLocation = () => {
-    const exists = savedLocations.some(loc => loc.id === currentLocation.id)
-    if (!exists) {
-      setSavedLocations(prev => [...prev, currentLocation])
-    }
-  }
-
-  // Remove a saved location
-  const removeSavedLocation = (id: string) => {
-    setSavedLocations(prev => prev.filter(loc => loc.id !== id))
-  }
-
-  // Load a saved location
-  const loadSavedLocation = (location: SavedLocation) => {
-    setCurrentLocation(location)
-  }
 
   // Get current weather condition
   const currentCondition = currentWeather ? getWeatherCondition(currentWeather.weatherCode) : null
@@ -345,158 +102,19 @@ export function Weather({ config }: { config?: WeatherConfig }) {
 
       {/* Settings Panel */}
       {showSettings && (
-        <div className="mb-3 p-3 rounded-xl bg-secondary backdrop-blur-xs border border-border/30 space-y-3">
-          {/* City Search */}
-          <div>
-            <label className="text-xs text-muted-foreground mb-1.5 block font-medium">Search for a city</label>
-            <div className="relative">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input
-                type="text"
-                value={citySearchInput}
-                onChange={(e) => setCitySearchInput(e.target.value)}
-                onFocus={() => citySearchResults.length > 0 && setShowCityDropdown(true)}
-                onKeyDown={(event) => {
-                  if (event.key !== 'ArrowDown' || citySearchResults.length === 0) return
-                  event.preventDefault()
-                  setShowCityDropdown(true)
-                }}
-                className="w-full pl-10 pr-10 py-2.5 text-sm rounded-lg bg-secondary/50 border border-border/30 text-foreground placeholder:text-muted-foreground"
-                placeholder="Type city name..."
-                aria-expanded={showCityDropdown}
-                aria-controls="weather-city-results"
-                aria-autocomplete="list"
-              />
-              {isSearching && (
-                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground animate-spin" />
-              )}
-
-              {/* City Search Dropdown */}
-              {showCityDropdown && citySearchResults.length > 0 && (
-                <div
-                  id="weather-city-results"
-                  ref={(node) => {
-                    cityDropdownNav.containerRef.current = node
-                  }}
-                  className="absolute z-50 w-full mt-1 bg-secondary/95 backdrop-blur-xs border border-border/30 rounded-lg shadow-lg max-h-60 overflow-y-auto"
-                  onKeyDown={cityDropdownNav.handleKeyDown}
-                  role="listbox"
-                  aria-label="City search results"
-                >
-                  {citySearchResults.map((city) => (
-                    <button
-                      key={city.id}
-                      onClick={() => selectCity(city)}
-                      className="w-full text-left px-3 py-2.5 hover:bg-secondary transition-colors border-b border-border last:border-0"
-                      role="option"
-                    >
-                      <div className="text-sm font-medium">{city.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {[city.admin1, city.country].filter(Boolean).join(', ')}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Current Location + Save Button */}
-          <div className="flex flex-wrap items-center justify-between gap-y-2 p-2.5 rounded-lg bg-secondary/50 border border-border/30">
-            <div className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-primary" />
-              <div>
-                <div className="text-sm font-medium">{currentLocation.cityName}</div>
-                <div className="text-xs text-muted-foreground">Current location</div>
-              </div>
-            </div>
-            {isCurrentLocationSaved ? (
-              <button
-                onClick={() => removeSavedLocation(currentLocation.id)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
-              >
-                <X className="w-3.5 h-3.5" />
-                Remove
-              </button>
-            ) : (
-              <button
-                onClick={saveCurrentLocation}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
-              >
-                <Star className="w-3.5 h-3.5" />
-                Save
-              </button>
-            )}
-          </div>
-
-          {/* Saved Locations */}
-          {savedLocations.length > 0 && (
-            <div>
-              <label className="text-xs text-muted-foreground mb-1.5 block font-medium">Saved locations</label>
-              <div className="space-y-1.5">
-                {savedLocations.map((location) => {
-                  const isCurrentLoc = location.id === currentLocation.id
-
-                  return (
-                    <div
-                      key={location.id}
-                      className={`flex items-center gap-2 p-2 rounded-lg transition-colors cursor-pointer ${
-                        isCurrentLoc
-                          ? 'bg-primary/10 border border-primary/30'
-                          : 'bg-secondary hover:bg-secondary/50'
-                      }`}
-                      onClick={() => !isCurrentLoc && loadSavedLocation(location)}
-                    >
-                      <MapPin className="w-4 h-4 text-muted-foreground" />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium truncate">{location.cityName}</div>
-                      </div>
-                      {!isCurrentLoc && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            removeSavedLocation(location.id)
-                          }}
-                          className="p-1 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors"
-                          title={t('common.remove')}
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Settings Row */}
-          <div className="flex gap-3 pt-2 border-t border-border/30">
-            <div className="flex-1">
-              <label className="text-xs text-muted-foreground mb-1 block">Units</label>
-              <select
-                value={units}
-                onChange={(e) => setUnits(e.target.value as 'F' | 'C')}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-secondary/50 border border-border/30 text-foreground"
-              >
-                <option value="F">°F (Fahrenheit)</option>
-                <option value="C">°C (Celsius)</option>
-              </select>
-            </div>
-            <div className="flex-1">
-              <label className="text-xs text-muted-foreground mb-1 block">Forecast</label>
-              <select
-                value={forecastLength}
-                onChange={(e) => setForecastLength(Number(e.target.value) as 2 | 7 | 14)}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-secondary/50 border border-border/30 text-foreground"
-              >
-                <option value={2}>2 days</option>
-                <option value={7}>7 days</option>
-                <option value={14}>14 days</option>
-              </select>
-            </div>
-          </div>
-        </div>
+        <WeatherSearch
+          currentLocation={currentLocation}
+          savedLocations={savedLocations}
+          isCurrentLocationSaved={isCurrentLocationSaved}
+          onSelectCity={selectCity}
+          onSaveCurrentLocation={saveCurrentLocation}
+          onRemoveSavedLocation={removeSavedLocation}
+          onLoadSavedLocation={loadSavedLocation}
+          units={units}
+          onUnitsChange={setUnits}
+          forecastLength={forecastLength}
+          onForecastLengthChange={setForecastLength}
+        />
       )}
 
       {/* Main Weather Display */}
@@ -561,117 +179,15 @@ export function Weather({ config }: { config?: WeatherConfig }) {
         )}
 
         {/* Hourly Forecast */}
-        {hourlyForecast.length > 0 && (
-          <div className="rounded-2xl bg-secondary border border-border p-4">
-            <div className="flex items-center gap-2 mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              <Calendar className="w-3 h-3" />
-              <span>{t('weather.hourlyForecast')}</span>
-            </div>
-            <div
-              ref={hourlyScrollRef}
-              className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-secondary scrollbar-track-transparent"
-            >
-              {hourlyForecast.map((hour, idx) => {
-                const condition = getWeatherCondition(hour.weatherCode)
-                const HourIcon = condition.icon
-                const isNow = idx === 0
-
-                return (
-                  <div
-                    key={idx}
-                    className="flex flex-col items-center gap-2 min-w-[60px] text-center"
-                  >
-                    <div className="text-sm font-medium">
-                      {isNow ? 'Now' : hour.hour}
-                    </div>
-                    <HourIcon className={`w-6 h-6 ${getConditionColor(hour.weatherCode)}`} />
-                    <div className="text-lg font-semibold">
-                      {hour.temperature}°
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
+        <WeatherHourly hourlyForecast={hourlyForecast} hourlyScrollRef={hourlyScrollRef} />
 
         {/* Daily Forecast */}
-        {forecast.length > 0 && (
-          <div className="rounded-2xl bg-secondary border border-border p-4">
-            <div className="flex items-center gap-2 mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              <Calendar className="w-3 h-3" />
-              <span>{forecastLength}-Day Forecast</span>
-            </div>
-            <div className="space-y-1">
-              {forecast.map((day, idx) => {
-                const condition = getWeatherCondition(day.weatherCode)
-                const Icon = condition.icon
-                const isExpanded = expandedDay === day.date
-                const tempRange = day.tempHigh - day.tempLow
-                const minTemp = Math.min(...forecast.map(d => d.tempLow))
-                const maxTemp = Math.max(...forecast.map(d => d.tempHigh))
-                const totalRange = maxTemp - minTemp || 1
-                const leftPercent = ((day.tempLow - minTemp) / totalRange) * 100
-                const widthPercent = (tempRange / totalRange) * 100
-
-                return (
-                  <div key={day.date}>
-                    <button
-                      onClick={() => setExpandedDay(isExpanded ? null : day.date)}
-                      className="w-full flex items-center gap-3 py-2 px-2 rounded-xl hover:bg-secondary/50 transition-all group"
-                    >
-                      <div className="w-16 text-left text-sm font-medium">
-                        {day.dayOfWeek}
-                      </div>
-
-                      <Icon className={`w-6 h-6 ${getConditionColor(day.weatherCode)}`} />
-
-                      <div className="flex-1 flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground w-8 text-right">
-                          {day.tempLow}°
-                        </span>
-                        <div className="flex-1 h-1.5 bg-secondary/50 rounded-full overflow-hidden relative">
-                          <div
-                            className="absolute h-full bg-linear-to-r from-blue-400 to-orange-400 rounded-full"
-                            style={{
-                              left: `${leftPercent}%`,
-                              width: `${Math.max(widthPercent, 5)}%` }}
-                          />
-                        </div>
-                        <span className="text-sm font-medium w-8">
-                          {day.tempHigh}°
-                        </span>
-                      </div>
-
-                      {isExpanded ? (
-                        <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                      ) : (
-                        <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                      )}
-                    </button>
-
-                    {isExpanded && (
-                      <div className="px-4 py-3 ml-6 space-y-2 text-sm">
-                        <div className="flex flex-wrap items-center justify-between gap-y-2">
-                          <span className="text-muted-foreground">Condition</span>
-                          <span className="font-medium">{condition.label}</span>
-                        </div>
-                        <div className="flex flex-wrap items-center justify-between gap-y-2">
-                          <span className="text-muted-foreground">Precipitation</span>
-                          <span className="font-medium">{day.precipitation}%</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {idx < forecast.length - 1 && (
-                      <div className="h-px bg-border/20 mx-2" />
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
+        <WeatherForecast
+          forecast={forecast}
+          forecastLength={forecastLength}
+          expandedDay={expandedDay}
+          onToggleDay={setExpandedDay}
+        />
 
         {/* Current Conditions Grid */}
         {currentWeather && (
