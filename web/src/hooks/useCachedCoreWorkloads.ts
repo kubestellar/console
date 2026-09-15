@@ -556,7 +556,11 @@ export function useCachedDeployments(
               cluster: cluster }))
           }
         }
-        return fetchDeploymentsViaAgent(namespace)
+        const agentDeployments = await fetchDeploymentsViaAgent(namespace)
+        // null means the agent was unreachable (e.g. no local kc-agent on
+        // the hosted console) — fall through to the REST API below instead
+        // of treating it as a genuine empty result (#23107).
+        if (agentDeployments) return agentDeployments
       }
 
       // Fall back to REST API
@@ -576,7 +580,10 @@ export function useCachedDeployments(
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
       if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
-        return fetchDeploymentsViaAgent(namespace, onProgress)
+        const agentDeployments = await fetchDeploymentsViaAgent(namespace, onProgress)
+        // null means the agent was unreachable — fall through to SSE below
+        // instead of treating it as a genuine empty result (#23107).
+        if (agentDeployments) return agentDeployments
       }
 
       // Fall back to SSE streaming -> REST per-cluster

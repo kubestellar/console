@@ -232,16 +232,16 @@ describe('fetchPodIssuesViaAgent', () => {
 // ===========================================================================
 
 describe('fetchDeploymentsViaAgent', () => {
-  it('returns empty array when agent is unavailable', async () => {
+  it('returns null when agent is unavailable', async () => {
     mockIsAgentUnavailable.mockReturnValue(true)
     const result = await fetchDeploymentsViaAgent()
-    expect(result).toEqual([])
+    expect(result).toBeNull()
   })
 
-  it('returns empty array when no clusters', async () => {
+  it('returns null when no clusters', async () => {
     mockClusterCacheRef.clusters = []
     const result = await fetchDeploymentsViaAgent()
-    expect(result).toEqual([])
+    expect(result).toBeNull()
   })
 
   it('fetches deployments and tags with short cluster name', async () => {
@@ -257,21 +257,24 @@ describe('fetchDeploymentsViaAgent', () => {
 
     const result = await fetchDeploymentsViaAgent()
     expect(result).toHaveLength(1)
-    expect(result[0].cluster).toBe('prod')
+    expect(result?.[0].cluster).toBe('prod')
   })
 
-  it('throws on non-ok response', async () => {
+  // #23107 — when every per-cluster request rejects (e.g. no local kc-agent
+  // reachable, as on the hosted console), the fetcher must return null
+  // instead of an empty array so callers fall through to the REST/SSE
+  // backend path rather than caching a false "zero deployments" result.
+  it('returns null when all cluster fetches fail (non-ok response)', async () => {
     mockClusterCacheRef.clusters = [
       { name: 'prod', reachable: true },
     ]
     mockAgentFetch.mockResolvedValue({ ok: false, status: 500 })
 
-    // The error is caught by settledWithConcurrency, so result is empty
     const result = await fetchDeploymentsViaAgent()
-    expect(result).toEqual([])
+    expect(result).toBeNull()
   })
 
-  it('handles invalid JSON gracefully', async () => {
+  it('returns null when JSON parsing fails for every cluster', async () => {
     mockClusterCacheRef.clusters = [
       { name: 'prod', reachable: true },
     ]
@@ -281,7 +284,23 @@ describe('fetchDeploymentsViaAgent', () => {
     })
 
     const result = await fetchDeploymentsViaAgent()
-    expect(result).toEqual([])
+    expect(result).toBeNull()
+  })
+
+  it('returns partial results (not null) when only some clusters fail', async () => {
+    mockClusterCacheRef.clusters = [
+      { name: 'prod', reachable: true },
+      { name: 'staging', reachable: true },
+    ]
+    mockAgentFetch.mockImplementation(async (url: string) => {
+      if (url.includes('cluster=prod')) {
+        return { ok: true, json: async () => ({ deployments: [{ name: 'nginx' }] }) }
+      }
+      return { ok: false, status: 500 }
+    })
+
+    const result = await fetchDeploymentsViaAgent()
+    expect(result).toHaveLength(1)
   })
 
   it('passes namespace parameter in query string', async () => {

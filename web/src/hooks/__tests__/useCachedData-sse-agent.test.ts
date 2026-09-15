@@ -353,6 +353,7 @@ describe('useCachedData', () => {
 
       mockClusterCacheRef.clusters = [{ name: 'c1', context: 'c1-ctx', reachable: true }] as typeof mockClusterCacheRef.clusters
       mockIsAgentUnavailable.mockReturnValue(false)
+      mockIsBackendUnavailable.mockReturnValue(true)
 
       // Agent returns ok but JSON fails (returns null via .catch)
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
@@ -364,11 +365,13 @@ describe('useCachedData', () => {
       useCachedDeployments() // no cluster => uses fetchDeploymentsViaAgent
 
       const fetcher = capturedOpts.fetcher as () => Promise<unknown[]>
-      const result = await fetcher()
 
-      // fetchDeploymentsViaAgent: null data => throws 'Invalid JSON'
-      // settledWithConcurrency settles, accumulated is empty, returns []
-      expect(Array.isArray(result)).toBe(true)
+      // #23107 — every per-cluster agent request failing must NOT resolve
+      // to a silent []. fetchDeploymentsViaAgent now returns null in that
+      // case, so the outer fetcher falls through to the REST path, which
+      // (with no backend available in this test) surfaces as an explicit
+      // error instead of a false "zero deployments" result.
+      await expect(fetcher()).rejects.toThrow('No data source available')
     })
 
     it('fetchDeploymentsViaAgent tags results with short cluster name, not context', async () => {
