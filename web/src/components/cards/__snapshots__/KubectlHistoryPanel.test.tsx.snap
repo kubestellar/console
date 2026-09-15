@@ -10,7 +10,7 @@ exports[`CommandHistoryPanel > matches snapshot with history 1`] = `
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-rotate-ccw-clock w-4 h-4 text-orange-400"
+        class="lucide lucide-rotate-ccw-clock lucide-history w-4 h-4 text-orange-400"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -83,7 +83,7 @@ exports[`CommandHistoryPanel > matches snapshot with history 1`] = `
           >
             <svg
               aria-hidden="true"
-              class="lucide lucide-circle-check-big w-3 h-3 text-green-400 shrink-0"
+              class="lucide lucide-circle-check-big lucide-check-circle w-3 h-3 text-green-400 shrink-0"
               fill="none"
               height="24"
               stroke="currentColor"

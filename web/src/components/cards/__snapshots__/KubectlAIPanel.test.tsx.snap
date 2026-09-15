@@ -10,7 +10,7 @@ exports[`AIAssistantPanel > matches snapshot 1`] = `
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-sparkles w-4 h-4 text-purple-400"
+        class="lucide lucide-sparkles lucide-stars w-4 h-4 text-purple-400"
         fill="none"
         height="24"
         stroke="currentColor"
