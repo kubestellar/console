@@ -172,10 +172,11 @@ export function RBACExplorer() {
         <p className="text-xs text-muted-foreground/70 text-center max-w-xs">{error}</p>
         <button
           onClick={refetch}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition-colors"
+          disabled={isRefreshing}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition-colors disabled:opacity-50"
           data-testid="rbac-retry"
         >
-          <RefreshCw className="w-3 h-3" />
+          <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
           {t('common:rbac.retry')}
         </button>
       </div>

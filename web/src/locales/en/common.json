@@ -997,6 +997,7 @@
       "downloaded": "Downloaded!",
       "importSuccess": "Settings imported successfully",
       "importFailed": "Failed to import settings. Check that the file is a valid backup.",
+      "exportFailed": "Failed to export settings. Please try again.",
       "securityNote": "API keys, tokens, and credentials are AES-256-GCM encrypted at rest. Non-sensitive preferences (theme, AI mode) are stored in plaintext for easy reading. Exported backups retain encryption — they can only be imported on machines with the same encryption key."
     },
     "permissions": {

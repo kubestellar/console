@@ -255,6 +255,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
           onTabChange={handleTabChange}
           installerCount={recommendations.installerMissions.length}
           fixerCount={recommendations.fixerMissions.length}
+          lastUpdated={recommendations.lastUpdated}
         />
 
         <div className="flex-1 flex overflow-hidden">

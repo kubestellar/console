@@ -115,7 +115,7 @@ export function PolicyDrillDownHeader({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-6 text-sm">
           {canGoBack && (
-            <button onClick={onBack} className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors min-h-11 min-w-11 px-2 py-2">
+            <button onClick={onBack} className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors min-h-11 min-w-11 px-3 py-2">
               <ChevronLeft className="w-4 h-4" />
               {t('drilldown.goBack', 'Back')}
             </button>

@@ -363,16 +363,20 @@ export const coreFetchers = {
   deploymentIssues: async (): Promise<DeploymentIssue[]> => {
     if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
       const deployments = await fetchDeploymentsViaAgent()
-      return deployments
-        .filter(d => (d.readyReplicas ?? 0) < (d.replicas ?? 1))
-        .map(d => ({
-          name: d.name,
-          namespace: d.namespace || 'default',
-          cluster: d.cluster,
-          replicas: d.replicas ?? 1,
-          readyReplicas: d.readyReplicas ?? 0,
-          reason: d.status === 'failed' ? 'DeploymentFailed' : 'ReplicaFailure'
-        }))
+      // null means the agent was unreachable — fall through to the
+      // backend-only endpoint below instead of reporting zero issues (#23107).
+      if (deployments) {
+        return deployments
+          .filter(d => (d.readyReplicas ?? 0) < (d.replicas ?? 1))
+          .map(d => ({
+            name: d.name,
+            namespace: d.namespace || 'default',
+            cluster: d.cluster,
+            replicas: d.replicas ?? 1,
+            readyReplicas: d.readyReplicas ?? 0,
+            reason: d.status === 'failed' ? 'DeploymentFailed' : 'ReplicaFailure'
+          }))
+      }
     }
     const token = getToken()
     if (token && token !== 'demo-token' && !isBackendUnavailable()) {
@@ -384,7 +388,10 @@ export const coreFetchers = {
   },
   deployments: async (): Promise<Deployment[]> => {
     if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
-      return fetchDeploymentsViaAgent()
+      const deployments = await fetchDeploymentsViaAgent()
+      // null means the agent was unreachable — fall through to the REST
+      // API below instead of caching a false empty result (#23107).
+      if (deployments) return deployments
     }
     const token = getToken()
     if (token && token !== 'demo-token' && !isBackendUnavailable()) {

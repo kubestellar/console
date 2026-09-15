@@ -97,4 +97,31 @@ describe('MissionBrowserTabBar', () => {
     const refreshButton = container.querySelector('button[title*="Refresh"]')
     expect(refreshButton).toBeInTheDocument()
   })
+
+  it('shows a freshness indicator when lastUpdated is set', () => {
+    const fiveMinutesAgo = Date.now() - 5 * 60 * 1000
+    render(
+      <MissionBrowserTabBar
+        activeTab="recommended"
+        onTabChange={vi.fn()}
+        installerCount={10}
+        fixerCount={5}
+        lastUpdated={fiveMinutesAgo}
+      />
+    )
+    expect(screen.getByText(/Updated 5m ago/)).toBeInTheDocument()
+  })
+
+  it('does not show a freshness indicator when lastUpdated is null', () => {
+    render(
+      <MissionBrowserTabBar
+        activeTab="recommended"
+        onTabChange={vi.fn()}
+        installerCount={10}
+        fixerCount={5}
+        lastUpdated={null}
+      />
+    )
+    expect(screen.queryByText(/Updated/)).not.toBeInTheDocument()
+  })
 })

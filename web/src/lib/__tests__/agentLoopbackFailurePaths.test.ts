@@ -324,33 +324,34 @@ describe('agentFetchers failure paths', () => {
   })
 
   describe('fetchDeploymentsViaAgent', () => {
-    it('returns empty array when agent is unavailable', async () => {
+    it('returns null when agent is unavailable', async () => {
       mockIsAgentUnavailable.mockReturnValue(true)
       const { fetchDeploymentsViaAgent } = await import('../../hooks/useCachedData/agentFetchers')
       const result = await fetchDeploymentsViaAgent()
-      expect(result).toEqual([])
+      expect(result).toBeNull()
       expect(mockAgentFetch).not.toHaveBeenCalled()
     })
 
-    it('returns empty array when no clusters available', async () => {
+    it('returns null when no clusters available', async () => {
       mockClusterCacheRef.clusters = []
       const { fetchDeploymentsViaAgent } = await import('../../hooks/useCachedData/agentFetchers')
       const result = await fetchDeploymentsViaAgent()
-      expect(result).toEqual([])
+      expect(result).toBeNull()
     })
 
-    it('handles HTTP error from agent endpoint', async () => {
+    // #23107 — when every per-cluster request fails, the fetcher must
+    // return null (not []) so callers fall through to the REST/SSE backend
+    // path instead of caching a false "zero deployments" result.
+    it('returns null when HTTP error from agent endpoint fails every cluster', async () => {
       mockClusterCacheRef.clusters = [{ name: 'c1', reachable: true }]
       mockAgentFetch.mockResolvedValue({ ok: false, status: 503 })
 
       const { fetchDeploymentsViaAgent } = await import('../../hooks/useCachedData/agentFetchers')
-      // Errors are caught per-cluster by settledWithConcurrency
       const result = await fetchDeploymentsViaAgent()
-      // Failed clusters produce no results
-      expect(result).toEqual([])
+      expect(result).toBeNull()
     })
 
-    it('handles invalid JSON from agent endpoint', async () => {
+    it('returns null when invalid JSON fails every cluster', async () => {
       mockClusterCacheRef.clusters = [{ name: 'c1', reachable: true }]
       mockAgentFetch.mockResolvedValue({
         ok: true,
@@ -359,7 +360,7 @@ describe('agentFetchers failure paths', () => {
 
       const { fetchDeploymentsViaAgent } = await import('../../hooks/useCachedData/agentFetchers')
       const result = await fetchDeploymentsViaAgent()
-      expect(result).toEqual([])
+      expect(result).toBeNull()
     })
 
     it('maps cluster names correctly from agent response', async () => {
@@ -374,9 +375,9 @@ describe('agentFetchers failure paths', () => {
       const { fetchDeploymentsViaAgent } = await import('../../hooks/useCachedData/agentFetchers')
       const result = await fetchDeploymentsViaAgent()
 
-      expect(result.length).toBe(1)
+      expect(result?.length).toBe(1)
       // Should use short name 'prod', not context path
-      expect(result[0].cluster).toBe('prod')
+      expect(result?.[0].cluster).toBe('prod')
     })
   })
 
