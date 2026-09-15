@@ -65,6 +65,8 @@ vi.mock('../../config/externalApis', () => ({
 import { useCardLoadingState } from './CardDataContext'
 import { useGatewayStatus } from '../../hooks/useGatewayStatus'
 import { useCardData } from '../../lib/cards/cardHooks'
+import type { Gateway } from '../../hooks/useGatewayStatus'
+import type { UseCardDataResult } from '../../lib/cards/cardSort'
 
 const mockLoadingState = vi.mocked(useCardLoadingState)
 const mockUseGatewayStatus = vi.mocked(useGatewayStatus)
@@ -121,31 +123,26 @@ const baseCardData = {
 describe('GatewayStatus', () => {
   beforeEach(() => {
     mockLoadingState.mockReturnValue(baseLoadingState)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockUseGatewayStatus.mockReturnValue(baseGatewayStatus as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockUseCardData.mockReturnValue(baseCardData as any)
+    mockUseGatewayStatus.mockReturnValue(baseGatewayStatus as ReturnType<typeof useGatewayStatus>)
+    mockUseCardData.mockReturnValue(baseCardData as UseCardDataResult<Gateway, string>)
   })
 
   it('renders skeleton while loading', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockUseGatewayStatus.mockReturnValue({ ...baseGatewayStatus, isLoading: true } as any)
+    mockUseGatewayStatus.mockReturnValue({ ...baseGatewayStatus, isLoading: true } as ReturnType<typeof useGatewayStatus>)
     const { container } = render(<GatewayStatus />)
     expect(container.firstChild).toBeTruthy()
     expect(container.querySelector('[data-testid="skeleton"]')).toBeInTheDocument()
   })
 
   it('renders error state when fetch failed', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockUseGatewayStatus.mockReturnValue({ ...baseGatewayStatus, isLoading: false, isFailed: true } as any)
+    mockUseGatewayStatus.mockReturnValue({ ...baseGatewayStatus, isLoading: false, isFailed: true } as ReturnType<typeof useGatewayStatus>)
     render(<GatewayStatus />)
     expect(screen.getByText('gatewayStatus.loadFailed')).toBeInTheDocument()
   })
 
   it('retry button calls refetch', () => {
     const refetch = vi.fn()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockUseGatewayStatus.mockReturnValue({ ...baseGatewayStatus, isLoading: false, isFailed: true, refetch } as any)
+    mockUseGatewayStatus.mockReturnValue({ ...baseGatewayStatus, isLoading: false, isFailed: true, refetch } as ReturnType<typeof useGatewayStatus>)
     render(<GatewayStatus />)
     fireEvent.click(screen.getByText('common:common.retry'))
     expect(refetch).toHaveBeenCalledTimes(1)
@@ -164,10 +161,8 @@ describe('GatewayStatus', () => {
         listeners: [{ protocol: 'HTTP', port: 80 }],
       },
     ]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockUseGatewayStatus.mockReturnValue({ ...baseGatewayStatus, gateways } as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockUseCardData.mockReturnValue({ ...baseCardData, items: gateways, totalItems: 1 } as any)
+    mockUseGatewayStatus.mockReturnValue({ ...baseGatewayStatus, gateways } as ReturnType<typeof useGatewayStatus>)
+    mockUseCardData.mockReturnValue({ ...baseCardData, items: gateways, totalItems: 1 } as UseCardDataResult<Gateway, string>)
     render(<GatewayStatus />)
     expect(screen.getByText('my-gateway')).toBeInTheDocument()
   })

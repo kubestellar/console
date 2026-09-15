@@ -42,8 +42,7 @@ const basePods = {
 describe('DNSHealth', () => {
   beforeEach(() => {
     mockLoadingState.mockReturnValue(baseLoadingState)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockCachedPods.mockReturnValue(basePods as any)
+    mockCachedPods.mockReturnValue(basePods as ReturnType<typeof useCachedPods>)
   })
 
   it('renders skeleton while loading', () => {
@@ -58,8 +57,7 @@ describe('DNSHealth', () => {
   })
 
   it('renders error state on consecutive failures', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockCachedPods.mockReturnValue({ ...basePods, isFailed: true, consecutiveFailures: 3 } as any)
+    mockCachedPods.mockReturnValue({ ...basePods, isFailed: true, consecutiveFailures: 3 } as ReturnType<typeof useCachedPods>)
     const { container } = render(<DNSHealth />)
     // Component should render even in error state
     expect(container.firstChild).toBeTruthy()
@@ -86,8 +84,7 @@ describe('DNSHealth', () => {
         containers: [{ name: 'coredns', image: 'registry.k8s.io/coredns/coredns:v1.10.1' }],
       },
     ]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockCachedPods.mockReturnValue({ ...basePods, pods } as any)
+    mockCachedPods.mockReturnValue({ ...basePods, pods } as ReturnType<typeof useCachedPods>)
     render(<DNSHealth />)
     expect(screen.getByText('prod')).toBeInTheDocument()
     expect(screen.getByText('dnsHealth.readyCount')).toBeInTheDocument()
@@ -105,8 +102,7 @@ describe('DNSHealth', () => {
         containers: [{ name: 'coredns', image: 'registry.k8s.io/coredns/coredns:v1.10.1' }],
       },
     ]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockCachedPods.mockReturnValue({ ...basePods, pods } as any)
+    mockCachedPods.mockReturnValue({ ...basePods, pods } as ReturnType<typeof useCachedPods>)
     const { container } = render(<DNSHealth />)
     expect(container.firstChild).toBeTruthy()
   })

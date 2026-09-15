@@ -65,18 +65,12 @@ const baseLoadingState = {
 describe('ClusterFocus', () => {
   beforeEach(() => {
     mockLoadingState.mockReturnValue(baseLoadingState)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockClusters.mockReturnValue({ deduplicatedClusters: [], isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, lastRefresh: null } as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockGPUNodes.mockReturnValue({ nodes: [], isLoading: false, isRefreshing: false, isDemoFallback: false, lastRefresh: null } as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockPodIssues.mockReturnValue({ issues: [], isLoading: false, isRefreshing: false, isDemoFallback: false, lastRefresh: null } as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockDeploymentIssues.mockReturnValue({ issues: [], isLoading: false, isRefreshing: false, isDemoFallback: false, lastRefresh: null } as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockGlobalFilters.mockReturnValue({ selectedClusters: [], isAllClustersSelected: true, customFilter: '' } as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockDrillDown.mockReturnValue({ drillToCluster: vi.fn(), drillToPod: vi.fn(), drillToDeployment: vi.fn(), drillToResources: vi.fn() } as any)
+    mockClusters.mockReturnValue({ deduplicatedClusters: [], isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, lastRefresh: null } as ReturnType<typeof useClusters>)
+    mockGPUNodes.mockReturnValue({ nodes: [], isLoading: false, isRefreshing: false, isDemoFallback: false, lastRefresh: null } as ReturnType<typeof useCachedGPUNodes>)
+    mockPodIssues.mockReturnValue({ issues: [], isLoading: false, isRefreshing: false, isDemoFallback: false, lastRefresh: null } as ReturnType<typeof useCachedPodIssues>)
+    mockDeploymentIssues.mockReturnValue({ issues: [], isLoading: false, isRefreshing: false, isDemoFallback: false, lastRefresh: null } as ReturnType<typeof useCachedDeploymentIssues>)
+    mockGlobalFilters.mockReturnValue({ selectedClusters: [], isAllClustersSelected: true, customFilter: '' } as ReturnType<typeof useGlobalFilters>)
+    mockDrillDown.mockReturnValue({ drillToCluster: vi.fn(), drillToPod: vi.fn(), drillToDeployment: vi.fn(), drillToResources: vi.fn() } as ReturnType<typeof useDrillDownActions>)
   })
 
   it('renders skeleton while loading', () => {
@@ -92,16 +86,14 @@ describe('ClusterFocus', () => {
   })
 
   it('renders select-cluster prompt when no cluster configured', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockClusters.mockReturnValue({ deduplicatedClusters: [{ name: 'prod' }], isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, lastRefresh: null } as any)
+    mockClusters.mockReturnValue({ deduplicatedClusters: [{ name: 'prod' }], isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, lastRefresh: null } as ReturnType<typeof useClusters>)
     render(<ClusterFocus />)
     expect(screen.getByText('cards:clusterFocus.selectClusterToView')).toBeInTheDocument()
   })
 
   it('renders happy-path with configured cluster', () => {
     const clusters = [{ name: 'prod', healthy: true, reachable: true, nodeCount: 5, podCount: 30, cpuCores: 32, memoryGB: 128, server: 'https://prod.api.example.com' }]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockClusters.mockReturnValue({ deduplicatedClusters: clusters, isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, lastRefresh: null } as any)
+    mockClusters.mockReturnValue({ deduplicatedClusters: clusters, isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, lastRefresh: null } as ReturnType<typeof useClusters>)
     render(<ClusterFocus config={{ cluster: 'prod' }} />)
     expect(screen.getByText('prod')).toBeInTheDocument()
   })
