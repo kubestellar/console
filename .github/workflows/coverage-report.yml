@@ -35,7 +35,11 @@ jobs:
   coverage-report:
     if: github.repository == 'kubestellar/console'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # #23490 — broad coverage instrumentation over all of src/**/*.{ts,tsx} is
+    # slower than the narrower "gate subset" run (~26 min there); 15 min was no
+    # longer enough headroom and the step was being cancelled mid-run rather
+    # than completing, before the (non-gating) summary could even be produced.
+    timeout-minutes: 40
 
     steps:
       - name: Checkout

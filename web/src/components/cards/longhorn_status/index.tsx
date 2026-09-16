@@ -25,6 +25,7 @@ import { SkeletonCardWithRefresh } from '../../ui/Skeleton'
 import { EmptyState } from '../../ui/EmptyState'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { cn } from '../../../lib/cn'
+import { getUsageColor } from '../../../lib/cards/statusColors'
 import type {
   LonghornNode,
   LonghornVolume,
@@ -36,8 +37,6 @@ import type {
 // ---------------------------------------------------------------------------
 
 const PCT_MULTIPLIER = 100
-const USAGE_PCT_WARN = 70
-const USAGE_PCT_ALERT = 85
 
 const BINARY_ZERO_LABEL = '0'
 const BINARY_FORMAT = { binary: true, zeroLabel: BINARY_ZERO_LABEL } as const
@@ -56,11 +55,7 @@ function usagePct(used: number, total: number): number {
   return Math.max(0, Math.min(PCT_MULTIPLIER, pct))
 }
 
-function usageColor(pct: number): string {
-  if (pct >= USAGE_PCT_ALERT) return 'text-red-400'
-  if (pct >= USAGE_PCT_WARN) return 'text-yellow-400'
-  return 'text-green-400'
-}
+const usageColor = getUsageColor
 
 const ROBUSTNESS_BADGE_CLASSES: Record<LonghornVolumeRobustness, string> = {
   healthy: 'bg-green-500/20 text-green-400',

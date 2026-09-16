@@ -154,3 +154,39 @@ export const HEALTH_BADGE_UNHEALTHY = 'bg-yellow-500/15 text-yellow-400'
 export function getHealthBadgeClasses(isHealthy: boolean): string {
   return isHealthy ? HEALTH_BADGE_HEALTHY : HEALTH_BADGE_UNHEALTHY
 }
+
+// ---------------------------------------------------------------------------
+// Usage Percentage Color Thresholds
+//
+// Shared text-color mapping for a usage/capacity percentage, used across
+// storage and infrastructure status cards (Longhorn, Rook, TiKV, etc.).
+// ---------------------------------------------------------------------------
+
+/** Default "warning" threshold (percent) for usage-based coloring. */
+export const DEFAULT_USAGE_PCT_WARN = 70
+
+/** Default "alert" threshold (percent) for usage-based coloring. */
+export const DEFAULT_USAGE_PCT_ALERT = 85
+
+export interface UsageColorThresholds {
+  /** Percent at or above which the "warning" (yellow) color applies. */
+  warn?: number
+  /** Percent at or above which the "alert" (red) color applies. */
+  alert?: number
+}
+
+/**
+ * Get the Tailwind text-color class for a usage percentage, based on
+ * warn/alert thresholds (defaults: warn=70, alert=85).
+ *
+ * @example
+ * getUsageColor(90) // => 'text-red-400'
+ * getUsageColor(75) // => 'text-yellow-400'
+ * getUsageColor(30) // => 'text-green-400'
+ */
+export function getUsageColor(pct: number, thresholds: UsageColorThresholds = {}): string {
+  const { warn = DEFAULT_USAGE_PCT_WARN, alert = DEFAULT_USAGE_PCT_ALERT } = thresholds
+  if (pct >= alert) return 'text-red-400'
+  if (pct >= warn) return 'text-yellow-400'
+  return 'text-green-400'
+}

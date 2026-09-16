@@ -17,14 +17,12 @@ import { MetricTile } from '../../../lib/cards/CardComponents'
 import { cn } from '../../../lib/cn'
 import type { TikvStore } from '../../../lib/demo/tikv'
 import { BYTES_PER_GIB } from '../../../lib/constants/units'
-import { getHealthBadgeClasses } from '../../../lib/cards/statusColors'
+import { getHealthBadgeClasses, getUsageColor } from '../../../lib/cards/statusColors'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
 // ---------------------------------------------------------------------------
 
-const USAGE_PCT_WARN = 70
-const USAGE_PCT_ALERT = 85
 const PCT_MULTIPLIER = 100
 const MIN_DECIMAL_PLACES = 1
 const STORE_PAGE_SIZE = 6
@@ -66,11 +64,7 @@ function usagePct(store: Partial<TikvStore> | undefined): number {
   return Math.max(0, Math.min(PCT_MULTIPLIER, (used / capacity) * PCT_MULTIPLIER))
 }
 
-function usageColor(pct: number): string {
-  if (pct >= USAGE_PCT_ALERT) return 'text-red-400'
-  if (pct >= USAGE_PCT_WARN) return 'text-yellow-400'
-  return 'text-green-400'
-}
+const usageColor = getUsageColor
 
 // ---------------------------------------------------------------------------
 // Component
