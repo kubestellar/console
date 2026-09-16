@@ -19,6 +19,7 @@ on:
       - "Auto-QA Tuner"
       - "Nil Safety"
       - "GA4 Error Monitor"
+      - "CodeQL Security Analysis"
       # Weekly reviews
       - "OpenSSF Scorecard"
       - "Weekly Coverage Review"
