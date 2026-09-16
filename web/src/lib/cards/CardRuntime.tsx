@@ -34,12 +34,17 @@
  *   title: All pods healthy
  *   variant: success
  * ```
+ *
+ * The non-React registries (data hooks, drill actions, renderers, card
+ * definitions) and pure helper logic live under `./runtime/` so this file
+ * stays focused on the React-facing `CardRuntime` component. Everything is
+ * re-exported below to keep existing import sites unchanged.
  */
 
-import { ReactNode, useState, type KeyboardEvent } from 'react'
+import { useState } from 'react'
 import { getIcon } from '../icons'
 import { CardDefinition, CardColumnDefinition } from './types'
-import { useCardData, SortDirection } from './cardHooks'
+import { useCardData } from './cardHooks'
 import {
   CardSkeleton,
   CardEmptyState,
@@ -47,94 +52,16 @@ import {
   CardSearchInput,
   CardClusterFilter,
   CardClusterIndicator,
-  CardHeader,
-  CardListItem,
-  CardStatusBadge } from './CardComponents'
+  CardHeader } from './CardComponents'
 import { CardControls } from '../../components/ui/CardControls'
 import { Pagination } from '../../components/ui/Pagination'
 import { RefreshButton } from '../../components/ui/RefreshIndicator'
-import { ClusterBadge } from '../../components/ui/ClusterBadge'
-
-// ============================================================================
-// Data Hook Registry - Maps hook names to actual hooks
-// ============================================================================
-
-type DataHookResult<T> = {
-  data: T[]
-  isLoading: boolean
-  isRefreshing: boolean
-  error?: string
-  refetch: () => void
-  isFailed?: boolean
-  consecutiveFailures?: number
-  lastRefresh?: Date
-}
-
-// This will be populated by registerDataHook()
-const dataHookRegistry = new Map<string, () => DataHookResult<unknown>>()
-
-export function registerDataHook<T>(name: string, hook: () => DataHookResult<T>) {
-  dataHookRegistry.set(name, hook as () => DataHookResult<unknown>)
-}
-
-// ============================================================================
-// Drill Action Registry - Maps action names to functions
-// ============================================================================
-
-type DrillAction = (...args: unknown[]) => void
-const drillActionRegistry = new Map<string, DrillAction>()
-
-export function registerDrillAction(name: string, action: DrillAction) {
-  drillActionRegistry.set(name, action)
-}
-
-// ============================================================================
-// Renderer Registry - Maps render names to components
-// ============================================================================
-
-type CellRenderer<T = unknown> = (value: unknown, item: T, column: CardColumnDefinition) => ReactNode
-const rendererRegistry = new Map<string, CellRenderer>()
-
-export function registerRenderer<T>(name: string, renderer: CellRenderer<T>) {
-  rendererRegistry.set(name, renderer as CellRenderer)
-}
-
-// Register default renderers
-registerRenderer('statusBadge', (value) => {
-  const status = String(value).toLowerCase()
-  let variant: 'success' | 'warning' | 'error' | 'info' | 'neutral' = 'neutral'
-  if (status.includes('running') || status.includes('healthy') || status.includes('ready')) {
-    variant = 'success'
-  } else if (status.includes('pending') || status.includes('waiting')) {
-    variant = 'warning'
-  } else if (status.includes('failed') || status.includes('error') || status.includes('crash')) {
-    variant = 'error'
-  }
-  return <CardStatusBadge status={String(value)} variant={variant} />
-})
-
-registerRenderer('clusterBadge', (value) => (
-  <ClusterBadge cluster={String(value || 'default')} />
-))
-
-registerRenderer('number', (value) => (
-  <span className="font-mono text-sm">{Number(value).toLocaleString()}</span>
-))
-
-registerRenderer('percentage', (value) => (
-  <span className="font-mono text-sm">{Number(value).toFixed(1)}%</span>
-))
-
-// Allowlist for column alignment values — keeps unvalidated user config from
-// producing garbage Tailwind classes like "text-foo" that silently drop styles.
-const VALID_ALIGN_VALUES = ['left', 'center', 'right'] as const
-type ValidAlign = (typeof VALID_ALIGN_VALUES)[number]
-const DEFAULT_ALIGN: ValidAlign = 'left'
-function normalizeAlign(align: string | undefined): ValidAlign {
-  return (VALID_ALIGN_VALUES as readonly string[]).includes(align ?? '')
-    ? (align as ValidAlign)
-    : DEFAULT_ALIGN
-}
+import { dataHookRegistry, noopDataHook } from './runtime/dataHookRegistry'
+import { drillActionRegistry } from './runtime/drillActionRegistry'
+import { rendererRegistry } from './runtime/rendererRegistry'
+import { buildFilterConfig, buildSortConfig } from './runtime/buildRuntimeConfig'
+import { CardRuntimeTable } from './runtime/CardRuntimeTable'
+import { CardRuntimeList } from './runtime/CardRuntimeList'
 
 // ============================================================================
 // CardRuntime Props
@@ -152,16 +79,6 @@ export interface CardRuntimeProps {
 // ============================================================================
 // CardRuntime Component
 // ============================================================================
-
-// Noop data hook used when the requested hook is not registered.
-// This ensures hooks are called unconditionally to satisfy the Rules of Hooks.
-const NOOP_HOOK_RESULT: DataHookResult<unknown> = {
-  data: [],
-  isLoading: false,
-  isRefreshing: false,
-  error: undefined,
-  refetch: () => {} }
-const noopDataHook = () => NOOP_HOOK_RESULT
 
 export function CardRuntime({ definition, config: _config, title }: CardRuntimeProps) {
   const {
@@ -203,47 +120,9 @@ export function CardRuntime({ definition, config: _config, title }: CardRuntimeP
     consecutiveFailures,
     lastRefresh } = useDataHook()
 
-  // Build filter config from definition
-  const filterConfig = (() => {
-    const searchFields: string[] = []
-    let clusterField: string | undefined
-    let statusField: string | undefined
-
-    filterDefs?.forEach(f => {
-      if (f.type === 'text' && f.searchFields) {
-        searchFields.push(...f.searchFields)
-      }
-      if (f.field === 'cluster') clusterField = 'cluster'
-      if (f.field === 'status') statusField = 'status'
-    })
-
-    return {
-      searchFields: searchFields.length > 0 ? searchFields : ['name', 'namespace'],
-      clusterField,
-      statusField }
-  })()
-
-  // Build sort config from columns
-  const sortConfig = (() => {
-    const sortableColumns = columns?.filter(c => c.sortable !== false) || []
-    const comparators: Record<string, (a: unknown, b: unknown) => number> = {}
-
-    sortableColumns.forEach(col => {
-      comparators[col.field] = (a: unknown, b: unknown) => {
-        const aVal = (a as Record<string, unknown>)[col.field]
-        const bVal = (b as Record<string, unknown>)[col.field]
-        if (typeof aVal === 'number' && typeof bVal === 'number') {
-          return aVal - bVal
-        }
-        return String(aVal || '').localeCompare(String(bVal || ''))
-      }
-    })
-
-    return {
-      defaultField: sortableColumns[0]?.field || 'name',
-      defaultDirection: 'asc' as SortDirection,
-      comparators }
-  })()
+  // Build filter/sort config from the card definition
+  const filterConfig = buildFilterConfig(filterDefs)
+  const sortConfig = buildSortConfig(columns)
 
   // Use the card data hook
   const cardData = useCardData(rawData as Record<string, unknown>[], {
@@ -349,69 +228,25 @@ export function CardRuntime({ definition, config: _config, title }: CardRuntimeP
     switch (visualization) {
       case 'table':
         return (
-          <div className="flex-1 overflow-auto scroll-enhanced">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  {columns?.map(col => (
-                    <th
-                      key={col.field}
-                      className={`px-2 py-1.5 text-xs font-medium text-muted-foreground text-${normalizeAlign(col.align)}`}
-                      style={col.width ? { width: col.width } : undefined}
-                    >
-                      {col.header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item, idx) => (
-                  <tr
-                    key={idx}
-                    className={`border-b border-border/50 ${drillDown ? 'cursor-pointer hover:bg-secondary/50' : ''}`}
-                    onClick={() => drillDown && handleItemClick(item)}
-                    {...(drillDown ? {
-                      role: 'button' as const,
-                      tabIndex: 0,
-                      onKeyDown: (event: KeyboardEvent<HTMLTableRowElement>) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault()
-                          handleItemClick(item)
-                        }
-                      },
-                    } : {})}
-                  >
-                    {columns?.map(col => (
-                      <td
-                        key={col.field}
-                        className={`px-2 py-2 text-${normalizeAlign(col.align)}`}
-                      >
-                        {renderCell(item, col)}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <CardRuntimeTable
+            columns={columns}
+            items={items}
+            drillDown={drillDown}
+            onItemClick={handleItemClick}
+            renderCell={renderCell}
+          />
         )
 
       case 'status':
       default:
         return (
-          <div className="flex-1 space-y-2 overflow-y-auto scroll-enhanced min-h-card-content">
-            {items.map((item, idx) => (
-              <CardListItem
-                key={idx}
-                onClick={drillDown ? () => handleItemClick(item) : undefined}
-                dataTour={idx === 0 ? 'drilldown' : undefined}
-              >
-                {columns?.slice(0, 3).map(col => (
-                  <div key={col.field}>{renderCell(item, col)}</div>
-                ))}
-              </CardListItem>
-            ))}
-          </div>
+          <CardRuntimeList
+            columns={columns}
+            items={items}
+            drillDown={drillDown}
+            onItemClick={handleItemClick}
+            renderCell={renderCell}
+          />
         )
     }
   }
@@ -491,29 +326,15 @@ export function CardRuntime({ definition, config: _config, title }: CardRuntimeP
 }
 
 // ============================================================================
-// Card Registry - Store card definitions
+// Re-exports (kept for backwards compatibility — see ./runtime/ for the
+// actual implementations)
 // ============================================================================
 
-const cardDefinitionRegistry = new Map<string, CardDefinition>()
-
-export function registerCard(definition: CardDefinition) {
-  cardDefinitionRegistry.set(definition.type, definition)
-}
-
-export function getCardDefinition(type: string): CardDefinition | undefined {
-  return cardDefinitionRegistry.get(type)
-}
-
-export function getAllCardDefinitions(): CardDefinition[] {
-  return Array.from(cardDefinitionRegistry.values())
-}
-
-// ============================================================================
-// YAML Parser (future implementation)
-// ============================================================================
-
-export function parseCardYAML(_yaml: string): CardDefinition {
-  // YAML parsing intentionally not implemented - use registerCard() with JS objects
-  // If YAML config becomes a requirement, add js-yaml library and implement parser here
-  throw new Error('YAML parsing not yet implemented. Use registerCard() with JS objects.')
-}
+export { registerDataHook } from './runtime/dataHookRegistry'
+export { registerDrillAction } from './runtime/drillActionRegistry'
+export { registerRenderer } from './runtime/rendererRegistry'
+export {
+  registerCard,
+  getCardDefinition,
+  getAllCardDefinitions,
+  parseCardYAML } from './runtime/cardDefinitionRegistry'
