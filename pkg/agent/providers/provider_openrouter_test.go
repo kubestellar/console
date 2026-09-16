@@ -41,6 +41,24 @@ func TestOpenRouterProvider_Interface(t *testing.T) {
 	var _ ai.Provider = &OpenRouterProvider{}
 }
 
+// TestOpenRouterProvider_IsAvailable covers the IsAvailable branch that
+// reads through to ConfigManager.IsKeyAvailable. Was 0% before this test.
+func TestOpenRouterProvider_IsAvailable(t *testing.T) {
+	p := NewOpenRouterProvider()
+
+	t.Setenv("OPENROUTER_API_KEY", "")
+	config.GetConfigManager().InvalidateKeyValidity(openRouterProviderKey)
+	if p.IsAvailable() {
+		t.Error("IsAvailable() = true with no OPENROUTER_API_KEY, want false")
+	}
+
+	t.Setenv("OPENROUTER_API_KEY", "test-key")
+	config.GetConfigManager().InvalidateKeyValidity(openRouterProviderKey)
+	if !p.IsAvailable() {
+		t.Error("IsAvailable() = false with OPENROUTER_API_KEY set, want true")
+	}
+}
+
 // TestOpenRouterProvider_DefaultBaseURL ensures NewOpenRouterProvider uses the
 // public OpenRouter endpoint when OPENROUTER_BASE_URL is not set.
 func TestOpenRouterProvider_DefaultBaseURL(t *testing.T) {
@@ -96,6 +114,8 @@ func TestGetEnvKeyForProvider_OpenRouter(t *testing.T) {
 }
 
 func TestOpenRouterProvider_Chat(t *testing.T) {
+	AllowLoopbackForTests = true
+	t.Cleanup(func() { AllowLoopbackForTests = false })
 	// 1. Mock OpenRouter server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Verify headers
@@ -144,6 +164,8 @@ func TestOpenRouterProvider_Chat(t *testing.T) {
 }
 
 func TestOpenRouterProvider_StreamChat(t *testing.T) {
+	AllowLoopbackForTests = true
+	t.Cleanup(func() { AllowLoopbackForTests = false })
 	// 1. Mock OpenRouter server for streaming
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
