@@ -37,9 +37,7 @@ import { useLocation } from 'react-router-dom'
 import {
   DndContext,
   closestCenter,
-  DragOverlay,
-  DragStartEvent,
-  DragEndEvent } from '@dnd-kit/core'
+  DragOverlay } from '@dnd-kit/core'
 import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable'
 import { DashboardDefinition, NewCardInput } from './types'
 import { DashboardTemplate } from '../../components/dashboard/templates'
@@ -57,40 +55,21 @@ import { AddCardModal } from '../../components/dashboard/AddCardModal'
 import { TemplatesModal } from '../../components/dashboard/TemplatesModal'
 import { ConfigureCardModal } from '../../components/dashboard/ConfigureCardModal'
 import { FloatingDashboardActions } from '../../components/dashboard/FloatingDashboardActions'
-import { ClusterDropZone, DraggedWorkload } from '../../components/cards/ClusterDropZone'
-import { useDeployWorkload } from '../../hooks/useWorkloads'
-import { useToast } from '../../components/ui/Toast'
+import { ClusterDropZone } from '../../components/cards/ClusterDropZone'
+import { useWorkloadDragDeploy } from './hooks/useWorkloadDragDeploy'
+import {
+  DASHBOARD_DEFAULT_REFRESH_MS,
+  resolveStatsValueGetter } from './dashboardRegistry'
 
-// ============================================================================
-// Dashboard Registry
-// ============================================================================
-
-const DASHBOARD_DEFAULT_REFRESH_MS = 30_000
-
-const dashboardRegistry = new Map<string, DashboardDefinition>()
-
-export function registerDashboard(definition: DashboardDefinition) {
-  dashboardRegistry.set(definition.id, definition)
-}
-
-export function getDashboardDefinition(id: string): DashboardDefinition | undefined {
-  return dashboardRegistry.get(id)
-}
-
-export function getAllDashboardDefinitions(): DashboardDefinition[] {
-  return Array.from(dashboardRegistry.values())
-}
-
-// ============================================================================
-// Stats Value Getter Registry
-// ============================================================================
-
-type StatsValueGetter = (blockId: string, data: unknown) => StatBlockValue
-const statsValueGetterRegistry = new Map<string, StatsValueGetter>()
-
-export function registerStatsValueGetter(statsType: string, getter: StatsValueGetter) {
-  statsValueGetterRegistry.set(statsType, getter)
-}
+// Re-exported so existing importers (dashboards/index.ts, lib/index.ts,
+// registry.ts, tests) keep working after the registry moved to its own module.
+export {
+  registerDashboard,
+  getDashboardDefinition,
+  getAllDashboardDefinitions,
+  registerStatsValueGetter,
+  parseDashboardYAML,
+} from './dashboardRegistry'
 
 // ============================================================================
 // DashboardRuntime Props
@@ -189,74 +168,11 @@ export function DashboardRuntime({
   insertAtIndexRef.current = insertAtIndex
 
   // Workload drag-drop state for deploying to clusters
-  const [draggedWorkload, setDraggedWorkload] = useState<DraggedWorkload | null>(null)
-  const deployWorkload = useDeployWorkload()
-  const { showToast } = useToast()
-
-  // Extended drag handlers to support workload-to-cluster deployment
-  const handleDragStart = (event: DragStartEvent) => {
-    // First call the original handler for card ordering
-    dnd.handleDragStart(event)
-
-    // Check if this is a workload being dragged
-    const data = event.active.data.current
-    if (data?.type === 'workload' && data?.workload) {
-      setDraggedWorkload(data.workload)
-    }
-  }
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    // First call the original handler for card ordering
-    dnd.handleDragEnd(event)
-
-    // Check if workload was dropped on a cluster
-    const activeData = event.active.data.current
-    const overData = event.over?.data.current
-
-    if (activeData?.type === 'workload' && overData?.type === 'cluster') {
-      const workload = activeData.workload
-      const targetCluster = overData.cluster
-
-      // Call deploy API
-      handleDeployWorkload(workload, targetCluster)
-    }
-
-    // Clear dragged workload state
-    setDraggedWorkload(null)
-  }
-
-  // Handle deploying workload to cluster
-  const handleDeployWorkload = (
-    workload: { name: string; namespace: string; sourceCluster: string },
-    targetCluster: string
-  ) => {
-    deployWorkload.mutate({
-      workloadName: workload.name,
-      namespace: workload.namespace,
-      sourceCluster: workload.sourceCluster,
-      targetClusters: [targetCluster] }, {
-      onSuccess: () => {
-        showToast(`Deployed ${workload.name} to ${targetCluster}`, 'success')
-      },
-      onError: (error: Error) => {
-        showToast(`Failed to deploy: ${error.message}`, 'error')
-      } }).catch(console.error)
-  }
+  const { draggedWorkload, handleDragStart, handleDragEnd, handleDeployWorkload } =
+    useWorkloadDragDeploy(dnd)
 
   // Get stats value getter from registry or props
-  const getStatValue = (() => {
-    if (customGetStatValue) return customGetStatValue
-
-    if (statsConfig?.type) {
-      const getter = statsValueGetterRegistry.get(statsConfig.type)
-      if (getter) {
-        return (blockId: string) => getter(blockId, data)
-      }
-    }
-
-    // Default fallback
-    return () => ({ value: '-', sublabel: '' })
-  })()
+  const getStatValue = resolveStatsValueGetter(statsConfig?.type, data, customGetStatValue)
 
   // Handle add cards (supports inline insertion at a specific index)
   const handleAddCards = (newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
@@ -441,14 +357,4 @@ export function DashboardRuntime({
       />
     </div>
   )
-}
-
-// ============================================================================
-// YAML Parser (future implementation)
-// ============================================================================
-
-export function parseDashboardYAML(_yaml: string): DashboardDefinition {
-  // YAML parsing intentionally not implemented - use registerDashboard() with JS objects
-  // If YAML config becomes a requirement, add js-yaml library and implement parser here
-  throw new Error('YAML parsing not yet implemented. Use registerDashboard() with JS objects.')
 }
