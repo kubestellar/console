@@ -10,33 +10,22 @@
  *   <UnifiedCard config={clusterHealthConfig} title="Custom Title" />
  */
 
-import { ReactNode, useMemo, Suspense } from 'react'
+import { useMemo } from 'react'
 import { safeLazy } from '../../safeLazy'
-import {
-  AlertTriangle,
-  Info,
-  RefreshCw,
-  CheckCircle,
-  AlertCircle,
-  XCircle,
-  HelpCircle,
-  type LucideIcon
-} from 'lucide-react'
 import type {
   UnifiedCardConfig,
-  UnifiedCardProps,
-  CardContent } from '../types'
+  UnifiedCardProps } from '../types'
 import { useDataSource } from './hooks/useDataSource'
 import { useCardFiltering } from './hooks/useCardFiltering'
-import { ListVisualization } from './visualizations/ListVisualization'
-import { TableVisualization } from './visualizations/TableVisualization'
 // Lazy-load ChartVisualization to defer the echarts vendor chunk from the
 // critical loading path — it is only needed for cards with chartType content.
 const LazyChartVisualization = safeLazy(() => import('./visualizations/ChartVisualization'), 'ChartVisualization')
-import { StatusGridVisualization } from './visualizations/StatusGridVisualization'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { useReportCardDataState } from '../../../components/cards/CardDataContext'
 import { useIsModeSwitching } from '../demo'
+import { LoadingState, EmptyState, ErrorState } from './components/CardStateViews'
+import { InlineStats, CardFooter } from './components/CardChrome'
+import { renderCardContent } from './components/renderCardContent'
 
 /**
  * UnifiedCard - Renders any card type from config
@@ -159,7 +148,7 @@ export function UnifiedCard({
     }
 
     // Render the appropriate visualization based on content type
-    return renderContent(mergedConfig.content, filteredData, mergedConfig, handleDrillDown)
+    return renderCardContent(mergedConfig.content, filteredData, mergedConfig, LazyChartVisualization, handleDrillDown)
   })()
 
   return (
@@ -178,265 +167,6 @@ export function UnifiedCard({
       {/* Footer (if configured) */}
       {mergedConfig.footer && (
         <CardFooter config={mergedConfig.footer} data={filteredData} />
-      )}
-    </div>
-  )
-}
-
-/**
- * Render the appropriate visualization based on content.type
- */
-function renderContent(
-  content: CardContent,
-  data: unknown[] | unknown,
-  config: UnifiedCardConfig,
-  onDrillDown?: (item: Record<string, unknown>) => void
-): ReactNode {
-  switch (content.type) {
-    case 'list':
-      return (
-        <ListVisualization
-          content={content}
-          data={data as unknown[]}
-          drillDown={config.drillDown}
-          onDrillDown={onDrillDown}
-        />
-      )
-
-    case 'table':
-      return (
-        <TableVisualization
-          content={content}
-          data={data as unknown[]}
-          drillDown={config.drillDown}
-          onDrillDown={onDrillDown}
-        />
-      )
-
-    case 'chart':
-      return (
-        <Suspense fallback={<div className="animate-pulse bg-secondary/30 rounded" style={{ height: content.height ?? 200 }} />}>
-          <LazyChartVisualization
-            content={content}
-            data={data as unknown[]}
-          />
-        </Suspense>
-      )
-
-    case 'status-grid':
-      return (
-        <StatusGridVisualization
-          content={content}
-          data={data}
-        />
-      )
-
-    case 'custom':
-      // Custom components are rendered as placeholders until registered via component registry
-      return (
-        <PlaceholderVisualization
-          type={`custom: ${content.componentName}`}
-          itemCount={Array.isArray(data) ? data.length : data ? 1 : 0}
-        />
-      )
-
-    default:
-      return (
-        <div className="text-muted-foreground text-sm p-4">
-          Unknown content type: {(content as { type: string }).type}
-        </div>
-      )
-  }
-}
-
-/**
- * Placeholder visualization while actual implementations are built
- */
-function PlaceholderVisualization({
-  type,
-  itemCount,
-  columns }: {
-  type: string
-  itemCount: number
-  columns?: number
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center p-6 text-muted-foreground border border-dashed border-border rounded-lg m-2">
-      <Info className="w-8 h-8 mb-2 text-blue-400" />
-      <div className="text-sm font-medium">Visualization: {type}</div>
-      <div className="text-xs mt-1">
-        {itemCount} items{columns ? `, ${columns} columns` : ''}
-      </div>
-      <div className="text-xs mt-2 text-muted-foreground">
-        (Implementation pending - PR 2/4)
-      </div>
-    </div>
-  )
-}
-
-/**
- * Loading state component with skeleton rows
- * Note: The refresh icon in the card header animates while this is shown
- */
-function LoadingState({
-  config }: {
-  config?: UnifiedCardConfig['loadingState']
-}) {
-  const rows = config?.rows ?? 3
-  const showSearch = config?.showSearch ?? true
-  const showHeader = config?.showHeader ?? false
-
-  return (
-    <div className="p-2 space-y-2">
-      {/* Header skeleton */}
-      {showHeader && (
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <div className="h-5 w-5 bg-secondary/60 rounded-full animate-pulse" />
-            <div className="h-4 bg-secondary/60 rounded w-24 animate-pulse" />
-          </div>
-          <RefreshCw className="w-4 h-4 text-muted-foreground/40 animate-spin" />
-        </div>
-      )}
-
-      {/* Search skeleton */}
-      {showSearch && (
-        <div className="h-8 bg-secondary/60 rounded w-full animate-pulse" />
-      )}
-
-      {/* Content rows skeleton */}
-      {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="flex items-center gap-2">
-          <div className="h-4 bg-secondary/60 rounded w-16 animate-pulse" />
-          <div className="h-4 bg-secondary/60 rounded flex-1 animate-pulse" />
-          <div className="h-4 bg-secondary/60 rounded w-20 animate-pulse" />
-        </div>
-      ))}
-    </div>
-  )
-}
-
-/**
- * Icon lookup map for common icon names
- * Supports kebab-case icon names (e.g., 'info', 'alert-triangle', 'check-circle')
- */
-const ICON_MAP: Record<string, LucideIcon> = {
-  info: Info,
-  'alert-triangle': AlertTriangle,
-  'alert-circle': AlertCircle,
-  'check-circle': CheckCircle,
-  'x-circle': XCircle,
-  'help-circle': HelpCircle }
-
-/**
- * Get icon component by name (case-insensitive, kebab-case format)
- */
-function getIconComponent(iconName?: string): LucideIcon {
-  if (!iconName?.trim()) return Info
-  return ICON_MAP[iconName.toLowerCase()] ?? Info
-}
-
-/**
- * Empty state component
- */
-function EmptyState({
-  config }: {
-  config?: UnifiedCardConfig['emptyState']
-}) {
-  const title = config?.title ?? 'No data'
-  const message = config?.message
-  const variant = config?.variant ?? 'neutral'
-  const IconComponent = getIconComponent(config?.icon)
-
-  const variantColors = {
-    success: 'text-green-400',
-    info: 'text-blue-400',
-    warning: 'text-yellow-400',
-    neutral: 'text-muted-foreground' }
-
-  return (
-    <div className="flex flex-col items-center justify-center p-6 text-center">
-      <div className={`mb-2 ${variantColors[variant]}`}>
-        <IconComponent className="w-8 h-8" />
-      </div>
-      <div className="text-sm font-medium text-foreground">{title}</div>
-      {message && (
-        <div className="text-xs text-muted-foreground mt-1">{message}</div>
-      )}
-    </div>
-  )
-}
-
-/**
- * Error state component
- */
-function ErrorState({
-  message,
-  onRetry }: {
-  message: string
-  onRetry?: () => void
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center p-6 text-center">
-      <AlertTriangle className="w-8 h-8 text-red-400 mb-2" />
-      <div className="text-sm font-medium text-foreground">Error loading data</div>
-      <div className="text-xs text-muted-foreground mt-1">{message}</div>
-      {onRetry && (
-        <button
-          onClick={onRetry}
-          aria-label="Retry loading data"
-          className="mt-3 px-3 py-1 text-xs bg-secondary hover:bg-secondary/80 rounded transition-colors"
-        >
-          Retry
-        </button>
-      )}
-    </div>
-  )
-}
-
-/**
- * Inline stats displayed at top of card
- * 
- * Note: Value resolution is intentionally left as placeholder ("--") until the stats
- * feature design is finalized. Stats config includes valueField/valueResolver for future
- * implementation to compute values from card data.
- */
-function InlineStats({
-  stats,
-  data: _data }: {
-  stats: NonNullable<UnifiedCardConfig['stats']>
-  data: unknown[] | unknown | undefined
-}) {
-  return (
-    <div className="flex items-center gap-3 px-2 py-1.5 border-b border-border">
-      {stats.map((stat) => (
-        <div key={stat.id} className="flex items-center gap-1.5 text-xs">
-          <div className={`w-2 h-2 rounded-full ${stat.bgColor ?? 'bg-muted-foreground'}`} />
-          <span className="text-muted-foreground">{stat.label}:</span>
-          <span className="font-medium text-foreground">--</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-/**
- * Card footer component
- */
-function CardFooter({
-  config,
-  data }: {
-  config: NonNullable<UnifiedCardConfig['footer']>
-  data: unknown[] | unknown | undefined
-}) {
-  return (
-    <div className="flex items-center justify-between px-2 py-1.5 text-xs text-muted-foreground border-t border-border">
-      {config.showTotal && !!data && (
-        <span>{Array.isArray(data) ? data.length : 1} items</span>
-      )}
-      {config.text && <span>{config.text}</span>}
-      {config.pagination && (
-        <span className="text-muted-foreground">Pagination placeholder</span>
       )}
     </div>
   )
