@@ -1,4 +1,5 @@
 import { Loader2, Sparkles } from 'lucide-react'
+import { Input } from '../ui/Input'
 import { visualizationIcons, wrapAbbreviations } from './shared/cardCatalog'
 import type { AddCardAiPanelProps } from './addCardModal.types'
 
@@ -32,14 +33,16 @@ export function AddCardAiPanel({
           {t('dashboard.addCard.describeWhatYouWant')}
         </label>
         <div className="flex gap-2">
-          <input
-            type="text"
-            value={query}
-            onChange={(event) => onQueryChange(event.target.value)}
-            onKeyDown={(event) => event.key === 'Enter' && onGenerate()}
-            placeholder={t('dashboard.addCard.aiPlaceholder')}
-            className="flex-1 px-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50"
-          />
+          <div className="flex-1">
+            <Input
+              type="text"
+              value={query}
+              onChange={(event) => onQueryChange(event.target.value)}
+              onKeyDown={(event) => event.key === 'Enter' && onGenerate()}
+              placeholder={t('dashboard.addCard.aiPlaceholder')}
+              className="w-full px-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50"
+            />
+          </div>
           <button
             onClick={onGenerate}
             disabled={!query.trim() || isGenerating}

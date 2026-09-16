@@ -2,6 +2,7 @@ import type { KeyboardEvent } from 'react'
 import type { TFunction } from 'i18next'
 import { Loader2, Sparkles } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { TextArea } from '../ui/TextArea'
 
 interface ConfigureCardAiTabProps {
   nlPrompt: string
@@ -77,7 +78,7 @@ export function ConfigureCardAiTab({
         <label className="block text-sm text-muted-foreground mb-1">
           {t('dashboard.configure.describePreferences')}
         </label>
-        <textarea
+        <TextArea
           value={nlPrompt}
           onChange={(e) => onPromptChange(e.target.value)}
           placeholder={t('dashboard.configure.aiPlaceholder')}

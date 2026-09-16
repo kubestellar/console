@@ -1,4 +1,5 @@
 import { Activity, Plus, Search, Sparkles, Wand2 } from 'lucide-react'
+import { Input } from '../ui/Input'
 import { CATEGORY_LOCALE_KEYS, visualizationIcons, wrapAbbreviations } from './shared/cardCatalog'
 import { countAvailableCards } from './addCardModal.utils'
 import type { AddCardBrowsePanelProps, CardCatalogEntry } from './addCardModal.types'
@@ -26,7 +27,7 @@ export function AddCardBrowsePanel({
       <div className="mb-4 flex items-center gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
+          <Input
             ref={searchInputRef}
             type="text"
             value={browseSearch}

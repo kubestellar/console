@@ -7,6 +7,8 @@ import { STAT_INLINE_ASSIST_PROMPT } from '../../lib/ai/prompts'
 import { InlineAIAssist } from './InlineAIAssist'
 import { StatusBadge } from '../ui/StatusBadge'
 import { Button } from '../ui/Button'
+import { Input } from '../ui/Input'
+import { Select } from '../ui/Select'
 import type { BlockEditorItem, StatAssistResult } from './statBlockFactoryModal.types'
 import {
   AVAILABLE_COLORS,
@@ -156,7 +158,7 @@ export function StatBlockFactoryBuilderTab({
         <div className="grid grid-cols-3 gap-3">
           <div>
             <label className="text-xs text-muted-foreground block mb-1">{t('dashboard.statFactory.titleLabel')}</label>
-            <input
+            <Input
               type="text"
               value={title}
               onChange={event => onTitleChange(event.target.value)}
@@ -166,7 +168,7 @@ export function StatBlockFactoryBuilderTab({
           </div>
           <div>
             <label className="text-xs text-muted-foreground block mb-1">{t('dashboard.statFactory.typeIdLabel')}</label>
-            <input
+            <Input
               type="text"
               value={statsType}
               onChange={event => onStatsTypeChange(event.target.value)}
@@ -176,7 +178,7 @@ export function StatBlockFactoryBuilderTab({
           </div>
           <div>
             <label className="text-xs text-muted-foreground block mb-1">{t('dashboard.statFactory.gridColumnsLabel')}</label>
-            <select
+            <Select
               value={gridCols}
               onChange={event => onGridColsChange(Number(event.target.value))}
               className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
@@ -189,7 +191,7 @@ export function StatBlockFactoryBuilderTab({
               <option value={6}>6</option>
               <option value={8}>8</option>
               <option value={10}>10</option>
-            </select>
+            </Select>
           </div>
         </div>
 
@@ -313,31 +315,37 @@ export function StatBlockFactoryBuilderTab({
                       ))}
                     </div>
 
-                    <input
-                      type="text"
-                      value={block.label}
-                      onChange={event => onUpdateBlock(idx, 'label', event.target.value)}
-                      placeholder={t('dashboard.statFactory.labelPlaceholder')}
-                      className="flex-1 text-xs px-2 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
-                    />
+                    <div className="flex-1 min-w-0">
+                      <Input
+                        type="text"
+                        value={block.label}
+                        onChange={event => onUpdateBlock(idx, 'label', event.target.value)}
+                        placeholder={t('dashboard.statFactory.labelPlaceholder')}
+                        className="w-full text-xs px-2 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
+                      />
+                    </div>
 
-                    <input
-                      type="text"
-                      value={block.field}
-                      onChange={event => onUpdateBlock(idx, 'field', event.target.value)}
-                      placeholder={t('dashboard.statFactory.dataFieldPlaceholder')}
-                      className="w-24 text-xs px-2 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
-                    />
+                    <div className="w-24">
+                      <Input
+                        type="text"
+                        value={block.field}
+                        onChange={event => onUpdateBlock(idx, 'field', event.target.value)}
+                        placeholder={t('dashboard.statFactory.dataFieldPlaceholder')}
+                        className="w-full text-xs px-2 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
+                      />
+                    </div>
 
-                    <select
-                      value={block.format}
-                      onChange={event => onUpdateBlock(idx, 'format', event.target.value)}
-                      className="w-20 text-xs px-1.5 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-hidden"
-                    >
-                      {VALUE_FORMATS.map(format => (
-                        <option key={format.value} value={format.value}>{format.label}</option>
-                      ))}
-                    </select>
+                    <div className="w-20">
+                      <Select
+                        value={block.format}
+                        onChange={event => onUpdateBlock(idx, 'format', event.target.value)}
+                        className="w-full text-xs px-1.5 py-1.5 rounded-lg bg-secondary text-foreground focus:outline-hidden"
+                      >
+                        {VALUE_FORMATS.map(format => (
+                          <option key={format.value} value={format.value}>{format.label}</option>
+                        ))}
+                      </Select>
+                    </div>
 
                     <button
                       onClick={() => onRemoveBlock(idx)}

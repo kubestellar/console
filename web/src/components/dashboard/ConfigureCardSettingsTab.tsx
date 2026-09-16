@@ -1,6 +1,8 @@
 import type { TFunction } from 'i18next'
 import type { ClusterInfo } from '../../hooks/mcp/types'
 import type { CardConfigField } from './cardConfigData'
+import { Input } from '../ui/Input'
+import { Select } from '../ui/Select'
 
 interface ConfigureCardSettingsTabProps {
   title: string
@@ -25,7 +27,7 @@ export function ConfigureCardSettingsTab({
     <div className="space-y-4">
       <div>
         <label className="block text-sm text-muted-foreground mb-1">{t('dashboard.configure.cardTitle')}</label>
-        <input
+        <Input
           type="text"
           value={title}
           onChange={(e) => onTitleChange(e.target.value)}
@@ -38,7 +40,7 @@ export function ConfigureCardSettingsTab({
         <div key={field.key}>
           <label className="block text-sm text-muted-foreground mb-1">{t(`cardConfig.fieldLabels.${field.key}`, field.label)}</label>
           {field.type === 'cluster' ? (
-            <select
+            <Select
               value={(config[field.key] as string) || ''}
               onChange={(e) => updateConfig(field.key, e.target.value)}
               className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
@@ -47,9 +49,9 @@ export function ConfigureCardSettingsTab({
               {clusters.map((cluster) => (
                 <option key={cluster.name} value={cluster.name}>{cluster.name}</option>
               ))}
-            </select>
+            </Select>
           ) : field.type === 'select' ? (
-            <select
+            <Select
               value={(config[field.key] as string) || ''}
               onChange={(e) => updateConfig(field.key, e.target.value)}
               className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
@@ -58,9 +60,9 @@ export function ConfigureCardSettingsTab({
               <option value="cpu">{t('cardConfig.cpuUsage')}</option>
               <option value="memory">{t('cardConfig.memoryUsage')}</option>
               <option value="pods">{t('cardConfig.podCount')}</option>
-            </select>
+            </Select>
           ) : field.type === 'number' ? (
-            <input
+            <Input
               type="number"
               value={(config[field.key] as number) || ''}
               onChange={(e) => updateConfig(field.key, parseInt(e.target.value, 10) || undefined)}
@@ -68,7 +70,7 @@ export function ConfigureCardSettingsTab({
               className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
             />
           ) : (
-            <input
+            <Input
               type="text"
               value={(config[field.key] as string) || ''}
               onChange={(e) => updateConfig(field.key, e.target.value || undefined)}
