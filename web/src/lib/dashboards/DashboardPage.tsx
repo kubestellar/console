@@ -1,45 +1,17 @@
-import { useState, useEffect, useRef, ReactNode, useMemo, useCallback } from 'react'
-import { useSearchParams, useLocation } from 'react-router-dom'
-import { LayoutGrid, ChevronDown, ChevronRight } from 'lucide-react'
-import { EmptyState, EmptyStateAction } from '../../components/ui/EmptyState'
+import { ReactNode } from 'react'
+import { type DragEndEvent } from '@dnd-kit/core'
 import { getIcon } from '../icons'
-import {
-  DndContext,
-  closestCenter,
-  pointerWithin,
-  rectIntersection,
-  DragOverlay,
-  type DragEndEvent,
-  type CollisionDetection
-} from '@dnd-kit/core'
-import {
-  SortableContext,
-  rectSortingStrategy
-} from '@dnd-kit/sortable'
-import { useDashboard } from './dashboardHooks'
 import type { DashboardCard, DashboardCardPlacement } from './types'
-import { SortableDashboardCard, DragPreviewCard, DASHBOARD_CARD_ROW_HEIGHT_PX } from './DashboardComponents'
 import { ConfigureCardModal } from '../../components/dashboard/ConfigureCardModal'
 import { FloatingDashboardActions } from '../../components/dashboard/FloatingDashboardActions'
 import { DashboardCustomizer } from '../../components/dashboard/customizer/DashboardCustomizer'
-import type { CustomizerSection } from '../../components/dashboard/customizer/customizerNav'
-import { DashboardTemplate } from '../../components/dashboard/templates'
 import { StatsOverview, StatBlockValue } from '../../components/ui/StatsOverview'
 import { DashboardStatsType } from '../../components/ui/StatsBlockDefinitions'
 import { DashboardHeader } from '../../components/shared/DashboardHeader'
 import { DashboardHealthIndicator } from '../../components/dashboard/DashboardHealthIndicator'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
-import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
-import { prefetchCardChunks } from '../../components/cards/cardRegistry'
-import { useDashboardContextOptional } from '../../hooks/useDashboardContext'
-
-// ============================================================================
-// Constants
-// ============================================================================
-
-const GRID_STYLE = { gridAutoRows: `${DASHBOARD_CARD_ROW_HEIGHT_PX}px` } as const
-const COMPACT_GRID_BREAKPOINT_PX = 1200
-const OVERLAY_Z_INDEX = 9_999
+import { EmptyStateAction } from '../../components/ui/EmptyState'
+import { useDashboardPageState } from './hooks/useDashboardPageState'
+import { DashboardPageCardsSection } from './components/DashboardPageCardsSection'
 
 // ============================================================================
 // Types
@@ -107,13 +79,6 @@ export interface DashboardPageProps {
   testId?: string
 }
 
-const DASHBOARD_VIRTUALIZATION_THRESHOLD = 60
-const DASHBOARD_VIRTUALIZATION_INITIAL_COUNT = 48
-const DASHBOARD_VIRTUALIZATION_STEP = 24
-const DASHBOARD_VIRTUALIZATION_ROOT_MARGIN = '900px 0px'
-const DEFAULT_STAT_BLOCK_VALUE: StatBlockValue = { value: '-', sublabel: '' }
-const DEFAULT_EMPTY_STATE_ACTION_PROPS = { label: 'Add Cards' }
-
 // ============================================================================
 // DashboardPage Component
 // ============================================================================
@@ -142,314 +107,76 @@ export function DashboardPage({
   isDemoData = false,
   onDragEnd: externalDragEnd,
   testId = 'dashboard-page' }: DashboardPageProps) {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const location = useLocation()
-  // Capture the route path at mount time — KeepAlive keeps this component alive
-  // across navigations, so we need to know which route we belong to.
-  const mountedRouteRef = useRef(location.pathname)
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const Icon = getIcon(icon)
 
-  // Combine refresh with indicator
-  const combinedRefetch = useCallback(() => {
-    onRefresh?.()
-  }, [onRefresh])
-  const { showIndicator, triggerRefresh } = useRefreshIndicator(combinedRefetch)
-
-  // Use the shared dashboard hook for cards, DnD, modals, auto-refresh
   const {
+    dashboardRef,
+    dashboardWidth,
+    cardsGridRef,
+    useCompactGrid,
+    loadMoreRef,
+    isFetching,
+    isRefreshing,
+    liveRouteState,
     cards,
-    setCards,
-    addCards,
-    removeCard,
-    configureCard,
-    updateCardWidth,
-    updateCardHeight,
-    reset,
-    isCustomized,
-    showAddCard,
-    setShowAddCard,
-    // showTemplates and setShowTemplates are no longer used directly —
-    // templates are accessed via the unified DashboardCustomizer
-    showTemplates: _showTemplates,
-    setShowTemplates: _setShowTemplates,
-    configuringCard,
-    setConfiguringCard,
-    openConfigureCard,
+    visibleCards,
+    shouldVirtualizeCards,
     showCards,
     setShowCards,
-    expandCards,
-    dnd: { sensors, activeId, activeDragData, handleDragStart, handleDragEnd: baseDragEnd },
+    getStatValue,
+    sensors,
+    collisionDetection,
+    handleDragStart,
+    handleDragEnd,
+    activeId,
+    activeDragData,
+    handleRemoveCard,
+    handleConfigureCard,
+    handleSaveCardConfig,
+    handleWidthChange,
+    handleHeightChange,
+    handleAddCards,
+    applyTemplate,
+    setInsertAtIndex,
+    showAddCard,
+    setShowAddCard,
+    addCardSearch,
+    setAddCardSearch,
+    customizerInitialSection,
+    setCustomizerInitialSection,
+    widgetCardType,
+    setWidgetCardType,
+    handleOpenCustomizer,
+    defaultEmptyStateAction,
+    configuringCard,
+    setConfiguringCard,
+    configureCardData,
     autoRefresh,
     setAutoRefresh,
+    handleRefresh,
+    triggerRefresh,
     undo,
     redo,
     canUndo,
-    canRedo } = useDashboard({
+    canRedo,
+    reset,
+    isCustomized } = useDashboardPageState({
       storageKey,
       defaultCards,
-      isActive: location.pathname === mountedRouteRef.current,
-      onRefresh
-    })
+      customGetStatValue,
+      onRefresh,
+      isLoading,
+      externalRefreshing,
+      hasData,
+      error,
+      routeState,
+      onDragEnd: externalDragEnd })
 
-  // Workload-aware collision detection: when dragging a workload, prefer
-  // cluster-group droppables over the larger sortable card containers.
-  const collisionDetection: CollisionDetection = (args) => {
-    const isWorkloadDrag = args.active.data.current?.type === 'workload'
-    if (isWorkloadDrag) {
-      const allCollisions = [...pointerWithin(args), ...rectIntersection(args)]
-      const seen = new Set<string>()
-      const unique = allCollisions.filter(c => {
-        const id = String(c.id)
-        if (seen.has(id)) return false
-        seen.add(id)
-        return true
-      })
-      // Prefer specific cluster-group targets
-      const target = unique.find(
-        (c) => String(c.id).startsWith('cluster-group-') || String(c.id).startsWith('cluster-drop-')
-      )
-      if (target) return [target]
-      // Fall back to the card-level drop zone
-      const cardTarget = unique.find(
-        (c) => String(c.id) === 'cluster-groups-card'
-      )
-      if (cardTarget) return [cardTarget]
-      return []
-    }
-    return closestCenter(args)
-  }
-
-  // Combined drag-end: card reorder + external handler (e.g. workload deploy)
-  const handleDragEnd = (event: DragEndEvent) => {
-    baseDragEnd(event)
-    externalDragEnd?.(event)
-  }
-
-  // Prefetch React.lazy() chunks for cards on this dashboard
-  useEffect(() => {
-    prefetchCardChunks(cards.map(c => c.card_type))
-  }, [cards])
-
-  // Combined refreshing state
-  const isRefreshing = externalRefreshing || showIndicator
-  const isFetching = isLoading || isRefreshing
-  const liveRouteState = routeState ?? (
-    isLoading && !hasData
-      ? 'partial'
-      : error && !hasData
-        ? 'unavailable'
-        : hasData
-          ? 'loaded'
-          : 'empty'
-  )
-
-  // Bridge: when CardWrapper's "Export Widget" calls studioContext.openAddCardModal(),
-  // it sets isAddCardModalOpen in the DashboardContext. Sync that into our local
-  // showAddCard state so the DashboardCustomizer opens.
-  const dashCtx = useDashboardContextOptional()
-  const [widgetCardType, setWidgetCardType] = useState<string | undefined>(undefined)
-  useEffect(() => {
-    // Guard: only process on the active dashboard — KeepAlive keeps inactive
-    // dashboards mounted, so without this check we'd open the customizer on
-    // a hidden dashboard when the context fires.
-    if (location.pathname !== mountedRouteRef.current) return
-    if (dashCtx?.isAddCardModalOpen) {
-      setShowAddCard(true)
-      if (dashCtx.studioInitialSection) {
-        setCustomizerInitialSection(dashCtx.studioInitialSection)
-      }
-      if (dashCtx.studioWidgetCardType) {
-        setWidgetCardType(dashCtx.studioWidgetCardType)
-      }
-      // Reset context state so it doesn't re-trigger
-      dashCtx.closeAddCardModal()
-    }
-  }, [dashCtx?.isAddCardModalOpen, dashCtx?.studioInitialSection, dashCtx?.studioWidgetCardType, location.pathname])
-
-  // Handle addCard and customizeSidebar URL params via the DashboardCustomizer.
-  // Guard with mounted route: KeepAlive keeps hidden dashboards mounted,
-  // so all of them see the same searchParams. Only process when active.
-  const [addCardSearch, setAddCardSearch] = useState('')
-  // Determine initial section for DashboardCustomizer based on URL params
-  const [customizerInitialSection, setCustomizerInitialSection] = useState<CustomizerSection | undefined>(undefined)
-  useEffect(() => {
-    if (location.pathname !== mountedRouteRef.current) return
-    if (searchParams.get('addCard') === 'true') {
-      setAddCardSearch(searchParams.get('cardSearch') || '')
-      setCustomizerInitialSection('cards')
-      setShowAddCard(true)
-      setSearchParams({}, { replace: true })
-    } else if (searchParams.get('customizeSidebar') === 'true') {
-      setCustomizerInitialSection('dashboards')
-      setShowAddCard(true)
-      setSearchParams({}, { replace: true })
-    }
-  }, [searchParams, setSearchParams, setShowAddCard, location.pathname])
-
-  // Inline card insertion
-  const [insertAtIndex, setInsertAtIndex] = useState<number | null>(null)
-  const insertAtIndexRef = useRef<number | null>(null)
-  const [visibleCardCount, setVisibleCardCount] = useState(DASHBOARD_VIRTUALIZATION_INITIAL_COUNT)
-  const loadMoreRef = useRef<HTMLDivElement | null>(null)
-  const dashboardRef = useRef<HTMLDivElement | null>(null)
-  const [dashboardWidth, setDashboardWidth] = useState(() => (
-    typeof window !== 'undefined' ? window.innerWidth : 0
-  ))
-  const cardsGridRef = useRef<HTMLDivElement | null>(null)
-  const [useCompactGrid, setUseCompactGrid] = useState(false)
-  insertAtIndexRef.current = insertAtIndex
-
-  // Card handlers
-  const handleAddCards = (newCards: Array<{ type: string; title: string; config: Record<string, unknown> }>) => {
-    const idx = insertAtIndexRef.current
-    if (idx !== null) {
-      const cardsToAdd = newCards.map(c => ({
-        id: `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        card_type: c.type,
-        config: c.config || {},
-        title: c.title
-      }))
-      setCards(prev => [...prev.slice(0, idx), ...cardsToAdd, ...prev.slice(idx)])
-      setInsertAtIndex(null)
-    } else {
-      addCards(newCards)
-    }
-    expandCards()
-    setShowAddCard(false)
-    setWidgetCardType(undefined)
-    setCustomizerInitialSection(undefined)
-  }
-
-  const handleRemoveCard = useCallback((cardId: string) => {
-    removeCard(cardId)
-  }, [removeCard])
-
-  const handleConfigureCard = useCallback((cardId: string) => {
-    openConfigureCard(cardId)
-  }, [openConfigureCard])
-
-  const handleSaveCardConfig = useCallback((cardId: string, config: Record<string, unknown>) => {
-    configureCard(cardId, config)
-    setConfiguringCard(null)
-  }, [configureCard, setConfiguringCard])
-
-  const handleWidthChange = useCallback((cardId: string, newWidth: number) => {
-    updateCardWidth(cardId, newWidth)
-  }, [updateCardWidth])
-
-  const handleHeightChange = useCallback((cardId: string, newHeight: number) => {
-    updateCardHeight(cardId, newHeight)
-  }, [updateCardHeight])
-
-  const applyTemplate = (template: DashboardTemplate) => {
-    const newCards = template.cards.map((card, i) => ({
-      id: `card-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
-      card_type: card.card_type,
-      config: card.config || {},
-      title: card.title
-    }))
-    setCards(newCards)
-    expandCards()
-    // Close DashboardCustomizer after applying template
-    setShowAddCard(false)
-    setWidgetCardType(undefined)
-    setCustomizerInitialSection(undefined)
-  }
-
-  const mergedStatValueGetter = useMemo(
-    () => (customGetStatValue ? createMergedStatValueGetter(customGetStatValue, getUniversalStatValue) : null),
-    [customGetStatValue, getUniversalStatValue],
-  )
-  // Merged stat value getter: dashboard-specific first, then universal fallback
-  const getStatValue = useCallback((blockId: string): StatBlockValue => {
-    if (mergedStatValueGetter) {
-      return mergedStatValueGetter(blockId)
-    }
-    return getUniversalStatValue(blockId) ?? DEFAULT_STAT_BLOCK_VALUE
-  }, [mergedStatValueGetter, getUniversalStatValue])
-
-  const shouldVirtualizeCards = showCards && cards.length > DASHBOARD_VIRTUALIZATION_THRESHOLD
-  const visibleCards = useMemo(
-    () => (shouldVirtualizeCards ? cards.slice(0, Math.min(cards.length, visibleCardCount)) : cards),
-    [cards, shouldVirtualizeCards, visibleCardCount],
-  )
-  const handleOpenCustomizer = useCallback(() => {
+  // Insert a new card before/after the given index and open the add-card modal.
+  const handleInsertCard = (index: number | null) => {
+    setInsertAtIndex(index)
     setShowAddCard(true)
-  }, [setShowAddCard])
-  const defaultEmptyStateAction = useMemo<EmptyStateAction>(() => ({
-    ...DEFAULT_EMPTY_STATE_ACTION_PROPS,
-    onClick: handleOpenCustomizer,
-  }), [handleOpenCustomizer])
-  const handleRefresh = useCallback(() => {
-    triggerRefresh()
-  }, [triggerRefresh])
-
-  useEffect(() => {
-    if (!showCards) return
-    setVisibleCardCount((prev) => {
-      const nextMinimum = Math.min(cards.length, DASHBOARD_VIRTUALIZATION_INITIAL_COUNT)
-      return prev < nextMinimum ? nextMinimum : prev
-    })
-  }, [cards.length, showCards])
-
-  useEffect(() => {
-    if (!shouldVirtualizeCards || visibleCardCount >= cards.length) return
-    const target = loadMoreRef.current
-    if (!target) return
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (!entries.some(entry => entry.isIntersecting)) return
-        setVisibleCardCount(prev => Math.min(prev + DASHBOARD_VIRTUALIZATION_STEP, cards.length))
-      },
-      { rootMargin: DASHBOARD_VIRTUALIZATION_ROOT_MARGIN },
-    )
-    observer.observe(target)
-    return () => observer.disconnect()
-  }, [cards.length, shouldVirtualizeCards, visibleCardCount])
-
-  useEffect(() => {
-    const target = dashboardRef.current
-    if (!target || typeof ResizeObserver === 'undefined') return
-
-    const observer = new ResizeObserver(([entry]) => {
-      const nextWidth = Math.round(entry.contentRect.width)
-      setDashboardWidth(prev => (prev === nextWidth ? prev : nextWidth))
-    })
-
-    observer.observe(target)
-    return () => observer.disconnect()
-  }, [])
-
-  useEffect(() => {
-    if (!showCards || cards.length === 0) return
-    const target = cardsGridRef.current
-    if (!target || typeof ResizeObserver === 'undefined') return
-
-    const syncGridMode = (width: number) => {
-      setUseCompactGrid(width < COMPACT_GRID_BREAKPOINT_PX)
-    }
-
-    syncGridMode(target.getBoundingClientRect().width)
-
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0]
-      if (!entry) return
-      syncGridMode(entry.contentRect.width)
-    })
-
-    observer.observe(target)
-    return () => observer.disconnect()
-  }, [cards.length, showCards])
-
-  // Transform card for ConfigureCardModal
-  const configureCardData = configuringCard ? {
-    id: configuringCard.id,
-    card_type: configuringCard.card_type,
-    config: configuringCard.config,
-    title: configuringCard.title
-  } : null
+  }
 
   // Default empty state text
   const emptyTitle = emptyState?.title || `${title} Dashboard`
@@ -501,87 +228,37 @@ export function DashboardPage({
         {beforeCards}
 
         {/* Dashboard Cards Section */}
-        <div className="mb-6">
-          {/* Card section header with toggle */}
-          <div className="flex items-center justify-between mb-3">
-            <button
-              onClick={() => setShowCards(!showCards)}
-              className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <LayoutGrid className="w-4 h-4" />
-              <span>{title} Cards ({cards.length})</span>
-              {showCards ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-            </button>
-          </div>
-
-          {/* Cards grid */}
-          {showCards && (
-            <>
-              {cards.length === 0 ? (
-                <EmptyState
-                  icon={<Icon className="w-12 h-12 text-muted-foreground" />}
-                  title={emptyTitle}
-                  description={emptyDescription}
-                  action={emptyState?.action ?? defaultEmptyStateAction}
-                  secondaryAction={emptyState?.secondaryAction}
-                  data-testid="dashboard-empty-state"
-                />
-              ) : (
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={collisionDetection}
-                  onDragStart={handleDragStart}
-                  onDragEnd={handleDragEnd}
-                >
-                  <SortableContext items={visibleCards.map(c => c.id)} strategy={rectSortingStrategy}>
-                    <div
-                      ref={cardsGridRef}
-                      className="grid grid-cols-1 md:grid-cols-12 gap-2 min-w-0"
-                      data-testid="dashboard-cards-grid"
-                      style={GRID_STYLE}
-                    >
-                      {visibleCards.map((card, index) => (
-                        <SortableDashboardCard
-                          key={card.id}
-                          card={card}
-                          onConfigure={() => handleConfigureCard(card.id)}
-                          onRemove={() => handleRemoveCard(card.id)}
-                          onWidthChange={(newWidth) => handleWidthChange(card.id, newWidth)}
-                          onHeightChange={(newHeight) => handleHeightChange(card.id, newHeight)}
-                          isDragging={activeId === card.id}
-                          isRefreshing={isRefreshing}
-                          onRefresh={triggerRefresh}
-                          lastUpdated={lastUpdated}
-                          useCompactGrid={useCompactGrid}
-                          onInsertBefore={() => { setInsertAtIndex(index); setShowAddCard(true) }}
-                          onInsertAfter={() => { setInsertAtIndex(index + 1); setShowAddCard(true) }}
-                          containerWidth={dashboardWidth}
-                        />
-                      ))}
-                    </div>
-                    {shouldVirtualizeCards && visibleCards.length < cards.length && (
-                      <div ref={loadMoreRef} className="h-1 w-full" aria-hidden="true" />
-                    )}
-                  </SortableContext>
-                  <DragOverlay dropAnimation={null} zIndex={OVERLAY_Z_INDEX}>
-                    {activeId && cards.find(c => c.id === activeId) ? (
-                      <DragPreviewCard card={cards.find(c => c.id === activeId)!} />
-                    ) : activeId && activeDragData?.type === 'workload' ? (
-                      <div className="bg-blue-100 dark:bg-blue-900/60 shadow-xl rounded-lg px-4 py-2 border-2 border-blue-400 max-w-xs pointer-events-none">
-                        <div className="text-sm font-medium text-blue-900 dark:text-blue-100 truncate">
-                          {(activeDragData.workload as { name?: string })?.name || 'Workload'}
-                        </div>
-                        <div className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">
-                          Drop on a cluster group to deploy
-                        </div>
-                      </div>
-                    ) : null}
-                  </DragOverlay>
-                </DndContext>
-              )}
-            </>
-          )}
-        </div>
+        <DashboardPageCardsSection
+          title={title}
+          Icon={Icon}
+          cards={cards}
+          visibleCards={visibleCards}
+          shouldVirtualizeCards={shouldVirtualizeCards}
+          loadMoreRef={loadMoreRef}
+          showCards={showCards}
+          onToggleShowCards={() => setShowCards(!showCards)}
+          emptyState={emptyState}
+          emptyTitle={emptyTitle}
+          emptyDescription={emptyDescription}
+          defaultEmptyStateAction={defaultEmptyStateAction}
+          sensors={sensors}
+          collisionDetection={collisionDetection}
+          handleDragStart={handleDragStart}
+          handleDragEnd={handleDragEnd}
+          activeId={activeId}
+          activeDragData={activeDragData}
+          cardsGridRef={cardsGridRef}
+          onConfigureCard={handleConfigureCard}
+          onRemoveCard={handleRemoveCard}
+          onWidthChange={handleWidthChange}
+          onHeightChange={handleHeightChange}
+          isRefreshing={isRefreshing}
+          onCardRefresh={triggerRefresh}
+          lastUpdated={lastUpdated}
+          useCompactGrid={useCompactGrid}
+          onInsertCard={handleInsertCard}
+          dashboardWidth={dashboardWidth}
+        />
 
         {/* Dashboard-specific content */}
         {children}
