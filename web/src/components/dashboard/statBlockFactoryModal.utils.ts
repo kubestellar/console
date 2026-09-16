@@ -7,7 +7,7 @@ import {
   HelpCircle,
   type LucideIcon } from 'lucide-react'
 import type { StatBlockColor, StatBlockValueSource, StatBlockDefinition, StatsDefinition } from '../../lib/stats/types'
-import type { BlockEditorItem, StatAssistResult, AiStatBlockResult } from './statBlockFactoryModal.types'
+import type { BlockEditorItem, StatAssistResult, AiStatBlockResult, StatBlockInput } from './statBlockFactoryModal.types'
 
 // Demo/preview constants
 export const DEMO_STAT_VALUE = 42 // Placeholder value shown in stat block previews
@@ -102,6 +102,22 @@ export function createEmptyBlock(): BlockEditorItem {
     field: '',
     format: '',
     tooltip: '' }
+}
+
+export function normalizeBlockEditorItem(block: StatBlockInput): BlockEditorItem {
+  return {
+    id: block.id ?? createStatBlockId(),
+    label: block.label,
+    icon: block.icon || 'Activity',
+    color: (AVAILABLE_COLORS.includes(block.color as StatBlockColor) ? block.color : 'purple') as StatBlockColor,
+    field: block.field || '',
+    format: block.format || '',
+    tooltip: block.tooltip || '',
+  }
+}
+
+export function normalizeBlockEditorItems(blocks: StatBlockInput[]): BlockEditorItem[] {
+  return blocks.map(normalizeBlockEditorItem)
 }
 
 export function validateStatAssistResult(data: unknown): { valid: true; result: StatAssistResult } | { valid: false; error: string } {
