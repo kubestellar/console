@@ -4,7 +4,7 @@
 // previously lived in auth.tsx, with import paths adjusted for this
 // file's location under src/lib/auth/.
 
-import { createContext, use, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react'
+import { createContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react'
 import { checkOAuthConfigured, checkOAuthConfiguredWithRetry } from '../api'
 import { dashboardSync } from '../dashboards/dashboardSync'
 import { clearPermissionsCache } from '../../hooks/usePermissions'
