@@ -11,6 +11,7 @@ import { authFetch } from '../../lib/api'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { RotatingTip } from '../ui/RotatingTip'
 import { TechnicalAcronym } from '../shared/TechnicalAcronym'
+import { Button } from '../ui/Button'
 
 interface HIPAACheck {
   id: string; name: string; description: string; status: string
@@ -115,7 +116,7 @@ export const HIPAADashboardContent = memo(function HIPAADashboardContent() {
     <div className="p-6 text-center">
       <XCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
       <p className="text-red-300 mb-4">{error}</p>
-      <button onClick={fetchData} className="px-4 py-2 min-h-11 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm">{t('common.retry', 'Retry')}</button>
+      <Button onClick={fetchData} variant="primary" className="min-h-11">{t('common.retry', 'Retry')}</Button>
     </div>
   )
 
