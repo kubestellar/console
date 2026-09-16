@@ -411,7 +411,6 @@ export async function setupAllMocks(page: Page) {
         url.includes('/api/missions')) {
       return route.fallback()
     }
-    // eslint-disable-next-line no-console
     console.error(`[mission-control-stress] Unmocked API call: ${url}`)
     route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
   })
