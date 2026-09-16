@@ -25,14 +25,12 @@ import { EmptyState } from '../../ui/EmptyState'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { cn } from '../../../lib/cn'
 import type { RookCephCluster, RookCephHealth } from '../../../lib/demo/rook'
-import { getHealthBadgeClasses } from '../../../lib/cards/statusColors'
+import { getHealthBadgeClasses, getUsageColor } from '../../../lib/cards/statusColors'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
 // ---------------------------------------------------------------------------
 
-const USAGE_PCT_WARN = 70
-const USAGE_PCT_ALERT = 85
 const PCT_MULTIPLIER = 100
 
 const BINARY_ZERO_LABEL = '0'
@@ -51,11 +49,7 @@ function usagePct(cluster: RookCephCluster): number {
   return Math.max(0, Math.min(PCT_MULTIPLIER, pct))
 }
 
-function usageColor(pct: number): string {
-  if (pct >= USAGE_PCT_ALERT) return 'text-red-400'
-  if (pct >= USAGE_PCT_WARN) return 'text-yellow-400'
-  return 'text-green-400'
-}
+const usageColor = getUsageColor
 
 function healthBadgeClasses(health: RookCephHealth): string {
   if (health === 'HEALTH_OK') return 'bg-green-500/20 text-green-400'
