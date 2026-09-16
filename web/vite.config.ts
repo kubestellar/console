@@ -472,6 +472,8 @@ export default defineConfig(({ mode }) => ({
         'src/components/animations/**',
         'src/components/modals/**',
         'src/components/missions/**',
+        'src/components/widgets/**',
+        'src/components/updates/**',
         'src/components/charts/**',
         'src/components/dashboard/customizer/**',
         'src/components/dashboard/shared/cardCatalog.ts',
