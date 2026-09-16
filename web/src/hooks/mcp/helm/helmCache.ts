@@ -81,3 +81,4 @@ export function saveHelmHistoryToStorage(cache: Map<string, HelmHistoryCacheEntr
     const obj = Object.fromEntries(cache.entries())
     localStorage.setItem(HELM_HISTORY_CACHE_KEY, JSON.stringify(obj))
   } catch { /* ignore storage errors */ }
+}
