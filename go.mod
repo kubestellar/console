@@ -122,5 +122,5 @@ replace (
 	github.com/google/cel-go => github.com/google/cel-go v0.29.2
 	go.opentelemetry.io/otel => go.opentelemetry.io/otel v1.44.0
 	go.opentelemetry.io/otel/sdk => go.opentelemetry.io/otel/sdk v1.43.0
-	google.golang.org/grpc => google.golang.org/grpc v1.82.1
+	google.golang.org/grpc => google.golang.org/grpc v1.83.1
 )
