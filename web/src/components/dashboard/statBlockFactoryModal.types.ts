@@ -20,28 +20,30 @@ export interface BlockEditorItem {
   tooltip: string
 }
 
+export interface StatBlockInput {
+  id?: string
+  label: string
+  icon?: string
+  color?: string
+  field?: string
+  format?: string
+  tooltip?: string
+}
+
 export interface StatAssistResult {
   title?: string
-  blocks?: {
-    label: string
-    icon: string
-    color: string
-    field: string
-    format?: string
-    tooltip?: string
-  }[]
+  blocks?: StatBlockInput[]
 }
 
 export interface AiStatBlockResult {
   title: string
   type: string
-  blocks: {
+  blocks: Array<StatBlockInput & {
     id: string
-    label: string
     icon: string
     color: string
     field: string
     format: string
     tooltip: string
-  }[]
+  }>
 }
