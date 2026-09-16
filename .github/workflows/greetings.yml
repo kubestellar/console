@@ -6,11 +6,12 @@ on:
   issues:
     types: [opened, reopened]
 
-permissions:
-  contents: read
-  issues: write
-  pull-requests: write
+permissions: read-all  # default read; writes scoped to job below
 
 jobs:
   greet:
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
     uses: kubestellar/infra/.github/workflows/reusable-greetings.yml@220beeeb8dae67e2fd8e89338ada8144609fc6ef # pin to main 2026-08-24

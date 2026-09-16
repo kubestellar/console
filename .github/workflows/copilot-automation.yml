@@ -10,11 +10,7 @@ on:
   pull_request_target:
     types: [opened, synchronize, ready_for_review]
 
-permissions:
-  contents: read
-  pull-requests: write
-  issues: write
-  statuses: write
+permissions: read-all  # default read; writes scoped to job below
 
 concurrency:
   group: copilot-automation-${{ github.event.pull_request.number || github.event.inputs.pr_number || github.sha }}
@@ -22,6 +18,11 @@ concurrency:
 
 jobs:
   copilot-automation:
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      statuses: write
     uses: kubestellar/infra/.github/workflows/reusable-copilot-automation.yml@220beeeb8dae67e2fd8e89338ada8144609fc6ef # pin to main 2026-08-24
     with:
       pr_number: ${{ github.event.inputs.pr_number || '' }}
