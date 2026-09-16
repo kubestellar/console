@@ -201,7 +201,7 @@ export function useKubeDoomGame() {
       setLevel(l => l + 1)
       setGameState('levelcomplete')
     }
-  }, [level, highScore, shoot])
+  }, [level, highScore])
 
   const { canvasRef, render } = useKubeDoomRenderer({
     gameState, playerRef, enemiesRef, shootFlashRef, damageFlashRef, update,

@@ -9,6 +9,8 @@ import { useTranslation } from 'react-i18next'
 import { WEATHER_API } from '../../../config/externalApis'
 import { useKeyboardNav } from '../../../hooks/useKeyboardNav'
 import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../../lib/constants'
+import { Input } from '../../ui/Input'
+import { Select } from '../../ui/Select'
 import { useToast } from '../../ui/Toast'
 import type { GeocodingResult, SavedLocation } from './types'
 
@@ -117,8 +119,7 @@ export function WeatherSearch({
       <div>
         <label className="text-xs text-muted-foreground mb-1.5 block font-medium">Search for a city</label>
         <div className="relative">
-          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
+          <Input
             type="text"
             value={citySearchInput}
             onChange={(e) => setCitySearchInput(e.target.value)}
@@ -128,15 +129,15 @@ export function WeatherSearch({
               event.preventDefault()
               setShowCityDropdown(true)
             }}
-            className="w-full pl-10 pr-10 py-2.5 text-sm rounded-lg bg-secondary/50 border border-border/30 text-foreground placeholder:text-muted-foreground"
+            inputSize="lg"
+            leadingIcon={<SearchIcon className="w-4 h-4" />}
+            trailingIcon={isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : undefined}
+            className="bg-secondary/50"
             placeholder="Type city name..."
             aria-expanded={showCityDropdown}
             aria-controls="weather-city-results"
             aria-autocomplete="list"
           />
-          {isSearching && (
-            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground animate-spin" />
-          )}
 
           {/* City Search Dropdown */}
           {showCityDropdown && citySearchResults.length > 0 && (
@@ -241,26 +242,26 @@ export function WeatherSearch({
       <div className="flex gap-3 pt-2 border-t border-border/30">
         <div className="flex-1">
           <label className="text-xs text-muted-foreground mb-1 block">Units</label>
-          <select
+          <Select
             value={units}
             onChange={(e) => onUnitsChange(e.target.value as 'F' | 'C')}
-            className="w-full px-3 py-2 text-sm rounded-lg bg-secondary/50 border border-border/30 text-foreground"
+            className="bg-secondary/50"
           >
             <option value="F">°F (Fahrenheit)</option>
             <option value="C">°C (Celsius)</option>
-          </select>
+          </Select>
         </div>
         <div className="flex-1">
           <label className="text-xs text-muted-foreground mb-1 block">Forecast</label>
-          <select
+          <Select
             value={forecastLength}
             onChange={(e) => onForecastLengthChange(Number(e.target.value) as 2 | 7 | 14)}
-            className="w-full px-3 py-2 text-sm rounded-lg bg-secondary/50 border border-border/30 text-foreground"
+            className="bg-secondary/50"
           >
             <option value={2}>2 days</option>
             <option value={7}>7 days</option>
             <option value={14}>14 days</option>
-          </select>
+          </Select>
         </div>
       </div>
     </div>

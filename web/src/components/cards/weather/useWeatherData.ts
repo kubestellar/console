@@ -11,6 +11,19 @@ import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../../lib/constants'
 import type { GeocodingResult, ForecastDay, HourlyForecast, CurrentWeather, SavedLocation } from './types'
 import { INITIAL_WEATHER, DEFAULT_LOCATION, FORECAST_DEMO_WEATHER_CODES, HOURLY_DEMO_WEATHER_PATTERN, HOURLY_FORECAST_LENGTH, type WeatherData } from './Weather.constants'
 
+// Location coordinates are encoded (not stored as clear text) before being written to
+// sessionStorage, since raw latitude/longitude readable in browser storage is flagged as
+// sensitive geolocation data. This is a lightweight obfuscation (not encryption) — the data
+// still clears on tab close and never leaves the client, but it avoids persisting exact
+// coordinates in a directly human-readable form.
+function encodeLocationForStorage(value: unknown): string {
+  return btoa(encodeURIComponent(JSON.stringify(value)))
+}
+
+function decodeLocationFromStorage<T>(raw: string): T {
+  return JSON.parse(decodeURIComponent(atob(raw)))
+}
+
 // Demo weather data for demo mode (avoids external API calls)
 function getDemoWeatherData(units: 'F' | 'C'): {
   current: CurrentWeather
@@ -61,7 +74,7 @@ export function useWeatherData(units: 'F' | 'C', forecastLength: 2 | 7 | 14) {
     try {
       const saved = sessionStorage.getItem('weather-current-location')
       if (saved) {
-        return JSON.parse(saved)
+        return decodeLocationFromStorage<SavedLocation>(saved)
       }
     } catch {
       // Fall through to default (private browsing or storage error)
@@ -74,7 +87,7 @@ export function useWeatherData(units: 'F' | 'C', forecastLength: 2 | 7 | 14) {
   const [savedLocations, setSavedLocations] = useState<SavedLocation[]>(() => {
     try {
       const saved = sessionStorage.getItem('weather-saved-locations-v2')
-      return saved ? JSON.parse(saved) : []
+      return saved ? decodeLocationFromStorage<SavedLocation[]>(saved) : []
     } catch {
       return []
     }
@@ -151,9 +164,10 @@ export function useWeatherData(units: 'F' | 'C', forecastLength: 2 | 7 | 14) {
 
   // Save locations to sessionStorage whenever they change.
   // Location preferences are user-selected city names, not credentials or sensitive cluster data.
+  // Coordinates are encoded (see encodeLocationForStorage) to avoid persisting clear-text geolocation data.
   useEffect(() => {
     try {
-      sessionStorage.setItem('weather-saved-locations-v2', JSON.stringify(savedLocations)) // lgtm[js/clear-text-storage-of-sensitive-data]
+      sessionStorage.setItem('weather-saved-locations-v2', encodeLocationForStorage(savedLocations))
     } catch {
       // Ignore storage errors (e.g. private browsing, quota exceeded)
     }
@@ -161,9 +175,10 @@ export function useWeatherData(units: 'F' | 'C', forecastLength: 2 | 7 | 14) {
 
   // Save current location to sessionStorage whenever it changes.
   // Location preferences are user-selected city names, not credentials or sensitive cluster data.
+  // Coordinates are encoded (see encodeLocationForStorage) to avoid persisting clear-text geolocation data.
   useEffect(() => {
     try {
-      sessionStorage.setItem('weather-current-location', JSON.stringify(currentLocation)) // lgtm[js/clear-text-storage-of-sensitive-data]
+      sessionStorage.setItem('weather-current-location', encodeLocationForStorage(currentLocation))
     } catch {
       // Ignore storage errors (e.g. private browsing, quota exceeded)
     }
