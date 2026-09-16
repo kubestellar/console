@@ -122,6 +122,7 @@ export function UserGroupsField({
             }
           }}
           className={SELECT_CLASS}
+          aria-label={t('rbac.selectCommonGroups')}
           data-testid="can-i-user-groups"
         >
           <option value="">{t('rbac.selectCommonGroups')}</option>

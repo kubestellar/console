@@ -104,7 +104,7 @@ exports[`CrossClusterPolicyComparison > snapshot > matches snapshot for loaded p
             >
               <svg
                 aria-hidden="true"
-                class="lucide lucide-circle-check w-3.5 h-3.5 text-green-400"
+                class="lucide lucide-circle-check lucide-check-circle-2 w-3.5 h-3.5 text-green-400"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -151,7 +151,7 @@ exports[`CrossClusterPolicyComparison > snapshot > matches snapshot for loaded p
             >
               <svg
                 aria-hidden="true"
-                class="lucide lucide-circle-check w-3.5 h-3.5 text-green-400"
+                class="lucide lucide-circle-check lucide-check-circle-2 w-3.5 h-3.5 text-green-400"
                 fill="none"
                 height="24"
                 stroke="currentColor"

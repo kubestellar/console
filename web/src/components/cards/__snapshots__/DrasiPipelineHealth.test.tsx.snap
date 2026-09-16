@@ -12,7 +12,7 @@ exports[`DrasiPipelineHealth > matches snapshot for healthy state 1`] = `
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-circle-check-big w-8 h-8 text-green-400"
+        class="lucide lucide-circle-check-big lucide-check-circle w-8 h-8 text-green-400"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -57,7 +57,7 @@ exports[`DrasiPipelineHealth > matches snapshot for healthy state 1`] = `
           >
             <svg
               aria-hidden="true"
-              class="lucide lucide-circle-check-big w-4 h-4 text-green-400"
+              class="lucide lucide-circle-check-big lucide-check-circle w-4 h-4 text-green-400"
               fill="none"
               height="24"
               stroke="currentColor"

@@ -101,7 +101,7 @@ exports[`ACMMLevel > matches snapshot 1`] = `
         >
           <svg
             aria-hidden="true"
-            class="lucide lucide-chart-column w-3.5 h-3.5 text-primary"
+            class="lucide lucide-chart-column lucide-bar-chart-3 w-3.5 h-3.5 text-primary"
             fill="none"
             height="24"
             stroke="currentColor"
