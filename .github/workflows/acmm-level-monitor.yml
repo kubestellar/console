@@ -27,24 +27,76 @@ jobs:
           MIN_LEVEL: ${{ github.event.inputs.min_level || '5' }}
         run: |
           RESPONSE=$(curl -sf "https://console.kubestellar.io/api/acmm/badge?repo=kubestellar%2Fconsole&force=true" || echo "")
+          echo "min_level=$MIN_LEVEL" >> "$GITHUB_OUTPUT"
           if [ -z "$RESPONSE" ]; then
+            echo "unreachable=true" >> "$GITHUB_OUTPUT"
             echo "level=0" >> "$GITHUB_OUTPUT"
             echo "message=badge endpoint unreachable" >> "$GITHUB_OUTPUT"
             echo "score=?/?" >> "$GITHUB_OUTPUT"
+            echo "ACMM badge endpoint unreachable — cannot determine level, not treating as a regression"
             exit 0
           fi
           LEVEL=$(echo "$RESPONSE" | python3 -c "import sys,json,re; d=json.load(sys.stdin); m=re.match(r'L(\d+)', d.get('message','')); print(m.group(1) if m else '0')")
           SCORE=$(echo "$RESPONSE" | python3 -c "import sys,json,re; d=json.load(sys.stdin); m=re.search(r'(\d+/\d+)', d.get('message','')); print(m.group(1) if m else '?/?')")
           MESSAGE=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('message','unknown'))")
+          echo "unreachable=false" >> "$GITHUB_OUTPUT"
           echo "level=$LEVEL" >> "$GITHUB_OUTPUT"
           echo "score=$SCORE" >> "$GITHUB_OUTPUT"
           echo "message=$MESSAGE" >> "$GITHUB_OUTPUT"
-          echo "min_level=$MIN_LEVEL" >> "$GITHUB_OUTPUT"
           echo "ACMM badge: $MESSAGE (level=$LEVEL, required>=$MIN_LEVEL)"
+
+      - name: Check for existing unreachable issue
+        id: existing_unreachable
+        if: ${{ steps.badge.outputs.unreachable == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          EXISTING=$(gh issue list \
+            --repo kubestellar/console \
+            --state open \
+            --label "acmm-monitor-unreachable" \
+            --json number \
+            --jq '.[0].number // empty' 2>/dev/null || echo "")
+          echo "number=$EXISTING" >> "$GITHUB_OUTPUT"
+
+      - name: Open unreachable issue
+        if: ${{ steps.badge.outputs.unreachable == 'true' && steps.existing_unreachable.outputs.number == '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --repo kubestellar/console \
+            --title "⚠️ ACMM badge endpoint unreachable — level check skipped" \
+            --label "bug,acmm-monitor-unreachable" \
+            --body "## ACMM Badge Endpoint Unreachable
+
+          **Detected:** $(date -u '+%Y-%m-%dT%H:%M:%SZ')
+
+          \`ACMM Level Monitor\` could not reach the badge endpoint, so today's ACMM level check was skipped. This is **not** a confirmed ACMM regression — it means the monitor has no data, and a real level drop could be masked until the endpoint recovers.
+
+          ## Investigation steps
+
+          1. Check whether \`https://console.kubestellar.io\` is up and the \`/api/acmm/badge\` route is responding.
+          2. Re-run this workflow manually (\`workflow_dispatch\`) once the endpoint is confirmed reachable to get a real level reading.
+          3. If the endpoint is up but still failing, check for API contract changes.
+
+          ## Badge URL
+
+          \`https://console.kubestellar.io/api/acmm/badge?repo=kubestellar%2Fconsole&force=true\`"
+
+      - name: Comment on existing unreachable issue
+        if: ${{ steps.badge.outputs.unreachable == 'true' && steps.existing_unreachable.outputs.number != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ steps.existing_unreachable.outputs.number }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" \
+            --repo kubestellar/console \
+            --body "Still unreachable as of $(date -u '+%Y-%m-%dT%H:%M:%SZ') — ACMM level check skipped again."
 
       - name: Check for existing regression issue
         id: existing
-        if: ${{ fromJson(steps.badge.outputs.level) < fromJson(steps.badge.outputs.min_level) }}
+        if: ${{ steps.badge.outputs.unreachable == 'false' && fromJson(steps.badge.outputs.level) < fromJson(steps.badge.outputs.min_level) }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -57,7 +109,7 @@ jobs:
           echo "number=$EXISTING" >> "$GITHUB_OUTPUT"
 
       - name: Open regression issue
-        if: ${{ fromJson(steps.badge.outputs.level) < fromJson(steps.badge.outputs.min_level) && steps.existing.outputs.number == '' }}
+        if: ${{ steps.badge.outputs.unreachable == 'false' && fromJson(steps.badge.outputs.level) < fromJson(steps.badge.outputs.min_level) && steps.existing.outputs.number == '' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Pass outputs as env vars to avoid expression injection from external API data
@@ -93,7 +145,7 @@ jobs:
           \`https://console.kubestellar.io/api/acmm/badge?repo=kubestellar%2Fconsole&force=true\`"
 
       - name: Comment on existing issue
-        if: ${{ fromJson(steps.badge.outputs.level) < fromJson(steps.badge.outputs.min_level) && steps.existing.outputs.number != '' }}
+        if: ${{ steps.badge.outputs.unreachable == 'false' && fromJson(steps.badge.outputs.level) < fromJson(steps.badge.outputs.min_level) && steps.existing.outputs.number != '' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Pass outputs as env vars to avoid expression injection from external API data
@@ -107,7 +159,7 @@ jobs:
             --body "Still regressed as of $(date -u '+%Y-%m-%dT%H:%M:%SZ'): badge is \`${MESSAGE}\` (L${LEVEL}, score ${SCORE})"
 
       - name: Pass — log and exit
-        if: ${{ fromJson(steps.badge.outputs.level) >= fromJson(steps.badge.outputs.min_level) }}
+        if: ${{ steps.badge.outputs.unreachable == 'false' && fromJson(steps.badge.outputs.level) >= fromJson(steps.badge.outputs.min_level) }}
         env:
           LEVEL: ${{ steps.badge.outputs.level }}
           MIN: ${{ steps.badge.outputs.min_level }}

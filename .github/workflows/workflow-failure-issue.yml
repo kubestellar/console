@@ -20,6 +20,7 @@ on:
       - "Nil Safety"
       - "GA4 Error Monitor"
       - "CodeQL Security Analysis"
+      - "ACMM Level Monitor"
       # Weekly reviews
       - "OpenSSF Scorecard"
       - "Weekly Coverage Review"
