@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -10,9 +11,9 @@ import (
 	"testing"
 
 	"github.com/gorilla/websocket"
-	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/agent/kube"
 	"github.com/kubestellar/console/pkg/agent/tokentracker"
+	"github.com/kubestellar/console/pkg/k8s"
 )
 
 // serverTestOption is a functional option for newTestServer.
@@ -151,4 +152,32 @@ func writeTestKubeconfig2(path string, entries map[string]string) {
 	if err := os.WriteFile(path, b, 0600); err != nil {
 		panic("writeTestKubeconfig2: " + err.Error())
 	}
+}
+
+// ServerMockProvider for testing handleChatMessage
+type ServerMockProvider struct {
+	name string
+}
+
+func (m *ServerMockProvider) Name() string                     { return m.name }
+func (m *ServerMockProvider) DisplayName() string              { return m.name }
+func (m *ServerMockProvider) Description() string              { return m.name }
+func (m *ServerMockProvider) Provider() string                 { return "mock" }
+func (m *ServerMockProvider) IsAvailable() bool                { return true }
+func (m *ServerMockProvider) Capabilities() ProviderCapability { return CapabilityChat }
+func (m *ServerMockProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error) {
+	return &ChatResponse{
+		Content: "Mock response: " + req.Prompt,
+		Agent:   m.name,
+		TokenUsage: &ProviderTokenUsage{
+			InputTokens:  1,
+			OutputTokens: 2,
+			TotalTokens:  3,
+		},
+		Done: true,
+	}, nil
+}
+func (m *ServerMockProvider) StreamChat(ctx context.Context, req *ChatRequest, onChunk func(chunk string)) (*ChatResponse, error) {
+	onChunk("Mock chunk")
+	return m.Chat(ctx, req)
 }
