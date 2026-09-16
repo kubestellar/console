@@ -76,6 +76,11 @@ export function useLaunchSequence({
     if (!isMountedRef.current) return
     setIsStarted(false)
     onUpdateProgress(initial)
+    // Deps intentionally keyed on phaseSignature only — moved verbatim from
+    // LaunchSequence.tsx (baselined at line 328); re-running on every
+    // onUpdateProgress/state.launchProgress identity change would re-init
+    // progress and clobber in-flight launch state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phaseSignature])
 
   const updateProgress = (updater: (prev: PhaseProgress[]) => PhaseProgress[]) => {
@@ -306,6 +311,11 @@ export function useLaunchSequence({
         onComplete()
       }
     }
+    // Deps moved verbatim from LaunchSequence.tsx (baselined at line 558);
+    // 't' is intentionally excluded — including it would re-run this effect
+    // on every locale/translation-instance change and reprocess mission
+    // statuses that haven't actually changed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [missions, onUpdateProgress, onComplete])
 
   // Auto-start on mount — keyed on content signature (#5508). Mission Control
@@ -314,6 +324,11 @@ export function useLaunchSequence({
     if (isStarted || effectivePhases.length === 0) return
     setIsStarted(true)
     void startUnifiedMission()
+    // Deps moved verbatim from LaunchSequence.tsx (baselined at line 566);
+    // 'startUnifiedMission' is intentionally excluded to keep this an
+    // auto-start-on-mount effect keyed on phaseSignature/isStarted, not one
+    // that re-fires whenever the callback identity changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phaseSignature, isStarted, effectivePhases.length])
 
   const progress = state.launchProgress.length > 0 ? state.launchProgress : progressRef.current
