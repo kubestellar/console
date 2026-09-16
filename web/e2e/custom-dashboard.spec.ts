@@ -45,7 +45,11 @@ test.describe('Custom Dashboard Creation', () => {
       await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
     })
 
-    test('shows sidebar', async ({ page }) => {
+    test('shows sidebar', async ({ page }, testInfo) => {
+      // On mobile viewports the sidebar is hidden by design (`-translate-x-full
+      // hidden md:flex`) — the hamburger menu opens it on demand. This test
+      // assumes desktop layout, so skip it on the mobile-* Playwright projects.
+      test.skip(testInfo.project.name.startsWith('mobile-'), 'sidebar is hidden by design on mobile breakpoints')
       await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
       await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 5000 })
     })
@@ -57,14 +61,19 @@ test.describe('Custom Dashboard Creation', () => {
   })
 
   test.describe('Sidebar Functionality', () => {
-    test('sidebar has customize button', async ({ page }) => {
+    // On mobile viewports the sidebar is hidden by design (`-translate-x-full
+    // hidden md:flex`) — the hamburger menu opens it on demand. These tests
+    // assume desktop layout, so skip them on the mobile-* Playwright projects.
+    test('sidebar has customize button', async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name.startsWith('mobile-'), 'sidebar is hidden by design on mobile breakpoints')
       await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 10000 })
       // WebKit renders sidebar content slightly later than Chromium/Firefox —
       // the "Add more" button depends on navSections being mounted. #10200
       await expect(page.getByTestId('sidebar-customize')).toBeVisible({ timeout: 10000 })
     })
 
-    test('customize button is clickable', async ({ page }) => {
+    test('customize button is clickable', async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name.startsWith('mobile-'), 'sidebar is hidden by design on mobile breakpoints')
       // WebKit renders sidebar content slower — use a longer timeout. #10200
       await expect(page.getByTestId('sidebar-customize')).toBeVisible({ timeout: 10000 })
 

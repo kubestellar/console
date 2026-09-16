@@ -44,11 +44,13 @@ export default defineConfig({
           // Nightly-only tests — have their own config (nightly.config.ts)
           '**/nightly/**',
           // Mission journey tests explicitly marked "NOT PR CI gates"
-          '**/mission-journey.spec.ts',
+          // (split into per-journey files by #23480; keep glob matching all parts)
+          '**/mission-journey.*.spec.ts',
           // Mission control tests require live kc-agent + GitHub API
           '**/mission-control-e2e.spec.ts',
           // Stress tests consistently timeout in CI preview (#16080)
-          '**/mission-control-stress.spec.ts',
+          // (split into per-suite files by #23480; keep glob matching all parts)
+          '**/mission-control-stress.*.spec.ts',
           // Requires live kc-agent WebSocket at ws://127.0.0.1:8585
           '**/UpdateSettings.spec.ts',
           // Mission tests with custom auth setup — need backend or inline mocking refactor

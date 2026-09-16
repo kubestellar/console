@@ -25,7 +25,13 @@ jobs:
   build-gate:
     name: build-gate
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # #23490 — "Frontend test (gate subset)" has grown to ~26 min on its own
+    # (1060 files / 11725 tests), leaving too little headroom after the Go
+    # build + frontend install/build/lint steps before hitting the previous
+    # 30-min cap; the whole job was getting cancelled seconds after the test
+    # step actually finished. Bumped to give real margin without excluding
+    # more coverage from the gate subset.
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
