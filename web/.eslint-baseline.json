@@ -19978,9 +19978,9 @@
     "message": "Use <Input> from components/ui/Input.tsx instead of raw <input>."
   },
   {
-    "file": "src/lib/dashboards/DashboardPage.tsx",
+    "file": "src/lib/dashboards/hooks/useDashboardPageState.ts",
     "rule": "react-hooks/exhaustive-deps",
-    "line": 268,
+    "line": 182,
     "column": 6,
     "message": "React Hook useEffect has missing dependencies: 'dashCtx' and 'setShowAddCard'. Either include them or remove the dependency array."
   },
