@@ -109,6 +109,7 @@ class FakeWebSocket {
 
   constructor(url: string) {
     this.url = url
+    // eslint-disable-next-line @typescript-eslint/no-this-alias -- moved verbatim from baselined kubectlProxy.core.connection.test.ts; mock captures instance for test assertions
     activeWs = this
   }
 
