@@ -7,12 +7,12 @@
 
 ## Current Status
 
-**No workflow-level alerting change is merged.** The `operations` agent's GitHub App
-token lacks the `workflows` permission required to create or update any file under
-`.github/workflows/` (verified in a prior session against `nightly-dast.yml`; the same
-constraint applies here). Until a maintainer with that permission adds the fix
-described below, a failure of this workflow produces **no notification of any kind**
-— only a red run in the Actions tab. See tracking issue
+**Alerting is wired up.** `"In-Place Upgrade Smoke"` — together with the 12 other
+scheduled workflows in the same gap class — is listed in the `workflows:` trigger list
+of `.github/workflows/workflow-failure-issue.yml`. A failed scheduled (or
+`workflow_dispatch`) run now opens a `workflow-failure` labelled issue titled
+`Workflow failure: In-Place Upgrade Smoke`, or comments on the existing open one if a
+failure is already being tracked. See tracking issue
 [#23144](https://github.com/kubestellar/console/issues/23144).
 
 ## Why This Matters
@@ -24,45 +24,51 @@ broken." It runs on a 6-hour cron (`17 */6 * * *`) and exercises the full self-u
 path: build baseline/head images, install via Helm into a Kind cluster, trigger
 `/api/self-upgrade/trigger`, and verify the upgraded pod becomes healthy.
 
-Unlike `nightly-dashboard-health.yml` (which opens a GitHub issue on failure) or the
-generic `workflow-failure-issue.yml` catch-all (which covers "Nightly Dashboard
-Health", "Nightly Compliance & Perf", "Auto-QA Agent/Tuner", "Nil Safety", "GA4 Error
-Monitor", "OpenSSF Scorecard", "Weekly Coverage Review", "Release", and "Build and
-Deploy KC"), `upgrade-smoke.yml` has neither an internal issue-creation step nor an
-entry in that catch-all's `workflows:` list. A break in the self-upgrade endpoint or a
-pod that never becomes healthy after the upgrade trigger currently goes undetected by
-anyone not actively watching the Actions tab.
+`upgrade-smoke.yml` has no internal issue-creation step of its own (unlike
+`nightly-dashboard-health.yml`); it relies entirely on the generic
+`workflow-failure-issue.yml` catch-all. A break in the self-upgrade endpoint or a pod
+that never becomes healthy after the upgrade trigger is therefore only detected if
+that catch-all lists this workflow by name.
 
-## Detecting a Failure Today
+## Detecting a Failure
 
-Until the fix lands, check manually:
+A failed scheduled run opens (or comments on) an issue:
+
+```bash
+gh issue list --repo kubestellar/console --label workflow-failure --state open
+```
+
+To inspect the underlying runs directly:
 
 ```bash
 gh run list --repo kubestellar/console --workflow=upgrade-smoke.yml --limit 10
 ```
 
-A `conclusion: failure` entry with `event: schedule` means a scheduled canary run
-failed with no automated notification having been sent.
+A `conclusion: failure` entry with `event: schedule` should have a corresponding
+`workflow-failure` issue. If it does not, the catch-all itself is broken — check the
+"Open Issue on Workflow Failure" workflow's own runs.
 
-## Proposed Fix
+## How The Alert Is Wired
 
-Add `"In-Place Upgrade Smoke"` to the `workflows:` list in
-`.github/workflows/workflow-failure-issue.yml` (the exact `name:` field value from
-`upgrade-smoke.yml`). This is the smallest change: it reuses the catch-all's existing
-dedup-by-title-and-label logic and comment-on-recurring-failure behavior, requiring no
-new code path. No other change to `upgrade-smoke.yml` itself is needed.
+`.github/workflows/workflow-failure-issue.yml` is a `workflow_run`-triggered catch-all.
+It matches on the exact `name:` field value of each monitored workflow — for this
+canary, `In-Place Upgrade Smoke` from `upgrade-smoke.yml`. It reuses one
+dedup-by-title-and-label code path for every monitored workflow, so no per-workflow
+issue-creation step is needed.
 
-The tracking issue also lists 12 other scheduled workflows in the same gap class
-(`nightly-ux-journeys.yml`, the four `perf-*.yml` regression gates, `route-smoke.yml`,
-`console-live-macos-canary.yml`, `mission-control-kind-e2e.yml`,
-`accm-history-update.yml`, `cleanup-screenshots.yml`, `stuck-detection.yml`,
-`ui-ux-standard.yml`); a maintainer applying this fix may want to add all of them to
-the same `workflows:` list in one pass.
+**If you rename a workflow, update its entry in that list** — the trigger matches by
+name, so a rename silently drops alerting.
+
+The same list also covers the 12 other scheduled workflows originally reported in the
+same gap class: `nightly-ux-journeys.yml`, the four `perf-*.yml` regression gates,
+`route-smoke.yml`, `console-live-macos-canary.yml`, `mission-control-kind-e2e.yml`,
+`accm-history-update.yml`, `cleanup-screenshots.yml`, `stuck-detection.yml`, and
+`ui-ux-standard.yml`.
 
 ## Escalation
 
-If a scheduled `upgrade-smoke.yml` run is found to have failed and gone unnoticed,
-treat it as a P1: it indicates the self-upgrade path for all deployed console
+If a scheduled `upgrade-smoke.yml` run fails, treat the resulting
+`workflow-failure` issue as a P1: it indicates the self-upgrade path for all deployed console
 instances may be broken. Reproduce locally per the workflow's own steps (build image,
 `kind create cluster`, Helm install baseline, trigger upgrade, poll for healthy pod)
 before assuming a flaky CI environment.
