@@ -849,6 +849,16 @@ jobs:
           LIVE_CANARY_MIN_ROUTE_DELAY_MS: ${{ env.LIVE_CANARY_MIN_ROUTE_DELAY_MS }}
         run: npx playwright test --config e2e/visual-login/intensive.config.ts --project=semantic-groundtruth --grep @live-site --grep-invert "production live" --workers=1 --max-failures=1
 
+      - name: Roll back live on semantic-test failure
+        if: ${{ failure() && env.PROMOTE_PRODUCTION == 'true' && steps.live-state.outputs.skip != 'true' && steps.live-revision.outputs.revision != '' && steps.live_semantic.outcome == 'failure' }}
+        shell: bash
+        run: |
+          set +e
+          export KUBECONFIG="$DEPLOY_KUBECONFIG"
+          helm rollback "$LIVE_RELEASE" "${{ steps.live-revision.outputs.revision }}" -n "$LIVE_NAMESPACE" --wait --timeout 5m \
+            > "$RUNNER_TEMP/console-live/live-rollback.log" 2>&1
+          cat "$RUNNER_TEMP/console-live/live-rollback.log"
+
       - name: Cool down before browser matrix
         if: ${{ !cancelled() && steps.canary_smoke.outcome == 'success' && steps.session_smoke.outcome == 'success' && steps.live_semantic.outcome == 'success' }}
         shell: bash
@@ -861,6 +871,7 @@ jobs:
           fi
 
       - name: Run live browser matrix against selected target
+        id: live_browser_matrix
         if: ${{ !cancelled() && steps.canary_smoke.outcome == 'success' && steps.session_smoke.outcome == 'success' && steps.live_semantic.outcome == 'success' }}
         timeout-minutes: 30
         working-directory: web
@@ -896,6 +907,16 @@ jobs:
         timeout-minutes: 5
         working-directory: web
         run: npm run test:visual:browser-matrix:compare
+
+      - name: Roll back live on browser-matrix failure
+        if: ${{ failure() && env.PROMOTE_PRODUCTION == 'true' && steps.live-state.outputs.skip != 'true' && steps.live-revision.outputs.revision != '' && steps.live_browser_matrix.outcome == 'failure' }}
+        shell: bash
+        run: |
+          set +e
+          export KUBECONFIG="$DEPLOY_KUBECONFIG"
+          helm rollback "$LIVE_RELEASE" "${{ steps.live-revision.outputs.revision }}" -n "$LIVE_NAMESPACE" --wait --timeout 5m \
+            > "$RUNNER_TEMP/console-live/live-rollback.log" 2>&1
+          cat "$RUNNER_TEMP/console-live/live-rollback.log"
 
       - name: Capture console live diagnostics
         if: always()
