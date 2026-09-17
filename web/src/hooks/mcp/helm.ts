@@ -12,4 +12,4 @@
  * No behavior change - all existing `hooks/mcp/helm` import paths keep
  * working via this re-export.
  */
-export { useHelmReleases, useHelmHistory, useHelmValues, __helmTestables } from './helm'
+export { useHelmReleases, useHelmHistory, useHelmValues, __helmTestables } from './helm/index'

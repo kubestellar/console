@@ -24,4 +24,4 @@ export {
   GPU_RESOURCE_TYPES,
   COMMON_RESOURCE_TYPES,
   __storageTestables,
-} from './storage'
+} from './storage/index'
