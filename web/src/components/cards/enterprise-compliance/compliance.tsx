@@ -5,7 +5,8 @@
 import { Shield, FileText, Activity, Lock, CheckCircle2, XCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useCardLoadingState } from '../CardDataContext'
-import { useSummaryData, ScoreRing, CardShell, MiniStat } from './shared'
+import { ScoreRing, CardShell, MiniStat } from './shared'
+import { useSummaryData } from './useSummaryData'
 
 // ── HIPAA Card ──────────────────────────────────────────────────────────────
 

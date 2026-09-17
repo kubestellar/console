@@ -5,7 +5,8 @@ import { KeyRound, Lock, Clock } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useCardLoadingState } from '../CardDataContext'
 import { TechnicalAcronym } from '../../shared/TechnicalAcronym'
-import { useSummaryData, ScoreRing, CardShell, MiniStat } from './shared'
+import { ScoreRing, CardShell, MiniStat } from './shared'
+import { useSummaryData } from './useSummaryData'
 
 // ── OIDC Federation Card ───────────────────────────────────────────────────
 

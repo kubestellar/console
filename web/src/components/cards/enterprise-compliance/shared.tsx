@@ -5,42 +5,7 @@
  * Each card fetches summary data and renders a compact view.
  */
 import { RefreshCcw } from 'lucide-react'
-import { authFetch, safeJson } from '../../../lib/api'
-import { useCache } from '../../../lib/cache'
-import { SCORE_GOOD, SCORE_WARN, SCORE_BAD, RING_BG, ENTERPRISE_SUMMARY_CACHE_PREFIX, SCORE_THRESHOLDS, DEFAULT_RING_SIZE } from '../EnterpriseComplianceCards.constants'
-
-export function useSummaryData<T extends Record<string, unknown>>(endpoint: string) {
-  const {
-    data,
-    isLoading,
-    isRefreshing,
-    isDemoFallback,
-    isFailed,
-    consecutiveFailures,
-    error,
-  } = useCache<T | null>({
-    key: `${ENTERPRISE_SUMMARY_CACHE_PREFIX}${endpoint}`,
-    category: 'rbac',
-    initialData: null,
-    fetcher: async () => {
-      const response = await authFetch(endpoint)
-      if (!response.ok) {
-        throw new Error(`Request failed with status ${response.status}`)
-      }
-      return safeJson<T>(response)
-    },
-  })
-
-  return {
-    data,
-    isLoading,
-    isRefreshing,
-    isDemoFallback,
-    isFailed,
-    consecutiveFailures,
-    error,
-  }
-}
+import { SCORE_GOOD, SCORE_WARN, SCORE_BAD, RING_BG, SCORE_THRESHOLDS, DEFAULT_RING_SIZE } from '../EnterpriseComplianceCards.constants'
 
 export function ScoreRing({ score, size = DEFAULT_RING_SIZE }: { score: number; size?: number }) {
   const r = (size - 8) / 2

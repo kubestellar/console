@@ -5,7 +5,8 @@
 import { Shield, WifiOff, Award } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useCardLoadingState } from '../CardDataContext'
-import { useSummaryData, ScoreRing, CardShell, MiniStat } from './shared'
+import { ScoreRing, CardShell, MiniStat } from './shared'
+import { useSummaryData } from './useSummaryData'
 
 // ── NIST 800-53 Card ─────────────────────────────────────────────────────────────
 

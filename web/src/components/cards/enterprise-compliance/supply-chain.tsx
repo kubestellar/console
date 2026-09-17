@@ -4,7 +4,8 @@
 import { Package, Shield, Lock } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useCardLoadingState } from '../CardDataContext'
-import { useSummaryData, CardShell, MiniStat } from './shared'
+import { CardShell, MiniStat } from './shared'
+import { useSummaryData } from './useSummaryData'
 
 // ── SBOM Manager Card ───────────────────────────────────────────────────────────
 
