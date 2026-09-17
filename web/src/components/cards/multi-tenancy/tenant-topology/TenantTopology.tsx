@@ -31,7 +31,7 @@
 import { useId } from 'react'
 import { useCardLoadingState } from '../../CardDataContext'
 import { DEMO_TENANT_TOPOLOGY } from './demoData'
-import { buildConnections } from './TenantTopologyParts'
+import { buildConnections } from './TenantTopologyConnections'
 import { TenantTopologyDefs } from './TenantTopologyDefs'
 import { TenantTopologyZones } from './TenantTopologyZones'
 import { TenantTopologyConnectionsLayer } from './TenantTopologyConnectionsLayer'
