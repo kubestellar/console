@@ -171,7 +171,7 @@ vi.mock('../../../lib/kubectlProxy', () => ({
   }
 }))
 
-vi.mock('../../cards/WorkloadImportDialog', () => ({
+vi.mock('../../cards/workload-import', () => ({
   WorkloadImportDialog: ({ isOpen }: { isOpen: boolean }) => (
     isOpen ? <div data-testid="workload-import-dialog">workload-import-dialog</div> : null
   ),

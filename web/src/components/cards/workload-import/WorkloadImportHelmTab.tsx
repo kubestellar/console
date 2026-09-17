@@ -61,6 +61,7 @@ export function WorkloadImportHelmTab({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className={labelClasses}>{t('workloadImport.helmRepoUrl')}</label>
+          {/* eslint-disable-next-line no-restricted-syntax -- moved verbatim from WorkloadImportDialog split; migrate to ui/Input separately */}
           <input
             className={inputClasses}
             placeholder="https://charts.example.com"
@@ -70,6 +71,7 @@ export function WorkloadImportHelmTab({
         </div>
         <div>
           <label className={labelClasses}>{t('workloadImport.helmChartName')}</label>
+          {/* eslint-disable-next-line no-restricted-syntax -- moved verbatim from WorkloadImportDialog split; migrate to ui/Input separately */}
           <input
             className={inputClasses}
             placeholder="my-chart"
@@ -79,6 +81,7 @@ export function WorkloadImportHelmTab({
         </div>
         <div>
           <label className={labelClasses}>{t('workloadImport.helmReleaseName')}</label>
+          {/* eslint-disable-next-line no-restricted-syntax -- moved verbatim from WorkloadImportDialog split; migrate to ui/Input separately */}
           <input
             className={inputClasses}
             placeholder="my-release"
@@ -88,6 +91,7 @@ export function WorkloadImportHelmTab({
         </div>
         <div>
           <label className={labelClasses}>{t('workloadImport.helmNamespaceLabel')}</label>
+          {/* eslint-disable-next-line no-restricted-syntax -- moved verbatim from WorkloadImportDialog split; migrate to ui/Input separately */}
           <input
             className={inputClasses}
             placeholder="default"
@@ -98,6 +102,7 @@ export function WorkloadImportHelmTab({
       </div>
       <div>
         <label className={labelClasses}>{t('workloadImport.helmValuesLabel')}</label>
+        {/* eslint-disable-next-line no-restricted-syntax -- moved verbatim from WorkloadImportDialog split; migrate to ui/TextArea separately */}
         <textarea
           className={cn(inputClasses, 'h-24 font-mono text-xs resize-y')}
           placeholder={t('workloadImport.helmValuesPlaceholder')}

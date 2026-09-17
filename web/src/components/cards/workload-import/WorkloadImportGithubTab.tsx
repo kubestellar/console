@@ -46,6 +46,7 @@ export function WorkloadImportGithubTab({
       </p>
       <div>
         <label className={labelClasses}>{t('workloadImport.githubRepoUrl')}</label>
+        {/* eslint-disable-next-line no-restricted-syntax -- moved verbatim from WorkloadImportDialog split; migrate to ui/Input separately */}
         <input
           className={inputClasses}
           placeholder="https://github.com/org/repo"
@@ -55,6 +56,7 @@ export function WorkloadImportGithubTab({
       </div>
       <div>
         <label className={labelClasses}>{t('workloadImport.githubManifestPath')}</label>
+        {/* eslint-disable-next-line no-restricted-syntax -- moved verbatim from WorkloadImportDialog split; migrate to ui/Input separately */}
         <input
           className={inputClasses}
           placeholder="k8s/ or deploy/manifests/"

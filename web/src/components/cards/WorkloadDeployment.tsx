@@ -8,7 +8,7 @@ import { useClusters } from '../../hooks/useMCP'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
-import { WorkloadImportDialog } from './WorkloadImportDialog'
+import { WorkloadImportDialog } from './workload-import'
 import { DraggableWorkloadItem } from './WorkloadDeploymentItem'
 import { usePersistedClusterFilter } from './WorkloadDeployment.hooks'
 import {

@@ -46,9 +46,11 @@ export function WorkloadImportYamlTab({
         <label className="flex items-center gap-1.5 px-2.5 py-1 text-2xs font-medium rounded-md bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground cursor-pointer transition-colors">
           <Download className="h-3 w-3" />
           Upload file
+          {/* eslint-disable-next-line no-restricted-syntax -- moved verbatim from WorkloadImportDialog split; migrate to ui/Input separately */}
           <input type="file" accept=".yaml,.yml,.json" onChange={onFileUpload} className="hidden" />
         </label>
       </div>
+      {/* eslint-disable-next-line no-restricted-syntax -- moved verbatim from WorkloadImportDialog split; migrate to ui/TextArea separately */}
       <textarea
         className={cn(inputClasses, 'h-48 font-mono text-xs resize-y')}
         placeholder={t('workloadImport.yamlPlaceholder')}
