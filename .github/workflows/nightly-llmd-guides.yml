@@ -100,12 +100,15 @@ jobs:
           START_TIME=$(date +%s)
           echo "guide=$GUIDE_NAME" >> "$GITHUB_OUTPUT"
 
+          mkdir -p guide-status
+
           # Check if guide script exists
           SCRIPT="scripts/llmd-guides/${GUIDE_NAME}.sh"
           if [ ! -f "$SCRIPT" ]; then
             echo "::warning::Guide script not found: $SCRIPT — skipping"
             echo "status=skipped" >> "$GITHUB_OUTPUT"
             echo "duration=0" >> "$GITHUB_OUTPUT"
+            echo "skipped:-" > "guide-status/${GUIDE_NAME}.status"
             exit 0
           fi
           
@@ -125,12 +128,17 @@ jobs:
           DURATION=$((END_TIME - START_TIME))
           echo "duration=${DURATION}" >> "$GITHUB_OUTPUT"
 
+          # Persist the REAL exit code (not the job/step conclusion) so the
+          # report job's verdict can't be masked by continue-on-error.
           if [ $EXIT_CODE -eq 0 ]; then
             echo "status=pass" >> "$GITHUB_OUTPUT"
+            echo "pass:${EXIT_CODE}" > "guide-status/${GUIDE_NAME}.status"
           elif [ $EXIT_CODE -eq 124 ]; then
             echo "status=timeout" >> "$GITHUB_OUTPUT"
+            echo "timeout:${EXIT_CODE}" > "guide-status/${GUIDE_NAME}.status"
           else
             echo "status=fail" >> "$GITHUB_OUTPUT"
+            echo "fail:${EXIT_CODE}" > "guide-status/${GUIDE_NAME}.status"
           fi
           echo "::endgroup::"
 
@@ -140,6 +148,8 @@ jobs:
         run: |
           echo "status=runner-unavailable" >> "$GITHUB_OUTPUT"
           echo "duration=0" >> "$GITHUB_OUTPUT"
+          mkdir -p guide-status
+          echo "runner-unavailable:-" > "guide-status/${{ matrix.guide }}.status"
 
       - name: Upload result artifact
         if: always()
@@ -149,6 +159,7 @@ jobs:
           retention-days: 30
           path: |
             scripts/llmd-guides/*.log
+            guide-status/*.status
 
   report:
     permissions:
@@ -189,14 +200,30 @@ jobs:
           RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
 
           for guide in "${GUIDES[@]}"; do
-            # Parse status from the job outputs via artifacts or job conclusion
-            JOB_NAME="run-guides ($guide)"
-            CONCLUSION=$(gh api \
-              "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs" \
-              --jq ".jobs[] | select(.name == \"${JOB_NAME}\") | .conclusion" 2>/dev/null || echo "unknown")
+            # Prefer the REAL exit code captured by the guide step itself —
+            # continue-on-error at the job/step level masks the job's own
+            # conclusion, so trusting the API conclusion here can report a
+            # failing/timing-out guide as a pass. Only fall back to the job
+            # conclusion when the status file is missing (e.g. the job never
+            # got far enough to write it — infra failure before the guide ran).
+            STATUS_FILE="results/${guide}.status"
+            if [ -f "$STATUS_FILE" ]; then
+              RESULT="$(cut -d: -f1 "$STATUS_FILE")"
+            else
+              JOB_NAME="run-guides (${guide})"
+              CONCLUSION=$(gh api \
+                "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs" \
+                --jq ".jobs[] | select(.name == \"${JOB_NAME}\") | .conclusion" 2>/dev/null || echo "unknown")
+              case "$CONCLUSION" in
+                success) RESULT="pass" ;;
+                skipped) RESULT="skipped" ;;
+                cancelled) RESULT="runner-unavailable" ;;
+                *) RESULT="fail" ;;
+              esac
+            fi
 
-            case "$CONCLUSION" in
-              success)
+            case "$RESULT" in
+              pass)
                 STATUS="✅ PASS"
                 PASSED=$((PASSED + 1))
                 ;;
@@ -204,10 +231,14 @@ jobs:
                 STATUS="⏭️ SKIP"
                 SKIPPED=$((SKIPPED + 1))
                 ;;
-              cancelled)
-                # Job cancelled due to continue-on-error + runner unavailability
+              runner-unavailable)
+                # Runner was unhealthy — not a guide failure
                 STATUS="⚠️ RUNNER N/A"
                 SKIPPED=$((SKIPPED + 1))
+                ;;
+              timeout)
+                STATUS="❌ FAIL (timeout)"
+                FAILED=$((FAILED + 1))
                 ;;
               *)
                 STATUS="❌ FAIL"
