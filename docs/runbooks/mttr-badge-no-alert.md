@@ -1,4 +1,4 @@
-# MTTR Badge — No Failure Alert Runbook
+# MTTR Badge — No Failure Alert Runbook (RESOLVED)
 
 **Repository:** `kubestellar/console`
 **Applies to:** `.github/workflows/mttr-badge.yml`
@@ -7,13 +7,13 @@
 
 ## Current Status
 
-**No workflow-level alerting change is merged.** The `operations` agent's GitHub App
-token lacks the `workflows` permission required to create or update any file under
-`.github/workflows/` (verified in prior sessions against `nightly-dast.yml`,
-`upgrade-smoke.yml`, and `stale.yml`; the same constraint applies here). Until a
-maintainer with that permission adds the fix described below, a failure of this
-workflow produces **no notification of any kind** — only a red run in the Actions
-tab.
+**Fixed.** `"MTTR Badge"` was added to the `workflows:` catch-all in
+`.github/workflows/workflow-failure-issue.yml`, and the missing-`GIST_TOKEN` and
+failed-gist-PATCH branches now call `core.setFailed(...)` instead of silently
+returning (PR [#23525](https://github.com/kubestellar/console/pull/23525)). Both
+a job failure and a "successful but silently skipped" badge update now surface
+through the catch-all. Tracking issue
+[#23268](https://github.com/kubestellar/console/issues/23268) is closed.
 
 ## Why This Matters
 
@@ -33,48 +33,35 @@ frozen at its last successfully computed value — anyone reading the README bad
 would see a stale MTTR number with no indication it stopped updating, potentially
 understating (or overstating) actual incident-response performance indefinitely.
 
-The workflow has no internal issue-creation-on-failure step, and it is not listed in
-`.github/workflows/workflow-failure-issue.yml`'s `workflow_run` catch-all
-(`workflows:` list currently covers Release, Build and Deploy KC, Nightly Compliance
-& Perf, Nightly Dashboard Health, Nightly gh-aw Version Check, Playwright
-Cross-Browser (Nightly), Card Loading Standard, Startup Smoke Tests, Auto-QA
-Agent/Tuner, Nil Safety, GA4 Error Monitor, OpenSSF Scorecard, Weekly Coverage
-Review). It is also distinct from the 13 jobs already tracked in #23144/#23230
-(`upgrade-smoke.yml` and its 12 siblings) — none of those lists include
-`mttr-badge.yml`.
+The workflow previously had no internal issue-creation-on-failure step and was
+not listed in `.github/workflows/workflow-failure-issue.yml`'s `workflow_run`
+catch-all. `"MTTR Badge"` is now on that list, alongside the 13 jobs already
+tracked in #23144/#23230 (`upgrade-smoke.yml` and its siblings).
 
-Failure modes that would go undetected today: the GitHub search API returning a
-rate-limit or transient error, `GIST_TOKEN` expiring or being revoked, or the gist
-PATCH request failing (the script only `console.log`s a message and returns on a
-non-OK gist response — it does not fail the job or raise).
+Failure modes that previously would have gone undetected: the GitHub search API
+returning a rate-limit or transient error, `GIST_TOKEN` expiring or being
+revoked, or the gist PATCH request failing. All three now fail the job (via
+`core.setFailed`) and surface through the catch-all.
 
-## Detecting a Failure Today
-
-Until the fix lands, check manually:
+## Detecting a Failure
 
 ```bash
 gh run list --repo kubestellar/console --workflow=mttr-badge.yml --limit 10
 ```
 
-A `conclusion: failure` entry means the scheduled badge-update run failed with no
-automated notification having been sent. Note that a **successful** run can still
-silently skip the badge update (e.g. `GIST_TOKEN` unset, gist PATCH non-OK, or no
-`Fixes`/`Closes` refs found in the last 100 merged PRs) — those cases exit 0 and
-won't show as a failed run at all; cross-check the job's log output for lines like
-`Gist update failed:` or `No GIST_TOKEN — skipping badge update`.
+A `conclusion: failure` entry now opens/updates a tracked issue automatically
+via the catch-all. Cross-check the job's log output for lines like `Gist update
+failed:` or `MTTR badge update skipped: GIST_TOKEN is not set` to confirm root
+cause.
 
-## Proposed Fix
+## Proposed Fix (applied)
 
-Add `"MTTR Badge"` (the exact `name:` field value from `mttr-badge.yml`) to the
-`workflows:` list in `.github/workflows/workflow-failure-issue.yml`. This is the
-smallest change: it reuses the catch-all's existing dedup-by-title-and-label logic
-and comment-on-recurring-failure behavior, requiring no new code path. No other
-change to `mttr-badge.yml` itself is needed for the *job-failure* case.
-
-Separately, a maintainer may want to make the "successful but silently skipped"
-cases above (missing `GIST_TOKEN`, non-OK gist PATCH) fail the job explicitly
-(e.g. `core.setFailed(...)`) so they surface through the same catch-all once wired
-up, instead of exiting 0.
+`"MTTR Badge"` (the exact `name:` field value from `mttr-badge.yml`) was added to
+the `workflows:` list in `.github/workflows/workflow-failure-issue.yml`, reusing
+the catch-all's existing dedup-by-title-and-label logic and
+comment-on-recurring-failure behavior. The missing-`GIST_TOKEN` and
+failed-gist-PATCH branches were also changed to call `core.setFailed(...)`
+instead of exiting 0, so those cases surface through the same catch-all.
 
 ## Escalation
 

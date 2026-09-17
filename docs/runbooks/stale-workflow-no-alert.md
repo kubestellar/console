@@ -1,4 +1,4 @@
-# Stale Issues Workflow — No Failure Alert Runbook
+# Stale Issues Workflow — No Failure Alert Runbook (RESOLVED)
 
 **Repository:** `kubestellar/console`
 **Applies to:** `.github/workflows/stale.yml`
@@ -7,20 +7,19 @@
 
 ## Current Status
 
-**No workflow-level alerting change is merged.** The `operations` agent's GitHub App
-token lacks the `workflows` permission required to create or update any file under
-`.github/workflows/` (confirmed in prior sessions; see
-`docs/runbooks/upgrade-smoke-no-alert.md`). Until a maintainer with that permission
-adds the fix described below, a failure of this workflow produces no notification of
-any kind. See tracking issue
-[#23193](https://github.com/kubestellar/console/issues/23193).
+**Fixed.** `"Stale Issues"` was added to the `workflows:` catch-all in
+`.github/workflows/workflow-failure-issue.yml` (PR
+[#23525](https://github.com/kubestellar/console/pull/23525)), so a failure of
+this workflow now opens/updates a tracked issue automatically. Tracking issue
+[#23193](https://github.com/kubestellar/console/issues/23193) is closed.
 
 ## Why This Matters
 
 `stale.yml` ("Stale Issues") runs daily (`cron: '0 0 * * *'`) and delegates to the
 shared `kubestellar/infra` `reusable-stale.yml` workflow to mark/close inactive
-issues and PRs. It has no internal issue-creation-on-failure step and is not listed
-in `.github/workflows/workflow-failure-issue.yml`'s catch-all `workflows:` list.
+issues and PRs. It previously had no internal issue-creation-on-failure step and
+was not listed in `.github/workflows/workflow-failure-issue.yml`'s catch-all
+`workflows:` list; `"Stale Issues"` is now on that list.
 
 Impact is lower than a user-facing canary (repo hygiene, not production traffic),
 but a silent failure here means stale issues/PRs accumulate unnoticed indefinitely.
@@ -37,12 +36,12 @@ gh run list --repo kubestellar/console --workflow=stale.yml --limit 10
 A `conclusion: failure` entry with `event: schedule` means a scheduled stale-triage
 run failed with no automated notification sent.
 
-## Proposed Fix
+## Proposed Fix (applied)
 
-Add `"Stale Issues"` (the exact `name:` field value from `stale.yml`) to the
-`workflows:` list in `.github/workflows/workflow-failure-issue.yml`. This reuses the
+`"Stale Issues"` (the exact `name:` field value from `stale.yml`) was added to the
+`workflows:` list in `.github/workflows/workflow-failure-issue.yml`, reusing the
 catch-all's existing dedup-by-title-and-label logic and comment-on-recurring-failure
-behavior — no new code path, and no change to `stale.yml` itself is needed.
+behavior — no change to `stale.yml` itself was needed.
 
 ## Escalation
 
