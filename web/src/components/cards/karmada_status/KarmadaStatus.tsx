@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { StatGrid } from '../../ui/StatGrid'
 import { StatTile } from '../shared/StatTile'
 import {
   CheckCircle,
@@ -211,7 +212,7 @@ export function KarmadaStatus() {
       </div>
 
       {/* ── Stats grid ── */}
-      <div className="grid grid-cols-2 @md:grid-cols-4 gap-2">
+      <StatGrid>
         <StatTile
           icon={<Globe className="w-4 h-4 text-blue-400" />}
           label={t('karmada.clusters', 'Clusters')}
@@ -240,7 +241,7 @@ export function KarmadaStatus() {
           colorClass="text-purple-400"
           borderClass="border-purple-500/20"
         />
-      </div>
+      </StatGrid>
 
       {/* ── View toggle ── */}
       <div className="flex gap-1 bg-muted/20 rounded-lg p-0.5">

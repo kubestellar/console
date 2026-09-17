@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { StatGrid } from '../../ui/StatGrid'
 import { StatTile } from '../shared/StatTile'
 import {
   CheckCircle,
@@ -299,7 +300,7 @@ export function KedaStatus() {
 
       {/* ── Stats grid ── */}
       {scaledObjects.length > 0 && (
-        <div className="grid grid-cols-2 @md:grid-cols-4 gap-2">
+        <StatGrid>
           <StatTile
             icon={<TrendingUp className="w-4 h-4 text-blue-400" />}
             label={t('keda.total', 'Total')}
@@ -328,7 +329,7 @@ export function KedaStatus() {
             colorClass="text-blue-400"
             borderClass="border-blue-500/20"
           />
-        </div>
+        </StatGrid>
       )}
 
       {/* ── Search ── */}
