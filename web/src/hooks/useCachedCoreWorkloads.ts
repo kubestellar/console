@@ -774,7 +774,45 @@ export function useCachedWorkloads(
       if (agentData) return agentData
 
       // Fall back to SSE streaming -> progressive per-cluster
-      return await fetchViaSSE<Workload>('workloads', 'workloads', {}, onProgress)
+      const sseData = await fetchViaSSE<Workload>('workloads', 'workloads', {}, onProgress)
+      if (sseData.length > 0) return sseData
+
+      // Agent and SSE yielded no data — fall back to the REST API, mirroring
+      // the non-progressive fetcher above. This progressive fetch occupies the
+      // shared `workloads:all:all` cache store; without this fallback the
+      // store's in-flight guard suppresses the startup REST prefetch, leaving
+      // the workload listing empty when the agent/SSE paths return nothing.
+      const token = getToken()
+      const hasRealToken = token && token !== 'demo-token'
+      if (hasRealToken && !isBackendUnavailable()) {
+        const res = await fetch('/api/workloads', {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}` },
+          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
+        if (res.ok) {
+          const data = await res.json().catch(() => null)
+          const items = (data?.items || data || []) as Array<Record<string, unknown>>
+          const workloads = items.map(d => ({
+            name: String(d.name || ''),
+            namespace: String(d.namespace || 'default'),
+            type: (String(d.type || 'Deployment')) as Workload['type'],
+            cluster: String(d.cluster || ''),
+            targetClusters: (d.targetClusters as string[]) || (d.cluster ? [String(d.cluster)] : []),
+            replicas: Number(d.replicas || 1),
+            readyReplicas: Number(d.readyReplicas || 0),
+            status: (String(d.status || 'Running')) as Workload['status'],
+            image: String(d.image || ''),
+            labels: (d.labels as Record<string, string>) || {},
+            createdAt: String(d.createdAt || new Date().toISOString()) }))
+          if (workloads.length > 0) {
+            onProgress(workloads)
+            return workloads
+          }
+        }
+      }
+
+      return sseData
     } })
   const result = useWorkloadsBase()
 
