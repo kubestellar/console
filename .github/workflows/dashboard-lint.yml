@@ -1,0 +1,55 @@
+name: Dashboard & Alert Lint
+
+# Validates the console's self-observability artifacts on every change:
+#   - Grafana dashboard JSON is well-formed and has the required fields.
+#   - The Helm-rendered PrometheusRule passes `promtool check rules`.
+#   - Every PromQL expression only references metrics the backend actually
+#     registers (pkg/api/metrics/metrics.go), guarding against unbounded or
+#     stale metric names creeping into a dashboard or alert.
+#
+# See scripts/lint-dashboards.sh for the checks themselves.
+# See issue #23176 for context.
+
+on:
+  pull_request:
+    paths:
+      - 'deploy/grafana/**'
+      - 'deploy/helm/**/templates/servicemonitor.yaml'
+      - 'deploy/helm/**/templates/prometheusrule.yaml'
+      - 'pkg/api/metrics/**'
+      - 'scripts/lint-dashboards.sh'
+      - '.github/workflows/dashboard-lint.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'deploy/grafana/**'
+      - 'deploy/helm/**/templates/servicemonitor.yaml'
+      - 'deploy/helm/**/templates/prometheusrule.yaml'
+      - 'pkg/api/metrics/**'
+      - 'scripts/lint-dashboards.sh'
+      - '.github/workflows/dashboard-lint.yml'
+
+permissions: read-all
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+
+      - name: Install promtool
+        # SHA256 pinned to Prometheus v3.5.0 linux/amd64 tarball.
+        run: |
+          PROM_VERSION="3.5.0"
+          PROM_SHA256="e811827af26d822afb09a4f28314f61b618b12cff5369835a67f674d8b46f39a"
+          curl -sSL "https://github.com/prometheus/prometheus/releases/download/v${PROM_VERSION}/prometheus-${PROM_VERSION}.linux-amd64.tar.gz" \
+            -o /tmp/prometheus.tar.gz
+          echo "${PROM_SHA256}  /tmp/prometheus.tar.gz" | sha256sum --check
+          tar xz -C /tmp prometheus-${PROM_VERSION}.linux-amd64/promtool --strip-components=1 -f /tmp/prometheus.tar.gz
+          sudo mv /tmp/promtool /usr/local/bin/promtool
+
+      - name: Lint dashboards and alert rules
+        run: bash scripts/lint-dashboards.sh
