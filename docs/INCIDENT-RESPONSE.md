@@ -29,11 +29,14 @@ The build sheriff is the designated owner for main branch health. Responsibiliti
 - Escalate if unable to resolve within 2 hours
 - Document root cause in incident post-mortem
 
-**Current rotation schedule**: See `.github/on-call-schedule.yml` (to be created).
-**Note:** this file, the `main-broken` label, and the Slack-posting step described
-below are not yet implemented — see
+**Current rotation schedule**: See `.github/on-call-schedule.yml` (to be created —
+naming an actual rotation is a personnel decision tracked by
+[#23534](https://github.com/kubestellar/console/issues/23534)).
+**Note:** this file and the Slack-posting/auto-labeling step described below are
+not yet implemented — see
 [`docs/runbooks/incident-response-automation-missing.md`](runbooks/incident-response-automation-missing.md)
-for current status and detection steps.
+for current status and detection steps, and
+[#23534](https://github.com/kubestellar/console/issues/23534) for the live tracker.
 
 #### All Contributors
 
@@ -43,9 +46,20 @@ for current status and detection steps.
 
 ### Response Workflow
 
-#### 1. Detection (Automated)
+#### 1. Detection (Currently Manual)
 
-When main CI fails:
+**Current state:** main CI failures are surfaced only as a red run in the Actions
+tab. There is no automated Slack alert, no automated labeling, and no named
+on-call owner yet — see [#23534](https://github.com/kubestellar/console/issues/23534)
+for the live tracker. Until that wiring lands:
+- Contributors/maintainers must notice the red run in the Actions tab
+- Whoever notices should manually apply the `main-broken` label to the last
+  merged PR (or open an incident issue) so the SLA clock below has a visible
+  start
+- There is no `#kubestellar-dev` Slack bot integration today
+
+**Intended future state (not yet implemented, tracked by
+[#23534](https://github.com/kubestellar/console/issues/23534)):**
 - GitHub Actions bot posts to `#kubestellar-dev` Slack channel
 - Build sheriff receives notification (GitHub notifications + Slack mention)
 - Automated label `main-broken` applied to last merged PR
