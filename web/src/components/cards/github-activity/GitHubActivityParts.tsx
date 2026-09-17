@@ -1,9 +1,10 @@
 import { GitPullRequest, GitBranch, Star, Users, Package, X, Plus, Check, AlertCircle } from 'lucide-react'
 import type { TFunction } from 'i18next'
-import { Skeleton } from '../ui/Skeleton'
-import { cn } from '../../lib/cn'
-import type { ViewMode } from './GitHubActivity.types'
-import { TIME_RANGES, type TimeRange, type GitHubActivityStats } from './GitHubActivity.sorting'
+import { Skeleton } from '../../ui/Skeleton'
+import { Input } from '../../ui/Input'
+import { cn } from '../../../lib/cn'
+import type { ViewMode } from '../GitHubActivity.types'
+import { TIME_RANGES, type TimeRange, type GitHubActivityStats } from '../GitHubActivity.sorting'
 
 export function GitHubActivitySkeleton() {
   return (
@@ -60,13 +61,14 @@ export function GitHubRepoEditor({
   return (
     <div className={cn('rounded-lg bg-purple-500/10 border border-purple-500/20 p-3 mb-3 space-y-2', !isError && 'shrink-0')}>
       <div className="flex items-center gap-2">
-        <input
+        <Input
           type="text"
+          inputSize="sm"
           value={repoInput}
           onChange={(e) => setRepoInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && onAddRepo()}
           placeholder="owner/repo (e.g., facebook/react)"
-          className="flex-1 px-2 py-1 text-xs rounded bg-secondary border border-border text-foreground"
+          className="flex-1 rounded bg-secondary border border-border text-foreground"
         />
         <button
           onClick={onAddRepo}

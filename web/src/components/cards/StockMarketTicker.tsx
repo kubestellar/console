@@ -14,7 +14,7 @@ import { safeGetJSON, safeSetJSON } from '../../lib/utils/localStorage'
 import type { StockSearchResult, SavedStock, StockData, StockMarketTickerProps, SortByOption } from './StockMarketTicker.types'
 import { SEARCH_DEBOUNCE_MS, SAVED_STOCKS_STORAGE_KEY, SORT_OPTIONS, SORT_COMPARATORS, DEFAULT_SYMBOLS } from './StockMarketTicker.constants'
 import { fetchRealStockData, searchStocks, getMarketStatus, generateMockStockData } from './StockMarketTicker.data'
-import { StockRow } from './StockMarketTickerParts'
+import { StockRow } from './stock-market-ticker/StockMarketTickerParts'
 
 export function StockMarketTicker({ config }: StockMarketTickerProps) {
   const { t } = useTranslation(['cards', 'common'])

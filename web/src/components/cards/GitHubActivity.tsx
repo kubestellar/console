@@ -31,7 +31,7 @@ import {
   GitHubStatsGrid,
   GitHubViewModeTabs,
   GitHubTimeRangeControls,
-} from './GitHubActivityParts'
+} from './github-activity/GitHubActivityParts'
 
 // Expose refresh method for CardWrapper
 export interface GitHubActivityRef {

@@ -5,9 +5,9 @@ import {
   Star, X
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { GREEN_500_BRIGHT, RED_500 } from '../../lib/theme/chartColors'
-import type { StockData } from './StockMarketTicker.types'
-import { formatLargeNumber, formatVolume } from './StockMarketTicker.data'
+import { GREEN_500_BRIGHT, RED_500 } from '../../../lib/theme/chartColors'
+import type { StockData } from '../StockMarketTicker.types'
+import { formatLargeNumber, formatVolume } from '../StockMarketTicker.data'
 
 // Sparkline component
 export function Sparkline({ data, isPositive }: { data: number[]; isPositive: boolean }) {
