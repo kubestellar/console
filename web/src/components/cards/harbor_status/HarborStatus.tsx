@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { StatGrid } from '../../ui/StatGrid'
 import { StatTile } from '../shared/StatTile'
 import {
   CheckCircle,
@@ -347,7 +348,7 @@ export function HarborStatus() {
         />
       </div>
 
-      <div className="grid grid-cols-2 @md:grid-cols-4 gap-3 mb-4 shrink-0 px-0.5">
+      <StatGrid gap={3} className="mb-4 shrink-0 px-0.5">
         <StatTile
           icon={<FolderOpen className="w-4 h-4 text-blue-400" />}
           label={t('harbor.projects', 'Projects')}
@@ -376,7 +377,7 @@ export function HarborStatus() {
           colorClass="text-orange-400"
           borderClass="border-orange-500/20"
         />
-      </div>
+      </StatGrid>
 
       <div
         className="flex gap-4 mb-3 border-b border-border/40 shrink-0 px-1"

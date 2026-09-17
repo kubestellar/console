@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { StatGrid } from '../../ui/StatGrid'
 import { StatTile } from '../shared/StatTile'
 import {
   CheckCircle,
@@ -444,7 +445,7 @@ export function CubefsStatus() {
       </div>
 
       {/* ── Stats grid ── */}
-      <div className="grid grid-cols-2 @md:grid-cols-4 gap-2">
+      <StatGrid>
         <StatTile
           icon={<Database className="w-4 h-4 text-blue-400" />}
           label={t('cubefs.volumes', 'Volumes')}
@@ -473,7 +474,7 @@ export function CubefsStatus() {
           colorClass="text-red-400"
           borderClass="border-red-500/20"
         />
-      </div>
+      </StatGrid>
 
       {/* ── Tab bar ── */}
       <div className="flex items-center gap-1">
