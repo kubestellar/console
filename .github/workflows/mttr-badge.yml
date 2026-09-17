@@ -113,7 +113,9 @@ jobs:
             const gistId = process.env.BADGE_GIST_ID;
             const gistToken = process.env.GIST_TOKEN;
             if (!gistToken) {
-              console.log('No GIST_TOKEN — skipping badge update');
+              // #23268: this used to `return` (exit 0) so a missing token
+              // caused the badge to silently go stale on a "successful" run.
+              core.setFailed('MTTR badge update skipped: GIST_TOKEN is not set');
               return;
             }
 
@@ -139,7 +141,10 @@ jobs:
               }),
             });
             if (!response.ok) {
-              console.log(`Gist update failed: ${response.status} ${response.statusText}`);
+              // #23268: this used to `return` (exit 0), masking a failed
+              // gist PATCH as a successful run and letting the public badge
+              // silently go stale.
+              core.setFailed(`Gist update failed: ${response.status} ${response.statusText}`);
               return;
             }
 

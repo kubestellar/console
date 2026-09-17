@@ -39,13 +39,18 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Run ZAP Baseline Scan
+        id: zap-scan
         uses: zaproxy/action-baseline@de8ad967d3548d44ef623df22cf95c3b0baf8b25 # v0.15.0
         with:
           target: ${{ env.TARGET_URL }}
           rules_file_name: '.github/zap-rules.tsv'
           cmd_options: '-a -j'
           allow_issue_writing: false
-        continue-on-error: true
+        # NOTE: continue-on-error intentionally removed (#23085) so a scanner
+        # crash/timeout/action failure surfaces as a real job/run failure
+        # instead of being masked and treated as "zero findings". The
+        # downstream steps use `if: always()` so report parsing and the
+        # create-or-close logic still run.
 
       - name: Upload ZAP Report
         if: always()
@@ -120,6 +125,11 @@ jobs:
           fi
           echo "has_findings=$HAS_FINDINGS" >> "$GITHUB_OUTPUT"
 
+          # #23085: distinguish "scanned, zero findings" from "scanner failed
+          # to produce a report" so a crashed/timed-out scan step can never be
+          # mistaken for a clean scan and auto-close a real finding.
+          echo "scan_outcome=${{ steps.zap-scan.outcome }}" >> "$GITHUB_OUTPUT"
+
       - name: Generate Alert Summary
         if: always() && steps.zap-results.outputs.has_findings == 'true'
         id: zap-summary
@@ -162,10 +172,12 @@ jobs:
           MEDIUM_COUNT: ${{ steps.zap-results.outputs.medium_count }}
           LOW_COUNT: ${{ steps.zap-results.outputs.low_count }}
           ALERT_COUNT: ${{ steps.zap-results.outputs.alert_count }}
+          SCAN_OUTCOME: ${{ steps.zap-results.outputs.scan_outcome }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const tag = '[nightly:dast-zap]';
+            const scanFailed = process.env.SCAN_OUTCOME === 'failure';
             const { data: issues } = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -245,6 +257,23 @@ jobs:
                 });
                 console.log(`Created issue #${issue.number}`);
               }
+            } else if (scanFailed) {
+              // #23085: the scan step itself failed (crash/timeout/action
+              // error) rather than completing with zero findings. Never
+              // auto-close a real tracked finding on a false "clean" signal —
+              // just leave it open and note the errored run. The job also
+              // fails (continue-on-error removed above) so the repo-wide
+              // workflow-failure-issue.yml catch-all opens/updates the
+              // "Workflow failure: Nightly DAST Security Scan" issue.
+              if (existing) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: existing.number,
+                  body: `⚠️ ZAP baseline scan step failed to complete on ${new Date().toISOString().slice(0, 10)} (no report produced). Leaving this issue open — this is not a confirmed clean scan.`,
+                });
+              }
+              console.log('ZAP scan step failed; skipping auto-close.');
             } else if (existing) {
               await github.rest.issues.update({
                 owner: context.repo.owner,
@@ -273,6 +302,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Run Nuclei Scan
+        id: nuclei-scan
         uses: projectdiscovery/nuclei-action@cc153d0541e1adf8a42bbe31c0a4fb2376147538 # v3
         with:
           target: ${{ env.TARGET_URL }}
@@ -280,7 +310,8 @@ jobs:
           severity: 'medium,high,critical'
           output: nuclei-results.json
           json: true
-        continue-on-error: true
+        # NOTE: continue-on-error intentionally removed (#23085) — see the
+        # ZAP scan step above for rationale.
 
       - name: Upload Nuclei Report
         if: always()
@@ -317,6 +348,10 @@ jobs:
           fi
           echo "has_findings=$HAS_FINDINGS" >> "$GITHUB_OUTPUT"
 
+          # #23085: same distinction as the ZAP job — a crashed/timed-out
+          # scan step must never be mistaken for "zero findings".
+          echo "scan_outcome=${{ steps.nuclei-scan.outcome }}" >> "$GITHUB_OUTPUT"
+
       - name: Generate Nuclei Summary
         if: always() && steps.nuclei-results.outputs.has_findings == 'true'
         run: |
@@ -333,10 +368,12 @@ jobs:
           CRITICAL_COUNT: ${{ steps.nuclei-results.outputs.critical_count }}
           HIGH_COUNT: ${{ steps.nuclei-results.outputs.high_count }}
           MEDIUM_COUNT: ${{ steps.nuclei-results.outputs.medium_count }}
+          SCAN_OUTCOME: ${{ steps.nuclei-results.outputs.scan_outcome }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const tag = '[nightly:dast-nuclei]';
+            const scanFailed = process.env.SCAN_OUTCOME === 'failure';
             const { data: issues } = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -412,6 +449,20 @@ jobs:
                   labels,
                 });
               }
+            } else if (scanFailed) {
+              // #23085: never auto-close a real tracked finding on a scanner
+              // crash — the job also fails (continue-on-error removed
+              // above), which the repo-wide workflow-failure-issue.yml
+              // catch-all picks up.
+              if (existing) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: existing.number,
+                  body: `⚠️ Nuclei scan step failed to complete on ${new Date().toISOString().slice(0, 10)} (no results produced). Leaving this issue open — this is not a confirmed clean scan.`,
+                });
+              }
+              console.log('Nuclei scan step failed; skipping auto-close.');
             } else if (existing) {
               await github.rest.issues.update({
                 owner: context.repo.owner,
