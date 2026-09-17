@@ -2,7 +2,7 @@ import { Plus } from 'lucide-react'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { RotatingTip } from '../ui/RotatingTip'
-import { WorkloadImportDialog } from '../cards/WorkloadImportDialog'
+import { WorkloadImportDialog } from '../cards/workload-import'
 import { ConfirmDialog } from '../../lib/modals'
 import { useWorkloads } from './useWorkloads'
 import {

@@ -13,7 +13,7 @@
  *   2. The regex doc claimed a YAML parser would "bloat the bundle",
  *      but `js-yaml` is already a project dependency
  *      (`web/src/lib/missions/fileParser.ts`,
- *      `web/src/components/cards/WorkloadImportDialog.tsx`,
+ *      `web/src/components/cards/workload-import/workloadImportDialog.utils.ts`,
  *      `web/src/components/missions/ShareMissionDialog.tsx`).
  *
  * This module replaces the regex with a `js-yaml`-based parse → walk →

@@ -109,7 +109,7 @@ vi.mock('./WorkloadDeployment.hooks', () => ({
   }),
 }))
 
-vi.mock('./WorkloadImportDialog', () => ({
+vi.mock('./workload-import', () => ({
   WorkloadImportDialog: () => null,
 }))
 
