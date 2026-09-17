@@ -26,6 +26,18 @@ on:
       # Weekly reviews
       - "OpenSSF Scorecard"
       - "Weekly Coverage Review"
+      # Repo hygiene / public-facing badges
+      - "Stale Issues"
+      - "MTTR Badge"
+      # Security scanning
+      - "Nightly DAST Security Scan"
+      # No-alert gap closed by #23405
+      - "Route & Modal Smoke Test"
+      - "Stuck Detection Workflow"
+      - "UI/UX Standards"
+      - "ACCM History Update"
+      - "Mission Control Kind E2E"
+      - "In-Place Upgrade Smoke"
     types:
       - completed
 
