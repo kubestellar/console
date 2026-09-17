@@ -19,6 +19,8 @@ on:
       - "Auto-QA Tuner"
       - "Nil Safety"
       - "GA4 Error Monitor"
+      - "GA4 Error Rate Regression"
+      - "GA4 Mobile Traffic Monitor"
       - "CodeQL Security Analysis"
       - "ACMM Level Monitor"
       # Weekly reviews
