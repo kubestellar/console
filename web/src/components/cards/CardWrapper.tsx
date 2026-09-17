@@ -1,42 +1,25 @@
-import { useState, useEffect, useCallback, useRef, useMemo, memo, Suspense } from 'react'
+import { memo, Suspense } from 'react'
 import { safeLazy } from '../../lib/safeLazy'
 import { Maximize2 } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
-import { CARD_TITLES, CARD_DESCRIPTIONS, DEMO_EXEMPT_CARDS } from './cardMetadata'
-import { CARD_ICONS } from './cardIcons'
+import { CARD_TITLES } from './cardMetadata'
 import { BaseModal } from '../../lib/modals'
 import { cn } from '@/lib/cn'
-import { useCardCollapse } from '../../lib/cards/cardHooks'
-import { useSnoozedCards } from '../../hooks/useSnoozedCards'
-import { useDemoMode } from '../../hooks/useDemoMode'
-import { useModal } from '../../hooks/useModal'
-import { isDemoMode as checkIsDemoMode } from '../../lib/demoMode'
-import { useIsModeSwitching } from '../../lib/unified/demo'
-import { CardDataReportContext, ForceLiveContext, type CardDataState } from './CardDataContext'
-import { ChatMessage } from './CardChat'
-import { emitCardExpanded, emitCardRefreshed } from '../../lib/analytics'
-import { useMissions } from '../../hooks/useMissions'
-import { LOADING_TIMEOUT_MS, SKELETON_DELAY_MS, INITIAL_RENDER_TIMEOUT_MS, TICK_INTERVAL_MS, CARD_LOADING_TIMEOUT_MS, MIN_SKELETON_DISPLAY_MS } from '../../lib/constants/network'
-import { useTimeoutFlag, useConditionalTimeout } from '../../hooks/useTimeoutFlag'
+import { CardDataReportContext, ForceLiveContext } from './CardDataContext'
 import { CardFailureBanner } from './CardErrorFallback'
 import { CardLoadingState } from './CardLoadingState'
 import { CardHeader } from './CardHeader'
 import { CardFooter } from './CardFooter'
 import { CardErrorBoundary } from './CardErrorBoundary'
-import { useResizeHandle } from './ResizeHandle'
 import type { CardWrapperProps } from './CardWrapper.types'
 import {
-  MIN_SPIN_DURATION,
-  COLLAPSED_CARDS_STORAGE_KEY,
   CONTAINER_QUERY_STYLE,
   DEFAULT_SNOOZE_MS,
-  LAST_UPDATED_TICK_MS,
-  COLLAPSE_DELAY_MS,
   LARGE_EXPANDED_CARDS,
   FULLSCREEN_EXPANDED_CARDS,
 } from './CardWrapper.constants'
 import { CardExpandedContext, CardTypeContext } from './CardWrapper.contexts'
-import { useLazyMount } from './CardWrapper.useLazyMount'
+import { CardDemoBrackets } from './CardDemoBrackets'
+import { useCardWrapperState } from './useCardWrapperState'
 
 // Re-exports for backwards compatibility — implementations now live in
 // CardWrapper.contexts.ts, CardWrapper.useLazyMount.ts and CardWrapper.types.ts
@@ -52,434 +35,76 @@ const FeatureRequestModal = safeLazy(() => import('../feedback/FeatureRequestMod
 // Re-export for backwards compatibility — data now lives in cardMetadata.ts and cardIcons.ts
 export { CARD_TITLES, CARD_DESCRIPTIONS } from './cardMetadata'
 
-export const CardWrapper = memo(function CardWrapper({
-  cardId,
-  cardType,
-  title: customTitle,
-  icon: Icon,
-  iconColor,
-  lastSummary,
-  pendingSwap,
-  chatMessages: externalMessages,
-  dragHandle,
-  isRefreshing,
-  lastUpdated,
-  isDemoData,
-  isLive,
-  forceLive,
-  isFailed,
-  consecutiveFailures,
-  cardWidth,
-  isCollapsed: externalCollapsed,
-  flashType = 'none',
-  onCollapsedChange,
-  onSwap,
-  onSwapCancel,
-  onConfigure,
-  onRemove,
-  onRefresh,
-  onWidthChange,
-  cardHeight,
-  onHeightChange,
-  onChatMessage,
-  onChatMessagesChange,
-  skeletonType,
-  skeletonRows,
-  registerExpandTrigger,
-  children }: CardWrapperProps) {
-  const { t } = useTranslation(['cards', 'common'])
-  const { setFullScreen } = useMissions()
-  const [isExpanded, setIsExpanded] = useState(false)
-  const { containerSize, expandedContentRef } = useResizeHandle(isExpanded)
-  const { isOpen: showBugReport, open: openBugReport, close: closeBugReport } = useModal()
-  const { isOpen: showWidgetExport, open: openWidgetExport, close: closeWidgetExport } = useModal()
+export const CardWrapper = memo(function CardWrapper(props: CardWrapperProps) {
+  const {
+    cardId,
+    cardType,
+    dragHandle,
+    isRefreshing,
+    isLive,
+    cardWidth,
+    cardHeight,
+    onConfigure,
+    onRemove,
+    onRefresh,
+    onWidthChange,
+    onHeightChange,
+    onSwapCancel,
+    pendingSwap,
+    lastSummary,
+    skeletonRows,
+    children,
+  } = props
 
-  // Register expand trigger for keyboard navigation
-  useEffect(() => {
-    registerExpandTrigger?.(() => setIsExpanded(true))
-  }, [registerExpandTrigger])
-
-  // Restore focus to card when expanded modal closes
-  const prevExpandedRef = useRef(false)
-  useEffect(() => {
-    if (prevExpandedRef.current && !isExpanded && cardId) {
-      const cardEl = document.querySelector(
-        `[data-card-id="${cardId}"]`
-      )?.closest('[tabindex="0"]') as HTMLElement | null
-      cardEl?.focus()
-    }
-    prevExpandedRef.current = isExpanded
-  }, [isExpanded, cardId])
-
-  // Lazy mounting - only render children when card is visible in viewport
-  const { ref: lazyRef, isVisible } = useLazyMount('200px')
-  // Track animation key to re-trigger flash animation
-  const [flashKey, setFlashKey] = useState(0)
-  const prevFlashType = useRef(flashType)
-
-  // Track visual spinning state separately to ensure minimum spin duration
-  const [isVisuallySpinning, setIsVisuallySpinning] = useState(false)
-  const spinStartRef = useRef<number | null>(null)
-
-  // Tick counter that forces the "last updated" label to re-render at a fixed
-  // cadence (#9104). Without this, when the refresh source (e.g. SSE stream)
-  // returns 404 repeatedly, `lastUpdated` is frozen at the last successful
-  // fetch and the label shows a stale "5d ago" that never advances even as
-  // real-world time passes. The setInterval below bumps this every minute so
-  // formatTimeAgo() is called with a current Date.now() and the label advances.
-  const [, setLastUpdatedTick] = useState(0)
-  useEffect(() => {
-    const id = setInterval(() => {
-      setLastUpdatedTick(t => t + 1)
-    }, LAST_UPDATED_TICK_MS)
-    return () => clearInterval(id)
-  }, [])
-
-  // Child-reported data state (from card components via CardDataContext)
-  // Declared early so it can be used in the refresh animation effect below
-  const [childDataState, setChildDataState] = useState<CardDataState | null>(null)
-
-  // Skeleton timeout: show skeleton for up to 5s while waiting for card to report.
-  // After timeout, assume card doesn't use reporting and show content.
-  const skeletonTimedOut = useTimeoutFlag(LOADING_TIMEOUT_MS, checkIsDemoMode())
-
-  // Skeleton delay: don't show skeleton immediately — prevents flicker when cache loads quickly from IndexedDB
-  const skeletonDelayPassed = useTimeoutFlag(SKELETON_DELAY_MS, checkIsDemoMode())
-
-  // Quick initial render timeout: if card hasn't reported state within 150ms, assume static/demo card
-  const initialRenderTimedOut = useTimeoutFlag(INITIAL_RENDER_TIMEOUT_MS, checkIsDemoMode())
-
-  // Minimum skeleton display duration guard (#5206): prevents skeleton→content→skeleton flicker
-  const minSkeletonElapsed = useTimeoutFlag(MIN_SKELETON_DISPLAY_MS, checkIsDemoMode())
-
-  // Stuck loading guard: force exit loading state after CARD_LOADING_TIMEOUT_MS (30s)
-  const cardLoadingTimedOut = useConditionalTimeout(childDataState?.isLoading ?? false, CARD_LOADING_TIMEOUT_MS)
-
-  // Handle minimum spin duration for refresh button
-  // Include both prop and context-reported refresh state
-  const contextIsRefreshing = childDataState?.isRefreshing || false
-  useEffect(() => {
-    if (isRefreshing || contextIsRefreshing) {
-      setIsVisuallySpinning(true)
-      spinStartRef.current = Date.now()
-    } else if (spinStartRef.current !== null) {
-      const elapsed = Date.now() - spinStartRef.current
-      const remaining = Math.max(0, MIN_SPIN_DURATION - elapsed)
-
-      if (remaining > 0) {
-        const timeout = setTimeout(() => {
-          setIsVisuallySpinning(false)
-          spinStartRef.current = null
-        }, remaining)
-        return () => clearTimeout(timeout)
-      } else {
-        setIsVisuallySpinning(false)
-        spinStartRef.current = null
-      }
-    }
-  }, [isRefreshing, contextIsRefreshing])
-
-  // Re-trigger animation when flashType changes to a non-none value
-  useEffect(() => {
-    if (flashType !== 'none' && flashType !== prevFlashType.current) {
-      setFlashKey(k => k + 1)
-    }
-    prevFlashType.current = flashType
-  }, [flashType])
-
-  // Get flash animation class based on type
-  const getFlashClass = () => {
-    switch (flashType) {
-      case 'info': return 'animate-card-flash'
-      case 'warning': return 'animate-card-flash-warning'
-      case 'error': return 'animate-card-flash-error'
-      default: return ''
-    }
-  }
-
-  // Use the shared collapse hook with localStorage persistence
-  // cardId is required for persistence; fall back to cardType if not provided
-  const collapseKey = cardId || `${cardType}-default`
-  const { isCollapsed: hookCollapsed, setCollapsed: hookSetCollapsed } = useCardCollapse(collapseKey)
-
-  // Check if this card has a previously-saved collapse state in localStorage.
-  // When the user explicitly collapsed a card, we should respect that immediately
-  // on page navigation (no delay) to prevent a flash of expanded state (#4895).
-  const hasSavedCollapseState = useMemo(() => {
-    try {
-      const stored = localStorage.getItem(COLLAPSED_CARDS_STORAGE_KEY)
-      if (!stored) return false
-      const ids: string[] = JSON.parse(stored)
-      return ids.includes(collapseKey)
-    } catch {
-      return false
-    }
-  }, [collapseKey])
-
-  // Track whether initial data load has completed AND content has been visible
-  // Skip the delay entirely if the card has a saved collapsed state — the user
-  // explicitly collapsed it, so we should respect that immediately across navigations.
-  const [hasCompletedInitialLoad, setHasCompletedInitialLoad] = useState(() => checkIsDemoMode() || hasSavedCollapseState)
-  const [collapseDelayPassed, setCollapseDelayPassed] = useState(() => checkIsDemoMode() || hasSavedCollapseState)
-
-  // Allow external control to override hook state
-  // IMPORTANT: Don't collapse until initial data load is complete AND a brief delay has passed
-  // This prevents the jarring sequence of: skeleton → collapse → show data
-  // Cards stay expanded showing content briefly, then respect collapsed state
-  // Exception: if the card has a saved collapse state, apply it immediately (#4895)
-  const savedCollapsedState = externalCollapsed ?? hookCollapsed
-  const isCollapsed = (hasCompletedInitialLoad && collapseDelayPassed) ? savedCollapsedState : false
-  const isCollapsedRef = useRef(isCollapsed)
-  const onCollapsedChangeRef = useRef(onCollapsedChange)
-
-  useEffect(() => {
-    isCollapsedRef.current = isCollapsed
-  }, [isCollapsed])
-
-  useEffect(() => {
-    onCollapsedChangeRef.current = onCollapsedChange
-  }, [onCollapsedChange])
-
-  const setCollapsed = useCallback((collapsed: boolean | ((prev: boolean) => boolean)) => {
-    const nextCollapsed = typeof collapsed === 'function'
-      ? collapsed(isCollapsedRef.current)
-      : collapsed
-
-    onCollapsedChangeRef.current?.(nextCollapsed)
-    // Always update the hook state for persistence
-    hookSetCollapsed(nextCollapsed)
-  }, [hookSetCollapsed])
-
-  const [showSummary, setShowSummary] = useState(false)
-  const [__timeRemaining, setTimeRemaining] = useState<number | null>(null)
-  // Chat state reserved for future use
-  // const [isChatOpen, setIsChatOpen] = useState(false)
-  const [localMessages, setLocalMessages] = useState<ChatMessage[]>([])
-  const { snoozeSwap } = useSnoozedCards()
-  const { isDemoMode: globalDemoMode } = useDemoMode()
-  const isModeSwitching = useIsModeSwitching()
-  const isDemoExempt = DEMO_EXEMPT_CARDS.has(cardType)
-  const isDemoMode = globalDemoMode && !isDemoExempt && !forceLive
-
-  // Report callback for CardDataContext (childDataState is declared earlier for refresh animation)
-  // Must be useCallback — CardDataContext children use this in useLayoutEffect deps
-  // Stable reference required — useLayoutEffect in CardDataContext depends on this.
-  // Use functional update to compare prev state and skip no-op updates that would
-  // otherwise trigger infinite re-renders (new object reference, same values).
-  const reportCallback = useCallback((state: CardDataState) => {
-    setChildDataState(prev => {
-      if (prev &&
-        prev.isFailed === state.isFailed &&
-        prev.consecutiveFailures === state.consecutiveFailures &&
-        prev.errorMessage === state.errorMessage &&
-        prev.isLoading === state.isLoading &&
-        prev.isRefreshing === state.isRefreshing &&
-        prev.hasData === state.hasData &&
-        prev.isDemoData === state.isDemoData &&
-        prev.lastUpdated === state.lastUpdated) {
-        return prev
-      }
-      return state
-    })
-  }, [])
-  const reportCtx = useMemo(() => ({ report: reportCallback }), [reportCallback])
-
-  // Merge child-reported state with props — child reports take priority when present
-  const effectiveIsFailed = isFailed || childDataState?.isFailed || cardLoadingTimedOut
-  const effectiveConsecutiveFailures = consecutiveFailures || childDataState?.consecutiveFailures || (cardLoadingTimedOut ? 1 : 0)
-  const effectiveErrorMessage = childDataState?.errorMessage || undefined
-  // Show loading when:
-  // - Card explicitly reports isLoading: true (AND stuck-loading timeout hasn't fired), OR
-  // - Card hasn't reported yet AND quick timeout hasn't passed (brief skeleton for reporting cards)
-  // - Minimum skeleton display time hasn't elapsed yet (#5206) — prevents flicker from
-  //   child useLayoutEffect reports causing skeleton → content → skeleton → content
-  // Static/demo cards that never report will stop showing as loading after 150ms
-  // NOTE: isRefreshing is NOT included — background refreshes should be invisible to avoid flicker
-  // cardLoadingTimedOut acts as a safety valve: if a card stays in isLoading:true for
-  // CARD_LOADING_TIMEOUT_MS (30s), force it out of loading state to prevent permanent spinner.
-  const effectiveIsLoading = (childDataState?.isLoading && !cardLoadingTimedOut) || (childDataState === null && !initialRenderTimedOut && !skeletonTimedOut) || (!minSkeletonElapsed && childDataState === null)
-  // hasData logic:
-  // - If card explicitly reports hasData, use it
-  // - If card hasn't reported AND quick timeout passed, assume has data (static/demo card)
-  // - If card hasn't reported AND skeleton timed out, assume has data (show content)
-  // - If card reports isLoading:true but not hasData, assume no data (show skeleton)
-  // - If stuck loading timed out, force hasData to true so content area is shown
-  // - Minimum skeleton display hasn't elapsed — don't claim hasData yet (#5206)
-  // - Otherwise default to true (show content)
-  const effectiveHasData = cardLoadingTimedOut ? true : (childDataState?.hasData ?? (
-    childDataState === null
-      ? ((initialRenderTimedOut || skeletonTimedOut) && minSkeletonElapsed)  // After quick timeout AND min skeleton elapsed, assume static card has content
-      : (childDataState?.isLoading ? false : true)
-  ))
-
-  // Merge isDemoData from child-reported state with prop.
-  // When forceLive is true, ignore child-reported isDemoData — the child checks global
-  // demo mode independently but we know the data is real (in-cluster with OAuth).
-  const effectiveIsDemoData = forceLive ? false : (childDataState?.isDemoData ?? isDemoData ?? false)
-
-  // Child can explicitly opt-out of demo indicator by reporting isDemoData: false
-  // This is used by stack-dependent cards that use stack data even in global demo mode
-  const childExplicitlyNotDemo = childDataState?.isDemoData === false
-
-  // Show demo indicator if:
-  // 1. Child reports demo data (isDemoData: true via prop or report), OR
-  // 2. Global demo mode is on AND child hasn't explicitly opted out
-  // Always suppress during loading phase — showing a demo badge on a skeleton is misleading.
-  // Demo-only cards resolve instantly so the badge appears within ms of content loading.
-  const showDemoIndicator = !effectiveIsLoading && (effectiveIsDemoData || (isDemoMode && !childExplicitlyNotDemo))
-
-  // Determine if we should show skeleton: loading with no cached data
-  // OR when demo mode is OFF and agent is offline (prevents showing stale demo data)
-  // OR when mode is switching (smooth transition between demo and live)
-  // Force skeleton immediately when offline + demo OFF, without waiting for childDataState
-  // This fixes the race condition where demo data briefly shows before skeleton
-  // Cards with effectiveIsDemoData=true (explicitly showing demo) or demo-exempt cards are excluded
-  const forceSkeletonForOffline = false // Cards render immediately — handle their own empty/offline state
-  const forceSkeletonForModeSwitching = isModeSwitching && !isDemoExempt
-
-  // Default to 'list' skeleton type if not specified, enabling automatic skeleton display
-  const effectiveSkeletonType = skeletonType || 'list'
-  // Cards render immediately — skeleton only used during demo↔live mode switching
-  const wantsToShowSkeleton = forceSkeletonForModeSwitching
-  const shouldShowSkeleton = (wantsToShowSkeleton && skeletonDelayPassed) || forceSkeletonForModeSwitching
-  const effectiveLastUpdated = lastUpdated ?? childDataState?.lastUpdated
-  const showHeaderRefreshIndicator = !onRefresh && (isRefreshing || isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline)
-  const showInstallCta = showDemoIndicator && !shouldShowSkeleton && !DEMO_EXEMPT_CARDS.has(cardType)
-
-  // Mark initial load as complete when data is ready or various timeouts pass
-  // This allows the saved collapsed state to take effect only after content is ready
-  // Conditions (any triggers completion):
-  // - effectiveHasData: card reported it has data
-  // - initialRenderTimedOut: 150ms passed, assume static card has content
-  // - skeletonTimedOut: 5s passed, fallback for slow loading cards
-  // - effectiveIsDemoData/isDemoMode: demo cards always have content immediately
-  useEffect(() => {
-    if (!hasCompletedInitialLoad && (effectiveHasData || initialRenderTimedOut || skeletonTimedOut || effectiveIsDemoData || isDemoMode)) {
-      setHasCompletedInitialLoad(true)
-    }
-  }, [hasCompletedInitialLoad, effectiveHasData, initialRenderTimedOut, skeletonTimedOut, effectiveIsDemoData, isDemoMode])
-
-  // Add a small delay before allowing collapse to ensure content is visible
-  // This prevents immediate collapse for demo cards and ensures smooth UX
-  useEffect(() => {
-    if (hasCompletedInitialLoad && !collapseDelayPassed) {
-      const timer = setTimeout(() => {
-        setCollapseDelayPassed(true)
-      }, COLLAPSE_DELAY_MS)
-      return () => clearTimeout(timer)
-    }
-  }, [hasCompletedInitialLoad, collapseDelayPassed])
-
-  // Use external messages if provided, otherwise use local state
-  const messages = externalMessages ?? localMessages
-
-  const title = t(`titles.${cardType}`, CARD_TITLES[cardType] || '') || customTitle || cardType
-  const description = t(`descriptions.${cardType}`, CARD_DESCRIPTIONS[cardType] || '')
-  const swapType = pendingSwap?.newType || ''
-  const newTitle = pendingSwap?.newTitle || t(`titles.${swapType}`, CARD_TITLES[swapType] || '') || swapType
-
-  // Get icon from prop or registry
-  const cardIconConfig = CARD_ICONS[cardType]
-  const ResolvedIcon = Icon || cardIconConfig?.icon
-  const resolvedIconColor = iconColor || cardIconConfig?.color || 'text-foreground'
-
-  // Countdown timer for pending swap
-  useEffect(() => {
-    if (!pendingSwap) {
-      setTimeRemaining(null)
-      return
-    }
-
-    const updateTime = () => {
-      const now = Date.now()
-      const swapTime = pendingSwap.swapAt.getTime()
-      const remaining = Math.max(0, Math.floor((swapTime - now) / 1000))
-      setTimeRemaining(remaining)
-
-      if (remaining === 0 && onSwap) {
-        onSwap(pendingSwap.newType)
-      }
-    }
-
-    updateTime()
-    const interval = setInterval(updateTime, TICK_INTERVAL_MS)
-    return () => clearInterval(interval)
-  }, [pendingSwap, onSwap])
-
-  const handleSnooze = (durationMs: number = DEFAULT_SNOOZE_MS) => {
-    if (!pendingSwap || !cardId) return
-
-    snoozeSwap({
-      originalCardId: cardId,
-      originalCardType: cardType,
-      originalCardTitle: title,
-      newCardType: pendingSwap.newType,
-      newCardTitle: newTitle || pendingSwap.newType,
-      reason: pendingSwap.reason }, durationMs)
-
-    onSwapCancel?.()
-  }
-
-  const handleSwapNow = () => {
-    if (pendingSwap && onSwap) {
-      onSwap(pendingSwap.newType)
-    }
-  }
-
-  const handleToggleCollapse = useCallback(() => {
-    setCollapsed(prev => !prev)
-  }, [setCollapsed])
-
-  const handleRefresh = useCallback(() => {
-    onRefresh?.()
-    emitCardRefreshed(cardType)
-  }, [onRefresh, cardType])
-
-  const handleLoadingTimeoutRetry = useCallback(() => {
-    // cardLoadingTimedOut resets automatically via useConditionalTimeout when
-    // childDataState.isLoading toggles back to true on re-fetch
-    onRefresh?.()
-  }, [onRefresh])
-
-  const handleExpandFullscreen = useCallback(() => {
-    emitCardExpanded(cardType)
-    setIsExpanded(true)
-  }, [cardType])
-
-  const handleOpenBugReport = useCallback(() => {
-    setFullScreen(false)
-    openBugReport()
-  }, [setFullScreen, openBugReport])
-
-  // Silence unused variable warnings for future chat implementation
-  void messages
-  void onChatMessage
-  void onChatMessagesChange
-  void setLocalMessages
-
-  // #6149 — Memoize inline provider values so every CardWrapper re-render
-  // (there are dozens on every dashboard) does not invalidate the
-  // CardExpandedContext / ForceLiveContext consumers inside the card.
-  const cardExpandedValue = useMemo(
-    () => ({ isExpanded, containerSize }),
-    [isExpanded, containerSize]
-  )
-  const forceLiveValue = useMemo(() => !!forceLive, [forceLive])
-
-  // #21775 — CardHeader expects a plain `(key, defaultValue?, options?) => string`
-  // translator (matching how it actually calls `t`). Passing the raw i18next
-  // TFunction<['cards','common']> directly triggers an excessively deep type
-  // instantiation (TS2589) because of its complex overloaded/generic call
-  // signature. Wrap it in a simple function that forwards all arguments.
-  const headerT = useCallback(
-    (key: string, defaultValue?: string, options?: Record<string, unknown>): string => {
-      if (defaultValue !== undefined) {
-        return t(key, defaultValue, options) as string
-      }
-      return t(key) as string
-    },
-    [t]
-  )
+  const {
+    t,
+    isExpanded,
+    setIsExpanded,
+    expandedContentRef,
+    showBugReport,
+    closeBugReport,
+    showWidgetExport,
+    openWidgetExport,
+    closeWidgetExport,
+    lazyRef,
+    isVisible,
+    flashKey,
+    flashClass,
+    isVisuallySpinning,
+    childDataState,
+    cardLoadingTimedOut,
+    isCollapsed,
+    showSummary,
+    setShowSummary,
+    reportCtx,
+    effectiveIsFailed,
+    effectiveConsecutiveFailures,
+    effectiveErrorMessage,
+    effectiveIsLoading,
+    effectiveIsDemoData,
+    showDemoIndicator,
+    forceSkeletonForOffline,
+    effectiveSkeletonType,
+    shouldShowSkeleton,
+    effectiveLastUpdated,
+    showHeaderRefreshIndicator,
+    showInstallCta,
+    title,
+    description,
+    newTitle,
+    ResolvedIcon,
+    resolvedIconColor,
+    handleSnooze,
+    handleSwapNow,
+    handleToggleCollapse,
+    handleRefresh,
+    handleLoadingTimeoutRetry,
+    handleExpandFullscreen,
+    handleOpenBugReport,
+    cardExpandedValue,
+    forceLiveValue,
+    headerT,
+  } = useCardWrapperState(props)
 
   return (
     <CardTypeContext.Provider value={cardType}>
@@ -489,23 +114,7 @@ export const CardWrapper = memo(function CardWrapper({
         <>
           {/* Outer wrapper for demo corner brackets (outside card border) */}
           <div className={cn('relative', isCollapsed ? 'h-auto' : 'h-full')}>
-            {showDemoIndicator && (
-              <>
-                <svg className="absolute -top-px -left-px w-5 h-5 pointer-events-none z-10" viewBox="0 0 20 20" fill="none">
-                  <defs><filter id="demo-rough"><feTurbulence type="turbulence" baseFrequency="0.04" numOctaves="4" result="noise" /><feDisplacementMap in="SourceGraphic" in2="noise" scale="1" /></filter></defs>
-                  <path d="M2 17 V9 C2 4.5 4.5 2 9 2 H17" stroke="rgb(234 179 8 / 0.4)" strokeWidth="2.5" strokeLinecap="round" fill="none" filter="url(#demo-rough)" />
-                </svg>
-                <svg className="absolute -top-px -right-px w-5 h-5 pointer-events-none z-10" viewBox="0 0 20 20" fill="none">
-                  <path d="M18 17 V9 C18 4.5 15.5 2 11 2 H3" stroke="rgb(234 179 8 / 0.4)" strokeWidth="2.5" strokeLinecap="round" fill="none" filter="url(#demo-rough)" />
-                </svg>
-                <svg className="absolute -bottom-px -left-px w-5 h-5 pointer-events-none z-10" viewBox="0 0 20 20" fill="none">
-                  <path d="M2 3 V11 C2 15.5 4.5 18 9 18 H17" stroke="rgb(234 179 8 / 0.4)" strokeWidth="2.5" strokeLinecap="round" fill="none" filter="url(#demo-rough)" />
-                </svg>
-                <svg className="absolute -bottom-px -right-px w-5 h-5 pointer-events-none z-10" viewBox="0 0 20 20" fill="none">
-                  <path d="M18 3 V11 C18 15.5 15.5 18 11 18 H3" stroke="rgb(234 179 8 / 0.4)" strokeWidth="2.5" strokeLinecap="round" fill="none" filter="url(#demo-rough)" />
-                </svg>
-              </>
-            )}
+            {showDemoIndicator && <CardDemoBrackets />}
           {/* Main card */}
           <div
             ref={lazyRef}
@@ -523,7 +132,7 @@ export const CardWrapper = memo(function CardWrapper({
               isCollapsed ? 'h-auto' : 'h-full',
               // Only pulse during initial skeleton display, not background refreshes (prevents flicker)
               shouldShowSkeleton && !forceSkeletonForOffline && 'animate-card-refresh-pulse',
-              getFlashClass()
+              flashClass
             )}
             onMouseEnter={() => setShowSummary(true)}
             onMouseLeave={() => setShowSummary(false)}
