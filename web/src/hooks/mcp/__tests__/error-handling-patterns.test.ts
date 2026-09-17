@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { readFileSync } from 'fs'
-import { join } from 'path'
+import { readFileSync, readdirSync, existsSync } from 'fs'
+import { join, extname } from 'path'
 
 /**
  * Verifies error handling patterns introduced in #17062:
@@ -11,6 +11,28 @@ import { join } from 'path'
 
 const hooksDir = join(__dirname, '..')
 const hooksRoot = join(__dirname, '..', '..')
+
+/**
+ * Some hook modules (e.g. storage.ts, helm.ts) were split into a directory of
+ * smaller files with the original filename kept as a backward-compatible
+ * barrel re-export (see Issue #23155). For those, concatenate the barrel with
+ * the contents of its sibling directory so pattern checks still see the code.
+ */
+function readModuleSource(dir: string, file: string): string {
+  const barrelContent = readFileSync(join(dir, file), 'utf-8')
+  const moduleDir = join(dir, file.replace(extname(file), ''))
+
+  if (!existsSync(moduleDir)) {
+    return barrelContent
+  }
+
+  const splitContent = readdirSync(moduleDir)
+    .filter(entry => entry.endsWith('.ts') || entry.endsWith('.tsx'))
+    .map(entry => readFileSync(join(moduleDir, entry), 'utf-8'))
+    .join('\n')
+
+  return `${barrelContent}\n${splitContent}`
+}
 
 describe('kagenti error logging level', () => {
   it('uses console.error (not console.warn) for fetch failures', () => {
@@ -32,7 +54,7 @@ describe('MCP hooks error propagation documentation', () => {
 
   for (const file of hookFiles) {
     it(`${file} documents error propagation via hook state`, () => {
-      const content = readFileSync(join(hooksDir, file), 'utf-8')
+      const content = readModuleSource(hooksDir, file)
       // Each backend catch block should document that errors propagate via state
       const catchBlocks = content
         .split('\n')
