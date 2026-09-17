@@ -14,4 +14,4 @@ permissions:
 
 jobs:
   analysis:
-    uses: kubestellar/infra/.github/workflows/reusable-scorecard.yml@220beeeb8dae67e2fd8e89338ada8144609fc6ef # pin to main 2026-08-24
+    uses: kubestellar/infra/.github/workflows/reusable-scorecard.yml@cfe3dcacb317e67ccf3701c98bc0416a7712cfbf # pin to main 2026-09-17
