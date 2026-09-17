@@ -4,7 +4,7 @@
 // previously lived in auth.tsx, with import paths adjusted for this
 // file's location under src/lib/auth/.
 
-import { createContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react'
 import { checkOAuthConfigured, checkOAuthConfiguredWithRetry } from '../api'
 import { dashboardSync } from '../dashboards/dashboardSync'
 import { clearPermissionsCache } from '../../hooks/usePermissions'
@@ -24,6 +24,7 @@ import { validateResponse } from '../schemas/validate'
 import { ROUTES } from '../../config/routes'
 import { redirectToDevLogin, type LoginOptions } from '../devLogin'
 import type { User, AuthContextType } from './types'
+import { AuthContext } from './context'
 import {
   AUTH_USER_CACHE_KEY,
   AUTH_USER_CACHE_VALIDATED_KEY,
@@ -37,8 +38,6 @@ import {
   getCachedUser,
   cacheUser,
 } from './tokenHelpers'
-
-export const AuthContext = createContext<AuthContextType | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(getCachedUser)

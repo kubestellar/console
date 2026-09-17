@@ -3,7 +3,7 @@
 // useAuth() implementation that previously lived in auth.tsx.
 
 import { use } from 'react'
-import { AuthContext } from './AuthContext'
+import { AuthContext } from './context'
 import type { AuthContextType } from './types'
 
 /**
