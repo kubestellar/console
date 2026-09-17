@@ -27,7 +27,7 @@ import {
   getDemoWorkloads,
 } from './demoData'
 import { fetchSecurityIssuesViaKubectl } from './securityScanner'
-import { DeploymentsResponseSchema } from '../../lib/schemas'
+import { DeploymentSchema, DeploymentsResponseSchema } from '../../lib/schemas'
 import { validateArrayResponse } from '../../lib/schemas/validate'
 import type { Deployment, Service, SecurityIssue } from '../useMCP'
 import type { Workload } from '../useWorkloads'
@@ -67,7 +67,7 @@ export function useCachedDeployments(
           if (response.ok) {
             const rawData = await response.json().catch(() => null)
             if (!rawData) return []
-            const data = validateArrayResponse<{ deployments: Deployment[] }>(DeploymentsResponseSchema, rawData, '/agent/deployments', 'deployments')
+            const data = validateArrayResponse<{ deployments: Deployment[] }>(DeploymentsResponseSchema, rawData, '/agent/deployments', 'deployments', DeploymentSchema)
             return (data.deployments || []).map(d => ({
               ...d,
               cluster: cluster }))
@@ -90,7 +90,7 @@ export function useCachedDeployments(
       if (hasRealToken && !isBackendUnavailable()) {
         if (cluster) {
           const raw = await getClusterFetcher()<unknown>('deployments', { cluster, namespace })
-          const data = validateArrayResponse<{ deployments: Deployment[] }>(DeploymentsResponseSchema, raw, '/api/mcp/deployments', 'deployments')
+          const data = validateArrayResponse<{ deployments: Deployment[] }>(DeploymentsResponseSchema, raw, '/api/mcp/deployments', 'deployments', DeploymentSchema)
           const deployments = data.deployments || []
           return deployments.map(d => ({ ...d, cluster: d.cluster || cluster }))
         }

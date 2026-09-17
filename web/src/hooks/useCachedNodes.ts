@@ -9,7 +9,7 @@ import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/ca
 import { clusterCacheRef, deduplicateClustersByServer } from './mcp/shared'
 import { fetchFromAllClusters, fetchViaSSE, getClusterFetcher } from '../lib/cache/fetcherUtils'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
-import { NodesResponseSchema } from '../lib/schemas'
+import { NodeInfoSchema, NodesResponseSchema } from '../lib/schemas'
 import { validateArrayResponse } from '../lib/schemas/validate'
 import { getDemoCachedNodes, getDemoCoreDNSStatus } from './useCachedData/demoData'
 import { classifyError, type ClusterErrorType } from '../lib/errorClassifier'
@@ -111,7 +111,7 @@ export function useCachedNodes(
     fetcher: async () => {
       if (cluster) {
         const raw = await getClusterFetcher()<unknown>('nodes', { cluster })
-        const data = validateArrayResponse<{ nodes: NodeInfo[] }>(NodesResponseSchema, raw, '/api/mcp/nodes', 'nodes')
+        const data = validateArrayResponse<{ nodes: NodeInfo[] }>(NodesResponseSchema, raw, '/api/mcp/nodes', 'nodes', NodeInfoSchema)
         return (data.nodes || []).map(n => ({ ...n, cluster }))
       }
       return fetchFromAllClusters<NodeInfo>('nodes', 'nodes', {})
@@ -222,6 +222,7 @@ export function useCachedAllNodes(): CachedHookResult<NodeInfo[]> & {
             raw,
             '/api/mcp/nodes',
             'nodes',
+            NodeInfoSchema,
           )
           return {
             nodes: (data.nodes || []).map((n) => ({ ...n, cluster: cluster.name })),
