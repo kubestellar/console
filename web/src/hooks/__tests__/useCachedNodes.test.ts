@@ -40,6 +40,7 @@ vi.mock('../../lib/utils/concurrency', () => ({
 vi.mock('../../lib/schemas', () => ({
     createCachedHook: vi.fn(),
   NodesResponseSchema: {},
+  NodeInfoSchema: {},
 }))
 
 vi.mock('../../lib/schemas/validate', () => ({
