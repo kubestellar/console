@@ -31,13 +31,22 @@ on:
       - "MTTR Badge"
       # Security scanning
       - "Nightly DAST Security Scan"
-      # No-alert gap closed by #23405
+      # Canaries / smoke tests (self-upgrade, routing, cross-platform)
+      - "In-Place Upgrade Smoke"
       - "Route & Modal Smoke Test"
+      - "Console Live macOS Canary"
+      - "Mission Control Kind E2E"
+      - "Nightly UX Journey Tests"
+      # Performance regression gates
+      - "Perf — Bundle size"
+      - "Perf — React commits per navigation"
+      - "Perf — React commits per second (idle)"
+      - "Performance TTFI Gate"
+      # Maintenance / hygiene jobs
+      - "ACCM History Update"
+      - "Cleanup Old Screenshots"
       - "Stuck Detection Workflow"
       - "UI/UX Standards"
-      - "ACCM History Update"
-      - "Mission Control Kind E2E"
-      - "In-Place Upgrade Smoke"
     types:
       - completed
 
