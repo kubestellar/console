@@ -16,7 +16,7 @@ import {
 } from '../../lib/cache/fetcherUtils'
 import { getAgentClusters } from './agentFetchers'
 import { getDemoPods, getDemoEvents } from './demoData'
-import { PodsResponseSchema, EventsResponseSchema } from '../../lib/schemas'
+import { PodInfoSchema, PodsResponseSchema, ClusterEventSchema, EventsResponseSchema } from '../../lib/schemas'
 import { validateArrayResponse } from '../../lib/schemas/validate'
 import type { PodInfo, ClusterEvent } from '../useMCP'
 
@@ -46,7 +46,7 @@ export function useCachedPods(
       let pods: PodInfo[]
       if (cluster) {
         const raw = await getClusterFetcher()<unknown>('pods', { cluster, namespace })
-        const data = validateArrayResponse<{ pods: PodInfo[] }>(PodsResponseSchema, raw, '/api/mcp/pods', 'pods')
+        const data = validateArrayResponse<{ pods: PodInfo[] }>(PodsResponseSchema, raw, '/api/mcp/pods', 'pods', PodInfoSchema)
         pods = (data.pods || []).map(p => ({ ...p, cluster }))
       } else {
         pods = await fetchFromAllClusters<PodInfo>('pods', 'pods', { namespace })
@@ -96,7 +96,7 @@ export function useCachedAllPods(
     fetcher: async () => {
       if (cluster) {
         const raw = await getClusterFetcher()<unknown>('pods', { cluster })
-        const data = validateArrayResponse<{ pods: PodInfo[] }>(PodsResponseSchema, raw, '/api/mcp/pods (allPods)', 'pods')
+        const data = validateArrayResponse<{ pods: PodInfo[] }>(PodsResponseSchema, raw, '/api/mcp/pods (allPods)', 'pods', PodInfoSchema)
         return (data.pods || []).map(p => ({ ...p, cluster }))
       }
       return await fetchFromAllClusters<PodInfo>('pods', 'pods')
@@ -168,7 +168,7 @@ export function useCachedEvents(
       // Fall back to REST API (requires backend auth)
       if (cluster) {
         const raw = await getClusterFetcher()<unknown>('events', { cluster, namespace, limit })
-        const data = validateArrayResponse<{ events: ClusterEvent[] }>(EventsResponseSchema, raw, '/api/mcp/events', 'events')
+        const data = validateArrayResponse<{ events: ClusterEvent[] }>(EventsResponseSchema, raw, '/api/mcp/events', 'events', ClusterEventSchema)
         return data.events || []
       }
       return await fetchFromAllClusters<ClusterEvent>('events', 'events', { namespace, limit })

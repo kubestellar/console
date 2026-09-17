@@ -104,4 +104,39 @@ describe('validateArrayResponse', () => {
       expect.stringContaining('/pods-bad'),
     )
   })
+
+  describe('per-item recovery (#23526)', () => {
+    const itemSchema = z.object({ name: z.string() })
+
+    it('salvages valid items and drops only the invalid ones when itemSchema is provided', () => {
+      const data = { pods: [{ name: 'pod-1' }, { name: 123 }, { name: 'pod-3' }] }
+      const result = validateArrayResponse<{ pods: { name: string }[] }>(
+        schema, data, '/pods', 'pods', itemSchema,
+      )
+      expect(result.pods).toEqual([{ name: 'pod-1' }, { name: 'pod-3' }])
+    })
+
+    it('falls back to an empty array when every item is invalid', () => {
+      const data = { pods: [{ name: 1 }, { name: 2 }] }
+      const result = validateArrayResponse<{ pods: { name: string }[] }>(
+        schema, data, '/pods', 'pods', itemSchema,
+      )
+      expect(result.pods).toEqual([])
+    })
+
+    it('falls back to an empty array when the array itself is missing/malformed', () => {
+      const result = validateArrayResponse<{ pods: { name: string }[] }>(
+        schema, { pods: 'not-an-array' }, '/pods', 'pods', itemSchema,
+      )
+      expect(result.pods).toEqual([])
+    })
+
+    it('does not attempt recovery when itemSchema is omitted (existing behavior)', () => {
+      const data = { pods: [{ name: 'pod-1' }, { name: 123 }] }
+      const result = validateArrayResponse<{ pods: { name: string }[] }>(
+        schema, data, '/pods', 'pods',
+      )
+      expect(result.pods).toEqual([])
+    })
+  })
 })

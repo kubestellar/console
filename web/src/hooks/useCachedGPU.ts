@@ -20,7 +20,9 @@ import {
   HW_DEMO_DATA,
 } from './useCachedData/demoData'
 import {
+  GPUNodeSchema,
   GPUNodesResponseSchema,
+  GPUNodeHealthStatusSchema,
   GPUNodeHealthResponseSchema,
 } from '../lib/schemas'
 import { validateArrayResponse } from '../lib/schemas/validate'
@@ -175,7 +177,7 @@ export function useCachedGPUNodes(
     fetcher: async () => {
       if (cluster) {
         const raw = await getClusterFetcher()<unknown>('gpu-nodes', { cluster })
-        const data = validateArrayResponse<{ nodes: GPUNode[] }>(GPUNodesResponseSchema, raw, '/api/mcp/gpu-nodes', 'nodes')
+        const data = validateArrayResponse<{ nodes: GPUNode[] }>(GPUNodesResponseSchema, raw, '/api/mcp/gpu-nodes', 'nodes', GPUNodeSchema)
         return (data.nodes || []).map(n => ({ ...n, cluster }))
       }
 
@@ -200,7 +202,7 @@ export function useCachedGPUNodes(
       const tasks = reachable.map((cl) => async () => {
         const raw = await getClusterFetcher()<unknown>('gpu-nodes', { cluster: cl.name })
         const data = validateArrayResponse<{ nodes: GPUNode[] }>(
-          GPUNodesResponseSchema, raw, '/api/mcp/gpu-nodes', 'nodes',
+          GPUNodesResponseSchema, raw, '/api/mcp/gpu-nodes', 'nodes', GPUNodeSchema,
         )
         return (data.nodes || []).map(n => ({ ...n, cluster: cl.name }))
       })
@@ -261,7 +263,7 @@ export function useCachedGPUNodeHealth(
       // gpu-nodes/health is a backend-only endpoint (#9996)
       if (cluster) {
         const raw = await fetchBackendAPI<unknown>('gpu-nodes/health', { cluster })
-        const data = validateArrayResponse<{ nodes: GPUNodeHealthStatus[] }>(GPUNodeHealthResponseSchema, raw, '/api/mcp/gpu-nodes/health', 'nodes')
+        const data = validateArrayResponse<{ nodes: GPUNodeHealthStatus[] }>(GPUNodeHealthResponseSchema, raw, '/api/mcp/gpu-nodes/health', 'nodes', GPUNodeHealthStatusSchema)
         return (data.nodes || []).map(n => ({ ...n, cluster }))
       }
       return fetchFromAllClustersViaBackend<GPUNodeHealthStatus>('gpu-nodes/health', 'nodes', {})
