@@ -33,10 +33,11 @@ Until a maintainer with that permission applies the fix manually, treat every
 `✅ PASS` result from this workflow as unverified. The original tracking issue,
 [#23142](https://github.com/kubestellar/console/issues/23142), was closed as
 completed once this runbook was merged, even though the underlying exit-code
-propagation fix described below was never applied — see
-[#23367](https://github.com/kubestellar/console/issues/23367) for the still-open
-tracker on both the doc-accuracy gap and (via [Proposed Fix](#proposed-fix)) the
-unresolved workflow fix.
+propagation fix described below was never applied. A follow-up,
+[#23367](https://github.com/kubestellar/console/issues/23367), was itself closed
+after only fixing this runbook's dead-tracker *reference* (PR #23368) — the
+underlying workflow fix was re-confirmed still missing this session and is now
+tracked by [#23535](https://github.com/kubestellar/console/issues/23535).
 
 ## Why This Can Happen Silently
 

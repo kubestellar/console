@@ -17,10 +17,10 @@ fixes below, the "Main Branch Build Recovery SLA" has no automated trigger and n
 named owner. The original tracking issue,
 [#23265](https://github.com/kubestellar/console/issues/23265), was closed as
 completed once this runbook was merged (in #23266), even though the automation gap
-it describes was never fixed — see
-[#23367](https://github.com/kubestellar/console/issues/23367) for the still-open
-tracker on both the doc-accuracy gap and (via [Proposed Fix](#proposed-fix)) the
-unresolved automation.
+it describes was never fixed. A follow-up, [#23367](https://github.com/kubestellar/console/issues/23367),
+was itself closed after only fixing this runbook's dead-tracker *reference* (PR
+#23368) — the underlying automation gap was re-confirmed still open this session
+and is now tracked by [#23534](https://github.com/kubestellar/console/issues/23534).
 
 ## Why This Matters
 
