@@ -67,7 +67,10 @@ func NewKagentClientFromEnv() *KagentClient {
 }
 
 // Status checks whether the kagent controller is reachable.
-func (c *KagentClient) Status() (bool, error) {
+func (c *KagentClient) Status() (avail bool, err error) {
+	start := time.Now()
+	defer func() { observeCall(opStatus, start, err) }()
+
 	resp, err := c.httpClient.Get(c.baseURL + "/health")
 	if err != nil {
 		return false, fmt.Errorf("kagent health check failed: %w", err)
@@ -77,7 +80,10 @@ func (c *KagentClient) Status() (bool, error) {
 }
 
 // ListAgents queries the kagent controller for registered agents.
-func (c *KagentClient) ListAgents() ([]AgentInfo, error) {
+func (c *KagentClient) ListAgents() (agents []AgentInfo, err error) {
+	start := time.Now()
+	defer func() { observeCall(opListAgents, start, err) }()
+
 	resp, err := c.httpClient.Get(c.baseURL + "/api/agents")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list kagent agents: %w", err)
@@ -85,22 +91,26 @@ func (c *KagentClient) ListAgents() ([]AgentInfo, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, err := io.ReadAll(io.LimitReader(resp.Body, maxKAgentResponseBytes))
-		if err != nil {
-			slog.Warn("failed to read response body", "error", err)
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxKAgentResponseBytes))
+		if readErr != nil {
+			slog.Warn("failed to read response body", "error", readErr)
 		}
-		return nil, fmt.Errorf("list agents returned %d: %s", resp.StatusCode, string(body))
+		err = fmt.Errorf("list agents returned %d: %s", resp.StatusCode, string(body))
+		return nil, err
 	}
 
-	var agents []AgentInfo
-	if err := json.NewDecoder(resp.Body).Decode(&agents); err != nil {
-		return nil, fmt.Errorf("failed to decode agent list: %w", err)
+	if err = json.NewDecoder(resp.Body).Decode(&agents); err != nil {
+		err = fmt.Errorf("failed to decode agent list: %w", err)
+		return nil, err
 	}
 	return agents, nil
 }
 
 // Discover fetches the A2A agent card for the given agent.
-func (c *KagentClient) Discover(namespace, agentName string) (*AgentCard, error) {
+func (c *KagentClient) Discover(namespace, agentName string) (card *AgentCard, err error) {
+	start := time.Now()
+	defer func() { observeCall(opDiscover, start, err) }()
+
 	url := fmt.Sprintf("%s/api/a2a/%s/%s/.well-known/agent.json",
 		c.baseURL, neturl.PathEscape(namespace), neturl.PathEscape(agentName))
 	resp, err := c.httpClient.Get(url)
@@ -110,18 +120,20 @@ func (c *KagentClient) Discover(namespace, agentName string) (*AgentCard, error)
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, err := io.ReadAll(io.LimitReader(resp.Body, maxKAgentResponseBytes))
-		if err != nil {
-			slog.Warn("failed to read response body", "error", err)
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxKAgentResponseBytes))
+		if readErr != nil {
+			slog.Warn("failed to read response body", "error", readErr)
 		}
-		return nil, fmt.Errorf("discover agent %s/%s returned %d: %s", namespace, agentName, resp.StatusCode, string(body))
+		err = fmt.Errorf("discover agent %s/%s returned %d: %s", namespace, agentName, resp.StatusCode, string(body))
+		return nil, err
 	}
 
-	var card AgentCard
-	if err := json.NewDecoder(resp.Body).Decode(&card); err != nil {
-		return nil, fmt.Errorf("failed to decode agent card: %w", err)
+	card = &AgentCard{}
+	if err = json.NewDecoder(resp.Body).Decode(card); err != nil {
+		err = fmt.Errorf("failed to decode agent card: %w", err)
+		return nil, err
 	}
-	return &card, nil
+	return card, nil
 }
 
 // a2aRequest is the JSON-RPC 2.0 envelope sent to the A2A endpoint.
@@ -133,7 +145,13 @@ type a2aRequest struct {
 
 // Invoke sends a message to an agent via the A2A protocol and returns the raw
 // response body for streaming consumption.
-func (c *KagentClient) Invoke(ctx context.Context, namespace, agentName, message string, contextID string) (io.ReadCloser, error) {
+func (c *KagentClient) Invoke(ctx context.Context, namespace, agentName, message string, contextID string) (body io.ReadCloser, err error) {
+	start := time.Now()
+	// Only the request/dispatch outcome and latency are recorded here — the
+	// returned body is consumed by the caller afterwards, so a later stream
+	// read failure is not attributed to this call.
+	defer func() { observeCall(opInvoke, start, err) }()
+
 	params := map[string]any{
 		"message": map[string]any{
 			"role": "user",
@@ -149,37 +167,41 @@ func (c *KagentClient) Invoke(ctx context.Context, namespace, agentName, message
 		params["contextId"] = contextID
 	}
 
-	body := a2aRequest{
+	reqBody := a2aRequest{
 		JSONRPC: "2.0",
 		Method:  "message/send",
 		Params:  params,
 	}
 
-	payload, err := json.Marshal(body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal A2A request: %w", err)
+	payload, marshalErr := json.Marshal(reqBody)
+	if marshalErr != nil {
+		err = fmt.Errorf("failed to marshal A2A request: %w", marshalErr)
+		return nil, err
 	}
 
 	url := fmt.Sprintf("%s/api/a2a/%s/%s",
 		c.baseURL, neturl.PathEscape(namespace), neturl.PathEscape(agentName))
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(payload))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+	req, reqErr := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(payload))
+	if reqErr != nil {
+		err = fmt.Errorf("failed to create request: %w", reqErr)
+		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("A2A invoke failed: %w", err)
+	resp, doErr := c.httpClient.Do(req)
+	if doErr != nil {
+		err = fmt.Errorf("A2A invoke failed: %w", doErr)
+		return nil, err
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		defer resp.Body.Close()
-		errBody, err := io.ReadAll(io.LimitReader(resp.Body, maxKAgentResponseBytes))
-		if err != nil {
-			slog.Warn("failed to read response body", "error", err)
+		errBody, readErr := io.ReadAll(io.LimitReader(resp.Body, maxKAgentResponseBytes))
+		if readErr != nil {
+			slog.Warn("failed to read response body", "error", readErr)
 		}
-		return nil, fmt.Errorf("A2A invoke returned %d: %s", resp.StatusCode, string(errBody))
+		err = fmt.Errorf("A2A invoke returned %d: %s", resp.StatusCode, string(errBody))
+		return nil, err
 	}
 
 	return resp.Body, nil
