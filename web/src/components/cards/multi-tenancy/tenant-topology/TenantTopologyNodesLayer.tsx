@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import { InterfaceBadge, StatusDot } from './TenantTopologyParts'
+import { InterfaceBadge, StatusDot } from './TenantTopologySubParts'
 import {
   AGENT1_H,
   AGENT1_W,

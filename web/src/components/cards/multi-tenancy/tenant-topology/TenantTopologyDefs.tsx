@@ -1,4 +1,4 @@
-import type { ConnectionDef } from './TenantTopologyParts'
+import type { ConnectionDef } from './TenantTopologyConnections'
 import {
   L2_UDN_CONNECTION_COLOR,
   L3_UDN_CONNECTION_COLOR,

@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
-import type { ConnectionDef } from './TenantTopologyParts'
-import { FlowParticle, ThroughputLabel } from './TenantTopologyParts'
+import type { ConnectionDef } from './TenantTopologyConnections'
+import { FlowParticle, ThroughputLabel } from './TenantTopologySubParts'
 import {
   CONNECTION_STROKE_WIDTH,
   DASHED_PATTERN,

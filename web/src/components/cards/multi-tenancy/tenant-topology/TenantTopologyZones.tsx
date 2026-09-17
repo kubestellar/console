@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import { K8sIcon } from './TenantTopologyParts'
+import { K8sIcon } from './TenantTopologySubParts'
 import {
   DASHED_PATTERN,
   DEFAULT_NET_CONNECTION_COLOR,
