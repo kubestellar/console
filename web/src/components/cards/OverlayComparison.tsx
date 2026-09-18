@@ -154,6 +154,7 @@ export function OverlayComparison({ config }: OverlayComparisonProps) {
           setSelectedBase('')
           setSelectedOverlay('')
         }}
+        aria-label={t('selectors.selectCluster')}
         className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground mb-4"
       >
         <option value="">{t('selectors.selectCluster')}</option>
@@ -180,6 +181,7 @@ export function OverlayComparison({ config }: OverlayComparisonProps) {
               <select
                 value={selectedBase}
                 onChange={(e) => setSelectedBase(e.target.value)}
+                aria-label="Base"
                 className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
               >
                 <option value="">{t('selectors.selectBase')}</option>
@@ -194,6 +196,7 @@ export function OverlayComparison({ config }: OverlayComparisonProps) {
                 value={selectedOverlay}
                 onChange={(e) => setSelectedOverlay(e.target.value)}
                 disabled={!selectedBase}
+                aria-label="Overlay"
                 className="w-full px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground disabled:opacity-50"
               >
                 <option value="">{t('selectors.selectOverlay')}</option>
