@@ -15,6 +15,10 @@ updates:
 - commit-message:
     prefix: chore(deps)
   directory: /web
+  ignore:
+  - dependency-name: "@playwright/test" # Pinned to 1.61.1 — later releases regress macOS WebKit (PushAPIEnabled protocol error, see #22334/#23548). Do not bump until upstream ships a fix.
+  - dependency-name: "playwright" # Transitive of @playwright/test; keep in lockstep with the pinned version above.
+  - dependency-name: "playwright-core" # Transitive of @playwright/test; keep in lockstep with the pinned version above.
   labels:
   - dependencies
   - javascript
