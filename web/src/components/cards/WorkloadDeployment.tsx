@@ -259,6 +259,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
           <select
             value={typeFilter}
             onChange={event => setTypeFilter(event.target.value as WorkloadType | 'All')}
+            aria-label="Filter by workload type"
             className="text-xs px-2 py-1 border border-gray-300 dark:border-border rounded bg-white dark:bg-secondary text-gray-900 dark:text-foreground"
           >
             {WORKLOAD_TYPES.map(type => (
@@ -270,6 +271,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
           <select
             value={statusFilter}
             onChange={event => setStatusFilter(event.target.value as WorkloadStatus | 'All')}
+            aria-label="Filter by workload status"
             className="text-xs px-2 py-1 border border-gray-300 dark:border-border rounded bg-white dark:bg-secondary text-gray-900 dark:text-foreground"
           >
             {WORKLOAD_STATUSES.map(status => (
