@@ -180,6 +180,7 @@ export function ResourceMarshall() {
             value={selectedNamespace}
             onChange={(e) => handleNamespaceChange(e.target.value)}
             disabled={!selectedCluster || nsLoading || isSelectedClusterOffline}
+            aria-label={t('common.selectNamespace', 'Select namespace...')}
             className={cn(
               'flex-1 text-sm rounded-md bg-secondary/50 border border-border px-2 py-1.5 text-foreground focus:outline-hidden focus:ring-1 focus:ring-blue-500/50',
               (!selectedCluster || nsLoading || isSelectedClusterOffline) && 'opacity-50 cursor-not-allowed',
@@ -205,6 +206,7 @@ export function ResourceMarshall() {
             value={selectedWorkload}
             onChange={(e) => handleWorkloadChange(e.target.value)}
             disabled={!selectedNamespace || wlLoading || isSelectedClusterOffline}
+            aria-label={t('cards:resourceMarshall.selectWorkload', 'Select workload...')}
             className={cn(
               'flex-1 text-sm rounded-md bg-secondary/50 border border-border px-2 py-1.5 text-foreground focus:outline-hidden focus:ring-1 focus:ring-blue-500/50',
               (!selectedNamespace || wlLoading || isSelectedClusterOffline) && 'opacity-50 cursor-not-allowed',
