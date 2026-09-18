@@ -17,27 +17,37 @@ gap described below is fixed.
 
 ## Current Status
 
-**The exit-code propagation fix described in [Proposed Fix](#proposed-fix) is not
-merged into `nightly-llmd-guides.yml`.** The `operations` agent's GitHub App token
-lacks the `workflows` permission required to create or update any file under
-`.github/workflows/` — a verified test push to this exact file was rejected by
-GitHub before a PR could even be opened:
+**A version of the exit-code propagation fix merged in
+[#23538](https://github.com/kubestellar/console/pull/23538) (closing
+[#23535](https://github.com/kubestellar/console/issues/23535)), but it does not
+take effect.** The `run-guides` job now writes each guide's real exit status to
+`guide-status/<guide>.status` and uploads it as part of the `guide-result-<guide>`
+artifact. The `report` job downloads all such artifacts merged into `results/`,
+but looks for the status file at `results/<guide>.status` — missing the
+`guide-status/` path segment that `upload-artifact` preserves (the artifact's
+actual internal path, confirmed by downloading and inspecting a real post-fix run,
+is `guide-status/<guide>.status`). That lookup always misses, so the `report` job
+silently falls back to the same job-conclusion query that motivated #23535 in the
+first place — which reads `success` unconditionally because `run-guides` has
+job-level `continue-on-error: true`. Net effect: **every guide is still
+unconditionally reported `✅ PASS` regardless of real outcome**, exactly as before
+#23538 merged. The one-line fix (`results/${guide}.status` →
+`results/guide-status/${guide}.status`) and two related follow-up gaps (the
+`report` job never exits non-zero on failure, and `"Nightly llm-d Guide E2E"` is
+still absent from `workflow-failure-issue.yml`'s catch-all) are filed with exact
+replacement text in [#23545](https://github.com/kubestellar/console/issues/23545)
+— filed as an issue rather than a PR because the fix is entirely inside
+`.github/workflows/nightly-llmd-guides.yml`, and the `operations` agent's GitHub
+App token (`contributor` tier) lacks the `workflows` permission required to push
+any change under `.github/workflows/`.
 
-```
-! [remote rejected] operations/test-workflow-perm-check-2 -> operations/test-workflow-perm-check-2
-  (refusing to allow a GitHub App to create or update workflow
-  `.github/workflows/nightly-llmd-guides.yml` without `workflows` permission)
-```
-
-Until a maintainer with that permission applies the fix manually, treat every
-`✅ PASS` result from this workflow as unverified. The original tracking issue,
+Until #23545 is applied, treat every `✅ PASS` result from this workflow as
+unverified. History: the original tracking issue,
 [#23142](https://github.com/kubestellar/console/issues/23142), was closed as
-completed once this runbook was merged, even though the underlying exit-code
-propagation fix described below was never applied. A follow-up,
-[#23367](https://github.com/kubestellar/console/issues/23367), was itself closed
-after only fixing this runbook's dead-tracker *reference* (PR #23368) — the
-underlying workflow fix was re-confirmed still missing this session and is now
-tracked by [#23535](https://github.com/kubestellar/console/issues/23535).
+completed once this runbook was merged, even though the underlying fix was never
+applied at the time. A follow-up, [#23367](https://github.com/kubestellar/console/issues/23367),
+was itself closed after only fixing this runbook's dead-tracker *reference* (PR
+#23368). #23535/#23538 then shipped a fix, but — per above — it doesn't work yet.
 
 ## Why This Can Happen Silently
 
@@ -139,25 +149,23 @@ opened for it today.
 
 ## Proposed Fix
 
-In the `Run guide E2E` step, after computing `EXIT_CODE` and writing the `status`
-output, add:
-```bash
-if [ "$EXIT_CODE" -ne 0 ]; then
-  exit "$EXIT_CODE"
-fi
-```
-so the step (and job) conclusion honestly reflects the guide's real outcome. The
-job-level `continue-on-error: true` (present for a different reason — tolerating
-runner unavailability without cancelling other matrix entries or failing the whole
-run) will still let other guides and the `report` job proceed; only the *job
-conclusion itself*, which `report` already queries, needs to become accurate.
-Separately, add `"Nightly llm-d Guide E2E"` to the monitored
-`on.workflow_run.workflows` list in `workflow-failure-issue.yml` — noting that the
-job-level `continue-on-error` also currently makes the *workflow-level* conclusion
-`success` regardless of job outcomes, so either the workflow-level setting needs
-matching treatment, or the `report` job should explicitly fail
-(e.g. `exit 1` when `FAILED -gt 0`) so `workflow_run` sees a real failure to alert
-on. A maintainer with the `workflows` GitHub App permission (or direct push access)
+#23538 already took a different (and reasonable) approach than the one originally
+proposed here: instead of re-raising `EXIT_CODE` in the guide step, it writes the
+real per-guide result to a `guide-status/<guide>.status` file and has the `report`
+job read that file instead of trusting the job conclusion. That design is sound —
+it's just wired to the wrong path. The exact remaining fix, with replacement text,
+is filed in [#23545](https://github.com/kubestellar/console/issues/23545):
+
+1. **Required (makes the shipped fix actually work):** in the `report` job,
+   `STATUS_FILE="results/${guide}.status"` must become
+   `STATUS_FILE="results/guide-status/${guide}.status"`, matching the path
+   `upload-artifact`/`download-artifact` actually produce.
+2. **Follow-up (so a real failure alerts automatically once #1 lands):** have the
+   `report` job `exit 1` when `FAILED -gt 0`, and add `"Nightly llm-d Guide E2E"`
+   to the monitored `on.workflow_run.workflows` list in
+   `workflow-failure-issue.yml`.
+
+A maintainer with the `workflows` GitHub App permission (or direct push access)
 needs to apply this to `.github/workflows/nightly-llmd-guides.yml` and
 `.github/workflows/workflow-failure-issue.yml`; it cannot be delivered as an
 automated PR from this agent for the reason described in
