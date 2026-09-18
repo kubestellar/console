@@ -91,9 +91,23 @@ jobs:
         working-directory: web
         run: npm ci
 
+      - name: Pin WebKit binary to installed Playwright version
+        working-directory: web
+        shell: bash
+        run: |
+          set -euo pipefail
+          playwright_version="$(node -p "require('./package.json').devDependencies['@playwright/test'] || require('./package.json').dependencies['@playwright/test']")"
+          echo "Installed @playwright/test version: $playwright_version"
+          # Scope the browser cache to this exact Playwright version so a
+          # runner image with a pre-populated/stale ms-playwright cache can
+          # never hand back a WebKit binary built for a different Playwright
+          # release (root cause of "Unknown setting" protocol errors).
+          browsers_path="$RUNNER_TEMP/ms-playwright-$playwright_version"
+          echo "PLAYWRIGHT_BROWSERS_PATH=$browsers_path" >> "$GITHUB_ENV"
+
       - name: Install Playwright WebKit
         working-directory: web
-        run: npx playwright install --with-deps webkit
+        run: npx playwright install --with-deps --force webkit
 
       - name: Mint signed live test session
         env:
