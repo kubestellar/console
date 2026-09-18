@@ -180,8 +180,9 @@ typing-extensions==4.16.0 \
 urllib3==2.7.0 \
     --hash=sha256:9fb4c81ebbb1ce9531cce37674bbc6f1360472bc18ca9a553ede278ef7276897
 
-wcmatch==8.5.2 \
-    --hash=sha256:17d3ad3758f9d0b5b4dedc770b65420d4dac62e680229c287bf24c9db856a478
+wcmatch==11.0.1 \
+    --hash=sha256:1ea2b4fa678b8ca268253798d5963935df39132d47c3e241c0a0732224005e7d \
+    --hash=sha256:fd149ecddb9f0a88ea780017d6dde17c994e494e7f7303d4e3c9d6251f978f4b
 
 wrapt==1.17.3 \
     --hash=sha256:b32888aad8b6e68f83a8fdccbf3165f5469702a7544472bdf41f582970ed3311
