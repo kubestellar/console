@@ -206,7 +206,7 @@ jobs:
             # failing/timing-out guide as a pass. Only fall back to the job
             # conclusion when the status file is missing (e.g. the job never
             # got far enough to write it — infra failure before the guide ran).
-            STATUS_FILE="results/${guide}.status"
+            STATUS_FILE="results/guide-status/${guide}.status"
             if [ -f "$STATUS_FILE" ]; then
               RESULT="$(cut -d: -f1 "$STATUS_FILE")"
             else
