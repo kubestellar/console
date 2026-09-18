@@ -276,6 +276,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
             setSelectedCluster(e.target.value)
             setSelectedNamespace('')
           }}
+          aria-label={t('kustomizationStatus.selectCluster')}
           className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
         >
           <option value="">{t('kustomizationStatus.selectCluster')}</option>
@@ -287,6 +288,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
           value={selectedNamespace}
           onChange={(e) => setSelectedNamespace(e.target.value)}
           disabled={!selectedCluster}
+          aria-label={t('kustomizationStatus.allNamespaces')}
           className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground disabled:opacity-50"
         >
           <option value="">{t('kustomizationStatus.allNamespaces')}</option>
@@ -350,7 +352,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
                 lastApplied: ks.lastApplied,
                 revision: ks.revision })
               const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-                const list = e.currentTarget.parentElement
+                const list = e.currentTarget.closest('[role="list"]')
                 const items = list ? Array.from(list.querySelectorAll<HTMLDivElement>('[data-keynav-item="kustomization"]')) : []
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault()
@@ -371,45 +373,46 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
               }
 
               return (
-                <div
-                  key={idx}
-                  data-keynav-item="kustomization"
-                  role="button"
-                  tabIndex={0}
-                  onClick={activate}
-                  onKeyDown={handleKeyDown}
-                  className={`p-3 rounded-lg cursor-pointer group ${ks.status === 'NotReady' ? 'bg-red-500/10 border border-red-500/20' : 'bg-secondary/30'} hover:bg-secondary/50 transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400`}
-                  title={`Click or press Enter to view ${ks.name} details`}
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
-                    <div className="flex items-center gap-2">
-                      <StatusIcon className={cn(`w-4 h-4 text-${color}-400`, (isRefreshing || ks.status === 'Progressing') && 'animate-spin')} />
-                      <span className="text-sm text-foreground font-medium">{ks.name}</span>
+                <div key={idx} role="listitem">
+                  <div
+                    data-keynav-item="kustomization"
+                    role="button"
+                    tabIndex={0}
+                    onClick={activate}
+                    onKeyDown={handleKeyDown}
+                    className={`p-3 rounded-lg cursor-pointer group ${ks.status === 'NotReady' ? 'bg-red-500/10 border border-red-500/20' : 'bg-secondary/30'} hover:bg-secondary/50 transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400`}
+                    title={`Click or press Enter to view ${ks.name} details`}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
+                      <div className="flex items-center gap-2">
+                        <StatusIcon className={cn(`w-4 h-4 text-${color}-400`, (isRefreshing || ks.status === 'Progressing') && 'animate-spin')} />
+                        <span className="text-sm text-foreground font-medium">{ks.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs px-1.5 py-0.5 rounded bg-${color}-500/20 text-${color}-400`}>
+                          {ks.status}
+                        </span>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs px-1.5 py-0.5 rounded bg-${color}-500/20 text-${color}-400`}>
-                        {ks.status}
-                      </span>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="ml-6 text-xs text-muted-foreground space-y-0.5">
+                      <div className="flex items-center gap-1">
+                        <GitBranch className="w-3 h-3" />
+                        <span className="truncate">{ks.path}</span>
+                      </div>
+                      <div className="flex flex-wrap items-center justify-between gap-y-2">
+                        <span className="truncate">{ks.revision.split('@')[1]?.slice(0, 12)}</span>
+                        <span>{formatTimeAgo(ks.lastApplied)}</span>
+                      </div>
                     </div>
+                    {(ks.status === 'NotReady' || ks.status === 'Suspended') && (
+                      <CardAIActions
+                        resource={{ kind: 'Kustomization', name: ks.name, namespace: ks.namespace, cluster: selectedCluster, status: ks.status }}
+                        issues={[{ name: `Kustomization ${ks.status}`, message: `Kustomization "${ks.name}" in ${ks.namespace} is ${ks.status} (source: ${ks.sourceRef}, path: ${ks.path})` }]}
+                        className="mt-1 ml-6"
+                      />
+                    )}
                   </div>
-                  <div className="ml-6 text-xs text-muted-foreground space-y-0.5">
-                    <div className="flex items-center gap-1">
-                      <GitBranch className="w-3 h-3" />
-                      <span className="truncate">{ks.path}</span>
-                    </div>
-                    <div className="flex flex-wrap items-center justify-between gap-y-2">
-                      <span className="truncate">{ks.revision.split('@')[1]?.slice(0, 12)}</span>
-                      <span>{formatTimeAgo(ks.lastApplied)}</span>
-                    </div>
-                  </div>
-                  {(ks.status === 'NotReady' || ks.status === 'Suspended') && (
-                    <CardAIActions
-                      resource={{ kind: 'Kustomization', name: ks.name, namespace: ks.namespace, cluster: selectedCluster, status: ks.status }}
-                      issues={[{ name: `Kustomization ${ks.status}`, message: `Kustomization "${ks.name}" in ${ks.namespace} is ${ks.status} (source: ${ks.sourceRef}, path: ${ks.path})` }]}
-                      className="mt-1 ml-6"
-                    />
-                  )}
                 </div>
               )
             })}
