@@ -177,8 +177,14 @@ export function Nodes() {
         )
       }}
     >
-      {/* Error Display */}
-      {error && (
+      {/* Error Display — only surface the hard-failure banner when there is no
+          node data to show. fullFetchClusters() falls back to the last-known-good
+          cluster list on a transient fetch failure (stale-while-revalidate) so the
+          stats above keep rendering real numbers; unconditionally showing this
+          banner alongside valid data contradicted the visible "N total nodes" and
+          made the live groundtruth check see a "Data unavailable" string parked
+          next to genuinely loaded data (same class of bug as #23526). */}
+      {error && totalNodes === 0 && (
         <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
           <div className="flex-1">
