@@ -486,8 +486,9 @@ async function collectPopupFact(
       let parent = popup.parentElement
       while (parent) {
         const ancestorStyle = window.getComputedStyle(parent)
-        const overflow = `${ancestorStyle.overflow} ${ancestorStyle.overflowX} ${ancestorStyle.overflowY}`
-        if (/(hidden|clip|auto|scroll)/i.test(overflow)) {
+        const clipsX = /(hidden|clip|auto|scroll)/i.test(ancestorStyle.overflowX)
+        const clipsY = /(hidden|clip|auto|scroll)/i.test(ancestorStyle.overflowY)
+        if (clipsX || clipsY) {
           const ancestorBox = boxFromRect(parent.getBoundingClientRect())
           nearestClippingAncestor = {
             ...(summarize(parent) as ElementSummary),
@@ -497,10 +498,14 @@ async function collectPopupFact(
             overflowY: ancestorStyle.overflowY,
           }
           if (ancestorBox) {
-            clippedByAncestor = popupBox.left < ancestorBox.left - 1
-              || popupBox.top < ancestorBox.top - 1
-              || popupBox.right > ancestorBox.right + 1
-              || popupBox.bottom > ancestorBox.bottom + 1
+            // Only flag clipping on the axes the ancestor actually clips. A
+            // container with `overflow-x-clip` but `overflow-y: visible`
+            // (e.g. Tailwind's `overflow-x-clip`) does not clip content that
+            // overflows vertically, so checking all four edges regardless of
+            // axis produces false positives for dropdowns that intentionally
+            // extend below a fixed-height nav bar.
+            clippedByAncestor = (clipsX && (popupBox.left < ancestorBox.left - 1 || popupBox.right > ancestorBox.right + 1))
+              || (clipsY && (popupBox.top < ancestorBox.top - 1 || popupBox.bottom > ancestorBox.bottom + 1))
           }
           break
         }
