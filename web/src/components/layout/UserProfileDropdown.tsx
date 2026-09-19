@@ -41,14 +41,19 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
   useEffect(() => {
     if (!isOpen) return
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownContainerRef.current && !dropdownContainerRef.current.contains(event.target as Node)) {
+      const target = event.target as Node
+      const insideTrigger = dropdownContainerRef.current?.contains(target)
+      // The dropdown menu is portaled to document.body (see ProfileCard), so it
+      // sits outside dropdownContainerRef and must be checked separately.
+      const insideMenu = menuRef.current?.contains(target)
+      if (!insideTrigger && !insideMenu) {
         closeDropdown()
       }
     }
 
     document.addEventListener('click', handleClickOutside)
     return () => document.removeEventListener('click', handleClickOutside)
-  }, [isOpen, closeDropdown])
+  }, [isOpen, closeDropdown, menuRef])
 
   if (!user) return null
   const profileMenuStateLabel = `profile menu, ${isOpen ? 'close' : 'open'}`
