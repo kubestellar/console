@@ -49,7 +49,11 @@ type RBACHandler struct {
 // NewRBACHandler creates a new RBAC handler.
 // Accepts *k8s.MultiClusterClient (or any rbacK8sClient implementation).
 func NewRBACHandler(s store.Store, k8sClient *k8s.MultiClusterClient) *RBACHandler {
-	return &RBACHandler{store: s, k8sClient: k8sClient}
+	h := &RBACHandler{store: s}
+	if k8sClient != nil {
+		h.k8sClient = k8sClient
+	}
+	return h
 }
 
 // ListConsoleUsers returns a page of console users. Supports limit/offset

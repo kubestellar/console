@@ -287,9 +287,9 @@ func TestRBACListK8sServiceAccounts_ForbiddenForNonAdmin(t *testing.T) {
 func TestRBACListK8sServiceAccounts_ServiceUnavailableWhenNoClient(t *testing.T) {
 	env := setupTestEnv(t)
 	// Construct the handler literal so k8sClient is a true nil interface.
-	// Passing nil through NewRBACHandler's *k8s.MultiClusterClient parameter
-	// produces a typed-nil interface which fails the h.k8sClient==nil branch
-	// (Go's classic typed-nil-in-interface pitfall — filed separately).
+	// This demonstrates the intended behavior (503) that was unreachable
+	// when using NewRBACHandler(store, nil) due to the typed-nil interface bug.
+	// See TestRBACListK8sServiceAccounts_ServiceUnavailableWhenConstructedViaNewRBACHandler.
 	handler := &RBACHandler{store: newAdminCovStore(), k8sClient: nil}
 	env.App.Get("/api/k8s/serviceaccounts", handler.ListK8sServiceAccounts)
 
@@ -303,6 +303,27 @@ func TestRBACListK8sServiceAccounts_ServiceUnavailableWhenNoClient(t *testing.T)
 
 	assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
 }
+
+// TestRBACListK8sServiceAccounts_ServiceUnavailableWhenConstructedViaNewRBACHandler
+// pins the fix for the typed-nil interface bug: NewRBACHandler(store, nil) must
+// produce a true-nil interface so the h.k8sClient == nil guard is reachable and
+// returns 503 Service Unavailable (not 500).
+func TestRBACListK8sServiceAccounts_ServiceUnavailableWhenConstructedViaNewRBACHandler(t *testing.T) {
+	env := setupTestEnv(t)
+	handler := NewRBACHandler(newAdminCovStore(), nil)
+	env.App.Get("/api/k8s/serviceaccounts", handler.ListK8sServiceAccounts)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/k8s/serviceaccounts", nil)
+	require.NoError(t, err)
+	req.Host = "localhost"
+
+	resp, err := env.App.Test(req, 5000)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
+}
+
 
 func TestRBACListK8sRoles_ForbiddenForNonAdmin(t *testing.T) {
 	env := setupTestEnv(t)
