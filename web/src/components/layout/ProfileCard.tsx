@@ -1,4 +1,5 @@
-import { useState, Suspense, type KeyboardEvent, type RefObject } from 'react'
+import { useState, useEffect, useCallback, Suspense, type KeyboardEvent, type RefObject } from 'react'
+import { createPortal } from 'react-dom'
 import { safeLazy } from '../../lib/safeLazy'
 import { useModalState } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
@@ -17,6 +18,11 @@ import {
 } from './ProfileCard.parts'
 
 const FeatureRequestModal = safeLazy(() => import('../feedback/FeatureRequestModal'), 'FeatureRequestModal')
+
+/** Vertical gap between the trigger button and the dropdown panel */
+const DROPDOWN_GAP_PX = 8
+/** Horizontal padding to keep the dropdown away from the viewport edge */
+const VIEWPORT_PADDING_PX = 8
 
 interface ProfileCardProps {
   user: {
@@ -56,9 +62,34 @@ export function ProfileCard({
 
   const contributorLevel = getContributorLevel(totalCoins).current
 
+  // Track dropdown position for the portal
+  const [pos, setPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 })
+
+  const updatePosition = useCallback(() => {
+    if (!triggerButtonRef.current) return
+    const rect = triggerButtonRef.current.getBoundingClientRect()
+    setPos({
+      top: rect.bottom + DROPDOWN_GAP_PX,
+      right: Math.max(window.innerWidth - rect.right, VIEWPORT_PADDING_PX),
+    })
+  }, [triggerButtonRef])
+
+  // Reposition on open, and on resize/scroll while open
+  useEffect(() => {
+    if (!isOpen) return
+    updatePosition()
+    window.addEventListener('resize', updatePosition)
+    window.addEventListener('scroll', updatePosition, { capture: true, passive: true })
+    return () => {
+      window.removeEventListener('resize', updatePosition)
+      window.removeEventListener('scroll', updatePosition, { capture: true })
+    }
+  }, [isOpen, updatePosition])
+
   return (
     <>
-      {isOpen && (
+      {/* Portaled to document.body to escape navbar overflow clipping on macOS WebKit (#23576) */}
+      {isOpen && createPortal(
         <div
           ref={menuRef}
           id="profile-dropdown-menu"
@@ -70,7 +101,8 @@ export function ProfileCard({
               triggerButtonRef.current?.focus()
             }
           }}
-          className="absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-5rem)] bg-card border border-border rounded-xl shadow-2xl overflow-hidden overflow-y-auto z-toast"
+          style={{ position: 'fixed', top: pos.top, right: pos.right, zIndex: 500 }}
+          className="w-72 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-5rem)] bg-card border border-border rounded-xl shadow-2xl overflow-hidden overflow-y-auto"
         >
           <ProfileAvatarBlock user={user} />
 
@@ -103,7 +135,8 @@ export function ProfileCard({
             onPreferences={onPreferences}
             onShowLogoutConfirm={() => setShowLogoutConfirm(true)}
           />
-        </div>
+        </div>,
+        document.body
       )}
 
       <SetupInstructionsDialog
