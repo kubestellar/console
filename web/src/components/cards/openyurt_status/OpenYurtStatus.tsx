@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { StatTile } from '../shared/StatTile'
+import { StatGrid } from '../../ui/StatGrid'
 import {
   CheckCircle,
   AlertTriangle,
@@ -277,7 +278,7 @@ export function OpenYurtStatus() {
 
       {/* ── Stats grid ── */}
       {nodePools.length > 0 && (
-        <div className="grid grid-cols-2 @md:grid-cols-4 gap-2">
+        <StatGrid>
           <StatTile
             icon={<Server className="w-4 h-4 text-blue-400" />}
             label={t('openyurt.totalNodes', 'Nodes')}
@@ -306,7 +307,7 @@ export function OpenYurtStatus() {
             colorClass="text-cyan-400"
             borderClass="border-cyan-500/20"
           />
-        </div>
+        </StatGrid>
       )}
 
       {/* ── Search ── */}
