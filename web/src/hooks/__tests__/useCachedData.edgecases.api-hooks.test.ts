@@ -523,13 +523,14 @@ describe('useCachedData', () => {
       expect(result).toEqual([])
     })
 
-    it('coreFetchers.deployments returns empty when no agent and no token', async () => {
+    it('coreFetchers.deployments throws when no agent and no token', async () => {
       localStorage.removeItem('kc_token')
       mockIsAgentUnavailable.mockReturnValue(true)
 
       const { coreFetchers } = await loadModule()
-      const result = await coreFetchers.deployments()
-      expect(result).toEqual([])
+      // Must reject (not resolve with []) so the prefetch cache entry is not
+      // stamped as fresh with a false-empty result (#23611).
+      await expect(coreFetchers.deployments()).rejects.toThrow('No data source available')
     })
 
     it('coreFetchers.deploymentIssues returns empty when no sources available', async () => {
