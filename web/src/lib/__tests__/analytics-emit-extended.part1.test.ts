@@ -1,8 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
-  emitCardAdded,
-  emitPageView,
-  initAnalytics,
   setAnalyticsOptOut,
   emitDeveloperSession,
   emitSessionContext,
