@@ -313,6 +313,10 @@ export function usePodPitfallGame(isExpanded: boolean) {
         clearInterval(gameLoopRef.current)
       }
     }
+    // 'time' intentionally omitted: it is only read inside a setScore updater
+    // callback and re-running this effect on every tick-down would restart
+    // the interval. Behavior moved verbatim from PodPitfall.tsx.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlaying, gameOver, draw, player.x, distance])
 
   // Keyboard — scoped to visible game container (KeepAlive-safe)
@@ -332,7 +336,6 @@ export function usePodPitfallGame(isExpanded: boolean) {
     setWon(false)
     setIsPlaying(true)
     emitGameStarted('pod_pitfall')
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
