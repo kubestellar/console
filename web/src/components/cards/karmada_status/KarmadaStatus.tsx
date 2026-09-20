@@ -13,8 +13,20 @@ import {
 import { useTranslation } from 'react-i18next'
 import { Skeleton, SkeletonStats, SkeletonList } from '../../ui/Skeleton'
 import { CardSearchInput } from '../../../lib/cards/CardComponents'
+import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import { useKarmadaStatus } from './useKarmadaStatus'
 import type { KarmadaMemberCluster, KarmadaClusterStatus, KarmadaBindingStatus, KarmadaResourceBinding } from './demoData'
+
+type ClusterSortField = 'name'
+type BindingSortField = 'name'
+
+const CLUSTER_SORT_COMPARATORS = {
+  name: commonComparators.string<KarmadaMemberCluster>('name'),
+}
+
+const BINDING_SORT_COMPARATORS = {
+  name: commonComparators.string<KarmadaResourceBinding>('name'),
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -97,7 +109,6 @@ function ResourceBindingRow({ binding }: { binding: KarmadaResourceBinding }) {
 export function KarmadaStatus() {
   const { t } = useTranslation('cards')
   const { data, isRefreshing, error, showSkeleton, showEmptyState } = useKarmadaStatus()
-  const [search, setSearch] = useState('')
   /** Toggle between 'clusters' and 'bindings' sub-view */
   const [view, setView] = useState<'clusters' | 'bindings'>('clusters')
 
@@ -114,24 +125,43 @@ export function KarmadaStatus() {
     failedBindings: resourceBindings.filter(b => b.status === 'Failed').length,
     totalPolicies: propagationPolicies.length + data.clusterPoliciesCount }
 
-  // Filtered lists
-  const filteredClusters = (() => {
-    if (!search.trim()) return memberClusters
-    const q = search.toLowerCase()
-    return memberClusters.filter(
-      c => c.name.toLowerCase().includes(q) || c.kubernetesVersion.toLowerCase().includes(q),
-    )
-  })()
+  // Use shared card data hook for filtering + sorting each sub-view's list
+  const {
+    items: filteredClusters,
+    filters: { search: clusterSearch, setSearch: setClusterSearch },
+  } = useCardData<KarmadaMemberCluster, ClusterSortField>(memberClusters, {
+    filter: {
+      searchFields: ['name', 'kubernetesVersion'],
+      storageKey: 'karmada-clusters',
+    },
+    sort: {
+      defaultField: 'name',
+      defaultDirection: 'asc',
+      comparators: CLUSTER_SORT_COMPARATORS,
+    },
+    defaultLimit: 'unlimited',
+  })
 
-  const filteredBindings = (() => {
-    if (!search.trim()) return resourceBindings
-    const q = search.toLowerCase()
-    return resourceBindings.filter(
-      b => b.name.toLowerCase().includes(q) ||
-        b.resourceKind.toLowerCase().includes(q) ||
-        (b.boundClusters || []).some(c => c.toLowerCase().includes(q)),
-    )
-  })()
+  const {
+    items: filteredBindings,
+    filters: { search: bindingSearch, setSearch: setBindingSearch },
+  } = useCardData<KarmadaResourceBinding, BindingSortField>(resourceBindings, {
+    filter: {
+      searchFields: ['name', 'resourceKind'],
+      customPredicate: (binding, query) =>
+        (binding.boundClusters || []).some(c => c.toLowerCase().includes(query)),
+      storageKey: 'karmada-bindings',
+    },
+    sort: {
+      defaultField: 'name',
+      defaultDirection: 'asc',
+      comparators: BINDING_SORT_COMPARATORS,
+    },
+    defaultLimit: 'unlimited',
+  })
+
+  const search = view === 'clusters' ? clusterSearch : bindingSearch
+  const setSearch = view === 'clusters' ? setClusterSearch : setBindingSearch
 
   // ── Loading ───────────────────────────────────────────────────────────────
   if (showSkeleton) {
