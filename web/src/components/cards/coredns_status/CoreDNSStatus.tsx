@@ -4,6 +4,7 @@ import { Wifi, AlertTriangle, CheckCircle, XCircle, RotateCcw } from 'lucide-rea
 import { useCachedCoreDNSStatus, type CoreDNSClusterStatus } from '../../../hooks/useCachedData'
 import { useCardLoadingState } from '../CardDataContext'
 import { Skeleton } from '../../ui/Skeleton'
+import { StatGrid } from '../../ui/StatGrid'
 import { cn } from '../../../lib/cn'
 import { STATUS_COLORS } from '../../../lib/statusColors'
 
@@ -74,7 +75,7 @@ export function CoreDNSStatus({ config }: CoreDNSStatusProps) {
     <div className="h-full flex flex-col min-h-card content-loaded overflow-hidden gap-3">
       {/* top stats — only pod-derivable metrics */}
       {totals && (
-        <div className="grid grid-cols-2 @md:grid-cols-3 gap-2">
+        <StatGrid cols={3}>
           <StatTile
             value={totals.totalPods.toString()}
             sub={t('coreDNSStatus.pods')}
@@ -90,7 +91,7 @@ export function CoreDNSStatus({ config }: CoreDNSStatusProps) {
             sub={t('coreDNSStatus.restarts')}
             color={totals.totalRestarts === 0 ? 'green' : totals.totalRestarts < RESTART_WARNING_THRESHOLD ? 'yellow' : 'red'}
           />
-        </div>
+        </StatGrid>
       )}
 
       {/* clusters */}

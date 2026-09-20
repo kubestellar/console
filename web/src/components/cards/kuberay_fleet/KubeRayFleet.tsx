@@ -9,6 +9,7 @@ import {
   CheckCircle2, XCircle, Clock, AlertTriangle, ArrowUpCircle,
 } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
+import { StatGrid } from '../../ui/StatGrid'
 import { useKubeRayFleet } from './useKubeRayFleet'
 import type { RayClusterState, RayJobStatus, RayServiceStatus } from './demoData'
 
@@ -82,12 +83,12 @@ export function KubeRayFleet() {
   return (
     <div className="h-full flex flex-col min-h-card gap-3 p-1 overflow-hidden">
       {/* Fleet summary tiles */}
-      <div className="grid grid-cols-2 @md:grid-cols-4 gap-2">
+      <StatGrid>
         <StatTile icon={Server} label="Clusters" value={`${readyClusters}/${rayClusters.length}`} color="text-blue-400" />
         <StatTile icon={Cpu} label="Workers" value={String(totalWorkers)} color="text-purple-400" />
         <StatTile icon={Layers} label="GPUs" value={String(data.totalGPUs)} color="text-green-400" />
         <StatTile icon={PlayCircle} label="Jobs" value={String(runningJobs)} color="text-yellow-400" />
-      </div>
+      </StatGrid>
 
       {/* Ray Clusters */}
       <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
