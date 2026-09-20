@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_updated": "2026-09-16T03:07:17Z",
+  "last_updated": "2026-09-20T03:07:17Z",
   "rolling_window_days": 30,
   "categories": {
     "performance": {
@@ -11,46 +11,46 @@
       "last_evaluated": "2026-08-16T03:18:35Z"
     },
     "security": {
-      "merged": 127,
+      "merged": 126,
       "closed": 71,
       "acceptance_rate": 0.64,
       "status": "normal",
-      "last_evaluated": "2026-09-16T03:07:17Z"
+      "last_evaluated": "2026-09-20T03:07:17Z"
     },
     "a11y": {
-      "merged": 98,
+      "merged": 94,
       "closed": 29,
-      "acceptance_rate": 0.77,
+      "acceptance_rate": 0.76,
       "status": "normal",
-      "last_evaluated": "2026-09-16T03:07:17Z"
+      "last_evaluated": "2026-09-15T03:07:39Z"
     },
     "operator": {
-      "merged": 1037,
+      "merged": 1005,
       "closed": 276,
-      "acceptance_rate": 0.79,
+      "acceptance_rate": 0.78,
       "status": "normal",
-      "last_evaluated": "2026-09-16T03:07:17Z"
+      "last_evaluated": "2026-09-20T03:07:17Z"
     },
     "sre": {
-      "merged": 656,
+      "merged": 651,
       "closed": 101,
       "acceptance_rate": 0.87,
       "status": "boosted",
-      "last_evaluated": "2026-09-16T03:07:17Z"
+      "last_evaluated": "2026-09-20T03:07:17Z"
     },
     "features": {
-      "merged": 52,
+      "merged": 50,
       "closed": 10,
-      "acceptance_rate": 0.84,
+      "acceptance_rate": 0.83,
       "status": "boosted",
-      "last_evaluated": "2026-09-16T03:07:17Z"
+      "last_evaluated": "2026-09-12T03:06:46Z"
     },
     "resilience": {
-      "merged": 130,
+      "merged": 129,
       "closed": 66,
       "acceptance_rate": 0.66,
       "status": "normal",
-      "last_evaluated": "2026-09-16T03:07:17Z"
+      "last_evaluated": "2026-09-15T03:07:39Z"
     },
     "consistency": {
       "merged": 39,
@@ -61,28 +61,35 @@
     }
   },
   "weekly_insights": {
-    "best_pr_size": "S",
+    "best_pr_size": "XS",
     "size_acceptance": {},
     "type_acceptance": {},
     "common_rejection_reasons": [
-      "- PR #23362: Closing as duplicate: this exact change (same branch, same commit content) was already merged as #23358 (commit 60161c9 on main). This PR was opened from a stale local branch checkout that predated that merge. No action needed."
+      "- PR #23288: Looks like vitest is up-to-date now, so this is no longer needed.",
+      "- PR #23287: Looks like joi is up-to-date now, so this is no longer needed."
     ],
     "best_change_type": "bug_fix",
-    "last_report_date": "2026-09-20"
+    "last_report_date": "2026-09-13"
   },
   "cncf_insights": {
-    "last_scan_date": "2026-09-16",
+    "last_scan_date": "2026-09-09",
     "suggested_checks": [
       {
         "pattern": "navigation_ux",
-        "count": 6,
-        "added": "2026-09-16",
+        "count": 5,
+        "added": "2026-09-09",
         "priority": "medium"
       },
       {
         "pattern": "form_ux",
-        "count": 15,
-        "added": "2026-09-16",
+        "count": 21,
+        "added": "2026-09-09",
+        "priority": "medium"
+      },
+      {
+        "pattern": "realtime_ux",
+        "count": 14,
+        "added": "2026-09-09",
         "priority": "medium"
       }
     ]
@@ -372,8 +379,8 @@
       ]
     },
     {
-      "date": "2026-09-16",
-      "total_merged": 2158,
+      "date": "2026-09-20",
+      "total_merged": 2113,
       "total_closed": 585,
       "categories_blocked": [],
       "categories_boosted": [
@@ -385,8 +392,8 @@
   "rotation_weights": {
     "performance": 0.95,
     "security": 0.96,
-    "a11y": 1.16,
-    "operator": 1.19,
+    "a11y": 1.14,
+    "operator": 1.17,
     "sre": 2.0,
     "features": 2.0,
     "resilience": 0.99,
