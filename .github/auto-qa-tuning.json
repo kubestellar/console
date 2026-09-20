@@ -61,15 +61,14 @@
     }
   },
   "weekly_insights": {
-    "best_pr_size": "XS",
+    "best_pr_size": "S",
     "size_acceptance": {},
     "type_acceptance": {},
     "common_rejection_reasons": [
-      "- PR #23288: Looks like vitest is up-to-date now, so this is no longer needed.",
-      "- PR #23287: Looks like joi is up-to-date now, so this is no longer needed."
+      "- PR #23362: Closing as duplicate: this exact change (same branch, same commit content) was already merged as #23358 (commit 60161c9 on main). This PR was opened from a stale local branch checkout that predated that merge. No action needed."
     ],
     "best_change_type": "bug_fix",
-    "last_report_date": "2026-09-13"
+    "last_report_date": "2026-09-20"
   },
   "cncf_insights": {
     "last_scan_date": "2026-09-16",
