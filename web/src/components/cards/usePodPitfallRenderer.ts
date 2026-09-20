@@ -9,7 +9,7 @@ import {
 } from './podPitfall.constants'
 
 interface UsePodPitfallRendererArgs {
-  canvasRef: RefObject<HTMLCanvasElement>
+  canvasRef: RefObject<HTMLCanvasElement | null>
   isExpanded: boolean
   player: Player
   cameraX: number
