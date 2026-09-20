@@ -26,8 +26,16 @@ const EMPTY_SSE_BODY = ': keep-alive\n\n'
 const CI_TIMEOUT_MULTIPLIER = 2
 /** Timeout for initial page load (Vite compiles modules on first visit) */
 const PAGE_LOAD_TIMEOUT_MS = process.env.CI ? 120_000 : 60_000
-/** Timeout for card content to appear after navigation */
-const CARD_CONTENT_TIMEOUT_MS = process.env.CI ? 30_000 : 15_000
+/** Base timeout for card content to appear after navigation (local runs) */
+const CARD_CONTENT_BASE_TIMEOUT_MS = 15_000
+// #23598 — Shared nightly runners can be severely contended (this run's
+// unit-test suite alone took ~71 minutes), so a single CI_TIMEOUT_MULTIPLIER
+// pass (30s) was not enough headroom for the mock API call / row-count polls
+// below. Apply the multiplier twice for CI, mirroring the wide local/CI gap
+// already used by WARM_TTC_THRESHOLD_MS in e2e/compliance/cache-constants.ts.
+const CARD_CONTENT_TIMEOUT_MS = process.env.CI
+  ? CARD_CONTENT_BASE_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER * CI_TIMEOUT_MULTIPLIER
+  : CARD_CONTENT_BASE_TIMEOUT_MS
 // #9078 — _POLL_WAIT_MS and _SETTLE_MS were dead constants from a previous
 // refactor; both have been removed in favor of explicit Playwright wait
 // patterns (expect.poll / waitForSelector) at the call sites.
