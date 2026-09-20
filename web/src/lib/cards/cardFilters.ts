@@ -138,10 +138,11 @@ export function useCardFilters<T>(
   // Guard against undefined config — dynamic/custom cards may pass undefined at runtime
   const safeConfig = config ?? ({} as FilterConfig<T>)
   const { searchFields, clusterField, statusField, customPredicate, storageKey } = safeConfig
+  // Default customFilter to '' — incomplete mocks/contexts may omit it
   const {
     filterByCluster,
     filterByStatus,
-    customFilter: globalCustomFilter,
+    customFilter: globalCustomFilter = '',
     selectedClusters,
     isAllClustersSelected } = useGlobalFilters()
   const { deduplicatedClusters } = useClusters()
