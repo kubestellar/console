@@ -366,7 +366,7 @@ function DroppableGroup({ group, isExpanded, clusterHealthMap, onToggle, onEdit,
                 <div key={cluster} className="flex items-center gap-1">
                   <div className={cn(
                     'w-1.5 h-1.5 rounded-full',
-                    healthy === false ? 'bg-red-500' : 'bg-green-500'
+                    healthy === false ? 'bg-status-error' : 'bg-status-success'
                   )} />
                   <ClusterBadge cluster={cluster} size="sm" />
                 </div>
