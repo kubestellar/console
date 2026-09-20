@@ -73,20 +73,20 @@ function formatAge(ageMinutes: number): string {
 type StatusColorClass = string
 
 const APP_STATUS_COLOR: Record<KubeVelaAppStatus, StatusColorClass> = {
-  running: 'text-green-400',
-  workflowSuspending: 'text-yellow-400',
+  running: 'text-status-success',
+  workflowSuspending: 'text-status-warning',
   workflowTerminated: 'text-muted-foreground',
-  workflowFailed: 'text-red-400',
-  unhealthy: 'text-red-400',
+  workflowFailed: 'text-status-error',
+  unhealthy: 'text-status-error',
   deleting: 'text-muted-foreground',
 }
 
 const APP_STATUS_BG: Record<KubeVelaAppStatus, StatusColorClass> = {
-  running: 'bg-green-500/20 text-green-400',
-  workflowSuspending: 'bg-yellow-500/20 text-yellow-400',
+  running: 'bg-green-500/20 text-status-success',
+  workflowSuspending: 'bg-yellow-500/20 text-status-warning',
   workflowTerminated: 'bg-muted/40 text-muted-foreground',
-  workflowFailed: 'bg-red-500/20 text-red-400',
-  unhealthy: 'bg-red-500/20 text-red-400',
+  workflowFailed: 'bg-red-500/20 text-status-error',
+  unhealthy: 'bg-red-500/20 text-status-error',
   deleting: 'bg-muted/40 text-muted-foreground',
 }
 

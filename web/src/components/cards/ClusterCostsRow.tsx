@@ -83,7 +83,7 @@ export function ClusterCostsRow({
           {/* 4. Cluster name */}
           <span className="text-sm font-medium text-foreground truncate min-w-0">{cluster.name}</span>
           {/* 5. Health dot */}
-          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${isDemoData ? 'bg-blue-400' : cluster.healthy ? 'bg-green-500' : 'bg-red-500'}`} />
+          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${isDemoData ? 'bg-blue-400' : cluster.healthy ? 'bg-status-success' : 'bg-status-error'}`} />
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <span className="text-sm font-medium text-green-400 shrink-0">
