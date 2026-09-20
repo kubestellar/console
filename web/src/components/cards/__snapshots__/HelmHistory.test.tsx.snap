@@ -18,6 +18,7 @@ exports[`HelmHistory > snapshot > matches snapshot for selector-only state 1`] =
     class="flex gap-2 mb-4"
   >
     <select
+      aria-label="selectCluster"
       class="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
     >
       <option
@@ -32,6 +33,7 @@ exports[`HelmHistory > snapshot > matches snapshot for selector-only state 1`] =
       </option>
     </select>
     <select
+      aria-label="selectRelease"
       class="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground disabled:opacity-50"
       disabled=""
     >

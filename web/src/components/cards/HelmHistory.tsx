@@ -302,6 +302,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
             setSelectedCluster(e.target.value)
             setSelectedRelease('')
           }}
+          aria-label={t('common:selectors.selectCluster')}
           className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
         >
           <option value="">{t('common:selectors.selectCluster')}</option>
@@ -313,6 +314,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
           value={selectedRelease}
           onChange={(e) => setSelectedRelease(e.target.value)}
           disabled={!selectedCluster || releasesLoading}
+          aria-label={t('common:selectors.selectRelease')}
           className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground disabled:opacity-50"
         >
           <option value="">{t('common:selectors.selectRelease')}</option>

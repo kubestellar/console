@@ -4207,7 +4207,9 @@
     "fixWithMission": "Fix with an AI Mission",
     "noViolationsDetected": "No policy violations detected",
     "allResourcesComply": "All resources comply with active policies",
-    "viewViolationAria": "View violation details for {{policy}}"
+    "viewViolationAria": "View violation details for {{policy}}",
+    "searchViolations": "Search violations...",
+    "noSearchResults": "No violations match your search."
   },
   "complianceScore": {
     "checkingClusters": "Checking clusters... {{checked}}/{{total}}",
