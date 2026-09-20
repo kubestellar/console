@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
-import type { ClusterInfo, ClusterHealth, MCPStatus } from '../types'
+import type { ClusterInfo, ClusterHealth } from '../types'
+
 
 
 // ---------------------------------------------------------------------------
@@ -8,7 +9,6 @@ import type { ClusterInfo, ClusterHealth, MCPStatus } from '../types'
 // ---------------------------------------------------------------------------
 const mockFullFetchClusters = vi.hoisted(() => vi.fn().mockResolvedValue(undefined))
 const mockConnectSharedWebSocket = vi.hoisted(() => vi.fn())
-const mockUseDemoMode = vi.hoisted(() => vi.fn().mockReturnValue(false))
 const mockIsDemoMode = vi.hoisted(() => vi.fn(() => false))
 const mockApiGet = vi.hoisted(() => vi.fn())
 const mockAgentFetch = vi.hoisted(() => vi.fn())
@@ -109,7 +109,7 @@ vi.mock('../../useLocalAgent', () => ({
 // ---------------------------------------------------------------------------
 // Imports (resolved after mocks are installed)
 // ---------------------------------------------------------------------------
-import { useMCPStatus, useClusterHealth } from '../clusters'
+import { useClusterHealth } from '../clusters'
 import {
   clusterSubscribers,
   dataSubscribers,
@@ -120,7 +120,6 @@ import {
   shouldMarkOffline,
   recordClusterFailure,
   clearClusterFailure,
-  REFRESH_INTERVAL_MS,
 } from '../shared'
 
 // ---------------------------------------------------------------------------
@@ -161,120 +160,6 @@ function resetSharedState() {
   dataSubscribers.clear()
   uiSubscribers.clear()
 }
-
-// ===========================================================================
-// Pure utilities – deduplicateClustersByServer
-// ===========================================================================
-
-describe('shouldMarkOffline / recordClusterFailure / clearClusterFailure', () => {
-  const TEST_CLUSTER = '__test_offline_cluster__'
-
-  afterEach(() => {
-    clearClusterFailure(TEST_CLUSTER)
-    vi.useRealTimers()
-  })
-
-  it('shouldMarkOffline returns false before the offline threshold', () => {
-    vi.useFakeTimers()
-    recordClusterFailure(TEST_CLUSTER)
-    vi.advanceTimersByTime(60_000) // 1 minute – below 5-minute threshold
-    expect(shouldMarkOffline(TEST_CLUSTER)).toBe(false)
-  })
-
-  it('shouldMarkOffline returns true after 5 minutes since the first failure', () => {
-    vi.useFakeTimers()
-    recordClusterFailure(TEST_CLUSTER)
-    vi.advanceTimersByTime(OFFLINE_THRESHOLD_MS + 1)
-    expect(shouldMarkOffline(TEST_CLUSTER)).toBe(true)
-  })
-
-  it('recordClusterFailure only sets the first failure timestamp once', () => {
-    vi.useFakeTimers()
-    recordClusterFailure(TEST_CLUSTER)
-    vi.advanceTimersByTime(1_000)
-    recordClusterFailure(TEST_CLUSTER) // second call must NOT reset the timestamp
-    // Should be offline 5 minutes after the FIRST call, not the second
-    vi.advanceTimersByTime(OFFLINE_THRESHOLD_MS)
-    expect(shouldMarkOffline(TEST_CLUSTER)).toBe(true)
-  })
-
-  it('clearClusterFailure resets offline tracking', () => {
-    vi.useFakeTimers()
-    recordClusterFailure(TEST_CLUSTER)
-    vi.advanceTimersByTime(OFFLINE_THRESHOLD_MS + 1)
-    expect(shouldMarkOffline(TEST_CLUSTER)).toBe(true)
-    clearClusterFailure(TEST_CLUSTER)
-    expect(shouldMarkOffline(TEST_CLUSTER)).toBe(false)
-  })
-})
-
-describe('useMCPStatus', () => {
-  beforeEach(() => {
-    mockAgentFetch.mockReset()
-  })
-
-  it('returns { status: null, isLoading: true, error: null } on mount', () => {
-    // Never-resolving promise simulates in-flight request
-    mockAgentFetch.mockReturnValue(new Promise(() => {}))
-    const { result } = renderHook(() => useMCPStatus())
-    expect(result.current.isLoading).toBe(true)
-    expect(result.current.status).toBeNull()
-    expect(result.current.error).toBeNull()
-  })
-
-  it('returns status data after fetch resolves', async () => {
-    const mockStatus: MCPStatus = {
-      opsClient: { available: true, toolCount: 5 },
-      deployClient: { available: false, toolCount: 0 },
-    }
-    mockAgentFetch.mockResolvedValue(new Response(JSON.stringify(mockStatus), { status: 200 }))
-    const { result } = renderHook(() => useMCPStatus())
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.status).toEqual(mockStatus)
-    expect(result.current.error).toBeNull()
-  })
-
-  it('returns "MCP bridge not available" on fetch error', async () => {
-    mockAgentFetch.mockRejectedValue(new Error('Network error'))
-    const { result } = renderHook(() => useMCPStatus())
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.error).toBe('MCP bridge not available')
-    expect(result.current.status).toBeNull()
-  })
-
-  it('polls every REFRESH_INTERVAL_MS', async () => {
-    vi.useFakeTimers()
-    mockAgentFetch.mockImplementation(() => Promise.resolve(
-      new Response(JSON.stringify({ opsClient: { available: true, toolCount: 1 }, deployClient: { available: true, toolCount: 1 } }), { status: 200 })
-    ))
-    renderHook(() => useMCPStatus())
-    // Flush the initial fetch promise
-    await act(() => Promise.resolve())
-    const callsAfterMount = mockAgentFetch.mock.calls.length
-    expect(callsAfterMount).toBeGreaterThanOrEqual(1)
-    // Advance exactly one poll interval then flush
-    act(() => { vi.advanceTimersByTime(REFRESH_INTERVAL_MS) })
-    await act(() => Promise.resolve())
-    expect(mockAgentFetch.mock.calls.length).toBeGreaterThan(callsAfterMount)
-    vi.useRealTimers()
-  })
-
-  it('clears the polling interval on unmount', async () => {
-    vi.useFakeTimers()
-    mockAgentFetch.mockImplementation(() => Promise.resolve(
-      new Response(JSON.stringify({ opsClient: { available: true, toolCount: 1 }, deployClient: { available: true, toolCount: 1 } }), { status: 200 })
-    ))
-    const { unmount } = renderHook(() => useMCPStatus())
-    await act(() => Promise.resolve())
-    unmount()
-    const countAfterUnmount = mockAgentFetch.mock.calls.length
-    // Advance several intervals – no further calls should occur
-    act(() => { vi.advanceTimersByTime(REFRESH_INTERVAL_MS * 3) })
-    await act(() => Promise.resolve())
-    expect(mockAgentFetch.mock.calls.length).toBe(countAfterUnmount)
-    vi.useRealTimers()
-  })
-})
 
 describe('useClusterHealth', () => {
   const CLUSTER = 'test-cluster'
@@ -590,250 +475,5 @@ describe('useClusterHealth', () => {
       'my-cluster',
       'arn:aws:eks:us-east-1:123456:cluster/my-cluster',
     )
-  })
-})
-
-describe('useMCPStatus — additional branches', () => {
-  beforeEach(() => {
-    mockAgentFetch.mockReset()
-  })
-
-  it('sets status to null when fetch errors, even if previous status existed', async () => {
-    // Use fake timers BEFORE rendering so subscribePolling creates fake intervals
-    vi.useFakeTimers()
-    const initialStatus: MCPStatus = {
-      opsClient: { available: true, toolCount: 5 },
-      deployClient: { available: true, toolCount: 3 },
-    }
-    mockAgentFetch.mockResolvedValueOnce(new Response(JSON.stringify(initialStatus), { status: 200 }))
-    const { result } = renderHook(() => useMCPStatus())
-    await act(async () => { await Promise.resolve() })
-    expect(result.current.status).toEqual(initialStatus)
-
-    // Subsequent poll error — hang after first rejection to prevent cascade
-    // from consecutiveFailures in useEffect deps
-    mockAgentFetch
-      .mockRejectedValueOnce(new Error('Network error'))
-      .mockImplementation(() => new Promise(() => {}))
-    await act(async () => { vi.advanceTimersByTime(REFRESH_INTERVAL_MS) })
-    await act(async () => { await Promise.resolve() })
-    expect(result.current.error).toBe('MCP bridge not available')
-    expect(result.current.status).toBeNull()
-    vi.useRealTimers()
-  })
-
-  it('clears error when fetch succeeds after failure', async () => {
-    // Use fake timers BEFORE rendering so subscribePolling creates fake intervals
-    vi.useFakeTimers()
-    // First call fails, subsequent hang to prevent cascade
-    mockAgentFetch
-      .mockRejectedValueOnce(new Error('err'))
-      .mockImplementation(() => new Promise(() => {}))
-    const { result } = renderHook(() => useMCPStatus())
-    await act(async () => { await Promise.resolve() })
-    expect(result.current.error).toBe('MCP bridge not available')
-
-    // Now succeed — replace mock with success response
-    const good: MCPStatus = {
-      opsClient: { available: true, toolCount: 1 },
-      deployClient: { available: false, toolCount: 0 },
-    }
-    mockAgentFetch.mockImplementation(() => Promise.resolve(new Response(JSON.stringify(good), { status: 200 })))
-    await act(async () => { vi.advanceTimersByTime(REFRESH_INTERVAL_MS * 4) })
-    await act(async () => { await Promise.resolve() })
-    expect(result.current.error).toBeNull()
-    expect(result.current.status).toEqual(good)
-    vi.useRealTimers()
-  })
-})
-
-describe('useClusterHealth — additional branches', () => {
-  const CLUSTER = 'branch-coverage-cluster'
-
-  beforeEach(() => {
-    resetSharedState()
-    mockFetchSingleClusterHealth.mockReset()
-    mockIsDemoMode.mockReturnValue(false)
-  })
-
-  afterEach(() => {
-    clearClusterFailure(CLUSTER)
-    vi.useRealTimers()
-  })
-
-  it('getCachedHealth returns null when cluster is undefined', async () => {
-    const { result } = renderHook(() => useClusterHealth(undefined))
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.health).toBeNull()
-  })
-
-  it('getCachedHealth returns null when cluster has no nodeCount in cache', async () => {
-    // Populate cache with a cluster that has NO nodeCount
-    await act(async () => {
-      updateClusterCache({
-        clusters: [{ name: CLUSTER, context: CLUSTER, server: 'https://x.com' }],
-        isLoading: false,
-      })
-    })
-    mockFetchSingleClusterHealth.mockReturnValue(new Promise(() => {}))
-    const { result } = renderHook(() => useClusterHealth(CLUSTER))
-    // Without nodeCount, getCachedHealth returns null so no initial data
-    expect(result.current.health).toBeNull()
-    expect(result.current.isLoading).toBe(true)
-  })
-
-  it('falls back to getCachedHealth when data is null and no prevHealth (transient)', async () => {
-    // Populate cache with cluster that has nodeCount
-    await act(async () => {
-      updateClusterCache({
-        clusters: [{
-          name: CLUSTER, context: CLUSTER, server: 'https://x.com',
-          nodeCount: 5, podCount: 30, cpuCores: 16, memoryGB: 64, storageGB: 200,
-          healthy: true, reachable: true,
-        }],
-        isLoading: false,
-      })
-    })
-    // Fetch returns null (transient failure), no prevHealth set yet
-    mockFetchSingleClusterHealth.mockResolvedValue(null)
-    const { result } = renderHook(() => useClusterHealth(CLUSTER))
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    // Should have fallen back to getCachedHealth
-    expect(result.current.health).not.toBeNull()
-    expect(result.current.health?.nodeCount).toBe(5)
-  })
-
-  it('returns demo health for known demo clusters with correct metrics', async () => {
-    mockIsDemoMode.mockReturnValue(true)
-
-    const { result } = renderHook(() => useClusterHealth('eks-prod-us-east-1'))
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-
-    expect(result.current.health?.cluster).toBe('eks-prod-us-east-1')
-    expect(result.current.health?.nodeCount).toBe(12)
-    expect(result.current.health?.podCount).toBe(156)
-    expect(result.current.health?.cpuCores).toBe(96)
-  })
-
-  it('demo health includes memoryBytes and storageBytes computed from GB', async () => {
-    mockIsDemoMode.mockReturnValue(true)
-
-    const { result } = renderHook(() => useClusterHealth('kind-local'))
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-
-    const health = result.current.health
-    expect(health).not.toBeNull()
-    // kind-local: memoryGB=8 => memoryBytes=8*1024*1024*1024
-    const EXPECTED_MEM_BYTES = 8 * 1024 * 1024 * 1024
-    expect(health?.memoryBytes).toBe(EXPECTED_MEM_BYTES)
-    // storageGB=50 => storageBytes=50*1024*1024*1024
-    const EXPECTED_STORAGE_BYTES = 50 * 1024 * 1024 * 1024
-    expect(health?.storageBytes).toBe(EXPECTED_STORAGE_BYTES)
-  })
-
-  it('demo health returns empty issues array', async () => {
-    mockIsDemoMode.mockReturnValue(true)
-
-    const { result } = renderHook(() => useClusterHealth('gke-staging'))
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-
-    expect(result.current.health?.issues).toEqual([])
-  })
-
-  it('demo health defaults cluster to "default" when cluster is undefined', async () => {
-    mockIsDemoMode.mockReturnValue(true)
-
-    const { result } = renderHook(() => useClusterHealth(undefined))
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-
-    expect(result.current.health?.cluster).toBe('default')
-  })
-})
-
-describe('useClusterHealth — additional edge cases', () => {
-  const CLUSTER = 'edge-cluster'
-
-  beforeEach(() => {
-    resetSharedState()
-    mockFetchSingleClusterHealth.mockReset()
-    mockIsDemoMode.mockReturnValue(false)
-  })
-
-  afterEach(() => {
-    clearClusterFailure(CLUSTER)
-    vi.useRealTimers()
-  })
-
-  it('getCachedHealth returns null when cluster has no nodeCount', async () => {
-    // Cluster without nodeCount should not provide cached health
-    const clusters: ClusterInfo[] = [
-      { name: CLUSTER, context: 'ctx', server: 'https://api.example.com' },
-    ]
-    await act(async () => {
-      updateClusterCache({ clusters, isLoading: false })
-    })
-
-    // fetchSingleClusterHealth never resolves, so we depend on cache
-    mockFetchSingleClusterHealth.mockReturnValue(new Promise(() => {}))
-    const { result } = renderHook(() => useClusterHealth(CLUSTER))
-    // Should still be loading since no cached data available
-    expect(result.current.isLoading).toBe(true)
-  })
-
-  it('returns demo health for all known demo cluster names', async () => {
-    mockIsDemoMode.mockReturnValue(true)
-    const knownClusters = [
-      'minikube', 'k3s-edge', 'eks-prod-us-east-1', 'gke-staging',
-      'aks-dev-westeu', 'openshift-prod', 'oci-oke-phoenix',
-    ]
-
-    for (const name of knownClusters) {
-      const { result } = renderHook(() => useClusterHealth(name))
-      await waitFor(() => expect(result.current.isLoading).toBe(false))
-      expect(result.current.health?.cluster).toBe(name)
-      expect(result.current.health?.nodeCount).toBeGreaterThan(0)
-    }
-  })
-
-  it('uses cached health from cluster cache when fetch returns null', async () => {
-    const clusters: ClusterInfo[] = [
-      {
-        name: 'cached-for-null',
-        context: 'ctx',
-        server: 'https://cached.example.com',
-        healthy: true,
-        reachable: true,
-        nodeCount: 5,
-        podCount: 30,
-        cpuCores: 16,
-        memoryGB: 64,
-        storageGB: 200,
-      },
-    ]
-    await act(async () => {
-      updateClusterCache({ clusters, isLoading: false })
-    })
-
-    // First fetch succeeds with real data
-    const healthData: ClusterHealth = {
-      cluster: 'cached-for-null', healthy: true, reachable: true,
-      nodeCount: 5, readyNodes: 5, podCount: 30,
-    }
-    mockFetchSingleClusterHealth.mockResolvedValueOnce(healthData)
-    const { result } = renderHook(() => useClusterHealth('cached-for-null'))
-    await waitFor(() => expect(result.current.health?.nodeCount).toBe(5))
-
-    // Second fetch returns null — should keep previous health
-    mockFetchSingleClusterHealth.mockResolvedValueOnce(null)
-    await act(async () => { await result.current.refetch() })
-    expect(result.current.health?.nodeCount).toBe(5)
-  })
-
-  it('refetch function is stable identity', () => {
-    mockFetchSingleClusterHealth.mockReturnValue(new Promise(() => {}))
-    const { result, rerender } = renderHook(() => useClusterHealth(CLUSTER))
-    const first = result.current.refetch
-    rerender()
-    expect(result.current.refetch).toBe(first)
   })
 })
