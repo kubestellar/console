@@ -117,6 +117,8 @@ import {
   REFRESH_INTERVAL_MS,
 } from '../shared'
 
+const OFFLINE_THRESHOLD_MS = 5 * 60_000 // 5 minutes — same as OFFLINE_THRESHOLD_MS in sharedImpl.health.ts
+
 describe('shouldMarkOffline / recordClusterFailure / clearClusterFailure', () => {
   const TEST_CLUSTER = '__test_offline_cluster__'
 
