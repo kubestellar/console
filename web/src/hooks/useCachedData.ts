@@ -397,7 +397,16 @@ export const coreFetchers = {
     if (token && token !== 'demo-token' && !isBackendUnavailable()) {
       return await fetchFromAllClusters<Deployment>('deployments', 'deployments', {})
     }
-    return []
+    // No data source available yet (auth/backend still warming up at app
+    // boot). Throwing — instead of returning [] — keeps this prefetch a
+    // "failure" so the cache's lastRefresh timestamp is NOT stamped. The
+    // 'deployments' category has a 60s freshness window (REFRESH_RATES),
+    // so returning [] here would poison the shared `deployments:all:all`
+    // cache entry with a false-fresh empty result: the /deployments page
+    // (which reads the exact same cache key) would then skip its own
+    // refetch for up to 60s and render 0/0 against a live cluster with
+    // real deployments (#23611, recurrence of #23526/#23530).
+    throw new Error('No data source available')
   },
   services: async (): Promise<Service[]> => {
     const data = await getClusterFetcher()<{ services: Service[] }>('services', {})

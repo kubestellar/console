@@ -9,6 +9,7 @@ import {
   CheckCircle2, XCircle,
 } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
+import { StatGrid } from '../../ui/StatGrid'
 import { useTrinoGateway } from './useTrinoGateway'
 import type { TrinoGatewayStatus } from './demoData'
 
@@ -76,12 +77,12 @@ export function TrinoGateway() {
   return (
     <div className="h-full flex flex-col min-h-card gap-3 p-1 overflow-hidden">
       {/* Summary tiles */}
-      <div className="grid grid-cols-2 @md:grid-cols-4 gap-2">
+      <StatGrid>
         <StatTile icon={Database} label="Clusters" value={`${healthyClusters}/${trinoClusters.length}`} color="text-blue-400" />
         <StatTile icon={Server} label="Workers" value={String(data.totalWorkers)} color="text-purple-400" />
         <StatTile icon={Activity} label="Queries" value={String(data.totalActiveQueries)} color="text-green-400" />
         <StatTile icon={ArrowRight} label="Gateway" value={gatewayStatus} color={GATEWAY_STATUS_COLORS[gatewayStatus as TrinoGatewayStatus] ?? 'text-muted-foreground'} />
-      </div>
+      </StatGrid>
 
       {/* Trino Clusters */}
       <div className="flex-1 overflow-y-auto space-y-2 min-h-0">

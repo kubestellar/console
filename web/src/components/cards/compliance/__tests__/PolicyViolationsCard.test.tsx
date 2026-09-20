@@ -41,7 +41,13 @@ vi.mock('../../../../hooks/useMissions', () => ({
 
 const mockSelectedClusters = vi.fn(() => [] as string[])
 vi.mock('../../../../hooks/useGlobalFilters', () => ({
-  useGlobalFilters: () => ({ selectedClusters: mockSelectedClusters() }),
+  useGlobalFilters: () => ({
+    selectedClusters: mockSelectedClusters(),
+    customFilter: '',
+    isAllClustersSelected: true,
+    filterByCluster: <T,>(items: T[]) => items,
+    filterByStatus: <T,>(items: T[]) => items,
+  }),
 }))
 
 const mockUseCardLoadingState = vi.fn()

@@ -5,6 +5,8 @@ import { useKyverno } from '../../../hooks/useKyverno'
 import { useMissions } from '../../../hooks/useMissions'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
 import { useCardLoadingState } from '../CardDataContext'
+import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
+import { CardSearchInput } from '../../../lib/cards/CardComponents'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { KyvernoDetailModal } from '../kyverno/KyvernoDetailModal'
 import { PolicyViolationDetailModal } from './PolicyViolationDetailModal'
@@ -13,17 +15,31 @@ import { CARD_UI_STRINGS } from '../strings'
 import type { CardConfig } from './cardTypes'
 import { MAX_VIOLATION_ENTRIES, TROUBLESHOOT_MISSIONS } from './complianceConstants'
 
+interface PolicyViolation {
+  policy: string
+  count: number
+  tool: string
+  clusters: string[]
+}
+
+type SortField = 'count' | 'policy'
+
+const VIOLATION_SORT_COMPARATORS = {
+  count: (a: PolicyViolation, b: PolicyViolation) => a.count - b.count,
+  policy: commonComparators.string<PolicyViolation>('policy'),
+}
+
 export function PolicyViolationsCard({ config: _config }: CardConfig) {
   const { t } = useTranslation(['common', 'cards'])
   const { statuses, isLoading, isRefreshing, isDemoData, installed, hasErrors, clustersChecked, totalClusters, unavailableReason, refetch } = useKyverno()
   const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
   const [modalCluster, setModalCluster] = useState<string | null>(null)
-  const [selectedViolation, setSelectedViolation] = useState<{ policy: string; count: number; tool: string; clusters: string[] } | null>(null)
+  const [selectedViolation, setSelectedViolation] = useState<PolicyViolation | null>(null)
 
   const allChecked = clustersChecked >= totalClusters && totalClusters > 0
   const violations = useMemo(() => {
-    const result: Array<{ policy: string; count: number; tool: string; clusters: string[] }> = []
+    const result: PolicyViolation[] = []
     const clusterViolations = new Map<string, { count: number; clusters: string[] }>()
 
     for (const [clusterName, status] of Object.entries(statuses)) {
@@ -91,6 +107,25 @@ export function PolicyViolationsCard({ config: _config }: CardConfig) {
   )
   const hasData = violations.length > 0 || isDemoData
   useCardLoadingState({ isLoading: isLoading && !hasData, isRefreshing, hasAnyData: hasData, isDemoData, isFailed: hasErrors })
+
+  // Use shared card data hook for search + sort of the violations list
+  const {
+    items: displayedViolations,
+    filters: { search, setSearch },
+  } = useCardData<PolicyViolation, SortField>(violations, {
+    filter: {
+      searchFields: ['policy', 'tool'],
+      customPredicate: (violation, query) =>
+        violation.clusters.some((cluster) => cluster.toLowerCase().includes(query)),
+      storageKey: 'policy-violations',
+    },
+    sort: {
+      defaultField: 'count',
+      defaultDirection: 'desc',
+      comparators: VIOLATION_SORT_COMPARATORS,
+    },
+    defaultLimit: 'unlimited',
+  })
 
   if (unavailableReason) {
     return (
@@ -185,36 +220,51 @@ export function PolicyViolationsCard({ config: _config }: CardConfig) {
         <span>{CARD_DESCRIPTIONS.policy_violations.description}</span>
       </div>
 
-      <div className="space-y-2">
-        {(violations || []).map((violation, index) => (
-          <div
-            key={index}
-            className="group flex flex-wrap items-center justify-between gap-y-2 p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer"
-            onClick={() => setSelectedViolation(violation)}
-            role="button"
-            aria-label={t('cards:policyViolations.viewViolationAria', { policy: violation.policy })}
-            tabIndex={0}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault()
-                setSelectedViolation(violation)
-              }
-            }}
-          >
-            <div>
-              <p className="text-sm font-medium text-foreground">{violation.policy}</p>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>{violation.tool}</span>
-                {violation.clusters.length > 0 && <span>· {(violation.clusters || []).join(', ')}</span>}
+      {violations.length > MAX_VIOLATION_ENTRIES / 2 && (
+        <CardSearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder={t('cards:policyViolations.searchViolations', 'Search violations...')}
+          className="mb-0"
+        />
+      )}
+
+      {displayedViolations.length === 0 ? (
+        <div className="flex items-center justify-center py-6 text-xs text-muted-foreground">
+          {t('cards:policyViolations.noSearchResults', 'No violations match your search.')}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {displayedViolations.map((violation, index) => (
+            <div
+              key={index}
+              className="group flex flex-wrap items-center justify-between gap-y-2 p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer"
+              onClick={() => setSelectedViolation(violation)}
+              role="button"
+              aria-label={t('cards:policyViolations.viewViolationAria', { policy: violation.policy })}
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  setSelectedViolation(violation)
+                }
+              }}
+            >
+              <div>
+                <p className="text-sm font-medium text-foreground">{violation.policy}</p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>{violation.tool}</span>
+                  {violation.clusters.length > 0 && <span>· {(violation.clusters || []).join(', ')}</span>}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <StatusBadge color="orange" size="md">{violation.count}</StatusBadge>
+                <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <StatusBadge color="orange" size="md">{violation.count}</StatusBadge>
-              <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {modalCluster && statuses[modalCluster] && (
         <KyvernoDetailModal

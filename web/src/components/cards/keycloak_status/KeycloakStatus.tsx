@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { StatTile } from '../shared/StatTile'
+import { StatGrid } from '../../ui/StatGrid'
 import {
   CheckCircle,
   AlertTriangle,
@@ -260,7 +261,7 @@ export function KeycloakStatus() {
 
       {/* ── Stats grid ── */}
       {realms.length > 0 && (
-        <div className="grid grid-cols-2 @md:grid-cols-4 gap-2">
+        <StatGrid>
           <StatTile
             icon={<Globe className="w-4 h-4 text-blue-400" />}
             label={t('keycloak.realms')}
@@ -289,7 +290,7 @@ export function KeycloakStatus() {
             colorClass="text-red-400"
             borderClass="border-red-500/20"
           />
-        </div>
+        </StatGrid>
       )}
 
       {/* ── Search + unified controls (sort, limit, cluster filter) ── */}

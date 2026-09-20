@@ -194,13 +194,14 @@ describe('useCachedData', () => {
       expect(issues).toEqual([])
     })
 
-    it('coreFetchers.deployments returns empty when both unavailable', async () => {
+    it('coreFetchers.deployments throws when both unavailable', async () => {
       mockIsAgentUnavailable.mockReturnValue(true)
       mockIsBackendUnavailable.mockReturnValue(true)
 
       const { coreFetchers } = await loadModule()
-      const deps = await coreFetchers.deployments()
-      expect(deps).toEqual([])
+      // Must reject (not resolve with []) so the prefetch cache entry is not
+      // stamped as fresh with a false-empty result (#23611).
+      await expect(coreFetchers.deployments()).rejects.toThrow('No data source available')
     })
 
     it('coreFetchers.securityIssues uses agent kubectl when available', async () => {

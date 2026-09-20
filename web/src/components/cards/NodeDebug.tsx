@@ -92,6 +92,10 @@ type TabMode = 'inspect' | 'exec'
 
 export function NodeDebug() {
   const { t } = useTranslation('cards')
+  // useCachedNodes + useCardLoadingState is the standardized data/loading pattern for this
+  // card (#23182). The remaining hooks below are debug-console UI state (selectors, exec mode,
+  // running/output state) — there is no list to search/sort/paginate here, so useCardData /
+  // useCardDemoState do not apply. See #23588.
   const { nodes, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures } = useCachedNodes()
   const { execute } = useKubectl()
   const { showToast } = useToast()
