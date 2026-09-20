@@ -23,6 +23,14 @@ import { TreeNode } from './TreeRenderer'
 import { useClusterDataCache } from './useClusterDataCache'
 import { SORT_OPTIONS, type ClusterResourceTreeProps, type NamespaceResources, type SortByOption, type TreeLens } from './types'
 
+// This card already uses the standardized hooks that fit its shape:
+// useChartFilters (cluster filtering without pagination — same hook used by
+// ClusterMetrics/PodHealthTrend/etc.) and useCardLoadingState. Full
+// useCardData/useCardDemoState don't apply here: this renders a nested
+// cluster -> namespace -> resource tree (not a flat list), the search box
+// must cascade into expanded namespaces (ClusterResourceTree.utils#filterClusters,
+// TreeBuilder#buildNamespaceResources), and `limit` truncates nested
+// nodes/namespaces per cluster rather than paginating a top-level list. See #23588.
 export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProps) {
   const { t } = useTranslation()
   const { deduplicatedClusters: clusters, isLoading, isRefreshing: clustersRefreshing, isFailed, consecutiveFailures } = useClusters()

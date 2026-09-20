@@ -127,6 +127,11 @@ interface DraggableWorkloadItemProps {
   onScaled?: () => void
 }
 
+// This component renders a single `workload` item within the list already
+// standardized on useCardData in the parent WorkloadDeployment.tsx (search,
+// sort, cluster filter, pagination). Its own hooks below are per-item scale
+// mutation / drag / confirm-dialog state, not list data — useCardData /
+// useCardDemoState do not apply at this level. See #23588.
 function DraggableWorkloadItemComponent({ workload, isSelected, onSelect, onScaled }: DraggableWorkloadItemProps) {
   const [replicaDraft, setReplicaDraft] = useState({ baseline: workload.replicas, desired: workload.replicas })
   const [isScaling, setIsScaling] = useState(false)
