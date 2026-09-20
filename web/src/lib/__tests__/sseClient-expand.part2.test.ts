@@ -142,11 +142,11 @@ describe('sseClient expanded', () => {
         callCount++
         const headers = (options as RequestInit)?.headers as Record<string, string>
         if (callCount === 1) {
-          expect(headers?.Authorization).toBe('******')
+          expect(headers?.Authorization).toBe('Bearer old-token')
           return Promise.reject(new Error('fail'))
         }
         // On retry, token should be fresh
-        expect(headers?.Authorization).toBe('******')
+        expect(headers?.Authorization).toBe('Bearer new-token')
         return Promise.resolve(makeSSEResponse([
           { event: 'done', data: {} },
         ]))
