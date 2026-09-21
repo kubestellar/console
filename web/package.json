@@ -124,7 +124,7 @@
     "@types/three": "^0.186.0",
     "@vitejs/plugin-react": "^6.1.1",
     "@vitest/coverage-v8": "^5.0.1",
-    "@vitest/ui": "^5.0.0",
+    "@vitest/ui": "^5.0.1",
     "eslint": "^10.10.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
