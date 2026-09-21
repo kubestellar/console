@@ -146,7 +146,7 @@ export function useKubeManRenderer({
         ctx.fill()
       }
     }
-  }, [maze, playerPos, playerDir, ghosts, mouthOpen, isExpanded, deathAnimation])
+  }, [canvasRef, maze, playerPos, playerDir, ghosts, mouthOpen, isExpanded, deathAnimation])
 
   return draw
 }
