@@ -75,7 +75,15 @@ jobs:
                 description: 'GA4 week-over-week error rate regression',
               });
             } catch (err) {
-              if (err.status !== 422) throw err;
+              if (err.status !== 422) {
+                const isRateLimit = (err.status === 403 || err.status === 429) &&
+                  (err.message || '').toLowerCase().includes('rate limit');
+                if (isRateLimit) {
+                  core.warning(`Skipping label creation: GitHub API rate limited (${err.message})`);
+                } else {
+                  throw err;
+                }
+              }
             }
 
       - name: Compare error rates week-over-week
@@ -213,14 +221,55 @@ jobs:
               core.info(`  ${r.category}: ${r.previous} → ${r.current} (${pct}) [${r.reason}]`);
             }
 
+            // Rate-limit-aware retry helper for GitHub API calls.
+            // Waits for x-ratelimit-reset on 403/429, with exponential backoff fallback.
+            const MAX_RETRIES = 3;
+            const INITIAL_BACKOFF_MS = 5000;
+            async function withRetry(fn, label = 'API call') {
+              for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+                try {
+                  return await fn();
+                } catch (err) {
+                  const isRateLimit = (err.status === 403 || err.status === 429) &&
+                    (err.message || '').toLowerCase().includes('rate limit');
+                  if (!isRateLimit || attempt === MAX_RETRIES) throw err;
+
+                  // Calculate wait time from reset header or use exponential backoff
+                  const resetEpoch = err.response?.headers?.['x-ratelimit-reset'];
+                  const backoffMs = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
+                  let waitMs = backoffMs;
+                  if (resetEpoch) {
+                    const resetMs = parseInt(resetEpoch, 10) * 1000 - Date.now();
+                    const RATE_LIMIT_BUFFER_MS = 1000;
+                    waitMs = Math.max(resetMs + RATE_LIMIT_BUFFER_MS, backoffMs);
+                  }
+                  const MAX_WAIT_MS = 120000;
+                  waitMs = Math.min(waitMs, MAX_WAIT_MS);
+                  core.warning(`${label}: rate limited (attempt ${attempt + 1}/${MAX_RETRIES}), waiting ${Math.round(waitMs / 1000)}s...`);
+                  await new Promise(resolve => setTimeout(resolve, waitMs));
+                }
+              }
+            }
+
             // Deduplicate against recently-filed regression issues
-            const { data: openIssues } = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              labels: 'ga4-regression',
-              state: 'open',
-              per_page: 30,
-            });
+            let openIssues;
+            try {
+              ({ data: openIssues } = await withRetry(() => github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: 'ga4-regression',
+                state: 'open',
+                per_page: 30,
+              }), 'list open ga4-regression issues'));
+            } catch (err) {
+              const isRateLimit = (err.status === 403 || err.status === 429) &&
+                (err.message || '').toLowerCase().includes('rate limit');
+              if (isRateLimit) {
+                core.warning(`GitHub API rate limit exhausted while listing open issues: ${err.message}. Skipping this run.`);
+                return;
+              }
+              throw err;
+            }
 
             const normalizeTitle = (t) =>
               t.replace(/\[GA4-Regression\]\s*/, '')
@@ -300,13 +349,24 @@ jobs:
                 `*Compares \`7daysAgo…yesterday\` vs \`14daysAgo…8daysAgo\` using GA4 Data API.*`,
               ].join('\n');
 
-              const { data: issue } = await github.rest.issues.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title,
-                body,
-                labels: ['bug', 'ga4-regression', 'ga4-error', 'help wanted', 'triage/accepted'],
-              });
+              let issue;
+              try {
+                ({ data: issue } = await withRetry(() => github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title,
+                  body,
+                  labels: ['bug', 'ga4-regression', 'ga4-error', 'help wanted', 'triage/accepted'],
+                }), `create issue "${title}"`));
+              } catch (err) {
+                const isRateLimit = (err.status === 403 || err.status === 429) &&
+                  (err.message || '').toLowerCase().includes('rate limit');
+                if (isRateLimit) {
+                  core.warning(`GitHub API rate limit exhausted while filing "${title}": ${err.message}. Skipping remaining regressions.`);
+                  break;
+                }
+                throw err;
+              }
 
               core.info(`Created issue #${issue.number}: ${title}`);
               created++;
