@@ -63,20 +63,27 @@ An empty result from the last two commands (as of this writing) means the SLA in
 
 ## Proposed Fix
 
-1. A maintainer creates `.github/on-call-schedule.yml` naming the actual current
-   Build Sheriff rotation (this is a personnel/process decision the `operations`
-   agent cannot make).
-2. Create the `main-broken` label (`gh label create main-broken ...`).
-3. Add a workflow step, gated on the main-branch build/test jobs with
-   `if: failure()`, that applies the label and opens/updates an incident-tracking
-   issue — reusing the same create-or-update-issue pattern already implemented in
+1. Create the `main-broken` label (`gh label create main-broken ...`) — tracked by
+   [#23615](https://github.com/kubestellar/console/issues/23615); `gh label create`
+   returns `HTTP 403` for the `operations`/`scanner` App tokens, so this needs a
+   maintainer.
+2. A maintainer creates `.github/on-call-schedule.yml` naming the actual current
+   Build Sheriff rotation, and a maintainer/agent with `workflows` scope adds a
+   workflow step, gated on the main-branch build/test jobs with `if: failure()`,
+   that applies the label and opens/updates an incident-tracking issue — reusing
+   the same create-or-update-issue pattern already implemented in
    `.github/workflows/workflow-failure-issue.yml` (search-by-title-and-label, then
-   comment on repeat failures instead of opening duplicates).
-4. Either wire the existing product Slack-webhook feature
+   comment on repeat failures instead of opening duplicates). Both are tracked by
+   [#23616](https://github.com/kubestellar/console/issues/23616).
+3. Either wire the existing product Slack-webhook feature
    (`docs/ALERT_NOTIFICATIONS.md`) to a CI-health channel, or edit
    `docs/INCIDENT-RESPONSE.md` §"Detection (Automated)" to stop describing
    automation that doesn't exist, so the doc doesn't overstate current coverage
-   until the wiring lands.
+   until the wiring lands. **Done** — `docs/INCIDENT-RESPONSE.md` now describes
+   the current manual process and links a "Planned Automation (Not Yet Wired)"
+   subsection to [#23534](https://github.com/kubestellar/console/issues/23534),
+   [#23615](https://github.com/kubestellar/console/issues/23615), and
+   [#23616](https://github.com/kubestellar/console/issues/23616).
 
 ## Escalation
 

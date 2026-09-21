@@ -31,12 +31,33 @@ The build sheriff is the designated owner for main branch health. Responsibiliti
 
 **Current rotation schedule**: See `.github/on-call-schedule.yml` (to be created —
 naming an actual rotation is a personnel decision tracked by
+[#23616](https://github.com/kubestellar/console/issues/23616), a child of
 [#23534](https://github.com/kubestellar/console/issues/23534)).
 **Note:** this file and the Slack-posting/auto-labeling step described below are
 not yet implemented — see
 [`docs/runbooks/incident-response-automation-missing.md`](runbooks/incident-response-automation-missing.md)
 for current status and detection steps, and
 [#23534](https://github.com/kubestellar/console/issues/23534) for the live tracker.
+
+#### Planned Automation (Not Yet Wired)
+
+The following pieces are designed but not yet implemented, and each requires
+access this agent's App token does not have:
+
+- **`main-broken` label** — tracked by
+  [#23615](https://github.com/kubestellar/console/issues/23615); `gh label create`
+  returns `HTTP 403` for the App token, so creation requires a maintainer.
+- **Workflow step to apply the label and open/update an incident issue on CI
+  failure** — tracked by
+  [#23616](https://github.com/kubestellar/console/issues/23616); this needs a
+  maintainer or an agent with `workflows` scope, since it touches
+  `.github/workflows/**`.
+- **`.github/on-call-schedule.yml` naming the actual Build Sheriff rotation** —
+  also tracked by [#23616](https://github.com/kubestellar/console/issues/23616);
+  naming a rotation is a personnel decision, not something an agent can decide.
+
+Until these land, follow the manual process in "Detection (Currently Manual)"
+below.
 
 #### All Contributors
 
@@ -53,9 +74,13 @@ tab. There is no automated Slack alert, no automated labeling, and no named
 on-call owner yet — see [#23534](https://github.com/kubestellar/console/issues/23534)
 for the live tracker. Until that wiring lands:
 - Contributors/maintainers must notice the red run in the Actions tab
-- Whoever notices should manually apply the `main-broken` label to the last
-  merged PR (or open an incident issue) so the SLA clock below has a visible
-  start
+- Whoever notices should manually watch the Actions tab and, on a main-branch
+  failure, manually open (or update) an incident-tracking issue — following the
+  same search-by-title-and-label / comment-on-repeat-failure pattern already
+  implemented in `.github/workflows/workflow-failure-issue.yml` — and apply a
+  `main-broken`-style label by hand once one exists (see
+  [#23615](https://github.com/kubestellar/console/issues/23615)) so the SLA
+  clock below has a visible start
 - There is no `#kubestellar-dev` Slack bot integration today
 
 **Intended future state (not yet implemented, tracked by
@@ -160,6 +185,10 @@ Human maintainers MAY merge into a broken main **only** if:
 
 ## Communication Templates
 
+**Note:** No Slack bot posts these automatically today (see "Planned Automation
+(Not Yet Wired)" above). Use these templates manually — in the incident issue
+and/or Slack — until the automated posting step lands.
+
 ### Slack: Main Branch Broken Alert
 ```
 🚨 **MAIN BRANCH IS RED** 🚨
@@ -237,5 +266,7 @@ All commits to main should:
 
 ---
 
-**Last Updated**: 2026-06-12
-**Owner**: Build Sheriff Rotation (see `.github/on-call-schedule.yml`)
+**Last Updated**: 2026-09-20
+**Owner**: Build Sheriff Rotation (planned — no rotation is named yet; see
+`.github/on-call-schedule.yml` (to be created) and
+[#23534](https://github.com/kubestellar/console/issues/23534))
