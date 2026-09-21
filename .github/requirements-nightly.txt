@@ -7,8 +7,9 @@ attrs==26.1.0 \
 boltons==21.0.0 \
     --hash=sha256:b9bb7b58b2b420bbe11a6025fdef6d3e5edc9f76a42fb467afe7ca212ef9948b
 
-bracex==3.0 \
-    --hash=sha256:3833e61c2f092d5aa0468fa2e6c6e990a306185abf763b6d122f0158e59c58a5
+bracex==3.0.1 \
+    --hash=sha256:4e38e32392e4a4780fe15d644bfc7c8514057cfc3861e060b11814ce829c25e4 \
+    --hash=sha256:6523ad83aeb5098a4ee597cff0f964442ff74e460bd3fafaffab6a013ff2288c
 
 certifi==2026.6.17 \
     --hash=sha256:2227dcbaafe0d2f59279d1762ddddc37783ed4354594f194ffc31d20f41fc3db
@@ -45,8 +46,9 @@ googleapis-common-protos==1.75.3 \
     --hash=sha256:57c435ac2c68b108999b6db075d9053e4d7a936ba57b4a3d45667b1346f1738a \
     --hash=sha256:a018d2bf098ca9fb6faa08d5bb780e2a2c2f73c566f069761331386c9596d3f2
 
-idna==3.18 \
-    --hash=sha256:7f952cbe720b688055e3f87de14f5c3e5fdaa8bc3928985c4077ca689de849a2
+idna==3.20 \
+    --hash=sha256:a7db850025b95ded1eae8a46181a1a6c56c92c96f0e2b005d9ff8dc0210cab44 \
+    --hash=sha256:ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c
 
 importlib-metadata==7.1.0 \
     --hash=sha256:30962b96c0c223483ed6cc7280e7f0199feb01a0e40cfae4d4450fc6fab1f570
@@ -80,8 +82,9 @@ opentelemetry-instrumentation-requests==0.65b0 \
     --hash=sha256:1d601548f89236d5ab373c7208a2e1e162a8d6462b5b972f9ad8fb0ed82d7438 \
     --hash=sha256:91688ec0d4d1fed75ea8d026ef2c66274ed9868c22b6be211ef85d832d16f957
 
-opentelemetry-proto==1.25.0 \
-    --hash=sha256:f07e3341c78d835d9b86665903b199893befa5e98866f63d22b00d0b7ca4972f
+opentelemetry-proto==1.44.0 \
+    --hash=sha256:898b155a0e1557afd867478fb6158e8122a46329ca0bb8dc53cc55e98f017f56 \
+    --hash=sha256:c547a79c2f8c0c515d31509154682e5921c7cfd5ca67b70e1f9266e2c3e103f3
 
 opentelemetry-sdk==1.25.0 \
     --hash=sha256:d97ff7ec4b351692e9d5a15af570c693b8715ad78b8aafbec5c7100fe966b4c9
@@ -90,8 +93,9 @@ opentelemetry-semantic-conventions==0.65b0 \
     --hash=sha256:1cacde7b0ad306f84c5ef08c3dbe1bbaf20165bba6f8bff43b670e555a086bcb \
     --hash=sha256:f9b2b81e9d5b64f11bc952075e7e9c7fb0aab075c7fd1c46d597f1b919852d60
 
-opentelemetry-util-http==0.46b0 \
-    --hash=sha256:8dc1949ce63caef08db84ae977fdc1848fe6dc38e6bbaad0ae3e6ecd0d451629
+opentelemetry-util-http==0.65b0 \
+    --hash=sha256:7553b606f963097cb190536dc30556cce85090692e471a422fff30ca29b04348 \
+    --hash=sha256:84f82d826978bba416ab453460ff6a7391cdc3534c93a786595e4068680016b7
 
 packaging==26.3 \
     --hash=sha256:94edc256424af38762eb31306eed28beb9f0efc50a8837492c9d6fd6004aed79 \
