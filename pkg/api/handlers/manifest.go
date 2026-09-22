@@ -19,6 +19,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/client"
 	"github.com/kubestellar/console/pkg/sanitize"
+	"github.com/kubestellar/console/pkg/ssrf"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -100,15 +101,19 @@ func (h *ManifestHandler) checkBootstrapAuth(c *fiber.Ctx) error {
 	return nil
 }
 
-// isBootstrapAllowedIP returns true if the IP is loopback, private, link-local,
-// or unspecified (0.0.0.0/::) — the unspecified case covers direct connections
-// without a reverse proxy where the kernel hasn't resolved the peer address.
+// isBootstrapAllowedIP returns true if the IP is one pkg/ssrf classifies as
+// internal (loopback, RFC 1918, link-local, CGNAT, cloud metadata, IETF
+// protocol assignments, multicast, unspecified). Delegating to the shared
+// classifier keeps the "internal address" definition consistent with the SSRF
+// guards and the analytics proxy; the unspecified case still covers direct
+// connections without a reverse proxy where the kernel hasn't resolved the
+// peer address.
 func isBootstrapAllowedIP(ip string) bool {
 	parsed := net.ParseIP(ip)
 	if parsed == nil {
 		return false
 	}
-	return parsed.IsLoopback() || parsed.IsPrivate() || parsed.IsLinkLocalUnicast() || parsed.IsUnspecified()
+	return ssrf.IsBlockedIP(parsed)
 }
 
 // manifestPayload is the JSON structure POSTed to GitHub as the app manifest.
