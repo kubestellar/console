@@ -19,6 +19,8 @@ on:
       - 'scripts/testdata/check-go-coverage-ratchet/**'
       - 'scripts/check-go-ratchet-orphans.sh'
       - 'scripts/__tests__/check-go-ratchet-orphans.test.sh'
+      - 'scripts/check-go-ratchet-completeness.sh'
+      - 'scripts/__tests__/check-go-ratchet-completeness.test.sh'
   push:
     branches: [main]
     paths:
@@ -33,6 +35,8 @@ on:
       - 'scripts/testdata/check-go-coverage-ratchet/**'
       - 'scripts/check-go-ratchet-orphans.sh'
       - 'scripts/__tests__/check-go-ratchet-orphans.test.sh'
+      - 'scripts/check-go-ratchet-completeness.sh'
+      - 'scripts/__tests__/check-go-ratchet-completeness.test.sh'
   workflow_dispatch:
 
 # Cancel superseded runs on the same PR/branch so we don't queue stale work.
@@ -81,6 +85,17 @@ jobs:
           chmod +x scripts/check-go-ratchet-orphans.sh
           ./scripts/check-go-ratchet-orphans.sh \
             "$GO_PACKAGE_COVERAGE_RATCHET_FILE"
+
+      - name: Check Go coverage ratchet completeness
+        # Fail the build when a Go package ships non-test .go files but is
+        # not listed in the per-package ratchet — those packages can
+        # otherwise silently regress to 0%. Mirrors the orphans check.
+        run: |
+          chmod +x scripts/check-go-ratchet-completeness.sh
+          ./scripts/check-go-ratchet-completeness.sh \
+            "$GO_PACKAGE_COVERAGE_RATCHET_FILE" \
+            pkg cmd \
+            --strict
 
       - name: Check Go coverage ratchet
         run: |
