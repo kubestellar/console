@@ -16,6 +16,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/client"
+	"github.com/kubestellar/console/pkg/ssrf"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -296,17 +297,23 @@ func stripPort(host string) string {
 	return h
 }
 
-// isPrivateIP returns true for loopback, link-local, and RFC-1918 addresses.
+// isPrivateIP returns true when the given address is one we should not forward
+// to third-party analytics. It delegates to pkg/ssrf's shared internal-address
+// classifier so the definition of "internal" stays consistent with the rest of
+// the codebase (SSRF guards, ping, card proxy) — that shared predicate covers
+// loopback, RFC 1918, link-local, CGNAT, cloud metadata, IETF protocol
+// assignments, multicast, and the unspecified address.
+//
 // When the proxy runs on the user's own machine (localhost install), c.IP()
 // returns 127.0.0.1 — sending that as _uip tells GA4 the user is at a
-// non-routable address, killing geolocation.  By detecting private IPs we
-// can skip the _uip override and let GA4 use the connection's source IP.
+// non-routable address, killing geolocation. Detecting internal IPs lets us
+// skip the _uip override and let GA4 use the connection's source IP instead.
 func isPrivateIP(ip string) bool {
 	parsed := net.ParseIP(ip)
 	if parsed == nil {
 		return false
 	}
-	return parsed.IsLoopback() || parsed.IsPrivate() || parsed.IsLinkLocalUnicast()
+	return ssrf.IsBlockedIP(parsed)
 }
 
 // ── Umami First-Party Proxy ─────────────────────────────────────────
