@@ -96,6 +96,7 @@ brews:
     license: "Apache-2.0"
     test: |
       system bin/"kc-agent", "--version"
+      system bin/"kc-agent", "--help"
     install: |
       bin.install "kc-agent"
 
