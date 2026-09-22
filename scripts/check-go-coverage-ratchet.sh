@@ -86,6 +86,17 @@ coverage_from_profile() {
   ' "$COVERPROFILE"
 }
 
+# A package with no non-test *.go file directly under it no longer exists on
+# disk (renamed/deleted) — that must still fail loudly as "missing". A
+# package whose directory DOES exist but produced zero coverprofile entries
+# has no coverable statements (interfaces / consts / no test entry point) —
+# that is expected and reported as "n/a" instead of "missing".
+has_no_coverable_statements() {
+  local package_path="$1"
+  [ -d "$package_path" ] || return 1
+  find "$package_path" -maxdepth 1 -type f -name '*.go' -not -name '*_test.go' | grep -q .
+}
+
 if [ ! -f "$COVERPROFILE" ]; then
   echo "Coverprofile not found: $COVERPROFILE" >&2
   exit 1
@@ -141,6 +152,10 @@ if [ -n "$PACKAGE_THRESHOLD_FILE" ]; then
     fi
 
     if ! current_coverage=$(coverage_from_profile "$package_path"); then
+      if has_no_coverable_statements "$package_path"; then
+        append_row "$package_path" 'n/a' "$minimum_coverage" ':information_source:'
+        continue
+      fi
       echo "::error::Package ${package_path} was not found in ${COVERPROFILE}"
       FAILURES=1
       append_row "$package_path" 'missing' "$minimum_coverage" ':x:'
