@@ -10,22 +10,6 @@ func sanitizeK8sStringForPrompt(input string) string {
 	return sanitize.PromptString(input)
 }
 
-// SanitizeK8sStringForPrompt neutralizes prompt-sensitive user-controlled input
-// before it is interpolated into downstream LLM prompts.
-//
-// Deprecated: Use sanitize.PromptString directly. This wrapper is retained
-// for backward compatibility during migration.
-func SanitizeK8sStringForPrompt(input string) string {
-	return sanitize.PromptString(input)
-}
-
-// SanitizePromptString keeps a generic alias for non-Kubernetes prompt fields.
-//
-// Deprecated: Use sanitize.PromptString directly.
-func SanitizePromptString(input string) string {
-	return sanitize.PromptString(input)
-}
-
 func sanitizeK8sStringsForPrompt(values []string) []string {
 	return sanitize.PromptStrings(values)
 }
