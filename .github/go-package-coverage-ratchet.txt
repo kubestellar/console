@@ -100,3 +100,15 @@ pkg/stellar/watcher 93.5
 # --- Misc test-helper / migrations packages ---
 pkg/k8s/k8stest 87.5
 pkg/store/migrations 88.5
+
+# --- Previously unratcheted packages (added so coverage cannot silently
+#     regress; see scripts/check-go-ratchet-completeness.sh). Packages under
+#     pkg/agent/protocol, pkg/client, pkg/stellar/prompts, and pkg/test are
+#     intentionally omitted because they contain no coverable statements or
+#     no test entry point and would be reported as "missing" by
+#     check-go-coverage-ratchet.sh. ---
+cmd/console 14.5
+cmd/kc-agent 0.0
+cmd/watcher 14.5
+pkg/api/handlers 68.5
+pkg/api/tracing 61.5
