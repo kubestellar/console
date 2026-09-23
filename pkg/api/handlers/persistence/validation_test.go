@@ -1,4 +1,4 @@
-package handlers
+package persistence
 
 // Tests for console_persistence_validation.go: matchString, clusterFilterNeedsNodes,
 // and evaluateClusterGroup (static-member and nil-client paths).

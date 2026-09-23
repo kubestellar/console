@@ -1,10 +1,11 @@
-package handlers
+package persistence
 
 import (
 	"context"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/api/middleware"
+	"github.com/kubestellar/console/pkg/api/transport"
 	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/safego"
@@ -16,6 +17,13 @@ import (
 	"strings"
 	"time"
 )
+
+// noClusterAccessMsg is the unified error message returned by every handler
+// when the Kubernetes client is unavailable. Duplicated locally (rather than
+// imported from the root handlers package) to avoid a circular import, since
+// the root handlers package aliases this subpackage's exported identifiers
+// (#9830). Mirrors the same pattern used in pkg/api/handlers/gitops.
+const noClusterAccessMsg = "No cluster access"
 
 // requireAdmin checks that the requesting user has the admin role.
 // Returns a Fiber error if not authorized, nil if authorized (#4750).
@@ -135,7 +143,7 @@ func (h *ConsolePersistenceHandlers) StopWatcher() {
 // because it's system-internal (not user-initiated).
 func (h *ConsolePersistenceHandlers) handleResourceEvent(event k8s.ConsoleResourceEvent) {
 	if h.hub != nil {
-		msg := Message{
+		msg := transport.Message{
 			Type: "console_resource_changed",
 			Data: event,
 		}

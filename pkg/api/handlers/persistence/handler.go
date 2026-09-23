@@ -1,8 +1,9 @@
-package handlers
+package persistence
 
 import (
 	"context"
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/api/transport"
 	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/store"
@@ -23,7 +24,7 @@ type ConsolePersistenceHandlers struct {
 	persistenceStore *store.PersistenceStore
 	k8sClient        *k8s.MultiClusterClient
 	watcher          *k8s.ConsoleWatcher
-	hub              *Hub
+	hub              *transport.Hub
 	userStore        store.Store
 	// deployer is used by reconcileDeployment. When nil, k8sClient is used.
 	// Tests can inject a fake to exercise per-cluster failure paths.
@@ -34,7 +35,7 @@ type ConsolePersistenceHandlers struct {
 func NewConsolePersistenceHandlers(
 	persistenceStore *store.PersistenceStore,
 	k8sClient *k8s.MultiClusterClient,
-	hub *Hub,
+	hub *transport.Hub,
 	userStore store.Store,
 ) *ConsolePersistenceHandlers {
 	h := &ConsolePersistenceHandlers{

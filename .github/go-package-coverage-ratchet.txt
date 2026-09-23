@@ -67,6 +67,7 @@ pkg/api/handlers/gitops 74.5
 pkg/api/handlers/internal/httputil 99.5
 pkg/api/handlers/mcp 65.5
 pkg/api/handlers/missions 74.5
+pkg/api/handlers/persistence 66.5
 pkg/api/handlers/rewards 62.5
 pkg/api/handlers/stellar 59.0
 pkg/api/handlers/workloads 78.5
