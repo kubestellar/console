@@ -19,7 +19,7 @@ name: Privileged Client Lint
 #                          authorized policy layer.
 #   self_upgrade.go      — The console pod patches its own Deployment. No
 #                          other identity could perform a self-upgrade.
-#   console_persistence.go — The reconciler (StartWatcher, reconcileDeployment,
+#   persistence/store.go — The reconciler (StartWatcher, reconcileDeployment,
 #                          evaluateClusterGroup, resolveManagedWorkload,
 #                          resolveTargetClusters, setTerminalStatus,
 #                          SyncNow, UpdateConfig) is system-internal: it
@@ -114,7 +114,7 @@ jobs:
           echo "The backend pod ServiceAccount may only be used for the GPU"
           echo "reservation exception (mcp/resources.go ResourceQuota handlers),"
           echo "the console self-upgrade (self_upgrade.go), and the system-"
-          echo "internal persistence reconciler (console_persistence.go)."
+          echo "internal persistence reconciler (persistence/store.go)."
           echo "Every other k8s mutation must go through kc-agent at"
           echo "LOCAL_AGENT_HTTP_URL with the user's kubeconfig — see #7993."
           echo

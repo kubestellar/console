@@ -29,6 +29,7 @@ gpu.go
 # Moved to mcp/ sub-package in #18101 (formerly mcp_resources.go).
 mcp/resources.go
 self_upgrade.go
-console_persistence.go
-# Split from console_persistence.go; same internal reconciler exception.
-console_persistence_store.go
+# Moved to persistence/ sub-package in #23690 (epic #23685 phase 1);
+# formerly console_persistence.go / console_persistence_store.go. Same
+# internal reconciler exception.
+persistence/store.go
