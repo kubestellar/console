@@ -140,19 +140,25 @@ export function RunDot({ run, guide, isDemoMode, isHighlighted, onMouseEnter, on
           logsContent = 'Demo mode: Log fetching is disabled. In live mode, this would fetch actual GitHub Actions logs for diagnosis.'
         } else {
           const API_BASE = import.meta.env.VITE_API_BASE_URL || BACKEND_DEFAULT_URL
-          const resp = await fetch(
-            `${API_BASE}/api/public/nightly-e2e/run-logs?repo=${encodeURIComponent(guide.repo)}&runId=${run.id}`,
-            { signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) }
-          )
-          if (resp.ok) {
-            const data = await resp.json()
-            if (data.jobs?.length) {
-              logsContent = data.jobs.map((j: { name: string; conclusion: string; log: string }) =>
-                `### Job: ${j.name} (${j.conclusion})\n\`\`\`\n${j.log}\n\`\`\``
-              ).join('\n\n')
-            } else {
-              logsContent = 'No failed job logs returned.'
+          try {
+            const resp = await fetch(
+              `${API_BASE}/api/public/nightly-e2e/run-logs?repo=${encodeURIComponent(guide.repo)}&runId=${run.id}`,
+              { signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) }
+            )
+            if (resp.ok) {
+              const data = await resp.json()
+              if (data.jobs?.length) {
+                logsContent = data.jobs.map((j: { name: string; conclusion: string; log: string }) =>
+                  `### Job: ${j.name} (${j.conclusion})\n\`\`\`\n${j.log}\n\`\`\``
+                ).join('\n\n')
+              } else {
+                logsContent = 'No failed job logs returned.'
+              }
             }
+          } catch (fetchErr) {
+            // Network error / timeout — keep the default fallback message so
+            // the mission still starts with a usable prompt (#23655).
+            console.warn('Failed to fetch nightly E2E run logs', fetchErr)
           }
         }
 
