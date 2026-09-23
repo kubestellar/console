@@ -24,6 +24,9 @@ import {
   NUM_OPERATORS,
 } from './ClusterGroups.constants'
 
+// Form sub-components for ClusterGroups card.
+// Demo data and loading state handled by parent ClusterGroups card.
+
 // Create Group Form
 // ============================================================================
 
