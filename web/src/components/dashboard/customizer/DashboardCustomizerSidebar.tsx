@@ -15,9 +15,22 @@ export function DashboardCustomizerSidebar({
   activeSection,
   onSectionChange,
 }: DashboardCustomizerSidebarProps) {
+  // Arrow-key navigation between section nav buttons (Home/End jump to first/last).
+  const handleNavKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
+    event.preventDefault()
+    const items = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button'))
+    if (items.length === 0) return
+    const currentIndex = Math.max(items.indexOf(document.activeElement as HTMLButtonElement), 0)
+    if (event.key === 'ArrowDown') items[Math.min(currentIndex + 1, items.length - 1)]?.focus()
+    else if (event.key === 'ArrowUp') items[Math.max(currentIndex - 1, 0)]?.focus()
+    else if (event.key === 'Home') items[0]?.focus()
+    else items[items.length - 1]?.focus()
+  }
+
   return (
     <div data-testid="studio-sidebar" className="w-56 border-r border-border flex flex-col h-full bg-secondary/20">
-      <nav className="flex-1 py-2">
+      <nav className="flex-1 py-2" onKeyDown={handleNavKeyDown}>
         {CUSTOMIZER_NAV.map((item) => {
           const Icon = item.icon
           const isActive = activeSection === item.id

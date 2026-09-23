@@ -350,6 +350,8 @@ export function StatBlockFactoryBuilderTab({
                     <button
                       onClick={() => onRemoveBlock(idx)}
                       className="p-1 text-muted-foreground hover:text-red-400 transition-colors min-h-11 min-w-11 flex items-center justify-center"
+                      title={t('dashboard.statFactory.deleteStatBlock')}
+                      aria-label={t('dashboard.statFactory.deleteStatBlock')}
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
