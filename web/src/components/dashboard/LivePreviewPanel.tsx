@@ -5,6 +5,7 @@ import { Tier1CardRuntime } from '../cards/DynamicCard'
 import { CARD_COMPILE_TIMEOUT_MS, compileCardCode, createCardComponent } from '../../lib/dynamic-cards/compiler'
 import { DynamicCardErrorBoundary } from '../cards/DynamicCardErrorBoundary'
 import { cn } from '../../lib/cn'
+import { Button } from '../ui/Button'
 import type { DynamicCardDefinition, DynamicCardDefinition_T1 } from '../../lib/dynamic-cards/types'
 import type { CardComponent } from '../cards/cardRegistry'
 
@@ -39,13 +40,13 @@ export function LivePreviewPanel({ tier, t1Config, t2Source, title, width = 6 }:
   if (collapsed) {
     return (
       <div className="flex items-center justify-center border-l border-border/50 bg-secondary/10 w-10 shrink-0">
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => setCollapsed(false)}
-          className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
           title={t('dashboard.preview.showPreview')}
-        >
-          <Eye className="w-4 h-4" />
-        </button>
+          icon={<Eye className="w-4 h-4" />}
+        />
       </div>
     )
   }
@@ -66,20 +67,20 @@ export function LivePreviewPanel({ tier, t1Config, t2Source, title, width = 6 }:
           </span>
         </div>
         <div className="flex items-center gap-0.5">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setSizeMode(sizeMode === 'card' ? 'full' : 'card')}
-            className="p-1 rounded text-muted-foreground/60 hover:text-foreground transition-colors"
             title={sizeMode === 'card' ? t('dashboard.preview.fullWidth') : t('dashboard.preview.cardWidth')}
-          >
-            {sizeMode === 'card' ? <Maximize2 className="w-3 h-3" /> : <Minimize2 className="w-3 h-3" />}
-          </button>
-          <button
+            icon={sizeMode === 'card' ? <Maximize2 className="w-3 h-3" /> : <Minimize2 className="w-3 h-3" />}
+          />
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setCollapsed(true)}
-            className="p-1 rounded text-muted-foreground/60 hover:text-foreground transition-colors"
             title={t('dashboard.preview.hidePreview')}
-          >
-            <EyeOff className="w-3 h-3" />
-          </button>
+            icon={<EyeOff className="w-3 h-3" />}
+          />
         </div>
       </div>
 
