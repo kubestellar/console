@@ -7,6 +7,8 @@
  * `localStorage`.
  */
 
+import { safeGet, safeSet } from '../../lib/safeLocalStorage'
+
 export const CATEGORY_FILTERS = [
   'All',
   'Troubleshoot',
@@ -62,24 +64,24 @@ export const MATURITY_LEVELS = ['All', 'graduated', 'incubating', 'sandbox'] as 
 
 export function loadWatchedRepos(): string[] {
   try {
-    const parsed = JSON.parse(localStorage.getItem(WATCHED_REPOS_KEY) || '[]')
+    const parsed = JSON.parse(safeGet(WATCHED_REPOS_KEY) || '[]')
     if (!Array.isArray(parsed)) return []
     return parsed.filter((v): v is string => typeof v === 'string')
   } catch { return [] }
 }
 
 export function saveWatchedRepos(repos: string[]) {
-  localStorage.setItem(WATCHED_REPOS_KEY, JSON.stringify(repos))
+  safeSet(WATCHED_REPOS_KEY, JSON.stringify(repos))
 }
 
 export function loadWatchedPaths(): string[] {
   try {
-    const parsed = JSON.parse(localStorage.getItem(WATCHED_PATHS_KEY) || '[]')
+    const parsed = JSON.parse(safeGet(WATCHED_PATHS_KEY) || '[]')
     if (!Array.isArray(parsed)) return []
     return parsed.filter((v): v is string => typeof v === 'string')
   } catch { return [] }
 }
 
 export function saveWatchedPaths(paths: string[]) {
-  localStorage.setItem(WATCHED_PATHS_KEY, JSON.stringify(paths))
+  safeSet(WATCHED_PATHS_KEY, JSON.stringify(paths))
 }

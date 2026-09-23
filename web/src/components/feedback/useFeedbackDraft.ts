@@ -24,7 +24,7 @@ import {
   isFeedbackRequestBodyTooLarge,
   isFeedbackRequestBodyLimitError,
 } from './FeatureRequestTypes'
-import { safeRemove, safeSetJSON } from '../../lib/safeLocalStorage'
+import { safeGet, safeRemove, safeSetJSON } from '../../lib/safeLocalStorage'
 import { type FeedbackType, type FeedbackModalProps, DRAFT_KEY, type DraftState } from './FeedbackModal.types'
 import { useModalFocusTrap } from '../../lib/modals'
 
@@ -138,7 +138,7 @@ export function useFeedbackDraft({ isOpen, onClose, initialType = 'feature' }: F
   // Restore draft from localStorage on mount
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(DRAFT_KEY)
+      const saved = safeGet(DRAFT_KEY)
       if (saved) {
         const draft: DraftState = JSON.parse(saved)
         setType(draft.type)
