@@ -135,9 +135,10 @@ export function GitOpsAppRow({ app, syncStatusColor, syncStatusLabel, healthStat
           </ul>
           <button
             onClick={() => onSync(app)}
-            className="mt-2 px-3 py-1 rounded bg-yellow-500/20 text-yellow-400 text-xs hover:bg-yellow-500/30 transition-colors flex items-center gap-1.5"
+            disabled={app.syncStatus === 'checking'}
+            className="mt-2 px-3 py-1 rounded bg-yellow-500/20 text-yellow-400 text-xs hover:bg-yellow-500/30 transition-colors flex items-center gap-1.5 disabled:opacity-50"
           >
-            <RefreshCw className="w-3 h-3" />
+            <RefreshCw className={`w-3 h-3 ${app.syncStatus === 'checking' ? 'animate-spin' : ''}`} />
             {t('gitops.syncNow')}
           </button>
         </div>
