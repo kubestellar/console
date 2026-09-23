@@ -2,6 +2,7 @@ import { getChartColor } from '../../lib/theme/chartColors'
 import type { GPUReservation } from '../../hooks/useGPUReservations'
 import type { GPUNode, ResourceQuota } from '../../hooks/mcp/types'
 import { GPU_KEYS, MAX_NAME_DISPLAY_LENGTH } from './gpu-constants'
+import { unschedulableFreeGPUs } from '../cards/GPUTaintFilter'
 
 const CHART_COLOR_COUNT = 4
 const PERCENT_SCALE = 100
@@ -18,6 +19,11 @@ export interface GPUOverviewStats {
   totalGPUs: number
   allocatedGPUs: number
   availableGPUs: number
+  /**
+   * Free GPUs that sit on cordoned, NotReady or NoSchedule/NoExecute-tainted
+   * nodes. Counted in `totalGPUs` but excluded from `availableGPUs` (#23676).
+   */
+  unschedulableGPUs: number
   utilizationPercent: number
   activeReservations: number
   reservedGPUs: number
@@ -42,7 +48,13 @@ export function computeGPUOverviewStats({
     (nodes || []).reduce((sum, node) => sum + Math.max(node.gpuAllocated || 0, 0), 0),
     totalGPUs,
   )
-  const availableGPUs = Math.max(totalGPUs - allocatedGPUs, 0)
+  // GPUs on cordoned / NotReady / untolerated-tainted nodes cannot take new
+  // pods, so their free capacity is not "available" (#23676).
+  const unschedulableGPUs = Math.min(
+    (nodes || []).reduce((sum, node) => sum + unschedulableFreeGPUs(node), 0),
+    Math.max(totalGPUs - allocatedGPUs, 0),
+  )
+  const availableGPUs = Math.max(totalGPUs - allocatedGPUs - unschedulableGPUs, 0)
   const utilizationPercent = totalGPUs > 0
     ? Math.round((allocatedGPUs / totalGPUs) * PERCENT_SCALE)
     : 0
@@ -98,6 +110,7 @@ export function computeGPUOverviewStats({
     totalGPUs,
     allocatedGPUs,
     availableGPUs,
+    unschedulableGPUs,
     utilizationPercent,
     activeReservations,
     reservedGPUs,

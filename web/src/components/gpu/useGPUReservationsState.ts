@@ -13,6 +13,7 @@ import { useGPUUtilizations } from '../../hooks/useGPUUtilizations'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { GPU_KEYS } from './gpu-constants'
 import { computeGPUOverviewStats } from './gpuOverviewStats'
+import { unschedulableFreeGPUs } from '../cards/GPUTaintFilter'
 import { useGPUDashboardCards } from './useGPUDashboardCards'
 import { useGPUCalendarState } from './useGPUCalendarState'
 import { useGPUReservationForm } from './useGPUReservationForm'
@@ -132,6 +133,9 @@ export function useGPUReservationsState() {
   // Clusters with GPU info for the dropdown
   const gpuClusters = (() => {
     const clusterMap: Record<string, GPUClusterInfo> = {}
+    // Free GPUs on cordoned / NotReady / tainted nodes, per cluster. They stay
+    // in totalGPUs but must not be offered as reservable capacity (#23676).
+    const unschedulableByCluster: Record<string, number> = {}
     for (const node of (rawNodes || [])) {
       if (!clusterMap[node.cluster]) {
         clusterMap[node.cluster] = {
@@ -142,9 +146,10 @@ export function useGPUReservationsState() {
           gpuTypes: [] }
       }
       const c = clusterMap[node.cluster]
-      c.totalGPUs += node.gpuCount
-      c.allocatedGPUs += node.gpuAllocated
-      c.availableGPUs = c.totalGPUs - c.allocatedGPUs
+      c.totalGPUs += node.gpuCount || 0
+      c.allocatedGPUs += node.gpuAllocated || 0
+      unschedulableByCluster[node.cluster] = (unschedulableByCluster[node.cluster] || 0) + unschedulableFreeGPUs(node)
+      c.availableGPUs = Math.max(c.totalGPUs - c.allocatedGPUs - unschedulableByCluster[node.cluster], 0)
       if (!c.gpuTypes.includes(node.gpuType)) {
         c.gpuTypes.push(node.gpuType)
       }

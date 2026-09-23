@@ -9,6 +9,7 @@ import type { GPUNode } from '../../hooks/useMCP'
 import type { GPUReservation, CreateGPUReservationInput, UpdateGPUReservationInput } from '../../hooks/useGPUReservations'
 import { normalizeGpuTypes } from '../../hooks/useGPUReservations'
 import type { GPUClusterInfo } from './ReservationFormModal'
+import { unschedulableFreeGPUs } from '../cards/GPUTaintFilter'
 
 type TranslateFn = (key: string, options?: string | Record<string, unknown>) => string
 
@@ -252,16 +253,18 @@ export function useReservationFormState({
   // GPU types available on selected cluster with per-type counts
   const clusterGPUTypes = (() => {
     if (!cluster) return [] as Array<{ type: string; total: number; available: number }>
-    const typeMap: Record<string, { total: number; allocated: number }> = {}
-    for (const n of allNodes.filter(n => n.cluster === cluster)) {
-      if (!typeMap[n.gpuType]) typeMap[n.gpuType] = { total: 0, allocated: 0 }
-      typeMap[n.gpuType].total += n.gpuCount
-      typeMap[n.gpuType].allocated += n.gpuAllocated
+    const typeMap: Record<string, { total: number; allocated: number; unschedulable: number }> = {}
+    for (const n of (allNodes || []).filter(n => n.cluster === cluster)) {
+      if (!typeMap[n.gpuType]) typeMap[n.gpuType] = { total: 0, allocated: 0, unschedulable: 0 }
+      typeMap[n.gpuType].total += n.gpuCount || 0
+      typeMap[n.gpuType].allocated += n.gpuAllocated || 0
+      // Free GPUs on cordoned / NotReady / tainted nodes are not reservable (#23676).
+      typeMap[n.gpuType].unschedulable += unschedulableFreeGPUs(n)
     }
     return Object.entries(typeMap).map(([type, d]) => ({
       type,
       total: d.total,
-      available: d.total - d.allocated }))
+      available: Math.max(d.total - d.allocated - d.unschedulable, 0) }))
   })()
 
   // Auto-generate quota name from title

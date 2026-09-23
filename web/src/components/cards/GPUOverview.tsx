@@ -131,7 +131,7 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
     )
   }
 
-  const totalGPUs = nodes.reduce((sum, n) => sum + n.gpuCount, 0)
+  const totalGPUs = (nodes || []).reduce((sum, n) => sum + (n.gpuCount || 0), 0)
 
   // Empty state when clusters are reachable but have no GPU resources
   if (!isLoading && totalGPUs === 0) {
@@ -149,7 +149,7 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
       </div>
     )
   }
-  const allocatedGPUs = nodes.reduce((sum, n) => sum + n.gpuAllocated, 0)
+  const allocatedGPUs = (nodes || []).reduce((sum, n) => sum + Math.max(n.gpuAllocated || 0, 0), 0)
   const gpuUtilization = totalGPUs > 0 ? (allocatedGPUs / totalGPUs) * 100 : 0
 
   // Group by type and sort
