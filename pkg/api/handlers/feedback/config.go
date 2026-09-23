@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"net/url"
 	"os"
 	"regexp"
 	"strconv"
@@ -16,6 +15,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/api/handlers/internal/httputil"
 	"github.com/kubestellar/console/pkg/client"
 	"github.com/kubestellar/console/pkg/settings"
 	"github.com/kubestellar/console/pkg/store"
@@ -79,7 +79,7 @@ const githubAPIBase = "https://api.github.com"
 // #6644: name/comment were previously feedback-specific, but parsePageParams
 // is reused by non-feedback handlers. Renamed to maxClientPageLimit and
 // scoped the comment to all list endpoints.
-const maxClientPageLimit = 1000
+const maxClientPageLimit = httputil.MaxClientPageLimit
 
 // parsePageParams reads `limit` and `offset` query params with defense against
 // malformed or oversized requests. Returns (limit, offset, err).
@@ -94,26 +94,7 @@ const maxClientPageLimit = 1000
 //
 // #6598-#6602.
 func parsePageParams(c *fiber.Ctx) (int, int, error) {
-	limit := 0
-	if raw := c.Query("limit"); raw != "" {
-		n, err := strconv.Atoi(raw)
-		if err != nil || n < 0 {
-			return 0, 0, fiber.NewError(fiber.StatusBadRequest, "invalid limit")
-		}
-		if n > maxClientPageLimit {
-			return 0, 0, fiber.NewError(fiber.StatusBadRequest, "limit too large")
-		}
-		limit = n
-	}
-	offset := 0
-	if raw := c.Query("offset"); raw != "" {
-		n, err := strconv.Atoi(raw)
-		if err != nil || n < 0 {
-			return 0, 0, fiber.NewError(fiber.StatusBadRequest, "invalid offset")
-		}
-		offset = n
-	}
-	return limit, offset, nil
+	return httputil.ParsePageParams(c)
 }
 
 // resolveGitHubAPIBase returns the API base URL, honoring GITHUB_URL for GHE.
@@ -174,19 +155,7 @@ func resolveGitHubUIBase() string {
 // "github.com" or a full URL like "https://ghe.example.com/foo") and returns
 // the lowercased hostname. It is tolerant of missing schemes.
 func extractHost(raw string) (string, error) {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return "", fmt.Errorf("empty URL")
-	}
-	// url.Parse treats bare hosts as Path, so inject a scheme if missing.
-	if !strings.Contains(raw, "://") {
-		raw = "https://" + raw
-	}
-	u, err := url.Parse(raw)
-	if err != nil {
-		return "", err
-	}
-	return strings.ToLower(u.Hostname()), nil
+	return httputil.ExtractHost(raw)
 }
 
 // screenshotUploadTimeout is a longer timeout for uploading base64 screenshots
@@ -371,8 +340,5 @@ func LoadFeedbackConfig() FeedbackConfig {
 }
 
 func getEnvOrDefault(key, defaultVal string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return defaultVal
+	return httputil.GetEnvOrDefault(key, defaultVal)
 }

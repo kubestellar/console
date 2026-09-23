@@ -5027,7 +5027,8 @@
       "errors": {
         "downloadJson": "Failed to export JSON: {{message}}",
         "downloadYaml": "Failed to export YAML: {{message}}",
-        "unknown": "unknown error"
+        "unknown": "unknown error",
+        "scanFailed": "Failed to scan mission for sensitive data. Review the content manually before sharing."
       }
     },
     "submitToKB": {

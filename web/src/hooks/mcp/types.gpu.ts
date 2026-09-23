@@ -24,6 +24,16 @@ export interface GPUNode {
   acceleratorType?: AcceleratorType  // GPU, TPU, AIU, or XPU
   /** Scheduling-gating taints on the underlying node (issue #8172). */
   taints?: GPUTaint[]
+  /**
+   * Mirrors `node.spec.unschedulable` (kubectl cordon). Optional because
+   * older agents do not report it (issue #23676).
+   */
+  unschedulable?: boolean
+  /**
+   * NodeReady condition. `false` when NotReady; optional because older
+   * agents do not report it (issue #23676).
+   */
+  ready?: boolean
   // Enhanced GPU info from NVIDIA GPU Feature Discovery
   gpuMemoryMB?: number
   gpuFamily?: string

@@ -68,6 +68,7 @@ export function useReplicaSetDrillDown(
           rs = JSON.parse(output)
         } catch {
           console.warn('[ReplicaSetDrillDown] Failed to parse ReplicaSet JSON output')
+          setError('Failed to parse ReplicaSet data')
           return
         }
         setReplicas(rs.spec?.replicas || 0)
@@ -93,6 +94,7 @@ export function useReplicaSetDrillDown(
             } catch {
               console.warn('[ReplicaSetDrillDown] Failed to parse Pods JSON output')
               setPods([])
+              setError('Failed to parse Pods data')
               return
             }
             const podInfo = podList.items?.map((p: { metadata: { name: string }; status: { phase: string; containerStatuses?: Array<{ restartCount: number }> } }) => ({

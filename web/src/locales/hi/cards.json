@@ -1747,7 +1747,9 @@
     "createReservation": "Create GPU Reservation",
     "stats": {
       "activeReservations": "Active Reservations",
-      "reservedGpus": "Reserved GPUs"
+      "reservedGpus": "Reserved GPUs",
+      "unschedulableGpus": "{{count}} अनिर्धारणीय",
+      "unschedulableGpusTitle": "कॉर्डन किए गए, NotReady या NoSchedule/NoExecute टेंट वाले नोड्स पर खाली GPU। कुल में गिने जाते हैं, उपलब्ध में नहीं।"
     },
     "charts": {
       "gpuUtilization": "GPU Utilization",
