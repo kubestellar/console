@@ -30,6 +30,12 @@ type GPUNode struct {
 	// Scheduling-gating taints on the underlying node.
 	// Empty when the node has no NoSchedule/NoExecute taints.
 	Taints []GPUTaint `json:"taints,omitempty"`
+	// Unschedulable mirrors node.Spec.Unschedulable (kubectl cordon). A cordoned
+	// node cannot accept new pods, so its free GPUs are not "available" (#23676).
+	Unschedulable bool `json:"unschedulable"`
+	// Ready reflects the NodeReady condition. False when the node is NotReady
+	// or the condition is missing/unknown (#23676).
+	Ready bool `json:"ready"`
 	// Enhanced GPU info from NVIDIA GPU Feature Discovery
 	GPUMemoryMB        int    `json:"gpuMemoryMB,omitempty"`        // GPU memory in MB
 	GPUFamily          string `json:"gpuFamily,omitempty"`          // GPU architecture family (e.g., ampere, hopper)

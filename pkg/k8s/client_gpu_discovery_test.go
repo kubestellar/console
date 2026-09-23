@@ -286,6 +286,88 @@ func TestGetGPUNodes_TaintCollection(t *testing.T) {
 	assert.Equal(t, "NoExecute", taintKeys["node.kubernetes.io/unschedulable"])
 }
 
+func TestGetGPUNodes_CordonedNode(t *testing.T) {
+	t.Parallel()
+	node := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "cordoned-gpu-node",
+			Labels: map[string]string{"nvidia.com/gpu.product": "A100"},
+		},
+		Spec: corev1.NodeSpec{
+			// kubectl cordon sets Spec.Unschedulable; the taint is added by the
+			// TaintNodesByCondition controller but may lag or be absent.
+			Unschedulable: true,
+		},
+		Status: corev1.NodeStatus{
+			Allocatable: corev1.ResourceList{
+				"nvidia.com/gpu": resource.MustParse("8"),
+			},
+			Conditions: []corev1.NodeCondition{
+				{Type: corev1.NodeReady, Status: corev1.ConditionTrue},
+			},
+		},
+	}
+	m := newGPUDiscoClient(node)
+	nodes, err := m.GetGPUNodes(context.Background(), testGPUDiscoCluster)
+	require.NoError(t, err)
+	require.Len(t, nodes, 1)
+	// The GPUs are still inventoried (Total) but the node is flagged so the
+	// frontend can exclude them from Available (#23676).
+	assert.Equal(t, 8, nodes[0].GPUCount)
+	assert.True(t, nodes[0].Unschedulable, "Spec.Unschedulable must be surfaced")
+	assert.True(t, nodes[0].Ready, "a cordoned-but-Ready node is still Ready")
+	assert.Empty(t, nodes[0].Taints, "cordon via spec alone carries no taint")
+}
+
+func TestGetGPUNodes_NotReadyNode(t *testing.T) {
+	t.Parallel()
+	node := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "notready-gpu-node",
+			Labels: map[string]string{"nvidia.com/gpu.product": "A100"},
+		},
+		Status: corev1.NodeStatus{
+			Allocatable: corev1.ResourceList{
+				"nvidia.com/gpu": resource.MustParse("4"),
+			},
+			Conditions: []corev1.NodeCondition{
+				{Type: corev1.NodeReady, Status: corev1.ConditionFalse, Message: "kubelet stopped posting node status"},
+			},
+		},
+	}
+	m := newGPUDiscoClient(node)
+	nodes, err := m.GetGPUNodes(context.Background(), testGPUDiscoCluster)
+	require.NoError(t, err)
+	require.Len(t, nodes, 1)
+	assert.Equal(t, 4, nodes[0].GPUCount)
+	assert.False(t, nodes[0].Ready, "NodeReady=False must be surfaced as Ready=false")
+	assert.False(t, nodes[0].Unschedulable, "NotReady does not imply cordoned")
+}
+
+func TestGetGPUNodes_ReadyNodeIsSchedulable(t *testing.T) {
+	t.Parallel()
+	node := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "healthy-gpu-node",
+			Labels: map[string]string{"nvidia.com/gpu.product": "A100"},
+		},
+		Status: corev1.NodeStatus{
+			Allocatable: corev1.ResourceList{
+				"nvidia.com/gpu": resource.MustParse("2"),
+			},
+			Conditions: []corev1.NodeCondition{
+				{Type: corev1.NodeReady, Status: corev1.ConditionTrue},
+			},
+		},
+	}
+	m := newGPUDiscoClient(node)
+	nodes, err := m.GetGPUNodes(context.Background(), testGPUDiscoCluster)
+	require.NoError(t, err)
+	require.Len(t, nodes, 1)
+	assert.True(t, nodes[0].Ready)
+	assert.False(t, nodes[0].Unschedulable)
+}
+
 func TestGetGPUNodes_CUDAVersionAssembly(t *testing.T) {
 	t.Parallel()
 	node := &corev1.Node{

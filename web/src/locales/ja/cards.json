@@ -1747,7 +1747,9 @@
     "createReservation": "Create GPU Reservation",
     "stats": {
       "activeReservations": "Active Reservations",
-      "reservedGpus": "Reserved GPUs"
+      "reservedGpus": "Reserved GPUs",
+      "unschedulableGpus": "{{count}} スケジュール不可",
+      "unschedulableGpusTitle": "cordon 済み、NotReady、または NoSchedule/NoExecute taint 付きノード上の空き GPU。合計には含まれますが利用可能には含まれません。"
     },
     "charts": {
       "gpuUtilization": "GPU Utilization",

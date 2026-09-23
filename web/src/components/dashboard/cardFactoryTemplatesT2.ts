@@ -371,10 +371,17 @@ export const T2_TEMPLATES: T2Template[] = [
   const [adding, setAdding] = useState(false)
   const [form, setForm] = useState({ namespace: 'default', resource: '', localPort: '', remotePort: '', protocol: 'TCP' })
   const [copied, setCopied] = useState(null)
+  const [persistError, setPersistError] = useState(false)
 
   // Persist forwards
   useEffect(() => {
-    try { window?.localStorage?.setItem?.(STORAGE_KEY, JSON.stringify(forwards)) } catch (e: unknown) { console.error('[CardFactoryModal] failed to persist port-forwards:', e) }
+    try {
+      window?.localStorage?.setItem?.(STORAGE_KEY, JSON.stringify(forwards))
+      setPersistError(false)
+    } catch (e: unknown) {
+      console.error('[CardFactoryModal] failed to persist port-forwards:', e)
+      setPersistError(true)
+    }
   }, [forwards])
 
   const addForward = () => {
@@ -425,6 +432,13 @@ export const T2_TEMPLATES: T2Template[] = [
           {adding ? 'Cancel' : 'Add'}
         </button>
       </div>
+
+      {persistError && (
+        <div className="flex items-center gap-1.5 mb-2 px-2 py-1 rounded bg-red-500/10 text-xs text-red-400">
+          <AlertTriangle className="w-3 h-3 shrink-0" />
+          Failed to save port forwards — changes may not persist
+        </div>
+      )}
 
       {adding && (
         <div className="grid grid-cols-2 gap-2 mb-3 p-2 rounded bg-secondary/20 border border-border/50">
