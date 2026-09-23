@@ -236,7 +236,8 @@
     "unknownError": "Unknown error",
     "ibmUpstreamUnavailable": "IBM Quantum is temporarily unavailable. We'll keep retrying — your saved credentials are unaffected.",
     "customQasmSaved": "Custom QASM configuration saved",
-    "qasmFileLabel": "QASM File (use 'Custom QASM' to paste or upload code)"
+    "qasmFileLabel": "QASM File (use 'Custom QASM' to paste or upload code)",
+    "circuitPopoutFetchFailed": "Failed to open circuit view"
   },
   "titles": {
     "cluster_health": "Cluster Health",
