@@ -20,12 +20,12 @@ func IsDemoMode(c *fiber.Ctx) bool {
 // when the Kubernetes client is unavailable (e.g., no kubeconfig loaded, or
 // the kc-agent websocket is disconnected). Keeping this as a single constant
 // ensures the message stays in sync across handlers (#9830).
-const noClusterAccessMsg = "No cluster access"
+const noClusterAccessMsg = httputil.NoClusterAccessMsg
 
 // ErrNoClusterAccess returns a standard error for missing cluster access.
 // Exported for use in sub-packages like gitops.
 func ErrNoClusterAccess(c *fiber.Ctx) error {
-	return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": noClusterAccessMsg})
+	return httputil.ErrNoClusterAccess(c)
 }
 
 // Demo cluster data - matches frontend GetDemoClusters() for consistency

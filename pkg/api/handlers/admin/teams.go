@@ -1,4 +1,4 @@
-package handlers
+package admin
 
 import (
 	"strings"
@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/api/audit"
+	"github.com/kubestellar/console/pkg/api/handlers/internal/httputil"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/services/team"
@@ -24,7 +25,7 @@ func NewTeamHandler(svc team.Service) *TeamHandler {
 // ListTeams returns all teams the user can see
 func (h *TeamHandler) ListTeams(c *fiber.Ctx) error {
 	userID := middleware.GetUserID(c)
-	limit, offset, err := ParsePageParams(c)
+	limit, offset, err := httputil.ParsePageParams(c)
 	if err != nil {
 		return err
 	}
@@ -221,7 +222,7 @@ func (h *TeamHandler) GetUserTeams(c *fiber.Ctx) error {
 
 // ListAllTeams returns all teams (admin-only)
 func (h *TeamHandler) ListAllTeams(c *fiber.Ctx) error {
-	limit, offset, err := ParsePageParams(c)
+	limit, offset, err := httputil.ParsePageParams(c)
 	if err != nil {
 		return err
 	}

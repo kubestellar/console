@@ -1,4 +1,4 @@
-package handlers
+package admin
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/kubestellar/console/pkg/api/audit"
+	"github.com/kubestellar/console/pkg/api/handlers/internal/httputil"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/models"
@@ -20,6 +21,11 @@ import (
 
 // rbacAnalysisTimeout is the timeout for RBAC analysis queries on large clusters.
 const rbacAnalysisTimeout = 60 * time.Second
+
+// defaultClusterFanoutConcurrency bounds how many clusters a handler fans out
+// to concurrently. Duplicated from the root handlers package (as in the
+// workloads subpackage) to avoid an import cycle (epic #23685).
+const defaultClusterFanoutConcurrency = 4
 
 // parseUUID parses a UUID string
 func parseUUID(s string) (uuid.UUID, error) {
@@ -77,7 +83,7 @@ func (h *RBACHandler) ListConsoleUsers(c *fiber.Ctx) error {
 	// #6595: bound the read. ?limit=&offset= follow the same contract as the
 	// feedback list endpoints (see ParsePageParams). Absent limit → store
 	// default; malformed/oversized limit → HTTP 400.
-	limit, offset, err := ParsePageParams(c)
+	limit, offset, err := httputil.ParsePageParams(c)
 	if err != nil {
 		return err
 	}
@@ -232,13 +238,13 @@ func (h *RBACHandler) ListK8sServiceAccounts(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient == nil {
-		return ErrNoClusterAccess(c)
+		return httputil.ErrNoClusterAccess(c)
 	}
 
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 
-	if err := validateClusterAndNamespace(cluster, namespace); err != nil {
+	if err := httputil.ValidateClusterAndNamespace(cluster, namespace); err != nil {
 		return err
 	}
 
@@ -325,14 +331,14 @@ func (h *RBACHandler) ListK8sRoles(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient == nil {
-		return ErrNoClusterAccess(c)
+		return httputil.ErrNoClusterAccess(c)
 	}
 
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 	includeSystem := c.Query("includeSystem") == "true"
 
-	if err := validateClusterAndNamespace(cluster, namespace); err != nil {
+	if err := httputil.ValidateClusterAndNamespace(cluster, namespace); err != nil {
 		return err
 	}
 
@@ -377,14 +383,14 @@ func (h *RBACHandler) ListK8sRoleBindings(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient == nil {
-		return ErrNoClusterAccess(c)
+		return httputil.ErrNoClusterAccess(c)
 	}
 
 	cluster := c.Query("cluster")
 	namespace := c.Query("namespace")
 	includeSystem := c.Query("includeSystem") == "true"
 
-	if err := validateClusterAndNamespace(cluster, namespace); err != nil {
+	if err := httputil.ValidateClusterAndNamespace(cluster, namespace); err != nil {
 		return err
 	}
 
@@ -444,14 +450,14 @@ func (h *RBACHandler) ListK8sUsers(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient == nil {
-		return ErrNoClusterAccess(c)
+		return httputil.ErrNoClusterAccess(c)
 	}
 
 	cluster := c.Query("cluster")
 	if cluster == "" {
 		return fiber.NewError(fiber.StatusBadRequest, "Cluster parameter required")
 	}
-	if err := validateK8sName("cluster", cluster); err != nil {
+	if err := httputil.ValidateK8sName("cluster", cluster); err != nil {
 		return err
 	}
 
@@ -482,14 +488,14 @@ func (h *RBACHandler) ListOpenShiftUsers(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient == nil {
-		return ErrNoClusterAccess(c)
+		return httputil.ErrNoClusterAccess(c)
 	}
 
 	cluster := c.Query("cluster")
 	if cluster == "" {
 		return fiber.NewError(fiber.StatusBadRequest, "Cluster parameter required")
 	}
-	if err := validateK8sName("cluster", cluster); err != nil {
+	if err := httputil.ValidateK8sName("cluster", cluster); err != nil {
 		return err
 	}
 
