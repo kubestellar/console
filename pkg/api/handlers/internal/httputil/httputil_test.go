@@ -1,4 +1,4 @@
-package handlers
+package httputil
 
 import (
 	"encoding/json"
@@ -38,7 +38,7 @@ func newParsePageParamsTestApp(t *testing.T) *fiber.App {
 
 func TestParsePageParams(t *testing.T) {
 	app := newParsePageParamsTestApp(t)
-	limitTooLarge := maxClientPageLimit + 1
+	limitTooLarge := MaxClientPageLimit + 1
 
 	tests := []struct {
 		name          string
@@ -57,7 +57,7 @@ func TestParsePageParams(t *testing.T) {
 			name:         "accepts zero and boundary values",
 			query:        "?limit=1000&offset=0",
 			wantStatus:   http.StatusOK,
-			wantResponse: &pageParamsResponse{Limit: maxClientPageLimit, Offset: 0},
+			wantResponse: &pageParamsResponse{Limit: MaxClientPageLimit, Offset: 0},
 		},
 		{
 			name:         "accepts positive values",
@@ -143,17 +143,17 @@ func TestResolveGitHubAPIBase(t *testing.T) {
 		{
 			name:      "defaults to public github api when env is unset",
 			githubURL: "",
-			want:      githubAPIBase,
+			want:      GitHubAPIBase,
 		},
 		{
 			name:      "maps bare github host to public api",
 			githubURL: "github.com",
-			want:      githubAPIBase,
+			want:      GitHubAPIBase,
 		},
 		{
 			name:      "maps www github host to public api",
 			githubURL: " https://www.github.com/ ",
-			want:      githubAPIBase,
+			want:      GitHubAPIBase,
 		},
 		{
 			name:      "appends ghe api path for bare enterprise host",

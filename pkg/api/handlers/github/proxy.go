@@ -20,6 +20,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/api/audit"
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/internal/httputil"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/client"
 	"github.com/kubestellar/console/pkg/settings"
@@ -59,7 +60,7 @@ const (
 
 // githubProxyAPIBase is the base URL for proxied GitHub API requests.
 // Configurable via GITHUB_API_BASE_URL env var to support GitHub Enterprise Server.
-var githubProxyAPIBase = handlers.GetEnvOrDefault("GITHUB_API_BASE_URL", githubProxyAPIBaseDefault)
+var githubProxyAPIBase = httputil.GetEnvOrDefault("GITHUB_API_BASE_URL", githubProxyAPIBaseDefault)
 
 var githubProxyClient = client.GitHub
 
