@@ -90,13 +90,13 @@ func (g *publicRouteGroup) Register(publicLimiter, analyticsBodyGuard fiber.Hand
 	dataResidency := compliance.NewDataResidencyHandler(residencyEngine)
 	dataResidency.RegisterPublicRoutes(g.app.Group("/api/compliance/residency", publicLimiter))
 
-	changeControl := handlers.NewChangeControlHandler()
+	changeControl := compliance.NewChangeControlHandler()
 	changeControl.RegisterPublicRoutes(publicAPI)
 
 	sodHandler := compliance.NewSoDHandler()
 	sodHandler.RegisterPublicRoutes(publicAPI)
 
-	baaHandler := handlers.NewBAAHandler()
+	baaHandler := compliance.NewBAAHandler()
 	baaHandler.RegisterPublicRoutes(publicAPI)
 
 	hipaaHandler := compliance.NewHIPAAHandler()
