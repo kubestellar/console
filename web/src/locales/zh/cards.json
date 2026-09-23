@@ -1747,7 +1747,9 @@
     "createReservation": "Create GPU Reservation",
     "stats": {
       "activeReservations": "Active Reservations",
-      "reservedGpus": "Reserved GPUs"
+      "reservedGpus": "Reserved GPUs",
+      "unschedulableGpus": "{{count}} 个不可调度",
+      "unschedulableGpusTitle": "位于已封锁 (cordon)、NotReady 或带有 NoSchedule/NoExecute 污点节点上的空闲 GPU。计入总数但不计入可用数。"
     },
     "charts": {
       "gpuUtilization": "GPU Utilization",

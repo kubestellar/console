@@ -68,4 +68,82 @@ describe('computeGPUOverviewStats', () => {
     expect(stats.reservedGPUs).toBe(6)
     expect(stats.clusterUsage).toEqual([{ name: 'cluster-a', value: 6 }])
   })
+
+  describe('unschedulable nodes (#23676)', () => {
+    const HEALTHY_NODE: GPUNode = {
+      name: 'healthy-node', cluster: 'cluster-a', gpuType: 'NVIDIA A100', gpuCount: 4, gpuAllocated: 1, ready: true,
+    }
+    const HEALTHY_FREE = HEALTHY_NODE.gpuCount - HEALTHY_NODE.gpuAllocated
+    const BLOCKED_GPU_COUNT = 8
+
+    function statsWith(extraNode: GPUNode) {
+      return computeGPUOverviewStats({
+        nodes: [HEALTHY_NODE, extraNode],
+        reservations: [],
+        gpuQuotas: EMPTY_QUOTAS,
+        gpuClusters: [],
+      })
+    }
+
+    it('excludes GPUs on a cordoned node from available but keeps them in total', () => {
+      const stats = statsWith({
+        name: 'cordoned', cluster: 'cluster-a', gpuType: 'NVIDIA A100',
+        gpuCount: BLOCKED_GPU_COUNT, gpuAllocated: 0, unschedulable: true, ready: true,
+      })
+      expect(stats.totalGPUs).toBe(HEALTHY_NODE.gpuCount + BLOCKED_GPU_COUNT)
+      expect(stats.availableGPUs).toBe(HEALTHY_FREE)
+      expect(stats.unschedulableGPUs).toBe(BLOCKED_GPU_COUNT)
+    })
+
+    it('excludes GPUs on a NotReady node from available but keeps them in total', () => {
+      const stats = statsWith({
+        name: 'notready', cluster: 'cluster-a', gpuType: 'NVIDIA A100',
+        gpuCount: BLOCKED_GPU_COUNT, gpuAllocated: 0, ready: false,
+      })
+      expect(stats.totalGPUs).toBe(HEALTHY_NODE.gpuCount + BLOCKED_GPU_COUNT)
+      expect(stats.availableGPUs).toBe(HEALTHY_FREE)
+      expect(stats.unschedulableGPUs).toBe(BLOCKED_GPU_COUNT)
+    })
+
+    it('excludes GPUs on a NoSchedule-tainted node from available but keeps them in total', () => {
+      const stats = statsWith({
+        name: 'tainted', cluster: 'cluster-a', gpuType: 'NVIDIA A100',
+        gpuCount: BLOCKED_GPU_COUNT, gpuAllocated: 0, ready: true,
+        taints: [{ key: 'node.kubernetes.io/unschedulable', effect: 'NoSchedule' }],
+      })
+      expect(stats.totalGPUs).toBe(HEALTHY_NODE.gpuCount + BLOCKED_GPU_COUNT)
+      expect(stats.availableGPUs).toBe(HEALTHY_FREE)
+      expect(stats.unschedulableGPUs).toBe(BLOCKED_GPU_COUNT)
+    })
+
+    it('does not exclude a node whose only taint is advisory (PreferNoSchedule)', () => {
+      const stats = statsWith({
+        name: 'advisory', cluster: 'cluster-a', gpuType: 'NVIDIA A100',
+        gpuCount: BLOCKED_GPU_COUNT, gpuAllocated: 0, ready: true,
+        taints: [{ key: 'prefer-gpu-workloads', effect: 'PreferNoSchedule' }],
+      })
+      expect(stats.availableGPUs).toBe(HEALTHY_FREE + BLOCKED_GPU_COUNT)
+      expect(stats.unschedulableGPUs).toBe(0)
+    })
+
+    it('treats nodes from older agents that omit the flags as schedulable', () => {
+      const stats = statsWith({
+        name: 'legacy', cluster: 'cluster-a', gpuType: 'NVIDIA A100', gpuCount: BLOCKED_GPU_COUNT, gpuAllocated: 0,
+      })
+      expect(stats.availableGPUs).toBe(HEALTHY_FREE + BLOCKED_GPU_COUNT)
+      expect(stats.unschedulableGPUs).toBe(0)
+    })
+
+    it('never counts already-allocated GPUs on a cordoned node as unschedulable', () => {
+      const allocated = 3
+      const stats = statsWith({
+        name: 'cordoned-busy', cluster: 'cluster-a', gpuType: 'NVIDIA A100',
+        gpuCount: BLOCKED_GPU_COUNT, gpuAllocated: allocated, unschedulable: true, ready: true,
+      })
+      expect(stats.allocatedGPUs).toBe(HEALTHY_NODE.gpuAllocated + allocated)
+      expect(stats.unschedulableGPUs).toBe(BLOCKED_GPU_COUNT - allocated)
+      expect(stats.availableGPUs).toBe(HEALTHY_FREE)
+      expect(stats.allocatedGPUs + stats.availableGPUs + stats.unschedulableGPUs).toBe(stats.totalGPUs)
+    })
+  })
 })
