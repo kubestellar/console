@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestIsValidCronSchedule(t *testing.T) {
@@ -373,6 +374,130 @@ func TestK8sVersionPatternRegex(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := k8sVersionPattern.MatchString(tt.version)
 			assert.Equal(t, tt.wantOK, result)
+		})
+	}
+}
+
+func TestValidateK8sName(t *testing.T) {
+	tests := []struct {
+		name        string
+		param       string
+		value       string
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name:    "EmptyValueAllowed",
+			param:   "namespace",
+			value:   "",
+			wantErr: false,
+		},
+		{
+			name:    "ValidLowercase",
+			param:   "namespace",
+			value:   "kube-system",
+			wantErr: false,
+		},
+		{
+			name:    "ValidWithDots",
+			param:   "group",
+			value:   "apps.v1",
+			wantErr: false,
+		},
+		{
+			name:    "ValidSingleChar",
+			param:   "namespace",
+			value:   "a",
+			wantErr: false,
+		},
+		{
+			name:        "TooLong",
+			param:       "namespace",
+			value:       string(make([]byte, MaxK8sNameLen+1)),
+			wantErr:     true,
+			errContains: "namespace",
+		},
+		{
+			name:        "InvalidUppercase",
+			param:       "cluster",
+			value:       "MyCluster",
+			wantErr:     true,
+			errContains: "cluster",
+		},
+		{
+			name:        "InvalidUnderscore",
+			param:       "namespace",
+			value:       "my_namespace",
+			wantErr:     true,
+			errContains: "must be a valid Kubernetes resource name",
+		},
+		{
+			name:        "InvalidStartsWithDash",
+			param:       "namespace",
+			value:       "-namespace",
+			wantErr:     true,
+			errContains: "must be a valid Kubernetes resource name",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateK8sName(tt.param, tt.value)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errContains)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestValidateClusterAndNamespace(t *testing.T) {
+	tests := []struct {
+		name        string
+		cluster     string
+		namespace   string
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name:      "BothEmpty",
+			cluster:   "",
+			namespace: "",
+			wantErr:   false,
+		},
+		{
+			name:      "BothValid",
+			cluster:   "my-cluster",
+			namespace: "kube-system",
+			wantErr:   false,
+		},
+		{
+			name:        "InvalidCluster",
+			cluster:     "Invalid_Cluster",
+			namespace:   "kube-system",
+			wantErr:     true,
+			errContains: "cluster",
+		},
+		{
+			name:        "ValidClusterInvalidNamespace",
+			cluster:     "my-cluster",
+			namespace:   "Invalid_Namespace",
+			wantErr:     true,
+			errContains: "namespace",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateClusterAndNamespace(tt.cluster, tt.namespace)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errContains)
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
