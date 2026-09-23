@@ -1,4 +1,4 @@
-package handlers
+package proxy
 
 import (
 	"bufio"
@@ -8,6 +8,7 @@ import (
 	"log/slog"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/api/handlers/auth"
 
 	"github.com/kubestellar/console/pkg/kagent"
 	"github.com/kubestellar/console/pkg/store"
@@ -47,7 +48,7 @@ func (h *KagentProxyHandler) GetStatus(c *fiber.Ctx) error {
 
 // ListAgents returns known kagent agents.
 func (h *KagentProxyHandler) ListAgents(c *fiber.Ctx) error {
-	if err := RequireEditorOrAdmin(c, h.store); err != nil {
+	if err := auth.RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 	if h.client == nil {
@@ -71,7 +72,7 @@ type chatRequest struct {
 
 // Chat streams a kagent agent conversation via SSE.
 func (h *KagentProxyHandler) Chat(c *fiber.Ctx) error {
-	if err := RequireEditorOrAdmin(c, h.store); err != nil {
+	if err := auth.RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 	if h.client == nil {
@@ -135,7 +136,7 @@ type callToolRequest struct {
 
 // CallTool invokes a tool through a kagent agent via A2A.
 func (h *KagentProxyHandler) CallTool(c *fiber.Ctx) error {
-	if err := RequireEditorOrAdmin(c, h.store); err != nil {
+	if err := auth.RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 	if h.client == nil {

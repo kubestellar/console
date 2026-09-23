@@ -68,6 +68,7 @@ pkg/api/handlers/internal/httputil 99.5
 pkg/api/handlers/mcp 65.5
 pkg/api/handlers/missions 74.5
 pkg/api/handlers/persistence 66.5
+pkg/api/handlers/proxy 64.0
 pkg/api/handlers/rewards 62.5
 pkg/api/handlers/stellar 59.0
 pkg/api/handlers/workloads 78.5
@@ -108,7 +109,7 @@ pkg/store/migrations 88.5
 cmd/console 14.5
 cmd/kc-agent 0.0
 cmd/watcher 14.5
-pkg/api/handlers 66.0
+pkg/api/handlers 70.0
 pkg/api/tracing 54.0
 
 # --- No-coverable-statement packages (interfaces / consts / no test entry

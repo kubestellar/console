@@ -1,9 +1,11 @@
-// Package handlers provides HTTP handlers for the console API.
-package handlers
+// Package proxy provides HTTP handlers that proxy console API requests to
+// upstream providers (analytics, cards, kagent, kagenti, quantum, YouTube) and
+// serve the Kubara catalog.
+package proxy
 
 import (
-	"encoding/json"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -15,6 +17,7 @@ import (
 	"unicode"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/api/handlers/internal/httputil"
 	"github.com/kubestellar/console/pkg/client"
 )
 
@@ -111,7 +114,6 @@ func validateCatalogPath(path string) error {
 	return nil
 }
 
-
 type KubaraCatalogEntry struct {
 	Name        string `json:"name"`
 	Path        string `json:"path"`
@@ -175,7 +177,7 @@ func (h *KubaraCatalogHandler) GetConfig(c *fiber.Ctx) error {
 // chart index, refreshing from upstream if the cache has expired.
 func (h *KubaraCatalogHandler) GetCatalog(c *fiber.Ctx) error {
 	// Demo mode: return static demo catalog immediately
-	if IsDemoMode(c) {
+	if httputil.IsDemoMode(c) {
 		return c.JSON(fiber.Map{
 			"entries": GetDemoKubaraCatalog(),
 			"source":  "demo",

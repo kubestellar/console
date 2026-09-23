@@ -1,4 +1,4 @@
-package handlers
+package proxy
 
 import (
 	"context"
@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/api/handlers/auth"
 
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/safego"
@@ -53,7 +54,6 @@ const (
 	// cardProxyEvictionInterval is how often to run the eviction goroutine.
 	cardProxyEvictionInterval = 5 * time.Minute
 )
-
 
 // cardProxyClient uses a custom DialContext to check resolved IPs at
 // connection time, preventing DNS rebinding / TOCTOU SSRF bypasses.
@@ -169,7 +169,7 @@ func NewCardProxyHandler(s store.Store) *CardProxyHandler {
 func (h *CardProxyHandler) Proxy(c *fiber.Ctx) error {
 	// Require at least editor role — viewers and anonymous users must not be
 	// able to trigger outbound requests through the proxy (#12436).
-	if err := RequireEditorOrAdmin(c, h.store); err != nil {
+	if err := auth.RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 
