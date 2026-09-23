@@ -236,6 +236,42 @@ export function useCachedSecurityIssues(
 }
 
 /**
+ * REST fallback for workloads: GET /api/workloads on the Go backend.
+ * Returns null when there is no usable token, the backend is marked
+ * unavailable, or the request fails — so callers can distinguish
+ * "no data source" from a legitimately empty workload list.
+ */
+async function fetchWorkloadsViaRest(): Promise<Workload[] | null> {
+  const token = getToken()
+  const hasRealToken = token && token !== 'demo-token'
+  if (!hasRealToken || isBackendUnavailable()) return null
+
+  const res = await fetch('/api/workloads', {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
+  if (res.ok) {
+    const data = await res.json().catch(() => null)
+    if (!data) return []
+    const items = (data.items || data) as Array<Record<string, unknown>>
+    return items.map(d => ({
+      name: String(d.name || ''),
+      namespace: String(d.namespace || 'default'),
+      type: (String(d.type || 'Deployment')) as Workload['type'],
+      cluster: String(d.cluster || ''),
+      targetClusters: (d.targetClusters as string[]) || (d.cluster ? [String(d.cluster)] : []),
+      replicas: Number(d.replicas || 1),
+      readyReplicas: Number(d.readyReplicas || 0),
+      status: (String(d.status || 'Running')) as Workload['status'],
+      image: String(d.image || ''),
+      labels: (d.labels as Record<string, string>) || {},
+      createdAt: String(d.createdAt || new Date().toISOString()) }))
+  }
+  return null
+}
+
+/**
  * Hook for fetching workloads with caching.
  * Fetches all workloads across all clusters via agent, then REST fallback.
  */
@@ -256,34 +292,8 @@ export function useCachedWorkloads(
       if (agentData) return agentData
 
       // Fall back to REST API
-      const token = getToken()
-      const hasRealToken = token && token !== 'demo-token'
-      if (hasRealToken && !isBackendUnavailable()) {
-        const res = await fetch('/api/workloads', {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}` },
-          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
-        if (res.ok) {
-          const data = await res.json().catch(() => null)
-          if (!data) return []
-          const items = (data.items || data) as Array<Record<string, unknown>>
-          return items.map(d => ({
-            name: String(d.name || ''),
-            namespace: String(d.namespace || 'default'),
-            type: (String(d.type || 'Deployment')) as Workload['type'],
-            cluster: String(d.cluster || ''),
-            targetClusters: (d.targetClusters as string[]) || (d.cluster ? [String(d.cluster)] : []),
-            replicas: Number(d.replicas || 1),
-            readyReplicas: Number(d.readyReplicas || 0),
-            status: (String(d.status || 'Running')) as Workload['status'],
-            image: String(d.image || ''),
-            labels: (d.labels as Record<string, string>) || {},
-            createdAt: String(d.createdAt || new Date().toISOString()) }))
-        }
-      }
-
-      return []
+      const restData = await fetchWorkloadsViaRest()
+      return restData ?? []
     },
     progressiveFetcher: async (onProgress) => {
       // Try agent first (progressive via kc-agent)
@@ -291,7 +301,19 @@ export function useCachedWorkloads(
       if (agentData) return agentData
 
       // Fall back to SSE streaming -> progressive per-cluster
-      return await fetchViaSSE<Workload>('workloads', 'workloads', {}, onProgress)
+      try {
+        return await fetchViaSSE<Workload>('workloads', 'workloads', {}, onProgress)
+      } catch (sseError) {
+        // The SSE/per-cluster chain is agent-routed in non-cluster mode, so it
+        // always fails when no local kc-agent is running. cacheCore only calls
+        // progressiveFetcher when both are provided (cacheCore.ts performFetch),
+        // which made the REST fallback in `fetcher` above unreachable from this
+        // hook — agentless sessions (and the deploy-dashboard e2e mocks) never
+        // hit GET /api/workloads and rendered no rows. Fall back to REST here.
+        const restData = await fetchWorkloadsViaRest()
+        if (restData) return restData
+        throw sseError
+      }
     } })
   const result = useWorkloadsBase()
 

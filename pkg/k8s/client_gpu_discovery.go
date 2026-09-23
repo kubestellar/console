@@ -276,6 +276,16 @@ func (m *MultiClusterClient) getGPUNodesWithPods(ctx context.Context, contextNam
 			})
 		}
 
+		// Cordon and readiness state, so the UI can exclude GPUs that no pod
+		// can actually be scheduled onto from "available" counts (#23676).
+		nodeReady := false
+		for _, cond := range node.Status.Conditions {
+			if cond.Type == corev1.NodeReady {
+				nodeReady = cond.Status == corev1.ConditionTrue
+				break
+			}
+		}
+
 		gpuNodes = append(gpuNodes, GPUNode{
 			Name:               node.Name,
 			Cluster:            contextName,
@@ -284,6 +294,8 @@ func (m *MultiClusterClient) getGPUNodesWithPods(ctx context.Context, contextNam
 			GPUAllocated:       allocated,
 			AcceleratorType:    accelType,
 			Taints:             nodeTaints,
+			Unschedulable:      node.Spec.Unschedulable,
+			Ready:              nodeReady,
 			GPUMemoryMB:        gpuMemoryMB,
 			GPUFamily:          gpuFamily,
 			CUDADriverVersion:  cudaDriverVersion,

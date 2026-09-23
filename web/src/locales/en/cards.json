@@ -236,7 +236,8 @@
     "unknownError": "Unknown error",
     "ibmUpstreamUnavailable": "IBM Quantum is temporarily unavailable. We'll keep retrying — your saved credentials are unaffected.",
     "customQasmSaved": "Custom QASM configuration saved",
-    "qasmFileLabel": "QASM File (use 'Custom QASM' to paste or upload code)"
+    "qasmFileLabel": "QASM File (use 'Custom QASM' to paste or upload code)",
+    "circuitPopoutFetchFailed": "Failed to open circuit view"
   },
   "titles": {
     "cluster_health": "Cluster Health",
@@ -2089,7 +2090,9 @@
     "createReservation": "Create GPU Reservation",
     "stats": {
       "activeReservations": "Active Reservations",
-      "reservedGpus": "Reserved GPUs"
+      "reservedGpus": "Reserved GPUs",
+      "unschedulableGpus": "{{count}} unschedulable",
+      "unschedulableGpusTitle": "Free GPUs on cordoned, NotReady or NoSchedule/NoExecute-tainted nodes. Counted in Total but not Available."
     },
     "charts": {
       "gpuUtilization": "GPU Utilization",

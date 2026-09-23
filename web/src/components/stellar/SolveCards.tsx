@@ -73,8 +73,8 @@ export function SolveEscalatedCard({ solve, onDismiss }: {
   return (
     <div className="mb-1 px-2.5 py-2" style={{
       borderLeft: `3px solid ${color}`,
-      background: 'rgba(227,179,65,0.05)',
-      border: '1px solid rgba(227,179,65,0.25)',
+      background: 'color-mix(in srgb, var(--s-warning) 5%, transparent)',
+      border: '1px solid color-mix(in srgb, var(--s-warning) 25%, transparent)',
       borderRadius: 'var(--s-r)',
     }}>
       <div className="flex items-center gap-2">

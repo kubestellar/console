@@ -124,6 +124,7 @@ export function ShareMissionDialog({ resolution, isOpen, onClose }: ShareMission
       setScanResult(result)
     } catch {
       setScanResult(null)
+      showToast(t('missions.share.errors.scanFailed'), 'error')
     } finally {
       setScanning(false)
     }

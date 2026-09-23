@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Info, FileText, Package, Stethoscope } from 'lucide-react'
+import { Info, FileText, Package, Stethoscope, AlertCircle } from 'lucide-react'
 import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { useMissions } from '../../../hooks/useMissions'
 import {
@@ -42,7 +42,7 @@ export function OperatorDrillDown({ data }: Props) {
 
   const [activeTab, setActiveTab] = useState<TabType>('overview')
 
-  const { csvInfo, csvLoading, operatorCRDs, crdsLoading } = useOperatorDrillDown(
+  const { csvInfo, csvLoading, operatorCRDs, crdsLoading, error } = useOperatorDrillDown(
     cluster, namespace, operatorName, currentCSV, operatorPhase, subscriptionName,
   )
 
@@ -139,6 +139,15 @@ Please:
       <OperatorTabBar tabs={TABS} activeTab={activeTab} onSelect={(id) => setActiveTab(id as TabType)} />
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        {error && (
+          <div
+            role="alert"
+            className="flex items-center gap-3 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+          >
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span className="flex-1">{error}</span>
+          </div>
+        )}
         {activeTab === 'overview' && (
           <OperatorOverviewTab
             csvInfo={csvInfo}

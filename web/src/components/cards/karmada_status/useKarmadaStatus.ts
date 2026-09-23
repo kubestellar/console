@@ -319,6 +319,7 @@ export interface UseKarmadaStatusResult {
   consecutiveFailures: number
   showSkeleton: boolean
   showEmptyState: boolean
+  lastRefresh: number | null
   isDemoFallback: boolean
 }
 
@@ -331,6 +332,7 @@ export function useKarmadaStatus(): UseKarmadaStatusResult {
     isFailed,
     consecutiveFailures,
     isDemoFallback,
+    lastRefresh,
   } = useCache<KarmadaStatus>({
     key: CACHE_KEY,
     category: 'default',
@@ -362,6 +364,7 @@ export function useKarmadaStatus(): UseKarmadaStatusResult {
     consecutiveFailures,
     showSkeleton,
     showEmptyState,
+    lastRefresh,
     isDemoFallback: effectiveIsDemoData,
   }
 }

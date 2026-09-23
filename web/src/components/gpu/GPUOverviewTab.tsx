@@ -72,6 +72,11 @@ export function GPUOverviewTab({
             <div>
               <div className="text-2xl font-bold text-green-400">{stats.availableGPUs}</div>
               <div className="text-xs text-muted-foreground">{t('common:common.available')}</div>
+              {stats.unschedulableGPUs > 0 && (
+                <div className="text-xs text-yellow-400" title={t('gpuReservations.stats.unschedulableGpusTitle')}>
+                  {t('gpuReservations.stats.unschedulableGpus', { count: stats.unschedulableGPUs })}
+                </div>
+              )}
             </div>
           </div>
         </div>

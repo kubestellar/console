@@ -42,6 +42,7 @@ const makeStats = (overrides: Partial<GPUOverviewStats> = {}): GPUOverviewStats 
   totalGPUs: 10,
   allocatedGPUs: 4,
   availableGPUs: 6,
+  unschedulableGPUs: 0,
   utilizationPercent: 40,
   activeReservations: 2,
   reservedGPUs: 4,
@@ -93,6 +94,17 @@ describe('GPUOverviewTab', () => {
     expect(screen.getByText('3')).toBeTruthy()
     expect(screen.getByText('5')).toBeTruthy()
     expect(screen.getByText('6')).toBeTruthy()
+  })
+
+  it('hides the unschedulable hint when every GPU is schedulable (#23676)', () => {
+    renderTab({ stats: makeStats({ unschedulableGPUs: 0 }) })
+    expect(screen.queryByText(/unschedulable/i)).toBeNull()
+  })
+
+  it('shows an unschedulable hint under Available when GPUs sit on cordoned or tainted nodes (#23676)', () => {
+    const UNSCHEDULABLE = 7
+    renderTab({ stats: makeStats({ totalGPUs: 12, availableGPUs: 1, unschedulableGPUs: UNSCHEDULABLE }) })
+    expect(screen.getByText(/unschedulable/i)).toBeTruthy()
   })
 
   it('shows the utilization percentage in the donut gauge', () => {

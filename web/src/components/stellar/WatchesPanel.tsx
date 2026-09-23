@@ -49,8 +49,8 @@ export function WatchesPanel({ watches, onResolve, onDismiss, onSnooze, onAction
           fontFamily: 'var(--s-mono)',
           fontSize: 10,
           color: 'var(--s-info)',
-          background: 'rgba(56,139,253,0.1)',
-          border: '1px solid rgba(56,139,253,0.25)',
+          background: 'color-mix(in srgb, var(--s-info) 10%, transparent)',
+          border: '1px solid color-mix(in srgb, var(--s-info) 25%, transparent)',
           borderRadius: 10,
         }}>
           {active.length}

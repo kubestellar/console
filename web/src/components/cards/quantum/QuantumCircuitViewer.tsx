@@ -1,9 +1,11 @@
 import React from 'react'
 import { ExternalLink } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useCardLoadingState } from '../CardDataContext'
 import { Skeleton } from '../../ui/Skeleton'
 import { isQuantumForcedToDemo } from '../../../lib/demoMode'
 import { useAuth } from '../../../lib/auth'
+import { useToast } from '../../ui/Toast'
 import {
   useQuantumCircuitAscii,
   QUANTUM_CIRCUIT_DEFAULT_POLL_MS,
@@ -63,6 +65,8 @@ interface QuantumCircuitViewerProps {
 }
 
 export const QuantumCircuitViewer: React.FC<QuantumCircuitViewerProps> = ({ isDemoData = false }) => {
+  const { t } = useTranslation('cards')
+  const { showToast } = useToast()
   const { isAuthenticated, login, isLoading: authIsLoading } = useAuth()
   const forceDemo = isDemoData || isQuantumForcedToDemo()
   const {
@@ -97,6 +101,7 @@ export const QuantumCircuitViewer: React.FC<QuantumCircuitViewerProps> = ({ isDe
       })
       if (!response.ok) {
         console.error('Failed to fetch circuit HTML:', response.statusText)
+        showToast(t('quantumControlPanel.circuitPopoutFetchFailed'), 'error')
         return
       }
       const html = await response.text()
@@ -104,6 +109,7 @@ export const QuantumCircuitViewer: React.FC<QuantumCircuitViewerProps> = ({ isDe
       setIframeOpen(true)
     } catch (err) {
       console.error('Error fetching circuit HTML:', err)
+      showToast(t('quantumControlPanel.circuitPopoutFetchFailed'), 'error')
     }
   }
 

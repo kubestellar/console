@@ -2,6 +2,7 @@ import { PlusCircle, RefreshCw, AlertTriangle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { ResetMode } from '../../hooks/useDashboardReset'
 import { BaseModal } from '../../lib/modals'
+import { Button } from '../ui/Button'
 
 interface ResetDialogProps {
   isOpen: boolean
@@ -73,12 +74,9 @@ export function ResetDialog({ isOpen, onClose, onReset }: ResetDialogProps) {
 
       <BaseModal.Footer showKeyboardHints>
         <div className="flex-1" />
-        <button
-          onClick={onClose}
-          className="px-4 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-        >
+        <Button variant="ghost" size="lg" onClick={onClose}>
           {t('actions.cancel')}
-        </button>
+        </Button>
       </BaseModal.Footer>
     </BaseModal>
   )

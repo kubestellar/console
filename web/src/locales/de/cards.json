@@ -1747,7 +1747,9 @@
     "createReservation": "Create GPU Reservation",
     "stats": {
       "activeReservations": "Active Reservations",
-      "reservedGpus": "Reserved GPUs"
+      "reservedGpus": "Reserved GPUs",
+      "unschedulableGpus": "{{count}} nicht planbar",
+      "unschedulableGpusTitle": "Freie GPUs auf abgesperrten, nicht bereiten oder mit NoSchedule/NoExecute-Taints versehenen Knoten. In Gesamt enthalten, aber nicht in Verfügbar."
     },
     "charts": {
       "gpuUtilization": "GPU Utilization",

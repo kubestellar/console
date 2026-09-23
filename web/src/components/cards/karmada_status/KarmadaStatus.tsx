@@ -4,7 +4,6 @@ import { StatTile } from '../shared/StatTile'
 import {
   CheckCircle,
   AlertTriangle,
-  RefreshCw,
   Globe,
   Server,
   XCircle,
@@ -12,6 +11,7 @@ import {
   GitBranch } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Skeleton, SkeletonStats, SkeletonList } from '../../ui/Skeleton'
+import { RefreshIndicator } from '../../ui/RefreshIndicator'
 import { CardSearchInput } from '../../../lib/cards/CardComponents'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import { useKarmadaStatus } from './useKarmadaStatus'
@@ -108,7 +108,7 @@ function ResourceBindingRow({ binding }: { binding: KarmadaResourceBinding }) {
 
 export function KarmadaStatus() {
   const { t } = useTranslation('cards')
-  const { data, isRefreshing, error, showSkeleton, showEmptyState } = useKarmadaStatus()
+  const { data, isRefreshing, error, showSkeleton, showEmptyState, lastRefresh } = useKarmadaStatus()
   /** Toggle between 'clusters' and 'bindings' sub-view */
   const [view, setView] = useState<'clusters' | 'bindings'>('clusters')
 
@@ -236,9 +236,12 @@ export function KarmadaStatus() {
             {t('karmada.controllerPods', 'pods')}
           </span>
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-        </div>
+        <RefreshIndicator
+          isRefreshing={isRefreshing}
+          lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+          size="sm"
+          showLabel={true}
+        />
       </div>
 
       {/* ── Stats grid ── */}
