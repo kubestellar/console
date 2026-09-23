@@ -1,4 +1,4 @@
-package handlers
+package admin
 
 // Additional coverage for pkg/api/handlers/rbac.go.
 //

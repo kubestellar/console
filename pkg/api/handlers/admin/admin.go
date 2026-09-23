@@ -1,7 +1,9 @@
-package handlers
+package admin
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/api/handlers/auth"
+	"github.com/kubestellar/console/pkg/api/handlers/internal/httputil"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/store"
 )
@@ -21,10 +23,10 @@ func NewAdminHandler(ft *middleware.FailureTracker, s store.Store) *AdminHandler
 // tier, and Retry-After value. In demo mode it returns an empty set.
 // Requires admin role to prevent information disclosure of user IDs and IP addresses (#16481).
 func (h *AdminHandler) GetRateLimitStatus(c *fiber.Ctx) error {
-	if err := RequireAdmin(c, h.store); err != nil {
+	if err := auth.RequireAdmin(c, h.store); err != nil {
 		return err
 	}
-	if IsDemoMode(c) {
+	if httputil.IsDemoMode(c) {
 		return c.JSON(middleware.StatusResponse{
 			Keys:  make([]middleware.KeyStatus, 0),
 			Total: 0,
