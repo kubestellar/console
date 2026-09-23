@@ -1,10 +1,11 @@
-package handlers
+package admin
 
 import (
 	"log/slog"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/api/audit"
+	"github.com/kubestellar/console/pkg/api/handlers/auth"
 	"github.com/kubestellar/console/pkg/settings"
 	"github.com/kubestellar/console/pkg/store"
 )
@@ -26,7 +27,7 @@ func NewSettingsHandler(manager *settings.SettingsManager, s store.Store) *Setti
 // invariant, an attacker can trigger side effects (decryption, disk I/O,
 // manager lookups) before being told they are forbidden.
 func (h *SettingsHandler) RequireAdmin(c *fiber.Ctx) error {
-	return RequireAdmin(c, h.store)
+	return auth.RequireAdmin(c, h.store)
 }
 
 // GetSettings returns browser-safe settings metadata without exposing secrets.
