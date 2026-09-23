@@ -4,6 +4,9 @@ import { InfoTooltip } from './card-wrapper/InfoTooltip'
 import { CardMeta } from './CardMeta'
 import { CardToolbar } from './CardToolbar'
 
+// Pure UI component — renders card header based on props; no data fetching.
+// Demo data support provided by individual card implementations via CardWrapper.
+
 interface CardHeaderProps {
   dragHandle?: ReactNode
   resolvedIcon?: ComponentType<{ className?: string }>

@@ -5,6 +5,8 @@ import { ApiKeyPromptModal } from './console-missions/shared'
 import { useMissionsData } from './useMissionsData'
 import { MissionRow } from './MissionsDisplay'
 
+// Demo data support provided by useMissionsData via useDemoMode() hook.
+
 interface MissionsProps {
   config?: Record<string, unknown>
 }
