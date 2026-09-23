@@ -45,7 +45,10 @@ export function MissionBrowserScheduleActionTab({ isActive }: Props) {
         setClusters(watching)
         if (!cluster && watching.length > 0) setCluster(watching[0])
       } catch {
-        if (mounted) setClusters([])
+        if (mounted) {
+          setClusters([])
+          showToast('Failed to load watched clusters.', 'error')
+        }
       }
     }
     void loadState()

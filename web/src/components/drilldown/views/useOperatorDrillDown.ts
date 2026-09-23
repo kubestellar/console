@@ -8,6 +8,7 @@ export interface UseOperatorDrillDownResult {
   csvLoading: boolean
   operatorCRDs: CRDInfo[] | null
   crdsLoading: boolean
+  error: string | null
 }
 
 /**
@@ -30,6 +31,7 @@ export function useOperatorDrillDown(
   const [operatorCRDs, setOperatorCRDs] = useState<CRDInfo[] | null>(null)
   const [crdsLoading, setCrdsLoading] = useState(false)
   const [subscriptionYaml, setSubscriptionYaml] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const fetchCSVInfo = useCallback(async () => {
     if (!agentConnected || csvInfo) return
@@ -44,6 +46,7 @@ export function useOperatorDrillDown(
         } catch {
           console.warn('[OperatorDrillDown] Failed to parse CSV JSON output')
           setCsvInfo({ name: currentCSV || operatorName, displayName: operatorName, version: 'Unknown', phase: operatorPhase })
+          setError('Failed to parse operator CSV data')
           setCsvLoading(false)
           return
         }
@@ -63,6 +66,7 @@ export function useOperatorDrillDown(
       }
     } catch {
       setCsvInfo({ name: currentCSV || operatorName, displayName: operatorName, version: 'Unknown', phase: operatorPhase })
+      setError('Failed to fetch operator CSV details')
     }
     setCsvLoading(false)
   }, [agentConnected, csvInfo, currentCSV, namespace, operatorName, operatorPhase, runKubectl])
@@ -80,6 +84,7 @@ export function useOperatorDrillDown(
         } catch {
           console.warn('[OperatorDrillDown] Failed to parse CRD JSON output')
           setOperatorCRDs([])
+          setError('Failed to parse operator CRD data')
           setCrdsLoading(false)
           return
         }
@@ -93,6 +98,7 @@ export function useOperatorDrillDown(
       }
     } catch {
       setOperatorCRDs([])
+      setError('Failed to fetch operator CRDs')
     }
     setCrdsLoading(false)
   }, [agentConnected, currentCSV, namespace, operatorCRDs, operatorName, runKubectl])
@@ -116,5 +122,5 @@ export function useOperatorDrillDown(
     void Promise.all([fetchCSVInfo(), fetchCRDs(), fetchSubscription()])
   }, [agentConnected, fetchCSVInfo, fetchCRDs, fetchSubscription])
 
-  return { csvInfo, csvLoading, operatorCRDs, crdsLoading }
+  return { csvInfo, csvLoading, operatorCRDs, crdsLoading, error }
 }
