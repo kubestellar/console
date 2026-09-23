@@ -11,6 +11,7 @@ import { CODE_INLINE_ASSIST_PROMPT } from '../../lib/ai/prompts'
 import { T2_TEMPLATES, type T2Template } from './cardFactoryTemplatesT2'
 import { TemplateDropdown } from './cardFactoryPreviews'
 import { validateT2AssistResult, type T2AssistResult } from './cardFactoryAssistTypes'
+import { Button } from '../ui/Button'
 
 const EXAMPLE_TSX = `// Example: Simple counter card
 export default function MyCard({ config }) {
@@ -186,13 +187,14 @@ export function CardFactoryCode({ onCardCreated, onSaveMessage }: CardFactoryCod
         <div>
           <div className="flex items-center justify-between mb-1">
             <label className="text-xs text-muted-foreground">{t('dashboard.cardFactory.tsxSourceCode')}</label>
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={handleCompile}
-              className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+              icon={<Eye className="w-3 h-3" />}
             >
-              <Eye className="w-3 h-3" />
               {t('dashboard.cardFactory.validate')}
-            </button>
+            </Button>
           </div>
           <textarea
             value={t2Source}
