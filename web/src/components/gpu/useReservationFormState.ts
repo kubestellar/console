@@ -9,7 +9,7 @@ import type { GPUNode } from '../../hooks/useMCP'
 import type { GPUReservation, CreateGPUReservationInput, UpdateGPUReservationInput } from '../../hooks/useGPUReservations'
 import { normalizeGpuTypes } from '../../hooks/useGPUReservations'
 import type { GPUClusterInfo } from './ReservationFormModal'
-import { unschedulableFreeGPUs } from '../cards/GPUTaintFilter'
+import { unschedulableFreeGPUs } from '../cards/gpuNodeSchedulable'
 
 type TranslateFn = (key: string, options?: string | Record<string, unknown>) => string
 

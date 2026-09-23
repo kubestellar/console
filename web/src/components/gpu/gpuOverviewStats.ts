@@ -2,7 +2,7 @@ import { getChartColor } from '../../lib/theme/chartColors'
 import type { GPUReservation } from '../../hooks/useGPUReservations'
 import type { GPUNode, ResourceQuota } from '../../hooks/mcp/types'
 import { GPU_KEYS, MAX_NAME_DISPLAY_LENGTH } from './gpu-constants'
-import { unschedulableFreeGPUs } from '../cards/GPUTaintFilter'
+import { unschedulableFreeGPUs } from '../cards/gpuNodeSchedulable'
 
 const CHART_COLOR_COUNT = 4
 const PERCENT_SCALE = 100

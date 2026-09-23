@@ -18,7 +18,7 @@ import {
   type GPUClusterInfo,
 } from './ReservationFormModal.utils'
 import { ClusterPicker, NamespaceField, ResourceRequestFields, ScheduleSelector } from './ReservationFormModal.parts'
-import { unschedulableFreeGPUs } from '../cards/GPUTaintFilter'
+import { unschedulableFreeGPUs } from '../cards/gpuNodeSchedulable'
 
 export type { GPUClusterInfo } from './ReservationFormModal.utils'
 
