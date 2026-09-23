@@ -1,4 +1,4 @@
-package handlers
+package compliance
 
 import (
 	"context"
@@ -22,10 +22,10 @@ import (
 // TestAuditExportDestinationValidation_S3 tests validation of S3 export destinations
 func TestAuditExportDestinationValidation_S3(t *testing.T) {
 	tests := []struct {
-		name           string
-		config         map[string]interface{}
-		expectValid    bool
-		expectedError  string
+		name          string
+		config        map[string]interface{}
+		expectValid   bool
+		expectedError string
 	}{
 		{
 			name: "valid S3 configuration",
@@ -296,7 +296,7 @@ func TestAuditExportDestinationValidation_WritePermissions(t *testing.T) {
 			"type": "filesystem",
 			"path": tempDir,
 		}
-		
+
 		valid := validateFilesystemWritePermissions(config)
 		assert.True(t, valid)
 	})
@@ -311,7 +311,7 @@ func TestAuditExportDestinationValidation_WritePermissions(t *testing.T) {
 			"type": "filesystem",
 			"path": readonlyDir,
 		}
-		
+
 		valid := validateFilesystemWritePermissions(config)
 		assert.False(t, valid)
 	})

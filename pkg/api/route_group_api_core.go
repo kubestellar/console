@@ -131,7 +131,7 @@ func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 	api.Post("/github-pipelines", githubPipelines.Serve)
 	api.Get("/github-pipelines/health", githubPipelines.HandleHealth)
 
-	agenticDetectionRuns := handlers.NewAgenticDetectionRunsHandler()
+	agenticDetectionRuns := compliance.NewAgenticDetectionRunsHandler()
 	api.Get("/agentic/detection-runs", agenticDetectionRuns.GetDetectionRuns)
 
 	api.Get("/github/*", githubProxy.Proxy)

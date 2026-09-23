@@ -1,10 +1,12 @@
-package handlers
+package compliance
 
 import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 
+	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/auth"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -33,10 +35,10 @@ func NewAuditHandler(s store.Store) *AuditHandler {
 //
 // In demo mode, returns an empty JSON array.
 func (h *AuditHandler) GetAuditLog(c *fiber.Ctx) error {
-	if IsDemoMode(c) {
+	if handlers.IsDemoMode(c) {
 		return c.JSON(make([]store.AuditEntry, 0))
 	}
-	if err := RequireAdmin(c, h.store); err != nil {
+	if err := auth.RequireAdmin(c, h.store); err != nil {
 		return err
 	}
 

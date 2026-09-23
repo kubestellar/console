@@ -1,8 +1,8 @@
-// Package handlers — Agentic Workflows Detection Runs
+// Package compliance — Agentic Workflows Detection Runs
 //
 // Fetches detection run data from the current GitHub "[aw] Detection Runs"
 // tracking issue, which records workflow runs where threat detection flagged problems.
-package handlers
+package compliance
 
 import (
 	"context"
@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/client"
 )
 
@@ -89,14 +90,14 @@ type DetectionRunIssue struct {
 
 // GetDetectionRuns returns detection runs from the active detection tracking issue.
 func (h *AgenticDetectionRunsHandler) GetDetectionRuns(c *fiber.Ctx) error {
-	if IsDemoMode(c) {
-		return DemoResponse(c, "agentic-detection-runs", GetDemoDetectionRuns())
+	if handlers.IsDemoMode(c) {
+		return handlers.DemoResponse(c, "agentic-detection-runs", GetDemoDetectionRuns())
 	}
 
 	runs, err := h.fetchDetectionRuns(c.UserContext())
 	if err != nil {
 		slog.Error("[AgenticDetectionRuns] Failed to fetch detection runs", "error", err)
-		return DemoResponse(c, "agentic-detection-runs", GetDemoDetectionRuns())
+		return handlers.DemoResponse(c, "agentic-detection-runs", GetDemoDetectionRuns())
 	}
 
 	return c.JSON(runs)
