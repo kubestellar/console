@@ -10,6 +10,7 @@ import { ConfigureCardAiTab } from './ConfigureCardAiTab'
 import { ConfigureCardBehaviorsTab } from './ConfigureCardBehaviorsTab'
 import { ConfigureCardSettingsTab } from './ConfigureCardSettingsTab'
 import { detectCardType, extractConfigFromPrompt, generateCardTitle } from './configureCardNL'
+import { useToast } from '../ui/Toast'
 
 interface Card {
   id: string
@@ -32,6 +33,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
   const { t } = useTranslation()
   const { deduplicatedClusters: clusters } = useClusters()
   const { addTokens } = useTokenUsage()
+  const { showToast } = useToast()
   const [config, setConfig] = useState<Record<string, unknown>>({})
   const [behaviors, setBehaviors] = useState<Record<string, boolean>>({})
   const [title, setTitle] = useState('')
@@ -94,6 +96,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
     setIsSaving(true)
     try {
       await onSave(card.id, { ...config, ...behaviors }, title || undefined)
+      showToast(t('dashboard.configure.saveSuccess', 'Card configuration saved'), 'success')
     } finally {
       if (isMountedRef.current) setIsSaving(false)
     }
