@@ -55,7 +55,7 @@ export function MissionBrowserScheduleActionTab({ isActive }: Props) {
     return () => {
       mounted = false
     }
-  }, [cluster, isActive])
+  }, [cluster, isActive, showToast])
 
   useEffect(() => {
     setDescription(buildDescription({ actionType, namespace, name, replicas, node }))
