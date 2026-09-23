@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/ssrf"
 )
 
 // pingClient is a shared HTTP client for ping requests.
@@ -35,7 +36,7 @@ var pingClient = &http.Client{
 				return nil, fmt.Errorf("no IPs resolved for host %s", host)
 			}
 			for _, ip := range ips {
-				if isBlockedIP(ip.IP) {
+				if ssrf.IsBlockedIP(ip.IP) {
 					return nil, fmt.Errorf("blocked: non-public IP %s for host %s", ip.IP, host)
 				}
 			}
@@ -175,7 +176,7 @@ func isPrivateHost(host string) bool {
 		if ip == nil {
 			continue
 		}
-		if isBlockedIP(ip) {
+		if ssrf.IsBlockedIP(ip) {
 			return true
 		}
 	}

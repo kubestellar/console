@@ -4,16 +4,16 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/api/handlers/internal/httputil"
 	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 	"github.com/kubestellar/console/pkg/k8s"
 )
 
-// IsDemoMode checks if the request has the X-Demo-Mode header set to "true"
-// When demo mode is enabled, handlers should return demo data immediately
-// without attempting to connect to real clusters.
-// Exported for use in sub-packages like gitops.
+// IsDemoMode delegates to httputil.IsDemoMode. It stays exported here so
+// existing root and sub-package call sites (e.g. gitops, compliance) keep
+// working after the helper moved to internal/httputil (epic #23685).
 func IsDemoMode(c *fiber.Ctx) bool {
-	return c.Get("X-Demo-Mode") == "true"
+	return httputil.IsDemoMode(c)
 }
 
 // noClusterAccessMsg is the unified error message returned by every handler

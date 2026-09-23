@@ -231,3 +231,37 @@ func TestGetEnvOrDefault(t *testing.T) {
 	assert.Equal(t, "fallback", GetEnvOrDefault("SHARED_UTILS_MISSING_VALUE", "fallback"))
 	assert.Equal(t, "fallback", GetEnvOrDefault("SHARED_UTILS_EMPTY_VALUE", "fallback"))
 }
+
+func TestIsDemoMode(t *testing.T) {
+	tests := []struct {
+		name   string
+		header string
+		set    bool
+		want   bool
+	}{
+		{name: "header set to true", header: "true", set: true, want: true},
+		{name: "header set to false", header: "false", set: true, want: false},
+		{name: "header set to TRUE is case sensitive", header: "TRUE", set: true, want: false},
+		{name: "header absent", set: false, want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			app := fiber.New()
+			var got bool
+			app.Get("/demo", func(c *fiber.Ctx) error {
+				got = IsDemoMode(c)
+				return c.SendStatus(http.StatusOK)
+			})
+
+			req := httptest.NewRequest(http.MethodGet, "/demo", nil)
+			if tt.set {
+				req.Header.Set("X-Demo-Mode", tt.header)
+			}
+			resp, err := app.Test(req)
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}

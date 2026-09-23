@@ -97,3 +97,10 @@ func GetEnvOrDefault(key, defaultVal string) string {
 	}
 	return defaultVal
 }
+
+// IsDemoMode checks if the request has the X-Demo-Mode header set to "true".
+// When demo mode is enabled, handlers should return demo data immediately
+// without attempting to connect to real clusters.
+func IsDemoMode(c *fiber.Ctx) bool {
+	return c.Get("X-Demo-Mode") == "true"
+}

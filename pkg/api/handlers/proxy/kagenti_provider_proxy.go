@@ -1,4 +1,4 @@
-package handlers
+package proxy
 
 import (
 	"bufio"
@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/api/handlers/auth"
 
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/kagentiprovider"
@@ -48,7 +49,7 @@ func NewKagentiProviderProxyHandler(client *kagentiprovider.KagentiClient, confi
 // GetStatus returns the kagenti controller availability status.
 // Only editors and admins may view LLM provider configuration (CWE-200, #16730).
 func (h *KagentiProviderProxyHandler) GetStatus(c *fiber.Ctx) error {
-	if err := RequireEditorOrAdmin(c, h.store); err != nil {
+	if err := auth.RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 	if h.client == nil {
@@ -79,7 +80,7 @@ func (h *KagentiProviderProxyHandler) GetStatus(c *fiber.Ctx) error {
 
 // ListAgents returns known kagenti agents.
 func (h *KagentiProviderProxyHandler) ListAgents(c *fiber.Ctx) error {
-	if err := RequireEditorOrAdmin(c, h.store); err != nil {
+	if err := auth.RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 	if h.client == nil {
@@ -113,7 +114,7 @@ func writeSSEDataEvent(w *bufio.Writer, payload string) error {
 
 // Chat streams a kagenti agent conversation via SSE.
 func (h *KagentiProviderProxyHandler) Chat(c *fiber.Ctx) error {
-	if err := RequireEditorOrAdmin(c, h.store); err != nil {
+	if err := auth.RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 	if h.client == nil {
@@ -250,7 +251,7 @@ type kagentiConfigUpdateRequest struct {
 
 // UpdateConfig updates the in-cluster Kagenti LLM provider configuration.
 func (h *KagentiProviderProxyHandler) UpdateConfig(c *fiber.Ctx) error {
-	if err := RequireAdmin(c, h.store); err != nil {
+	if err := auth.RequireAdmin(c, h.store); err != nil {
 		return err
 	}
 
@@ -292,7 +293,7 @@ func (h *KagentiProviderProxyHandler) UpdateConfig(c *fiber.Ctx) error {
 
 // CallTool invokes a tool through a kagenti agent via A2A.
 func (h *KagentiProviderProxyHandler) CallTool(c *fiber.Ctx) error {
-	if err := RequireEditorOrAdmin(c, h.store); err != nil {
+	if err := auth.RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 	if h.client == nil {
@@ -452,7 +453,7 @@ type kagentiDirectToolRequest struct {
 
 // CallToolDirect routes tool calls to the appropriate console handlers
 func (h *KagentiProviderProxyHandler) CallToolDirect(c *fiber.Ctx) error {
-	if err := RequireEditorOrAdmin(c, h.store); err != nil {
+	if err := auth.RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 	if h.k8sClient == nil {
