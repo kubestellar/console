@@ -32,8 +32,8 @@ export function DigestCard({ notification, solves, onDismiss, onOpenEvent }: Dig
   return (
     <div className="mx-1 mb-2.5 mt-1.5 px-3 py-2.5" style={{
       borderLeft: '3px solid var(--s-info)',
-      background: 'rgba(99,150,237,0.08)',
-      border: '1px solid rgba(99,150,237,0.25)',
+      background: 'color-mix(in srgb, var(--s-info) 8%, transparent)',
+      border: '1px solid color-mix(in srgb, var(--s-info) 25%, transparent)',
       borderRadius: 'var(--s-r)',
     }}>
       <div className="flex items-center gap-2">

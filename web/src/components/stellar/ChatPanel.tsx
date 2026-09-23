@@ -272,8 +272,8 @@ export function ChatPanel({
           <div
             className="mb-1.5 flex items-center gap-1.5 px-2 py-1 text-xs"
             style={{
-              background: 'rgba(227,179,65,0.1)',
-              border: '1px solid rgba(227,179,65,0.3)',
+              background: 'color-mix(in srgb, var(--s-warning) 10%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--s-warning) 30%, transparent)',
               borderRadius: 'var(--s-rs)',
               color: 'var(--s-warning)',
             }}
