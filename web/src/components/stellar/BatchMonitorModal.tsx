@@ -158,7 +158,7 @@ export function BatchMonitorModal({
       className="p-4"
       style={{
         position: 'fixed', inset: 0,
-        background: 'rgba(0,0,0,0.7)',
+        background: 'var(--overlay-backdrop)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         zIndex: OVERLAY_Z_INDEX,
       }}
@@ -176,7 +176,7 @@ export function BatchMonitorModal({
           maxWidth: 800, width: '100%',
           maxHeight: '90vh',
           display: 'flex', flexDirection: 'column',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+          boxShadow: 'var(--shadow-modal)',
         }}
         onClick={e => e.stopPropagation()}
       >
@@ -218,12 +218,12 @@ export function BatchMonitorModal({
                   color: batch.status === 'completed' ? 'var(--s-success)'
                     : batch.status === 'failed' ? 'var(--s-warning)'
                     : 'var(--s-info)',
-                  background: batch.status === 'completed' ? 'rgba(63,185,80,0.12)'
-                    : batch.status === 'failed' ? 'rgba(227,179,65,0.12)'
-                    : 'rgba(99,150,237,0.12)',
-                  border: `1px solid ${batch.status === 'completed' ? 'rgba(63,185,80,0.3)'
-                    : batch.status === 'failed' ? 'rgba(227,179,65,0.3)'
-                    : 'rgba(99,150,237,0.3)'}`,
+                  background: batch.status === 'completed' ? 'color-mix(in srgb, var(--s-success) 12%, transparent)'
+                    : batch.status === 'failed' ? 'color-mix(in srgb, var(--s-warning) 12%, transparent)'
+                    : 'color-mix(in srgb, var(--s-info) 12%, transparent)',
+                  border: `1px solid ${batch.status === 'completed' ? 'color-mix(in srgb, var(--s-success) 30%, transparent)'
+                    : batch.status === 'failed' ? 'color-mix(in srgb, var(--s-warning) 30%, transparent)'
+                    : 'color-mix(in srgb, var(--s-info) 30%, transparent)'}`,
                   borderRadius: 10,
                 }}
               >
