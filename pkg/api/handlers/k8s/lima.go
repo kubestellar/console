@@ -1,4 +1,4 @@
-package handlers
+package k8s
 
 import (
 	"context"
@@ -8,17 +8,19 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/kubestellar/console/pkg/k8s"
 	"k8s.io/apimachinery/pkg/api/resource"
+
+	"github.com/kubestellar/console/pkg/api/handlers/internal/httputil"
+	k8sclient "github.com/kubestellar/console/pkg/k8s"
 )
 
 // limaListTimeout is the timeout for listing Lima nodes across all clusters.
 const limaListTimeout = 30 * time.Second
 
-// limaClient defines the narrow subset of k8s.MultiClusterClient used by LimaHandlers.
+// limaClient defines the narrow subset of k8sclient.MultiClusterClient used by LimaHandlers.
 type limaClient interface {
-	DeduplicatedClusters(ctx context.Context) ([]k8s.ClusterInfo, error)
-	GetNodes(ctx context.Context, contextName string) ([]k8s.NodeInfo, error)
+	DeduplicatedClusters(ctx context.Context) ([]k8sclient.ClusterInfo, error)
+	GetNodes(ctx context.Context, contextName string) ([]k8sclient.NodeInfo, error)
 }
 
 // LimaHandlers handles Lima VM status API endpoints.
@@ -27,8 +29,8 @@ type LimaHandlers struct {
 }
 
 // NewLimaHandlers creates a new Lima handlers instance.
-// Accepts *k8s.MultiClusterClient (or any limaClient implementation).
-func NewLimaHandlers(k8sClient *k8s.MultiClusterClient) *LimaHandlers {
+// Accepts *k8sclient.MultiClusterClient (or any limaClient implementation).
+func NewLimaHandlers(k8sClient *k8sclient.MultiClusterClient) *LimaHandlers {
 	return &LimaHandlers{k8sClient: k8sClient}
 }
 
@@ -61,7 +63,7 @@ type LimaListResponse struct {
 //
 // GET /api/lima
 func (h *LimaHandlers) ListLima(c *fiber.Ctx) error {
-	if IsDemoMode(c) {
+	if httputil.IsDemoMode(c) {
 		return c.JSON(LimaListResponse{
 			LimaInstances: GetDemoLimaInstances(),
 			IsDemoData:    true,
@@ -77,7 +79,7 @@ func (h *LimaHandlers) ListLima(c *fiber.Ctx) error {
 
 	cluster := c.Query("cluster")
 	if cluster != "" {
-		if err := validateK8sName("cluster", cluster); err != nil {
+		if err := httputil.ValidateK8sName("cluster", cluster); err != nil {
 			return err
 		}
 	}
@@ -85,9 +87,9 @@ func (h *LimaHandlers) ListLima(c *fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), limaListTimeout)
 	defer cancel()
 
-	clusters := make([]k8s.ClusterInfo, 0)
+	clusters := make([]k8sclient.ClusterInfo, 0)
 	if cluster != "" {
-		clusters = append(clusters, k8s.ClusterInfo{Name: cluster, Context: cluster})
+		clusters = append(clusters, k8sclient.ClusterInfo{Name: cluster, Context: cluster})
 	} else {
 		deduplicated, err := h.k8sClient.DeduplicatedClusters(ctx)
 		if err != nil {
@@ -137,7 +139,7 @@ func (h *LimaHandlers) ListLima(c *fiber.Ctx) error {
 	})
 }
 
-func isLimaNode(node k8s.NodeInfo) bool {
+func isLimaNode(node k8sclient.NodeInfo) bool {
 	if strings.HasPrefix(strings.ToLower(node.Name), "lima-") {
 		return true
 	}
@@ -151,7 +153,7 @@ func isLimaNode(node k8s.NodeInfo) bool {
 	return strings.Contains(strings.ToLower(node.OSImage), "lima")
 }
 
-func mapNodeToLimaInstance(node k8s.NodeInfo) LimaInstanceSummary {
+func mapNodeToLimaInstance(node k8sclient.NodeInfo) LimaInstanceSummary {
 	status := limaNodeStatus(node.Conditions)
 
 	limaVersion := "unknown"
@@ -174,7 +176,7 @@ func mapNodeToLimaInstance(node k8s.NodeInfo) LimaInstanceSummary {
 	}
 }
 
-func limaNodeStatus(conditions []k8s.NodeCondition) string {
+func limaNodeStatus(conditions []k8sclient.NodeCondition) string {
 	hasPressure := false
 	isReady := false
 
@@ -256,4 +258,54 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+// GetDemoLimaInstances returns demo Lima instances for GET /api/lima.
+func GetDemoLimaInstances() []LimaInstanceSummary {
+	return []LimaInstanceSummary{
+		{
+			Name:        "lima-k3s",
+			Status:      "running",
+			CPUCores:    4,
+			MemoryGB:    8,
+			DiskGB:      60,
+			Arch:        "x86_64",
+			OS:          "Ubuntu 22.04 LTS",
+			LimaVersion: "0.18.0",
+			LastSeen:    time.Now().Add(-30 * time.Second).UTC().Format(time.RFC3339),
+		},
+		{
+			Name:        "lima-default",
+			Status:      "running",
+			CPUCores:    2,
+			MemoryGB:    4,
+			DiskGB:      30,
+			Arch:        "x86_64",
+			OS:          "Ubuntu 22.04 LTS",
+			LimaVersion: "0.18.0",
+			LastSeen:    time.Now().Add(-45 * time.Second).UTC().Format(time.RFC3339),
+		},
+		{
+			Name:        "lima-dev",
+			Status:      "running",
+			CPUCores:    4,
+			MemoryGB:    8,
+			DiskGB:      80,
+			Arch:        "aarch64",
+			OS:          "Ubuntu 23.10",
+			LimaVersion: "0.17.2",
+			LastSeen:    time.Now().Add(-2 * time.Minute).UTC().Format(time.RFC3339),
+		},
+		{
+			Name:        "lima-test",
+			Status:      "stopped",
+			CPUCores:    2,
+			MemoryGB:    4,
+			DiskGB:      20,
+			Arch:        "x86_64",
+			OS:          "Fedora 39",
+			LimaVersion: "0.17.2",
+			LastSeen:    time.Now().Add(-30 * time.Minute).UTC().Format(time.RFC3339),
+		},
+	}
 }

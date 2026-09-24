@@ -69,10 +69,8 @@ const baseGPUNodes = {
 describe('ClusterHealth', () => {
   beforeEach(() => {
     mockLoadingState.mockReturnValue(baseLoadingState)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockClusters.mockReturnValue(baseClusters as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockGPUNodes.mockReturnValue(baseGPUNodes as any)
+    mockClusters.mockReturnValue(baseClusters as unknown as ReturnType<typeof useClusters>)
+    mockGPUNodes.mockReturnValue(baseGPUNodes as unknown as ReturnType<typeof useCachedGPUNodes>)
   })
 
   it('renders skeleton while loading', () => {
@@ -91,8 +89,7 @@ describe('ClusterHealth', () => {
   })
 
   it('renders error state on consecutive failures', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockClusters.mockReturnValue({ ...baseClusters, isFailed: true, consecutiveFailures: 3 } as any)
+    mockClusters.mockReturnValue({ ...baseClusters, isFailed: true, consecutiveFailures: 3 } as unknown as ReturnType<typeof useClusters>)
     const { container } = render(<ClusterHealth />)
     expect(container.firstChild).toBeTruthy()
   })
@@ -102,8 +99,7 @@ describe('ClusterHealth', () => {
       { name: 'prod', healthy: true, reachable: true, nodeCount: 5, podCount: 42, cpuCores: 40, memoryGB: 160, version: 'v1.30.2' },
       { name: 'staging', healthy: false, reachable: true, nodeCount: 3, podCount: 15, cpuCores: 24, memoryGB: 96, version: 'v1.29.6' },
     ]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockClusters.mockReturnValue({ ...baseClusters, deduplicatedClusters: clusters } as any)
+    mockClusters.mockReturnValue({ ...baseClusters, deduplicatedClusters: clusters } as unknown as ReturnType<typeof useClusters>)
     render(<ClusterHealth />)
     expect(screen.getByText('prod')).toBeInTheDocument()
     expect(screen.getByText('staging')).toBeInTheDocument()
@@ -113,8 +109,7 @@ describe('ClusterHealth', () => {
     const clusters = [
       { name: 'prod', healthy: true, reachable: true, nodeCount: 5, podCount: 42, cpuCores: 40, memoryGB: 160, version: 'v1.30.2' },
     ]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockClusters.mockReturnValue({ ...baseClusters, deduplicatedClusters: clusters } as any)
+    mockClusters.mockReturnValue({ ...baseClusters, deduplicatedClusters: clusters } as unknown as ReturnType<typeof useClusters>)
     const { container } = render(<ClusterHealth />)
     expect(container.firstChild).toBeTruthy()
   })
