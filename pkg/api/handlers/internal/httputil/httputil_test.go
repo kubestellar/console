@@ -265,3 +265,23 @@ func TestIsDemoMode(t *testing.T) {
 		})
 	}
 }
+
+func TestDemoResponse(t *testing.T) {
+	app := fiber.New()
+	app.Get("/demo", func(c *fiber.Ctx) error {
+		return DemoResponse(c, "widgets", []string{"a", "b"})
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/demo", nil)
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	var got map[string]interface{}
+	require.NoError(t, json.Unmarshal(body, &got))
+	assert.Equal(t, "demo", got["source"])
+	assert.Equal(t, []interface{}{"a", "b"}, got["widgets"])
+}
