@@ -32,12 +32,16 @@ import {
 
 type Collision = { id: string }
 
-function workloadArgs() {
-  return { active: { data: { current: { type: 'workload' } } } } as any
+// Partial fixture — dashboardCollisionDetection only reads active.data.current.type,
+// so we don't need the full @dnd-kit CollisionDetectionArguments shape.
+type CollisionArgs = Parameters<typeof dashboardCollisionDetection>[0]
+
+function workloadArgs(): CollisionArgs {
+  return { active: { data: { current: { type: 'workload' } } } } as unknown as CollisionArgs
 }
 
-function reorderArgs() {
-  return { active: { data: { current: { type: 'card' } } } } as any
+function reorderArgs(): CollisionArgs {
+  return { active: { data: { current: { type: 'card' } } } } as unknown as CollisionArgs
 }
 
 describe('POINTER_SENSOR_ACTIVATION_DISTANCE', () => {
@@ -126,7 +130,9 @@ describe('dashboardCollisionDetection — card reorder drag', () => {
     mockPointerWithin.mockReturnValueOnce([])
     const centerResult = [{ id: 'card-x' }]
     mockClosestCenter.mockReturnValueOnce(centerResult)
-    const result = dashboardCollisionDetection({ active: { data: { current: undefined } } } as any)
+    const result = dashboardCollisionDetection(
+      { active: { data: { current: undefined } } } as unknown as CollisionArgs,
+    )
     expect(result).toBe(centerResult)
   })
 })

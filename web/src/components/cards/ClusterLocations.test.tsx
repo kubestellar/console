@@ -57,12 +57,13 @@ const baseLoadingState = {
 describe('ClusterLocations', () => {
   beforeEach(() => {
     mockLoadingState.mockReturnValue(baseLoadingState)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockClusters.mockReturnValue({ deduplicatedClusters: [], isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0 } as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockGlobalFilters.mockReturnValue({ selectedClusters: [], isAllClustersSelected: true, customFilter: '' } as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockDrillDown.mockReturnValue({ drillToCluster: vi.fn() } as any)
+    mockClusters.mockReturnValue(
+      { deduplicatedClusters: [], isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0 } as unknown as ReturnType<typeof useClusters>,
+    )
+    mockGlobalFilters.mockReturnValue(
+      { selectedClusters: [], isAllClustersSelected: true, customFilter: '' } as unknown as ReturnType<typeof useGlobalFilters>,
+    )
+    mockDrillDown.mockReturnValue({ drillToCluster: vi.fn() } as unknown as ReturnType<typeof useDrillDownActions>)
   })
 
   it('renders skeleton while loading', () => {
@@ -79,8 +80,9 @@ describe('ClusterLocations', () => {
   })
 
   it('renders error state on cluster fetch failure', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockClusters.mockReturnValue({ deduplicatedClusters: [], isLoading: false, isRefreshing: false, isFailed: true, consecutiveFailures: 3 } as any)
+    mockClusters.mockReturnValue(
+      { deduplicatedClusters: [], isLoading: false, isRefreshing: false, isFailed: true, consecutiveFailures: 3 } as unknown as ReturnType<typeof useClusters>,
+    )
     const { container } = render(<ClusterLocations />)
     expect(container.firstChild).toBeTruthy()
   })
@@ -90,8 +92,9 @@ describe('ClusterLocations', () => {
       { name: 'us-east-1', healthy: true, reachable: true, region: 'us-east-1', nodeCount: 5 },
       { name: 'eu-central-1', healthy: true, reachable: true, region: 'eu-central-1', nodeCount: 3 },
     ]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockClusters.mockReturnValue({ deduplicatedClusters: clusters, isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0 } as any)
+    mockClusters.mockReturnValue(
+      { deduplicatedClusters: clusters, isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0 } as unknown as ReturnType<typeof useClusters>,
+    )
     const { container } = render(<ClusterLocations />)
     expect(container.firstChild).toBeTruthy()
   })

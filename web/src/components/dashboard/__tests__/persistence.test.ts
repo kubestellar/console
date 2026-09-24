@@ -8,7 +8,7 @@
  * Run: npx vitest run src/components/dashboard/__tests__/persistence.test.ts
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { Card } from '../dashboardUtils'
+import type { Card, DashboardData } from '../dashboardUtils'
 
 const { mockLoad, defaultsFixture } = vi.hoisted(() => {
   const defaults = [{ id: 'default-1' }, { id: 'default-2' }] as unknown as Card[]
@@ -88,7 +88,7 @@ describe('setDashboardCache', () => {
 describe('patchDashboardCache', () => {
   it('merges partial updates onto the existing cache entry', () => {
     const initial = {
-      dashboard: { name: 'd1' } as any,
+      dashboard: { name: 'd1' } as unknown as DashboardData,
       cards: [{ id: 'a' }] as unknown as Card[],
       timestamp: 1,
     }
