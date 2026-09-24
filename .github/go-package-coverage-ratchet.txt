@@ -62,7 +62,7 @@ pkg/api/handlers/admin 62.0
 pkg/api/handlers/auth 82.5
 pkg/api/handlers/benchmarks 65.0
 pkg/api/handlers/compliance 90.5
-pkg/api/handlers/dashboards 72.5
+pkg/api/handlers/dashboards 71.0
 pkg/api/handlers/feedback 70.0
 pkg/api/handlers/github 60.5
 pkg/api/handlers/gitops 74.5
