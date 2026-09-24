@@ -1,9 +1,10 @@
-// Package handlers — input validation helpers shared by RBAC and namespace
-// handlers. Added for #6627: the RBAC/namespace request structs previously had
-// no field-level validation, so empty or malformed payloads silently relied on
+// Field-level input validation helpers shared by RBAC and namespace handlers.
+// Added for #6627: the RBAC/namespace request structs previously had no
+// field-level validation, so empty or malformed payloads silently relied on
 // downstream Kubernetes API checks. These helpers centralise the rules so every
 // handler rejects bad input at the HTTP boundary with a specific 400 error.
-package handlers
+// Moved here from the root handlers package in epic #23685.
+package httputil
 
 import (
 	"fmt"
@@ -47,10 +48,10 @@ var dnsSubdomainRegex = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-
 // #6675 Copilot followup: allow any number of `:label` segments.
 var roleNameRegex = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(:[a-z0-9]([-a-z0-9]*[a-z0-9])?)*(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`)
 
-// validateDNSLabel checks that s is a non-empty RFC 1123 DNS label suitable
+// ValidateDNSLabel checks that s is a non-empty RFC 1123 DNS label suitable
 // for a Kubernetes object name (ServiceAccount, Namespace, RoleBinding, etc).
 // Returns a user-facing error that names the field.
-func validateDNSLabel(field, s string) error {
+func ValidateDNSLabel(field, s string) error {
 	if s == "" {
 		return fmt.Errorf("%s is required", field)
 	}
@@ -63,10 +64,10 @@ func validateDNSLabel(field, s string) error {
 	return nil
 }
 
-// validateDNSSubdomain checks that s is a non-empty RFC 1123 DNS subdomain.
+// ValidateDNSSubdomain checks that s is a non-empty RFC 1123 DNS subdomain.
 // Used for fields that may legitimately contain dots (not currently used,
 // kept for future extensibility when we validate e.g. hostnames).
-func validateDNSSubdomain(field, s string) error {
+func ValidateDNSSubdomain(field, s string) error {
 	if s == "" {
 		return fmt.Errorf("%s is required", field)
 	}
@@ -79,10 +80,10 @@ func validateDNSSubdomain(field, s string) error {
 	return nil
 }
 
-// validateClusterName is a looser validator for cluster IDs. Cluster names
+// ValidateClusterName is a looser validator for cluster IDs. Cluster names
 // in this codebase come from kubeconfig contexts and may contain dots,
 // dashes, slashes, and digits. We only enforce non-empty and length.
-func validateClusterName(field, s string) error {
+func ValidateClusterName(field, s string) error {
 	if s == "" {
 		return fmt.Errorf("%s is required", field)
 	}
@@ -95,9 +96,9 @@ func validateClusterName(field, s string) error {
 	return nil
 }
 
-// validateRoleName accepts a Kubernetes Role/ClusterRole name. These may
+// ValidateRoleName accepts a Kubernetes Role/ClusterRole name. These may
 // contain a system: prefix and optional dots.
-func validateRoleName(field, s string) error {
+func ValidateRoleName(field, s string) error {
 	if s == "" {
 		return fmt.Errorf("%s is required", field)
 	}
@@ -110,9 +111,9 @@ func validateRoleName(field, s string) error {
 	return nil
 }
 
-// validateEnum checks that s is one of allowed (case-sensitive). Used for
+// ValidateEnum checks that s is one of allowed (case-sensitive). Used for
 // fields like subjectKind, roleKind, and the namespace-access role shortcuts.
-func validateEnum(field, s string, allowed []string) error {
+func ValidateEnum(field, s string, allowed []string) error {
 	if s == "" {
 		return fmt.Errorf("%s is required", field)
 	}
