@@ -350,3 +350,29 @@ func TestRequireEditorOrAdminMiddleware(t *testing.T) {
 		})
 	}
 }
+
+// TestRequireAdminCheckCompat exercises the backward-compat requireAdminCheck
+// wrapper (re-exported from pkg/api/handlers/auth) directly, without going
+// through a store lookup.
+func TestRequireAdminCheckCompat(t *testing.T) {
+	tests := []struct {
+		name    string
+		user    *models.User
+		wantErr bool
+	}{
+		{"nil user", nil, true},
+		{"non-admin user", &models.User{Role: models.UserRoleViewer}, true},
+		{"admin user", &models.User{Role: models.UserRoleAdmin}, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := requireAdminCheck(tt.user)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
