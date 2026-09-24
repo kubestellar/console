@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/k8s"
 )
 
@@ -234,7 +233,7 @@ func TestGetNVIDIAOperatorStatus_InvalidClusterName(t *testing.T) {
 
 // Verify that the handlers package demo functions are accessible from mcp package
 func TestDemoFunctionsExist(t *testing.T) {
-	assert.NotNil(t, handlers.GetDemoGPUNodes())
-	assert.NotNil(t, handlers.GetDemoGPUNodeHealth())
-	assert.NotNil(t, handlers.GetDemoNVIDIAOperatorStatus())
+	assert.NotNil(t, GetDemoGPUNodes())
+	assert.NotNil(t, GetDemoGPUNodeHealth())
+	assert.NotNil(t, GetDemoNVIDIAOperatorStatus())
 }

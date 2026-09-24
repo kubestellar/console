@@ -50,7 +50,7 @@ func finishClusterHealthWarmup() {
 func (h *MCPHandlers) ListClusters(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately without trying real clusters
 	if handlers.IsDemoMode(c) {
-		return handlers.DemoResponse(c, "clusters", handlers.GetDemoClusters())
+		return handlers.DemoResponse(c, "clusters", GetDemoClusters())
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
@@ -132,7 +132,7 @@ func (h *MCPHandlers) GetClusterHealth(c *fiber.Ctx) error {
 
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return c.JSON(handlers.GetDemoClusterHealth(cluster))
+		return c.JSON(GetDemoClusterHealth(cluster))
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
@@ -163,7 +163,7 @@ func (h *MCPHandlers) GetClusterHealth(c *fiber.Ctx) error {
 func (h *MCPHandlers) GetAllClusterHealth(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.DemoResponse(c, "health", handlers.GetDemoAllClusterHealth())
+		return handlers.DemoResponse(c, "health", GetDemoAllClusterHealth())
 	}
 
 	// Use direct k8s client for this as it's more efficient
@@ -185,7 +185,7 @@ func (h *MCPHandlers) GetAllClusterHealth(c *fiber.Ctx) error {
 func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.DemoResponse(c, "nodes", handlers.GetDemoNodes())
+		return handlers.DemoResponse(c, "nodes", GetDemoNodes())
 	}
 
 	cluster := c.Query("cluster")
@@ -256,7 +256,7 @@ func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
 func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.DemoResponse(c, "events", handlers.GetDemoEvents())
+		return handlers.DemoResponse(c, "events", GetDemoEvents())
 	}
 
 	cluster := c.Query("cluster")
@@ -366,7 +366,7 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.DemoResponse(c, "events", handlers.GetDemoWarningEvents())
+		return handlers.DemoResponse(c, "events", GetDemoWarningEvents())
 	}
 
 	cluster := c.Query("cluster")
@@ -473,7 +473,7 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.DemoResponse(c, "issues", handlers.GetDemoSecurityIssues())
+		return handlers.DemoResponse(c, "issues", GetDemoSecurityIssues())
 	}
 
 	cluster := c.Query("cluster")

@@ -14,7 +14,7 @@ import (
 func (h *MCPHandlers) GetGPUNodes(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.DemoResponse(c, "nodes", handlers.GetDemoGPUNodes())
+		return handlers.DemoResponse(c, "nodes", GetDemoGPUNodes())
 	}
 
 	cluster := c.Query("cluster")
@@ -56,7 +56,7 @@ func (h *MCPHandlers) GetGPUNodes(c *fiber.Ctx) error {
 // GetGPUNodeHealth returns proactive health check results for GPU nodes
 func (h *MCPHandlers) GetGPUNodeHealth(c *fiber.Ctx) error {
 	if handlers.IsDemoMode(c) {
-		return handlers.DemoResponse(c, "nodes", handlers.GetDemoGPUNodeHealth())
+		return handlers.DemoResponse(c, "nodes", GetDemoGPUNodeHealth())
 	}
 
 	cluster := c.Query("cluster")
@@ -163,7 +163,7 @@ func (h *MCPHandlers) GetGPUHealthCronJobResults(c *fiber.Ctx) error {
 func (h *MCPHandlers) GetNVIDIAOperatorStatus(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.DemoResponse(c, "operators", handlers.GetDemoNVIDIAOperatorStatus())
+		return handlers.DemoResponse(c, "operators", GetDemoNVIDIAOperatorStatus())
 	}
 
 	cluster := c.Query("cluster")
