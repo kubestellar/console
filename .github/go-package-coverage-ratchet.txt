@@ -66,8 +66,10 @@ pkg/api/handlers/feedback 70.0
 pkg/api/handlers/github 60.5
 pkg/api/handlers/gitops 74.5
 pkg/api/handlers/internal/httputil 99.5
+pkg/api/handlers/k8s 70.0
 pkg/api/handlers/mcp 65.5
 pkg/api/handlers/missions 74.5
+pkg/api/handlers/ops 66.0
 pkg/api/handlers/persistence 66.5
 pkg/api/handlers/proxy 64.0
 pkg/api/handlers/rewards 62.5

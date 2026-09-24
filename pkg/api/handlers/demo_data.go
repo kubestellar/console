@@ -5,6 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/api/handlers/internal/httputil"
+	handlersk8s "github.com/kubestellar/console/pkg/api/handlers/k8s"
 	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 	"github.com/kubestellar/console/pkg/k8s"
 )
@@ -387,54 +388,11 @@ func GetDemoFlatcarNodes() []k8s.FlatcarNodeInfo {
 	}
 }
 
-// GetDemoLimaInstances returns demo Lima instances for GET /api/lima.
+// GetDemoLimaInstances delegates to the k8s subpackage (moved along with
+// LimaInstanceSummary in epic #23685 phase 1). Exported here for backward
+// compatibility.
 func GetDemoLimaInstances() []LimaInstanceSummary {
-	return []LimaInstanceSummary{
-		{
-			Name:        "lima-k3s",
-			Status:      "running",
-			CPUCores:    4,
-			MemoryGB:    8,
-			DiskGB:      60,
-			Arch:        "x86_64",
-			OS:          "Ubuntu 22.04 LTS",
-			LimaVersion: "0.18.0",
-			LastSeen:    time.Now().Add(-30 * time.Second).UTC().Format(time.RFC3339),
-		},
-		{
-			Name:        "lima-default",
-			Status:      "running",
-			CPUCores:    2,
-			MemoryGB:    4,
-			DiskGB:      30,
-			Arch:        "x86_64",
-			OS:          "Ubuntu 22.04 LTS",
-			LimaVersion: "0.18.0",
-			LastSeen:    time.Now().Add(-45 * time.Second).UTC().Format(time.RFC3339),
-		},
-		{
-			Name:        "lima-dev",
-			Status:      "running",
-			CPUCores:    4,
-			MemoryGB:    8,
-			DiskGB:      80,
-			Arch:        "aarch64",
-			OS:          "Ubuntu 23.10",
-			LimaVersion: "0.17.2",
-			LastSeen:    time.Now().Add(-2 * time.Minute).UTC().Format(time.RFC3339),
-		},
-		{
-			Name:        "lima-test",
-			Status:      "stopped",
-			CPUCores:    2,
-			MemoryGB:    4,
-			DiskGB:      20,
-			Arch:        "x86_64",
-			OS:          "Fedora 39",
-			LimaVersion: "0.17.2",
-			LastSeen:    time.Now().Add(-30 * time.Minute).UTC().Format(time.RFC3339),
-		},
-	}
+	return handlersk8s.GetDemoLimaInstances()
 }
 
 // Demo NVIDIA Operator Status
@@ -643,31 +601,22 @@ func GetDemoPodNetworkStats() []PodNetworkStats {
 	}
 }
 
-// DemoResponse is a helper function to return demo data response.
-// Exported for use in sub-packages like mcp.
+// DemoResponse delegates to httputil.DemoResponse. It stays exported here so
+// existing call sites (e.g. mcp) keep working after the helper moved to
+// internal/httputil (epic #23685).
 func DemoResponse(c *fiber.Ctx, key string, data interface{}) error {
-	return c.JSON(fiber.Map{key: data, "source": "demo"})
+	return httputil.DemoResponse(c, key, data)
 }
 
-// GetDemoCRDs returns synthetic CRD data for demo mode.
+// GetDemoCRDs delegates to the k8s subpackage (moved along with CRDSummary
+// in epic #23685 phase 1). Exported here for backward compatibility.
 func GetDemoCRDs() []CRDSummary {
-	return []CRDSummary{
-		{Name: "certificates", Group: "cert-manager.io", Version: "v1", Scope: "Namespaced", Status: "Established", Instances: 12, Cluster: "eks-prod-us-east-1", Versions: []CRDVersion{{Name: "v1", Served: true, Storage: true}}},
-		{Name: "clusterissuers", Group: "cert-manager.io", Version: "v1", Scope: "Cluster", Status: "Established", Instances: 3, Cluster: "eks-prod-us-east-1", Versions: []CRDVersion{{Name: "v1", Served: true, Storage: true}}},
-		{Name: "bindingpolicies", Group: "control.kubestellar.io", Version: "v1alpha1", Scope: "Cluster", Status: "Established", Instances: 5, Cluster: "gke-staging", Versions: []CRDVersion{{Name: "v1alpha1", Served: true, Storage: true}}},
-		{Name: "prometheusrules", Group: "monitoring.coreos.com", Version: "v1", Scope: "Namespaced", Status: "Established", Instances: 8, Cluster: "gke-staging", Versions: []CRDVersion{{Name: "v1", Served: true, Storage: true}}},
-		{Name: "clusterpolicies", Group: "kyverno.io", Version: "v1", Scope: "Cluster", Status: "Established", Instances: 15, Cluster: "k3s-edge", Versions: []CRDVersion{{Name: "v1", Served: true, Storage: true}, {Name: "v2beta1", Served: true, Storage: false}}},
-	}
+	return handlersk8s.GetDemoCRDs()
 }
 
-// GetDemoWebhooks returns synthetic admission webhook data for demo mode.
+// GetDemoWebhooks delegates to the k8s subpackage (moved along with
+// WebhookSummary in epic #23685 phase 1). Exported here for backward
+// compatibility.
 func GetDemoWebhooks() []WebhookSummary {
-	return []WebhookSummary{
-		{Name: "cert-manager-webhook", Type: "validating", FailurePolicy: "Fail", MatchPolicy: "Equivalent", Rules: 3, Cluster: "eks-prod-us-east-1"},
-		{Name: "cert-manager-webhook", Type: "mutating", FailurePolicy: "Fail", MatchPolicy: "Equivalent", Rules: 2, Cluster: "eks-prod-us-east-1"},
-		{Name: "kyverno-resource-validating-webhook", Type: "validating", FailurePolicy: "Ignore", MatchPolicy: "Equivalent", Rules: 6, Cluster: "gke-staging"},
-		{Name: "kyverno-resource-mutating-webhook", Type: "mutating", FailurePolicy: "Ignore", MatchPolicy: "Equivalent", Rules: 4, Cluster: "gke-staging"},
-		{Name: "gatekeeper-validating-webhook", Type: "validating", FailurePolicy: "Ignore", MatchPolicy: "Exact", Rules: 1, Cluster: "k3s-edge"},
-		{Name: "istio-sidecar-injector", Type: "mutating", FailurePolicy: "Fail", MatchPolicy: "Equivalent", Rules: 2, Cluster: "eks-prod-us-east-1"},
-	}
+	return handlersk8s.GetDemoWebhooks()
 }

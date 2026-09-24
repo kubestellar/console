@@ -104,3 +104,10 @@ func GetEnvOrDefault(key, defaultVal string) string {
 func IsDemoMode(c *fiber.Ctx) bool {
 	return c.Get("X-Demo-Mode") == "true"
 }
+
+// DemoResponse is a helper function to return a demo data response, wrapping
+// data under key alongside a "source": "demo" marker so clients can tell
+// synthetic data apart from live cluster data.
+func DemoResponse(c *fiber.Ctx, key string, data interface{}) error {
+	return c.JSON(fiber.Map{key: data, "source": "demo"})
+}
