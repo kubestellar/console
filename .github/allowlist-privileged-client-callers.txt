@@ -25,7 +25,9 @@
 # Adding a new file to this allowlist is a security decision. Do it in the
 # same PR as the new exception and explain the rationale in the PR body.
 
-gpu.go
+# Moved to k8s/ sub-package in #23710 (epic #23685 phase 1); same
+# internal reconciler exception at its new path.
+k8s/gpu.go
 # Moved to mcp/ sub-package in #18101 (formerly mcp_resources.go).
 mcp/resources.go
 self_upgrade.go
