@@ -31,7 +31,7 @@ func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
 		return err
 	}
 
-	return h.withDemoFallback(c, "configmaps", handlers.GetDemoConfigMaps(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "configmaps", GetDemoConfigMaps(), func(client *k8s.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.ConfigMap, error) {
 			return client.GetConfigMaps(ctx, clusterName, namespace)
 		})
@@ -56,7 +56,7 @@ func (h *MCPHandlers) GetSecrets(c *fiber.Ctx) error {
 		return err
 	}
 
-	return h.withDemoFallback(c, "secrets", handlers.GetDemoSecrets(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "secrets", GetDemoSecrets(), func(client *k8s.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.Secret, error) {
 			return client.GetSecrets(ctx, clusterName, namespace)
 		})
@@ -76,7 +76,7 @@ func (h *MCPHandlers) GetServiceAccounts(c *fiber.Ctx) error {
 		return err
 	}
 
-	return h.withDemoFallback(c, "serviceAccounts", handlers.GetDemoServiceAccounts(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "serviceAccounts", GetDemoServiceAccounts(), func(client *k8s.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.ServiceAccount, error) {
 			return client.GetServiceAccounts(ctx, clusterName, namespace)
 		})
@@ -96,7 +96,7 @@ func (h *MCPHandlers) GetPVCs(c *fiber.Ctx) error {
 		return err
 	}
 
-	return h.withDemoFallback(c, "pvcs", handlers.GetDemoPVCs(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "pvcs", GetDemoPVCs(), func(client *k8s.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.PVC, error) {
 			return client.GetPVCs(ctx, clusterName, namespace)
 		})
@@ -114,7 +114,7 @@ func (h *MCPHandlers) GetPVs(c *fiber.Ctx) error {
 		return err
 	}
 
-	return h.withDemoFallback(c, "pvs", handlers.GetDemoPVs(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "pvs", GetDemoPVs(), func(client *k8s.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.PV, error) {
 			return client.GetPVs(ctx, clusterName)
 		})
@@ -134,7 +134,7 @@ func (h *MCPHandlers) GetResourceQuotas(c *fiber.Ctx) error {
 		return err
 	}
 
-	return h.withDemoFallback(c, "resourceQuotas", handlers.GetDemoResourceQuotas(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "resourceQuotas", GetDemoResourceQuotas(), func(client *k8s.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.ResourceQuota, error) {
 			return client.GetResourceQuotas(ctx, clusterName, namespace)
 		})
@@ -154,7 +154,7 @@ func (h *MCPHandlers) GetLimitRanges(c *fiber.Ctx) error {
 		return err
 	}
 
-	return h.withDemoFallback(c, "limitRanges", handlers.GetDemoLimitRanges(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "limitRanges", GetDemoLimitRanges(), func(client *k8s.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.LimitRange, error) {
 			return client.GetLimitRanges(ctx, clusterName, namespace)
 		})
@@ -283,7 +283,7 @@ func (h *MCPHandlers) GetPodLogs(c *fiber.Ctx) error {
 
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.DemoResponse(c, "logs", handlers.GetDemoPodLogs())
+		return handlers.DemoResponse(c, "logs", GetDemoPodLogs())
 	}
 
 	cluster := c.Query("cluster")
@@ -401,7 +401,7 @@ var AllowedDeployTools = map[string]bool{
 func (h *MCPHandlers) GetWasmCloudHosts(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.DemoResponse(c, "hosts", handlers.GetWasmCloudHosts())
+		return handlers.DemoResponse(c, "hosts", GetWasmCloudHosts())
 	}
 
 	// For non-demo mode, we'll return an empty list for now
@@ -413,7 +413,7 @@ func (h *MCPHandlers) GetWasmCloudHosts(c *fiber.Ctx) error {
 func (h *MCPHandlers) GetWasmCloudActors(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.DemoResponse(c, "actors", handlers.GetWasmCloudActors())
+		return handlers.DemoResponse(c, "actors", GetWasmCloudActors())
 	}
 
 	// For non-demo mode, we'll return an empty list for now
@@ -512,7 +512,7 @@ func (h *MCPHandlers) GetFlatcarNodes(c *fiber.Ctx) error {
 		return err
 	}
 
-	return h.withDemoFallback(c, "nodes", handlers.GetDemoFlatcarNodes(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "nodes", GetDemoFlatcarNodes(), func(client *k8s.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.FlatcarNodeInfo, error) {
 			return client.GetFlatcarNodes(ctx, clusterName)
 		})
@@ -532,7 +532,7 @@ func (h *MCPHandlers) GetIngresses(c *fiber.Ctx) error {
 		return err
 	}
 
-	return h.withDemoFallback(c, "ingresses", handlers.GetDemoIngresses(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "ingresses", GetDemoIngresses(), func(client *k8s.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.Ingress, error) {
 			return client.GetIngresses(ctx, clusterName, namespace)
 		})
@@ -552,7 +552,7 @@ func (h *MCPHandlers) GetNetworkPolicies(c *fiber.Ctx) error {
 		return err
 	}
 
-	return h.withDemoFallback(c, "networkpolicies", handlers.GetDemoNetworkPolicies(), func(client *k8s.MultiClusterClient) error {
+	return h.withDemoFallback(c, "networkpolicies", GetDemoNetworkPolicies(), func(client *k8s.MultiClusterClient) error {
 		items, errTracker, err := listClusterResources(c.Context(), client, cluster, func(ctx context.Context, clusterName string) ([]k8s.NetworkPolicy, error) {
 			return client.GetNetworkPolicies(ctx, clusterName, namespace)
 		})
@@ -597,7 +597,7 @@ func classifyComponent(labels map[string]string) string {
 func (h *MCPHandlers) GetPodNetworkStats(c *fiber.Ctx) error {
 	// Demo mode: return realistic sample data immediately
 	if handlers.IsDemoMode(c) {
-		return handlers.DemoResponse(c, "stats", handlers.GetDemoPodNetworkStats())
+		return handlers.DemoResponse(c, "stats", GetDemoPodNetworkStats())
 	}
 
 	if h.k8sClient == nil {
