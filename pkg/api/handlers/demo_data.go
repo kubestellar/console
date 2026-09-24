@@ -644,10 +644,11 @@ func GetDemoPodNetworkStats() []PodNetworkStats {
 	}
 }
 
-// DemoResponse is a helper function to return demo data response.
-// Exported for use in sub-packages like mcp.
+// DemoResponse delegates to httputil.DemoResponse. It stays exported here so
+// existing call sites (e.g. mcp) keep working after the helper moved to
+// internal/httputil (epic #23685).
 func DemoResponse(c *fiber.Ctx, key string, data interface{}) error {
-	return c.JSON(fiber.Map{key: data, "source": "demo"})
+	return httputil.DemoResponse(c, key, data)
 }
 
 // GetDemoCRDs delegates to the k8s subpackage (moved along with CRDSummary

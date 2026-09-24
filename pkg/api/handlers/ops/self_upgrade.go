@@ -1,4 +1,4 @@
-package handlers
+package ops
 
 import (
 	"context"
@@ -18,7 +18,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
+	"github.com/kubestellar/console/pkg/api/handlers/auth"
 	"github.com/kubestellar/console/pkg/api/middleware"
+	"github.com/kubestellar/console/pkg/api/transport"
 	k8sclient "github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/sanitize"
@@ -39,7 +41,7 @@ const selfUpgradeTimeout = 30 * time.Second
 // SelfUpgradeHandler handles in-console Helm self-upgrade via Deployment patch.
 type SelfUpgradeHandler struct {
 	k8sClient *k8sclient.MultiClusterClient
-	hub       *Hub
+	hub       *transport.Hub
 	store     store.Store
 
 	// inClusterClient is used for testing to provide a mock kubernetes client.
@@ -48,7 +50,7 @@ type SelfUpgradeHandler struct {
 }
 
 // NewSelfUpgradeHandler creates a new SelfUpgradeHandler.
-func NewSelfUpgradeHandler(k8sClient *k8sclient.MultiClusterClient, hub *Hub, store store.Store) *SelfUpgradeHandler {
+func NewSelfUpgradeHandler(k8sClient *k8sclient.MultiClusterClient, hub *transport.Hub, store store.Store) *SelfUpgradeHandler {
 	return &SelfUpgradeHandler{
 		k8sClient: k8sClient,
 		hub:       hub,
@@ -169,7 +171,7 @@ func (h *SelfUpgradeHandler) canPatchDeployment(ctx context.Context, client kube
 // GET /api/self-upgrade/status
 func (h *SelfUpgradeHandler) GetStatus(c *fiber.Ctx) error {
 	// Require admin to prevent topology information disclosure (CWE-200)
-	if err := RequireAdmin(c, h.store); err != nil {
+	if err := auth.RequireAdmin(c, h.store); err != nil {
 		return err
 	}
 
@@ -415,7 +417,7 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 		// Terminal error — no intermediate progress was claimed, so clients
 		// transition directly from "idle" to "failed" without a misleading
 		// 20% checkpoint.
-		h.hub.BroadcastAll(Message{
+		h.hub.BroadcastAll(transport.Message{
 			Type: "update_progress",
 			Data: map[string]any{
 				"status":  "failed",
@@ -433,7 +435,7 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 	// (image patched) and step 2 (waiting for rollout) back-to-back so the UI
 	// still sees a smooth progression, but neither event is sent unless the
 	// underlying state it describes is true.
-	h.hub.BroadcastAll(Message{
+	h.hub.BroadcastAll(transport.Message{
 		Type: "update_progress",
 		Data: map[string]any{
 			"status":   "running",
@@ -446,7 +448,7 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 	// asynchronously and terminates this pod mid-request, so no terminal
 	// success event is sent over this hub — clients detect completion by
 	// polling /health (see web/src/hooks/useSelfUpgrade.ts:pollForRestart).
-	h.hub.BroadcastAll(Message{
+	h.hub.BroadcastAll(transport.Message{
 		Type: "update_progress",
 		Data: map[string]any{
 			"status":   "running",

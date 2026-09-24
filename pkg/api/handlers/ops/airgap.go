@@ -1,8 +1,9 @@
-package handlers
+package ops
 
 import (
 	"github.com/gofiber/fiber/v2"
 
+	"github.com/kubestellar/console/pkg/api/handlers/internal/httputil"
 	"github.com/kubestellar/console/pkg/compliance/airgap"
 )
 
@@ -25,22 +26,22 @@ func (h *AirGapHandler) RegisterPublicRoutes(r fiber.Router) {
 }
 
 func (h *AirGapHandler) listRequirements(c *fiber.Ctx) error {
-	if IsDemoMode(c) {
-		return DemoResponse(c, "requirements", h.engine.Requirements())
+	if httputil.IsDemoMode(c) {
+		return httputil.DemoResponse(c, "requirements", h.engine.Requirements())
 	}
 	return c.JSON(h.engine.Requirements())
 }
 
 func (h *AirGapHandler) listClusters(c *fiber.Ctx) error {
-	if IsDemoMode(c) {
-		return DemoResponse(c, "clusters", h.engine.Clusters())
+	if httputil.IsDemoMode(c) {
+		return httputil.DemoResponse(c, "clusters", h.engine.Clusters())
 	}
 	return c.JSON(h.engine.Clusters())
 }
 
 func (h *AirGapHandler) getSummary(c *fiber.Ctx) error {
-	if IsDemoMode(c) {
-		return DemoResponse(c, "summary", h.engine.Summary())
+	if httputil.IsDemoMode(c) {
+		return httputil.DemoResponse(c, "summary", h.engine.Summary())
 	}
 	return c.JSON(h.engine.Summary())
 }
