@@ -94,39 +94,34 @@ const baseCardData = {
 describe('VClusterStatus', () => {
   beforeEach(() => {
     mockLoadingState.mockReturnValue(baseLoadingState)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockLocalAgent.mockReturnValue({ isConnected: false } as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    mockLocalAgent.mockReturnValue({ isConnected: false } as unknown as ReturnType<typeof useLocalAgent>)
     mockLocalClusterTools.mockReturnValue({
       vclusterInstances: [],
       isVClustersLoading: false,
       vclustersError: null,
       refresh: vi.fn(),
-    } as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockUseCardData.mockReturnValue(baseCardData as any)
+    } as unknown as ReturnType<typeof useLocalClusterTools>)
+    mockUseCardData.mockReturnValue(baseCardData as unknown as ReturnType<typeof useCardData>)
   })
 
   it('renders skeleton while loading', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockLocalAgent.mockReturnValue({ isConnected: true } as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockLocalClusterTools.mockReturnValue({ vclusterInstances: [], isVClustersLoading: true, vclustersError: null, refresh: vi.fn() } as any)
+    mockLocalAgent.mockReturnValue({ isConnected: true } as unknown as ReturnType<typeof useLocalAgent>)
+    mockLocalClusterTools.mockReturnValue(
+      { vclusterInstances: [], isVClustersLoading: true, vclustersError: null, refresh: vi.fn() } as unknown as ReturnType<typeof useLocalClusterTools>,
+    )
     const { container } = render(<VClusterStatus />)
     expect(container.firstChild).toBeTruthy()
     expect(container.querySelector('[data-testid="skeleton"]')).toBeInTheDocument()
   })
 
   it('renders error state when fetch failed', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockLocalAgent.mockReturnValue({ isConnected: true } as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    mockLocalAgent.mockReturnValue({ isConnected: true } as unknown as ReturnType<typeof useLocalAgent>)
     mockLocalClusterTools.mockReturnValue({
       vclusterInstances: [],
       isVClustersLoading: false,
       vclustersError: new Error('Network error'),
       refresh: vi.fn(),
-    } as any)
+    } as unknown as ReturnType<typeof useLocalClusterTools>)
     render(<VClusterStatus />)
     expect(screen.getByRole('alert')).toBeInTheDocument()
     expect(screen.getByText('vclusterStatus.loadFailed')).toBeInTheDocument()
@@ -134,15 +129,13 @@ describe('VClusterStatus', () => {
 
   it('retry button calls refresh', () => {
     const refresh = vi.fn()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockLocalAgent.mockReturnValue({ isConnected: true } as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    mockLocalAgent.mockReturnValue({ isConnected: true } as unknown as ReturnType<typeof useLocalAgent>)
     mockLocalClusterTools.mockReturnValue({
       vclusterInstances: [],
       isVClustersLoading: false,
       vclustersError: new Error('Error'),
       refresh,
-    } as any)
+    } as unknown as ReturnType<typeof useLocalClusterTools>)
     render(<VClusterStatus />)
     fireEvent.click(screen.getByText('common:common.retry'))
     expect(refresh).toHaveBeenCalledTimes(1)
@@ -158,12 +151,13 @@ describe('VClusterStatus', () => {
     const vclusters = [
       { name: 'dev-cluster', namespace: 'vcluster-dev', status: 'Running', context: 'kind-dev' },
     ]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockLocalAgent.mockReturnValue({ isConnected: true } as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockLocalClusterTools.mockReturnValue({ vclusterInstances: vclusters, isVClustersLoading: false, vclustersError: null, refresh: vi.fn() } as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockUseCardData.mockReturnValue({ ...baseCardData, items: [{ name: 'dev-cluster', namespace: 'vcluster-dev', hostCluster: 'kind-dev', status: 'Running', k8sVersion: '—', createdAt: '' }], totalItems: 1 } as any)
+    mockLocalAgent.mockReturnValue({ isConnected: true } as unknown as ReturnType<typeof useLocalAgent>)
+    mockLocalClusterTools.mockReturnValue(
+      { vclusterInstances: vclusters, isVClustersLoading: false, vclustersError: null, refresh: vi.fn() } as unknown as ReturnType<typeof useLocalClusterTools>,
+    )
+    mockUseCardData.mockReturnValue(
+      { ...baseCardData, items: [{ name: 'dev-cluster', namespace: 'vcluster-dev', hostCluster: 'kind-dev', status: 'Running', k8sVersion: '—', createdAt: '' }], totalItems: 1 } as unknown as ReturnType<typeof useCardData>,
+    )
     render(<VClusterStatus />)
     expect(screen.getByText('dev-cluster')).toBeInTheDocument()
   })
