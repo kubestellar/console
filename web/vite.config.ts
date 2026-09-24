@@ -137,6 +137,8 @@ export default defineConfig(({ mode }) => ({
             // Further split drasi to reduce remaining 564KB chunk
             ['cards-drasi-topology', ['/src/components/cards/DrasiTopology', '/src/components/cards/drasi/DrasiTopology']],
             ['cards-drasi-pipelines', ['/src/components/cards/DrasiPipelineHealth', '/src/components/cards/DrasiPipelines', '/src/components/cards/drasi/DrasiPipelineHealth', '/src/components/cards/drasi/DrasiPipelines']],
+            // Split the CodeMirror editor wrapper out of the drasi catch-all to reduce the 548KB chunk
+            ['cards-drasi-editor', ['/src/components/cards/drasi/CodeMirrorEditor.tsx', '/src/components/cards/drasi/LazyCodeMirror.tsx']],
             ['cards-drasi', ['/src/components/cards/drasi/', '/src/components/cards/DrasiPipelineHealth', '/src/components/cards/DrasiPipelines', '/src/components/cards/DrasiTopology']],
             ['cards-karmada', ['/src/components/cards/karmada_status/', '/src/components/cards/openyurt_status/']],
             ['cards-multitenancy', ['/src/components/cards/multi-tenancy/']],
@@ -186,7 +188,9 @@ export default defineConfig(({ mode }) => ({
             ['theme-system', ['/src/hooks/useTheme', '/src/hooks/useBranding']],
             // Source dirs with no rule fell through into app-routes (5.6M). Give the
             // largest unmatched components/lib/config trees their own chunks.
-            ['feature-missions', ['/src/components/missions/', '/src/components/mission-control/', '/src/lib/missions/']],
+            // Split mission-control out of feature-missions to reduce the 436KB chunk
+            ['feature-mission-control', ['/src/components/mission-control/']],
+            ['feature-missions', ['/src/components/missions/', '/src/lib/missions/']],
             ['feature-stellar', ['/src/components/stellar/']],
             ['feature-agent', ['/src/components/agent/', '/src/components/widgets/', '/src/components/modals/', '/src/lib/widgets/', '/src/lib/modals/']],
             ['feature-feedback', ['/src/components/feedback/', '/src/components/rewards/', '/src/components/updates/', '/src/components/teams/']],
@@ -196,6 +200,8 @@ export default defineConfig(({ mode }) => ({
             ['lib-demo', ['/src/lib/demo/']],
             ['lib-themes', ['/src/lib/themes/']],
             ['config-dashboards', ['/src/config/dashboards/']],
+            // Split internal test/perf-harness pages out of app-pages to reduce the 5.0MB chunk
+            ['app-pages-testing', ['/src/pages/AllCardsPerfTest', '/src/pages/CompliancePerfTest', '/src/pages/UnifiedCardTest', '/src/pages/UnifiedStatsTest', '/src/pages/UnifiedDashboardTest']],
             ['app-pages', ['/src/pages/']],
             // Split app shell to reduce massive 5.5M app-routes chunk
             ['app-router', ['/src/components/router/', '/src/lib/router/']],
