@@ -210,8 +210,17 @@ export const MCP_HOOK_TIMEOUT_MS = 15_000
 /** Extended timeout for MCP operations on large clusters */
 export const MCP_EXTENDED_TIMEOUT_MS = 30_000
 
+// #23598 — 2s was too tight for contended nightly CI runners: under heavy
+// load (the same run's unit-test suite took ~72 minutes) the browser's main
+// thread can be starved long enough that the AbortSignal.timeout() fires
+// before the (already-fulfilled) /health response is processed. That flips
+// checkBackendAvailability() to `false`, which then silently blocks every
+// REST fallback fetch (see fetchWorkloadsViaRest() and friends) even though
+// the mock/real backend actually responded. Raised to 6s — still well within
+// what a genuinely down backend would exceed — to give real event-loop
+// headroom instead of a hard-coded CI-only multiplier.
 /** Timeout for backend API health checks */
-export const BACKEND_HEALTH_CHECK_TIMEOUT_MS = 2_000
+export const BACKEND_HEALTH_CHECK_TIMEOUT_MS = 6_000
 
 /** Default timeout for fetch() calls to the local backend API */
 export const FETCH_DEFAULT_TIMEOUT_MS = 10_000
