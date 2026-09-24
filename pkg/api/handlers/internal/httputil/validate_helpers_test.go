@@ -1,4 +1,4 @@
-package handlers
+package httputil
 
 import (
 	"strings"
@@ -28,7 +28,7 @@ func TestValidateDNSLabel(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := validateDNSLabel("field", tc.value)
+			err := ValidateDNSLabel("field", tc.value)
 			if tc.wantErr && err == nil {
 				t.Fatalf("expected error, got nil")
 			}
@@ -56,10 +56,11 @@ func TestValidateClusterName(t *testing.T) {
 		{"empty", "", true},
 		{"newline", "prod\nhacked", true},
 		{"tab", "prod\thacked", true},
+		{"too long", strings.Repeat("a", maxK8sDNSSubdomainLen+1), true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := validateClusterName("cluster", tc.value)
+			err := ValidateClusterName("cluster", tc.value)
 			if tc.wantErr && err == nil {
 				t.Fatalf("expected error")
 			}
@@ -84,10 +85,11 @@ func TestValidateRoleName(t *testing.T) {
 		{"dotted", "rbac.example.com", false},
 		{"empty", "", true},
 		{"uppercase", "Admin", true},
+		{"too long", strings.Repeat("a", maxRoleNameLen+1), true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := validateRoleName("role", tc.value)
+			err := ValidateRoleName("role", tc.value)
 			if tc.wantErr && err == nil {
 				t.Fatalf("expected error")
 			}
@@ -101,18 +103,18 @@ func TestValidateRoleName(t *testing.T) {
 // TestValidateEnum covers accept/reject and the empty-string required case.
 func TestValidateEnum(t *testing.T) {
 	allowed := []string{"User", "Group", "ServiceAccount"}
-	if err := validateEnum("subjectKind", "User", allowed); err != nil {
+	if err := ValidateEnum("subjectKind", "User", allowed); err != nil {
 		t.Fatalf("unexpected: %v", err)
 	}
-	if err := validateEnum("subjectKind", "pod", allowed); err == nil {
+	if err := ValidateEnum("subjectKind", "pod", allowed); err == nil {
 		t.Fatalf("expected error for disallowed value")
 	}
-	if err := validateEnum("subjectKind", "", allowed); err == nil {
+	if err := ValidateEnum("subjectKind", "", allowed); err == nil {
 		t.Fatalf("expected error for empty value")
 	}
 }
 
-// TestValidateDNSSubdomain exercises validateDNSSubdomain's empty, too-long,
+// TestValidateDNSSubdomain exercises ValidateDNSSubdomain's empty, too-long,
 // invalid-char, and valid (including multi-label) cases.
 func TestValidateDNSSubdomain(t *testing.T) {
 	cases := []struct {
@@ -131,7 +133,7 @@ func TestValidateDNSSubdomain(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := validateDNSSubdomain("field", tc.value)
+			err := ValidateDNSSubdomain("field", tc.value)
 			if tc.wantErr && err == nil {
 				t.Fatalf("expected error, got nil")
 			}
