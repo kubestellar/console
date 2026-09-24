@@ -1,4 +1,4 @@
-package handlers
+package k8s
 
 import (
 	"strings"
@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kubestellar/console/pkg/k8s"
+	k8sclient "github.com/kubestellar/console/pkg/k8s"
 )
 
 // Unit tests for the pure helpers in lima.go that were previously covered
@@ -21,29 +21,29 @@ import (
 func TestIsLimaNode(t *testing.T) {
 	cases := []struct {
 		name string
-		node k8s.NodeInfo
+		node k8sclient.NodeInfo
 		want bool
 	}{
-		{"name prefix lima-", k8s.NodeInfo{Name: "lima-default"}, true},
-		{"name prefix LIMA- (case-insensitive)", k8s.NodeInfo{Name: "LIMA-Default"}, true},
-		{"instance label present", k8s.NodeInfo{
+		{"name prefix lima-", k8sclient.NodeInfo{Name: "lima-default"}, true},
+		{"name prefix LIMA- (case-insensitive)", k8sclient.NodeInfo{Name: "LIMA-Default"}, true},
+		{"instance label present", k8sclient.NodeInfo{
 			Name:   "node-1",
 			Labels: map[string]string{"lima.sh/instance": "default"},
 		}, true},
-		{"instance label empty value still qualifies", k8s.NodeInfo{
+		{"instance label empty value still qualifies", k8sclient.NodeInfo{
 			Name:   "node-1",
 			Labels: map[string]string{"lima.sh/instance": ""},
 		}, true},
-		{"OSImage contains lima", k8s.NodeInfo{
+		{"OSImage contains lima", k8sclient.NodeInfo{
 			Name:    "node-1",
 			OSImage: "Lima Linux 6.5",
 		}, true},
-		{"unrelated node", k8s.NodeInfo{
+		{"unrelated node", k8sclient.NodeInfo{
 			Name:    "worker-1",
 			OSImage: "Ubuntu 22.04",
 			Labels:  map[string]string{"role": "worker"},
 		}, false},
-		{"nil labels + no prefix + empty OSImage", k8s.NodeInfo{Name: "n"}, false},
+		{"nil labels + no prefix + empty OSImage", k8sclient.NodeInfo{Name: "n"}, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -57,19 +57,19 @@ func TestIsLimaNode(t *testing.T) {
 func TestLimaNodeStatus(t *testing.T) {
 	cases := []struct {
 		name       string
-		conditions []k8s.NodeCondition
+		conditions []k8sclient.NodeCondition
 		want       string
 	}{
 		{
 			name: "ready + no pressure → running",
-			conditions: []k8s.NodeCondition{
+			conditions: []k8sclient.NodeCondition{
 				{Type: "Ready", Status: "True"},
 			},
 			want: "running",
 		},
 		{
 			name: "ready but disk pressure → broken (pressure wins)",
-			conditions: []k8s.NodeCondition{
+			conditions: []k8sclient.NodeCondition{
 				{Type: "Ready", Status: "True"},
 				{Type: "DiskPressure", Status: "True"},
 			},
@@ -77,21 +77,21 @@ func TestLimaNodeStatus(t *testing.T) {
 		},
 		{
 			name: "memory pressure alone → broken",
-			conditions: []k8s.NodeCondition{
+			conditions: []k8sclient.NodeCondition{
 				{Type: "MemoryPressure", Status: "True"},
 			},
 			want: "broken",
 		},
 		{
 			name: "PID pressure alone → broken",
-			conditions: []k8s.NodeCondition{
+			conditions: []k8sclient.NodeCondition{
 				{Type: "PIDPressure", Status: "True"},
 			},
 			want: "broken",
 		},
 		{
 			name: "not ready + no pressure → stopped",
-			conditions: []k8s.NodeCondition{
+			conditions: []k8sclient.NodeCondition{
 				{Type: "Ready", Status: "False"},
 			},
 			want: "stopped",
@@ -103,14 +103,14 @@ func TestLimaNodeStatus(t *testing.T) {
 		},
 		{
 			name: "Ready=true case-insensitive",
-			conditions: []k8s.NodeCondition{
+			conditions: []k8sclient.NodeCondition{
 				{Type: "Ready", Status: "true"},
 			},
 			want: "running",
 		},
 		{
 			name: "pressure with lowercase status still triggers",
-			conditions: []k8s.NodeCondition{
+			conditions: []k8sclient.NodeCondition{
 				{Type: "DiskPressure", Status: "true"},
 			},
 			want: "broken",
@@ -198,7 +198,7 @@ func TestFirstNonEmpty(t *testing.T) {
 // ─── mapNodeToLimaInstance ───────────────────────────────────────────
 
 func TestMapNodeToLimaInstance_FullyPopulated(t *testing.T) {
-	node := k8s.NodeInfo{
+	node := k8sclient.NodeInfo{
 		Name:            "lima-default",
 		Architecture:    "arm64",
 		OSImage:         "Ubuntu 22.04",
@@ -207,7 +207,7 @@ func TestMapNodeToLimaInstance_FullyPopulated(t *testing.T) {
 		MemoryCapacity:  "8Gi",
 		StorageCapacity: "100Gi",
 		Labels:          map[string]string{"lima.sh/version": "1.0.7"},
-		Conditions: []k8s.NodeCondition{
+		Conditions: []k8sclient.NodeCondition{
 			{Type: "Ready", Status: "True"},
 		},
 	}
@@ -232,9 +232,9 @@ func TestMapNodeToLimaInstance_FullyPopulated(t *testing.T) {
 func TestMapNodeToLimaInstance_Defaults(t *testing.T) {
 	// No labels, no OSImage, no architecture → defaults kick in:
 	//   Arch → "unknown", OS → "Linux" (fallback), LimaVersion → "unknown"
-	node := k8s.NodeInfo{
+	node := k8sclient.NodeInfo{
 		Name: "lima-mini",
-		Conditions: []k8s.NodeCondition{
+		Conditions: []k8sclient.NodeCondition{
 			{Type: "Ready", Status: "False"},
 		},
 	}
@@ -256,7 +256,7 @@ func TestMapNodeToLimaInstance_Defaults(t *testing.T) {
 func TestMapNodeToLimaInstance_LimaVersionBlankFallsBackToUnknown(t *testing.T) {
 	// A version label present but whitespace-only should NOT be surfaced —
 	// the helper trims and falls back to "unknown" (#lima-version-blank).
-	node := k8s.NodeInfo{
+	node := k8sclient.NodeInfo{
 		Name:   "lima-x",
 		Labels: map[string]string{"lima.sh/version": "   "},
 	}
@@ -266,7 +266,7 @@ func TestMapNodeToLimaInstance_LimaVersionBlankFallsBackToUnknown(t *testing.T) 
 
 func TestMapNodeToLimaInstance_OSPrefersOSImage(t *testing.T) {
 	// firstNonEmpty(OSImage, OS, "Linux") → OSImage wins when non-blank.
-	node := k8s.NodeInfo{
+	node := k8sclient.NodeInfo{
 		Name:    "lima-a",
 		OSImage: "Debian 12",
 		OS:      "linux",
@@ -275,7 +275,7 @@ func TestMapNodeToLimaInstance_OSPrefersOSImage(t *testing.T) {
 	assert.Equal(t, "Debian 12", inst.OS)
 
 	// When OSImage is blank, fall through to OS.
-	node2 := k8s.NodeInfo{Name: "lima-b", OS: "linux"}
+	node2 := k8sclient.NodeInfo{Name: "lima-b", OS: "linux"}
 	inst2 := mapNodeToLimaInstance(node2)
 	assert.Equal(t, "linux", inst2.OS)
 }
@@ -284,10 +284,10 @@ func TestMapNodeToLimaInstance_OSPrefersOSImage(t *testing.T) {
 // prefix (not a substring match anywhere in the name), to guard against
 // a future refactor changing HasPrefix to Contains.
 func TestIsLimaNode_PrefixIsNotSubstring(t *testing.T) {
-	assert.False(t, isLimaNode(k8s.NodeInfo{Name: "worker-lima-1"}))
-	assert.True(t, isLimaNode(k8s.NodeInfo{Name: "lima-worker-1"}))
+	assert.False(t, isLimaNode(k8sclient.NodeInfo{Name: "worker-lima-1"}))
+	assert.True(t, isLimaNode(k8sclient.NodeInfo{Name: "lima-worker-1"}))
 	// And OSImage substring match IS by design case-insensitive:
-	assert.True(t, isLimaNode(k8s.NodeInfo{
+	assert.True(t, isLimaNode(k8sclient.NodeInfo{
 		Name:    "unrelated",
 		OSImage: strings.ToUpper("running LIMA image"),
 	}))

@@ -5,9 +5,9 @@ import "github.com/kubestellar/console/pkg/api/handlers/k8s"
 // Aliases keep route registration and existing call sites working after the
 // cluster/K8s-state handlers (namespaces, CRDs, topology, GPU, gadget,
 // events, Gateway API, MCS, ServiceExports, admission webhooks, card swap,
-// orbit missions, and the Medium blog proxy) moved into their own
-// pkg/api/handlers/k8s subpackage (epic #23685 phase 1). New code should
-// import pkg/api/handlers/k8s directly.
+// orbit missions, the Medium blog proxy, and Lima VM status) moved into
+// their own pkg/api/handlers/k8s subpackage (epic #23685 phase 1). New
+// code should import pkg/api/handlers/k8s directly.
 
 // Type aliases for the k8s handler structs and response/DTO types.
 type (
@@ -41,6 +41,9 @@ type (
 	OrbitScheduleEntry        = k8s.OrbitScheduleEntry
 	OrbitHandler              = k8s.OrbitHandler
 	MediumPost                = k8s.MediumPost
+	LimaHandlers              = k8s.LimaHandlers
+	LimaInstanceSummary       = k8s.LimaInstanceSummary
+	LimaListResponse          = k8s.LimaListResponse
 )
 
 // Constructors delegate to the k8s subpackage.
@@ -57,6 +60,7 @@ var (
 	NewWebhookHandlers       = k8s.NewWebhookHandlers
 	NewSwapHandler           = k8s.NewSwapHandler
 	NewOrbitHandler          = k8s.NewOrbitHandler
+	NewLimaHandlers          = k8s.NewLimaHandlers
 )
 
 // Package-level fiber handlers delegate to the k8s subpackage.
