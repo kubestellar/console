@@ -1,4 +1,4 @@
-package handlers
+package ops
 
 import (
 	"context"
@@ -14,9 +14,10 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/api/handlers/internal/httputil"
+	"github.com/kubestellar/console/pkg/api/handlers/stellar"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/store"
-	"github.com/kubestellar/console/pkg/api/handlers/stellar"
 )
 
 // ---------------------------------------------------------------------------
@@ -77,9 +78,9 @@ type timelineClient interface {
 // TimelineHandler serves the GET /api/timeline endpoint and owns the
 // background event journal collector goroutine.
 type TimelineHandler struct {
-	store        store.Store
-	k8sClient    timelineClient
-	stellarSink  StellarEventSink
+	store       store.Store
+	k8sClient   timelineClient
+	stellarSink StellarEventSink
 }
 
 // NewTimelineHandler creates a TimelineHandler.
@@ -103,7 +104,7 @@ func (h *TimelineHandler) SetStellarEventSink(sink StellarEventSink) {
 // GetTimeline handles GET /api/timeline.
 // Query params: cluster, namespace, since, until, kind, limit.
 func (h *TimelineHandler) GetTimeline(c *fiber.Ctx) error {
-	if IsDemoMode(c) {
+	if httputil.IsDemoMode(c) {
 		return c.JSON(demoTimelineEvents())
 	}
 

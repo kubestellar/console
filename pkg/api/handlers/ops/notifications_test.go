@@ -1,4 +1,4 @@
-package handlers
+package ops
 
 import (
 	"encoding/json"
@@ -56,7 +56,7 @@ func TestNotificationHandlers(t *testing.T) {
 		resp, _ := env.App.Test(req)
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
-		
+
 		var result map[string]interface{}
 		json.NewDecoder(resp.Body).Decode(&result)
 		assert.True(t, result["success"].(bool))
