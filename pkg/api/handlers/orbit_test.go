@@ -897,3 +897,68 @@ func TestCheckDueMissionsUsesExecutorResult(t *testing.T) {
 		t.Fatalf("history = %+v, want stored executor summary", mission.History)
 	}
 }
+
+// TestOrbitHandler_WithStore verifies WithStore attaches the given store and
+// returns the same handler instance for chaining.
+func TestOrbitHandler_WithStore(t *testing.T) {
+	h := NewOrbitHandler(t.TempDir(), nil, nil)
+	mockStore := new(test.MockStore)
+
+	got := h.WithStore(mockStore)
+
+	if got != h {
+		t.Fatalf("expected WithStore to return the same handler instance")
+	}
+	if h.store != mockStore {
+		t.Fatalf("expected store to be set on handler")
+	}
+}
+
+// TestOrbitHandler_RegisterRoutes verifies all orbit endpoints are wired up
+// and reachable.
+func TestOrbitHandler_RegisterRoutes(t *testing.T) {
+	h := NewOrbitHandler(t.TempDir(), nil, nil)
+	app := fiber.New()
+	group := app.Group("/api/orbit")
+	h.RegisterRoutes(group)
+
+	req, err := http.NewRequest("GET", "/api/orbit/missions", nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	req.Host = "localhost"
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.StatusCode == http.StatusNotFound {
+		t.Fatalf("expected /missions route to be registered, got 404")
+	}
+
+	req2, err := http.NewRequest("GET", "/api/orbit/schedule", nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	req2.Host = "localhost"
+	resp2, err := app.Test(req2)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp2.StatusCode == http.StatusNotFound {
+		t.Fatalf("expected /schedule route to be registered, got 404")
+	}
+}
+
+// TestOrbitHandler_StartScheduler verifies the scheduler goroutine starts
+// and stops cleanly when the done channel is closed, without panicking.
+func TestOrbitHandler_StartScheduler(t *testing.T) {
+	h := NewOrbitHandler(t.TempDir(), nil, nil)
+	done := make(chan struct{})
+
+	h.StartScheduler(done)
+	// Give the goroutine a moment to start before signalling shutdown.
+	time.Sleep(10 * time.Millisecond)
+	close(done)
+	// Allow the goroutine to observe the close and exit.
+	time.Sleep(10 * time.Millisecond)
+}

@@ -1,4 +1,4 @@
-package handlers
+package compliance
 
 import (
 	"bytes"
@@ -16,6 +16,15 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// RoundTripFunc is a helper for mocking http.Client Transport. Duplicated from
+// pkg/api/handlers/setup_test.go since _test.go symbols aren't importable
+// across packages.
+type RoundTripFunc func(req *http.Request) *http.Response
+
+func (f RoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req), nil
+}
 
 // fakeGitHubComment builds a minimal GitHub issue comment JSON payload.
 func fakeGitHubComment(login, body, htmlURL string, createdAt time.Time) DetectionRunIssueComment {

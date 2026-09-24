@@ -51,7 +51,7 @@ func (g *governanceRouteGroup) Register(routes *routeSetupContext) {
 	api.Get("/rbac/roles", rbac.ListK8sRoles)
 	api.Get("/rbac/bindings", rbac.ListK8sRoleBindings)
 
-	auditHandler := handlers.NewAuditHandler(g.store)
+	auditHandler := compliance.NewAuditHandler(g.store)
 	api.Get("/admin/audit-log", auditHandler.GetAuditLog)
 
 	complianceFrameworks := compliance.NewComplianceFrameworksHandler(nil)

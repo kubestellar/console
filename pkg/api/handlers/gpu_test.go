@@ -543,3 +543,248 @@ func TestGPUBulkUtilizations_ForbiddenForNonOwner(t *testing.T) {
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 }
+
+func TestGPUListReservations_AdminSeesAllReservations(t *testing.T) {
+	env := setupTestEnv(t)
+	store := &gpuTestStore{
+		user:    &models.User{ID: testAdminUserID, GitHubLogin: "alice", Role: models.UserRoleAdmin},
+		listAll: []models.GPUReservation{{ID: uuid.New(), UserID: uuid.New(), Title: "other"}},
+	}
+	handler := NewGPUHandler(store, nil, nil)
+	env.App.Get("/api/gpu/reservations", handler.ListReservations)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/gpu/reservations", nil)
+	require.NoError(t, err)
+	req.Host = "localhost"
+
+	resp, err := env.App.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var reservations []models.GPUReservation
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&reservations))
+	require.Len(t, reservations, 1)
+	assert.Equal(t, "other", reservations[0].Title)
+}
+
+func TestGPUListReservations_StoreErrorReturns500(t *testing.T) {
+	env := setupTestEnv(t)
+	store := &gpuTestStore{
+		user:    &models.User{ID: testAdminUserID, GitHubLogin: "alice", Role: models.UserRoleAdmin},
+		listErr: errors.New("db down"),
+	}
+	handler := NewGPUHandler(store, nil, nil)
+	env.App.Get("/api/gpu/reservations", handler.ListReservations)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/gpu/reservations", nil)
+	require.NoError(t, err)
+	req.Host = "localhost"
+
+	resp, err := env.App.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+}
+
+func TestGPUGetReservation_OwnerSuccess(t *testing.T) {
+	env := setupTestEnv(t)
+	resID := uuid.New()
+	store := &gpuTestStore{
+		user: &models.User{ID: testAdminUserID, GitHubLogin: "alice", Role: models.UserRoleAdmin},
+		reservations: map[uuid.UUID]*models.GPUReservation{
+			resID: {ID: resID, UserID: testAdminUserID, Title: "mine"},
+		},
+	}
+	handler := NewGPUHandler(store, nil, nil)
+	env.App.Get("/api/gpu/reservations/:id", handler.GetReservation)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/gpu/reservations/"+resID.String(), nil)
+	require.NoError(t, err)
+	req.Host = "localhost"
+
+	resp, err := env.App.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var got models.GPUReservation
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&got))
+	assert.Equal(t, "mine", got.Title)
+}
+
+func TestGPUGetReservation_InvalidID(t *testing.T) {
+	env := setupTestEnv(t)
+	store := &gpuTestStore{user: &models.User{ID: testAdminUserID, GitHubLogin: "alice", Role: models.UserRoleAdmin}}
+	handler := NewGPUHandler(store, nil, nil)
+	env.App.Get("/api/gpu/reservations/:id", handler.GetReservation)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/gpu/reservations/not-a-uuid", nil)
+	require.NoError(t, err)
+	req.Host = "localhost"
+
+	resp, err := env.App.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestGPUGetReservation_NotFound(t *testing.T) {
+	env := setupTestEnv(t)
+	store := &gpuTestStore{user: &models.User{ID: testAdminUserID, GitHubLogin: "alice", Role: models.UserRoleAdmin}}
+	handler := NewGPUHandler(store, nil, nil)
+	env.App.Get("/api/gpu/reservations/:id", handler.GetReservation)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/gpu/reservations/"+uuid.New().String(), nil)
+	require.NoError(t, err)
+	req.Host = "localhost"
+
+	resp, err := env.App.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+func TestGPUDeleteReservation_OwnerSuccess(t *testing.T) {
+	env := setupTestEnv(t)
+	resID := uuid.New()
+	store := &gpuTestStore{
+		user: &models.User{ID: testAdminUserID, GitHubLogin: "alice", Role: models.UserRoleAdmin},
+		reservations: map[uuid.UUID]*models.GPUReservation{
+			resID: {ID: resID, UserID: testAdminUserID, Cluster: "c1", Namespace: "ns1", GPUCount: 2},
+		},
+	}
+	handler := NewGPUHandler(store, nil, nil)
+	env.App.Delete("/api/gpu/reservations/:id", handler.DeleteReservation)
+
+	req, err := http.NewRequest(http.MethodDelete, "/api/gpu/reservations/"+resID.String(), nil)
+	require.NoError(t, err)
+	req.Host = "localhost"
+
+	resp, err := env.App.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+func TestGPUDeleteReservation_InvalidID(t *testing.T) {
+	env := setupTestEnv(t)
+	store := &gpuTestStore{user: &models.User{ID: testAdminUserID, GitHubLogin: "alice", Role: models.UserRoleAdmin}}
+	handler := NewGPUHandler(store, nil, nil)
+	env.App.Delete("/api/gpu/reservations/:id", handler.DeleteReservation)
+
+	req, err := http.NewRequest(http.MethodDelete, "/api/gpu/reservations/not-a-uuid", nil)
+	require.NoError(t, err)
+	req.Host = "localhost"
+
+	resp, err := env.App.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestGPUDeleteReservation_NotFound(t *testing.T) {
+	env := setupTestEnv(t)
+	store := &gpuTestStore{user: &models.User{ID: testAdminUserID, GitHubLogin: "alice", Role: models.UserRoleAdmin}}
+	handler := NewGPUHandler(store, nil, nil)
+	env.App.Delete("/api/gpu/reservations/:id", handler.DeleteReservation)
+
+	req, err := http.NewRequest(http.MethodDelete, "/api/gpu/reservations/"+uuid.New().String(), nil)
+	require.NoError(t, err)
+	req.Host = "localhost"
+
+	resp, err := env.App.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+func TestGPUDeleteReservation_NonOwnerForbidden(t *testing.T) {
+	env := setupTestEnv(t)
+	resID := uuid.New()
+	otherOwner := uuid.New()
+	store := &gpuTestStore{
+		user: &models.User{ID: testAdminUserID, GitHubLogin: "viewer", Role: models.UserRoleViewer},
+		reservations: map[uuid.UUID]*models.GPUReservation{
+			resID: {ID: resID, UserID: otherOwner},
+		},
+	}
+	handler := NewGPUHandler(store, nil, nil)
+	env.App.Delete("/api/gpu/reservations/:id", handler.DeleteReservation)
+
+	req, err := http.NewRequest(http.MethodDelete, "/api/gpu/reservations/"+resID.String(), nil)
+	require.NoError(t, err)
+	req.Host = "localhost"
+
+	resp, err := env.App.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+}
+
+func TestGPUGetReservationUtilization_Success(t *testing.T) {
+	env := setupTestEnv(t)
+	resID := uuid.New()
+	store := &gpuTestStore{
+		user: &models.User{ID: testAdminUserID, GitHubLogin: "alice", Role: models.UserRoleAdmin},
+		reservations: map[uuid.UUID]*models.GPUReservation{
+			resID: {ID: resID, UserID: testAdminUserID},
+		},
+	}
+	handler := NewGPUHandler(store, nil, nil)
+	env.App.Get("/api/gpu/reservations/:id/utilization", handler.GetReservationUtilization)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/gpu/reservations/"+resID.String()+"/utilization", nil)
+	require.NoError(t, err)
+	req.Host = "localhost"
+
+	resp, err := env.App.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var snapshots []models.GPUUtilizationSnapshot
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&snapshots))
+}
+
+func TestGPUGetReservationUtilization_InvalidID(t *testing.T) {
+	env := setupTestEnv(t)
+	store := &gpuTestStore{user: &models.User{ID: testAdminUserID, GitHubLogin: "alice", Role: models.UserRoleAdmin}}
+	handler := NewGPUHandler(store, nil, nil)
+	env.App.Get("/api/gpu/reservations/:id/utilization", handler.GetReservationUtilization)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/gpu/reservations/not-a-uuid/utilization", nil)
+	require.NoError(t, err)
+	req.Host = "localhost"
+
+	resp, err := env.App.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestGPUGetReservationUtilization_NotFound(t *testing.T) {
+	env := setupTestEnv(t)
+	store := &gpuTestStore{user: &models.User{ID: testAdminUserID, GitHubLogin: "alice", Role: models.UserRoleAdmin}}
+	handler := NewGPUHandler(store, nil, nil)
+	env.App.Get("/api/gpu/reservations/:id/utilization", handler.GetReservationUtilization)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/gpu/reservations/"+uuid.New().String()+"/utilization", nil)
+	require.NoError(t, err)
+	req.Host = "localhost"
+
+	resp, err := env.App.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+func TestGPUGetReservationUtilization_NonOwnerForbidden(t *testing.T) {
+	env := setupTestEnv(t)
+	resID := uuid.New()
+	otherOwner := uuid.New()
+	store := &gpuTestStore{
+		user: &models.User{ID: testAdminUserID, GitHubLogin: "viewer", Role: models.UserRoleViewer},
+		reservations: map[uuid.UUID]*models.GPUReservation{
+			resID: {ID: resID, UserID: otherOwner},
+		},
+	}
+	handler := NewGPUHandler(store, nil, nil)
+	env.App.Get("/api/gpu/reservations/:id/utilization", handler.GetReservationUtilization)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/gpu/reservations/"+resID.String()+"/utilization", nil)
+	require.NoError(t, err)
+	req.Host = "localhost"
+
+	resp, err := env.App.Test(req, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+}

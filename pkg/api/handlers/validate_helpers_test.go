@@ -111,3 +111,36 @@ func TestValidateEnum(t *testing.T) {
 		t.Fatalf("expected error for empty value")
 	}
 }
+
+// TestValidateDNSSubdomain exercises validateDNSSubdomain's empty, too-long,
+// invalid-char, and valid (including multi-label) cases.
+func TestValidateDNSSubdomain(t *testing.T) {
+	cases := []struct {
+		name    string
+		value   string
+		wantErr bool
+		errHint string
+	}{
+		{"valid simple", "foo", false, ""},
+		{"valid dotted", "foo.bar.example.com", false, ""},
+		{"empty", "", true, "required"},
+		{"uppercase", "Foo.com", true, "DNS subdomain"},
+		{"underscore", "foo_bar.com", true, "DNS subdomain"},
+		{"leading dot", ".foo.com", true, "DNS subdomain"},
+		{"too long", strings.Repeat("a", maxK8sDNSSubdomainLen+1), true, "at most"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateDNSSubdomain("field", tc.value)
+			if tc.wantErr && err == nil {
+				t.Fatalf("expected error, got nil")
+			}
+			if !tc.wantErr && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if tc.wantErr && !strings.Contains(err.Error(), tc.errHint) {
+				t.Fatalf("error %q does not contain hint %q", err.Error(), tc.errHint)
+			}
+		})
+	}
+}
