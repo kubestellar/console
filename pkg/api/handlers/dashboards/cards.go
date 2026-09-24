@@ -1,4 +1,4 @@
-package handlers
+package dashboards
 
 import (
 	"database/sql"
@@ -10,7 +10,9 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
+	"github.com/kubestellar/console/pkg/api/handlers/internal/httputil"
 	"github.com/kubestellar/console/pkg/api/middleware"
+	"github.com/kubestellar/console/pkg/api/transport"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/store"
 )
@@ -24,11 +26,11 @@ const MaxCardsPerDashboard = 200
 // CardHandler handles card operations
 type CardHandler struct {
 	store store.Store
-	hub   *Hub
+	hub   *transport.Hub
 }
 
 // NewCardHandler creates a new card handler
-func NewCardHandler(s store.Store, hub *Hub) *CardHandler {
+func NewCardHandler(s store.Store, hub *transport.Hub) *CardHandler {
 	return &CardHandler{store: s, hub: hub}
 }
 
@@ -75,7 +77,7 @@ func isValidCardType(t models.CardType) bool {
 
 // ListCards returns all cards for a dashboard
 func (h *CardHandler) ListCards(c *fiber.Ctx) error {
-	if IsDemoMode(c) {
+	if httputil.IsDemoMode(c) {
 		return c.JSON([]models.Card{})
 	}
 	userID := middleware.GetUserID(c)
@@ -102,7 +104,7 @@ func (h *CardHandler) ListCards(c *fiber.Ctx) error {
 
 // CreateCard creates a new card
 func (h *CardHandler) CreateCard(c *fiber.Ctx) error {
-	if IsDemoMode(c) {
+	if httputil.IsDemoMode(c) {
 		return c.Status(fiber.StatusCreated).JSON(fiber.Map{"status": "ok", "source": "demo"})
 	}
 	// Role check must run before any data access (#5999). Viewers cannot
@@ -164,7 +166,7 @@ func (h *CardHandler) CreateCard(c *fiber.Ctx) error {
 	}
 
 	// Notify via WebSocket
-	h.hub.Broadcast(userID, Message{
+	h.hub.Broadcast(userID, transport.Message{
 		Type: "card_created",
 		Data: card,
 	})
@@ -174,7 +176,7 @@ func (h *CardHandler) CreateCard(c *fiber.Ctx) error {
 
 // UpdateCard updates a card
 func (h *CardHandler) UpdateCard(c *fiber.Ctx) error {
-	if IsDemoMode(c) {
+	if httputil.IsDemoMode(c) {
 		return c.JSON(fiber.Map{"status": "ok", "source": "demo"})
 	}
 	// Role check must run before any data access (#5999).
@@ -241,7 +243,7 @@ func (h *CardHandler) UpdateCard(c *fiber.Ctx) error {
 	}
 
 	// Notify via WebSocket
-	h.hub.Broadcast(userID, Message{
+	h.hub.Broadcast(userID, transport.Message{
 		Type: "card_updated",
 		Data: card,
 	})
@@ -251,7 +253,7 @@ func (h *CardHandler) UpdateCard(c *fiber.Ctx) error {
 
 // DeleteCard deletes a card
 func (h *CardHandler) DeleteCard(c *fiber.Ctx) error {
-	if IsDemoMode(c) {
+	if httputil.IsDemoMode(c) {
 		return c.SendStatus(fiber.StatusNoContent)
 	}
 	// Role check must run before any data access (#5999).
@@ -283,7 +285,7 @@ func (h *CardHandler) DeleteCard(c *fiber.Ctx) error {
 	}
 
 	// Notify via WebSocket
-	h.hub.Broadcast(userID, Message{
+	h.hub.Broadcast(userID, transport.Message{
 		Type: "card_deleted",
 		Data: fiber.Map{"id": cardID},
 	})
@@ -293,7 +295,7 @@ func (h *CardHandler) DeleteCard(c *fiber.Ctx) error {
 
 // RecordFocus records a card focus event
 func (h *CardHandler) RecordFocus(c *fiber.Ctx) error {
-	if IsDemoMode(c) {
+	if httputil.IsDemoMode(c) {
 		return c.JSON(fiber.Map{"status": "ok", "source": "demo"})
 	}
 	// Role check: RecordFocus writes to card_focus and the event log, so
@@ -351,15 +353,15 @@ func (h *CardHandler) RecordFocus(c *fiber.Ctx) error {
 
 // GetCardTypes returns available card types
 func (h *CardHandler) GetCardTypes(c *fiber.Ctx) error {
-	if IsDemoMode(c) {
-		return DemoResponse(c, "card_types", models.GetCardTypes())
+	if httputil.IsDemoMode(c) {
+		return httputil.DemoResponse(c, "card_types", models.GetCardTypes())
 	}
 	return c.JSON(models.GetCardTypes())
 }
 
 // GetHistory returns the user's card history
 func (h *CardHandler) GetHistory(c *fiber.Ctx) error {
-	if IsDemoMode(c) {
+	if httputil.IsDemoMode(c) {
 		return c.JSON([]models.CardHistory{})
 	}
 	userID := middleware.GetUserID(c)
@@ -382,7 +384,7 @@ func (h *CardHandler) GetHistory(c *fiber.Ctx) error {
 
 // MoveCard moves a card to a different dashboard
 func (h *CardHandler) MoveCard(c *fiber.Ctx) error {
-	if IsDemoMode(c) {
+	if httputil.IsDemoMode(c) {
 		return c.JSON(fiber.Map{"status": "ok", "source": "demo"})
 	}
 	// Role check must run before any data access (#5999).
@@ -445,7 +447,7 @@ func (h *CardHandler) MoveCard(c *fiber.Ctx) error {
 	}
 
 	// Notify via WebSocket
-	h.hub.Broadcast(userID, Message{
+	h.hub.Broadcast(userID, transport.Message{
 		Type: "card_moved",
 		Data: fiber.Map{
 			"card_id":             cardID,

@@ -1,4 +1,4 @@
-package handlers
+package dashboards
 
 import (
 	"encoding/json"
@@ -289,4 +289,3 @@ func TestImportDashboard_ExceedsUserLimit(t *testing.T) {
 	assert.Equal(t, http.StatusTooManyRequests, resp.StatusCode)
 	mockStore.AssertExpectations(t)
 }
-

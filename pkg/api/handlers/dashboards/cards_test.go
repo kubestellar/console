@@ -1,4 +1,4 @@
-package handlers
+package dashboards
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/api/transport"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/store"
 	"github.com/kubestellar/console/pkg/test"
@@ -32,7 +33,7 @@ func setupCardTest(t *testing.T, userID uuid.UUID) (*fiber.App, *test.MockStore,
 		Role: models.UserRoleAdmin,
 	}, nil).Maybe()
 
-	hub := NewHub()
+	hub := transport.NewHub()
 	go hub.Run()
 	t.Cleanup(func() { hub.Close() })
 
@@ -234,7 +235,7 @@ func TestRecordFocus_BadBody_Returns400(t *testing.T) {
 	}
 
 	app := fiber.New()
-	hub := NewHub()
+	hub := transport.NewHub()
 	go hub.Run()
 	t.Cleanup(func() { hub.Close() })
 
@@ -359,7 +360,7 @@ func newCardMutationApp(
 		},
 	}
 
-	hub := NewHub()
+	hub := transport.NewHub()
 	go hub.Run()
 	t.Cleanup(func() { hub.Close() })
 
@@ -413,7 +414,7 @@ func TestMoveCard_RejectsWhenTargetAtLimit(t *testing.T) {
 		moveErr: store.ErrDashboardCardLimitReached,
 	}
 
-	hub := NewHub()
+	hub := transport.NewHub()
 	go hub.Run()
 	t.Cleanup(func() { hub.Close() })
 
@@ -618,7 +619,7 @@ func TestCreateCard_UserStoreError_Returns500(t *testing.T) {
 	}
 	failing := &failingUserStore{cardMutationStore: inner}
 
-	hub := NewHub()
+	hub := transport.NewHub()
 	go hub.Run()
 	t.Cleanup(func() { hub.Close() })
 

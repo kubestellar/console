@@ -8,13 +8,12 @@ import "github.com/kubestellar/console/pkg/api/handlers/ops"
 // subpackage (epic #23685 phase 1). New code should import
 // pkg/api/handlers/ops directly.
 //
-// DashboardHandler and its demo-data helpers (IsDemoMode, DemoResponse,
-// GetDemo*) stay at root: DashboardHandler depends on the unexported
-// isValidCardType helper in cards.go, and the demo-data helpers are used
-// throughout the still-flat k8s-resource handlers (crds.go, namespaces.go,
-// gateway.go, etc.) that a separate, concurrent epic #23685 slice is moving
-// into pkg/api/handlers/k8s. Moving demo_data.go/dashboard.go here would
-// force a cross-slice dependency, so they were intentionally left in place.
+// DashboardHandler and CardHandler did not land here: they form their own
+// cohesive dashboard/card CRUD domain and moved to
+// pkg/api/handlers/dashboards instead (see dashboards_aliases.go). The
+// demo-data helpers (IsDemoMode, DemoResponse, GetDemo*) stay at root
+// because they are used throughout the remaining root handlers; the
+// canonical implementations now live in internal/httputil.
 
 // Type aliases for the ops handler structs.
 type (
