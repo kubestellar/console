@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/kubestellar/console/pkg/agent"
@@ -18,12 +17,7 @@ import (
 
 func main() {
 	// Set up structured logging — JSON for production, human-readable text for dev.
-	var logHandler slog.Handler
-	if os.Getenv("DEV_MODE") == "true" {
-		logHandler = slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug})
-	} else {
-		logHandler = slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})
-	}
+	logHandler := buildLogHandler(os.Stderr, os.Getenv("DEV_MODE") == "true")
 	slog.SetDefault(slog.New(logHandler))
 
 	port := flag.Int("port", 8585, "Port to listen on")
@@ -40,14 +34,7 @@ func main() {
 	slog.Info("KubeStellar Console - Local Agent starting", "version", agent.Version, "commit", agent.CommitSHA, "built", agent.BuildTime)
 
 	// Parse comma-separated allowed origins from flag
-	var origins []string
-	if *allowedOrigins != "" {
-		for _, o := range strings.Split(*allowedOrigins, ",") {
-			if trimmed := strings.TrimSpace(o); trimmed != "" {
-				origins = append(origins, trimmed)
-			}
-		}
-	}
+	origins := parseAllowedOrigins(*allowedOrigins)
 
 	server, err := agent.NewServer(agent.Config{
 		Port:           *port,

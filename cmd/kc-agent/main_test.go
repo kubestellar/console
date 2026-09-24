@@ -1,64 +1,21 @@
 package main
 
 import (
-	"os"
+	"bytes"
+	"encoding/json"
+	"log/slog"
 	"strings"
 	"testing"
 )
 
-func TestFlags_ParsedWithoutPanic(t *testing.T) {
-	// Test that flag parsing doesn't panic with valid inputs
-	testCases := []struct {
-		name string
-		args []string
-	}{
-		{
-			name: "version flag",
-			args: []string{"-version"},
-		},
-		{
-			name: "port flag",
-			args: []string{"-port", "9999"},
-		},
-		{
-			name: "kubeconfig flag",
-			args: []string{"-kubeconfig", "/path/to/kubeconfig"},
-		},
-		{
-			name: "allowed-origins flag single",
-			args: []string{"-allowed-origins", "http://localhost:3000"},
-		},
-		{
-			name: "allowed-origins flag multiple",
-			args: []string{"-allowed-origins", "http://localhost:3000,http://localhost:4000"},
-		},
-		{
-			name: "combined flags",
-			args: []string{"-port", "8888", "-kubeconfig", "~/.kube/config"},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			// Reset os.Args to avoid interference from test runner
-			oldArgs := os.Args
-			defer func() { os.Args = oldArgs }()
-
-			// We can't actually execute main() in tests because it would start the server,
-			// but we can verify the flag definitions exist and are parseable
-			// by checking that main.go imports flag package and defines the expected flags
-		})
-	}
-}
-
-func TestAllowedOrigins_ParsesCommaSeparatedList(t *testing.T) {
+func TestParseAllowedOrigins(t *testing.T) {
 	testCases := []struct {
 		name     string
 		input    string
 		expected []string
 	}{
 		{
-			name:     "empty string",
+			name:     "empty string returns nil",
 			input:    "",
 			expected: nil,
 		},
@@ -73,34 +30,36 @@ func TestAllowedOrigins_ParsesCommaSeparatedList(t *testing.T) {
 			expected: []string{"http://localhost:3000", "http://localhost:4000"},
 		},
 		{
-			name:     "origins with whitespace",
+			name:     "origins with surrounding whitespace are trimmed",
 			input:    "http://localhost:3000 , http://localhost:4000 , http://localhost:5000",
 			expected: []string{"http://localhost:3000", "http://localhost:4000", "http://localhost:5000"},
 		},
 		{
-			name:     "origins with empty entries",
+			name:     "empty entries between commas are dropped",
 			input:    "http://localhost:3000,,http://localhost:4000",
 			expected: []string{"http://localhost:3000", "http://localhost:4000"},
+		},
+		{
+			name:     "whitespace-only entries are dropped",
+			input:    "http://localhost:3000,   ,http://localhost:4000",
+			expected: []string{"http://localhost:3000", "http://localhost:4000"},
+		},
+		{
+			name:     "single whitespace-only input returns nil",
+			input:    "   ",
+			expected: nil,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Simulate the parsing logic from main.go
-			var origins []string
-			if tc.input != "" {
-				for _, o := range strings.Split(tc.input, ",") {
-					if trimmed := strings.TrimSpace(o); trimmed != "" {
-						origins = append(origins, trimmed)
-					}
-				}
+			got := parseAllowedOrigins(tc.input)
+
+			if len(got) != len(tc.expected) {
+				t.Fatalf("got %d origins %v, want %d %v", len(got), got, len(tc.expected), tc.expected)
 			}
 
-			if len(origins) != len(tc.expected) {
-				t.Fatalf("got %d origins, want %d", len(origins), len(tc.expected))
-			}
-
-			for i, origin := range origins {
+			for i, origin := range got {
 				if origin != tc.expected[i] {
 					t.Errorf("origins[%d] = %q, want %q", i, origin, tc.expected[i])
 				}
@@ -109,68 +68,89 @@ func TestAllowedOrigins_ParsesCommaSeparatedList(t *testing.T) {
 	}
 }
 
-func TestMain_ImportsExpectedPackages(t *testing.T) {
-	// Verify that the expected packages are imported by checking that
-	// key functions/types are accessible
-	// This is a smoke test to ensure the import chain doesn't have missing symbols
+func TestBuildLogHandler_DevModeEmitsText(t *testing.T) {
+	var buf bytes.Buffer
 
-	t.Run("agent package accessible", func(t *testing.T) {
-		// If this compiles, the import chain is correct
-		// We can't actually call agent.NewServer in a unit test without
-		// a full environment setup
-	})
-
-	t.Run("safego package accessible", func(t *testing.T) {
-		// The import is used in main(), verified at compile time
-	})
-
-	t.Run("federation providers package imported", func(t *testing.T) {
-		// The blank import ensures init() funcs run
-		// Verified at compile time
-	})
-}
-
-func TestVersionFlag_DoesNotPanic(t *testing.T) {
-	// This is a smoke test to ensure the version flag handling doesn't panic
-	// We can't actually test the os.Exit behavior in a unit test
-	// but we can verify the structure is correct
-	t.Run("version flag exists", func(t *testing.T) {
-		// If main.go compiles, the version flag is correctly defined
-		// Actual behavior testing would require integration tests
-	})
-}
-
-func TestSignalHandling_DoesNotPanic(t *testing.T) {
-	// Verify that signal handling code doesn't panic during setup
-	// We can't actually send signals in a unit test, but we can verify
-	// the code structure is correct
-	t.Run("signal channel setup", func(t *testing.T) {
-		// If main.go compiles and imports os/signal, signal handling is correct
-		// Actual signal delivery testing requires integration tests
-	})
-}
-
-func TestLogging_ConfiguredCorrectly(t *testing.T) {
-	// Verify logging setup doesn't panic with different DEV_MODE values
-	testCases := []struct {
-		name    string
-		devMode string
-	}{
-		{name: "dev mode enabled", devMode: "true"},
-		{name: "dev mode disabled", devMode: ""},
-		{name: "dev mode false", devMode: "false"},
+	handler := buildLogHandler(&buf, true)
+	if handler == nil {
+		t.Fatal("buildLogHandler returned nil")
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			oldVal := os.Getenv("DEV_MODE")
-			defer os.Setenv("DEV_MODE", oldVal)
+	logger := slog.New(handler)
+	logger.Debug("hello", "component", "kc-agent")
 
-			os.Setenv("DEV_MODE", tc.devMode)
+	line := buf.String()
+	if line == "" {
+		t.Fatal("expected debug log to be emitted in dev mode, got empty output")
+	}
 
-			// If we can set the environment variable without panic,
-			// the logging setup structure is correct
-			// Actual logging configuration testing requires integration tests
-		})
+	// Text handler emits key=value pairs, not JSON.
+	if strings.HasPrefix(strings.TrimSpace(line), "{") {
+		t.Errorf("dev mode should use text handler, got JSON-looking line: %q", line)
+	}
+	if !strings.Contains(line, "hello") {
+		t.Errorf("expected log line to contain message %q, got %q", "hello", line)
+	}
+	if !strings.Contains(line, "component=kc-agent") {
+		t.Errorf("expected log line to contain %q, got %q", "component=kc-agent", line)
+	}
+}
+
+func TestBuildLogHandler_ProductionEmitsJSON(t *testing.T) {
+	var buf bytes.Buffer
+
+	handler := buildLogHandler(&buf, false)
+	if handler == nil {
+		t.Fatal("buildLogHandler returned nil")
+	}
+
+	logger := slog.New(handler)
+	logger.Info("started", "port", 8585)
+
+	line := strings.TrimSpace(buf.String())
+	if line == "" {
+		t.Fatal("expected info log to be emitted in production mode, got empty output")
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(line), &payload); err != nil {
+		t.Fatalf("expected JSON log line in production mode, unmarshal failed: %v — line: %q", err, line)
+	}
+
+	if got := payload["msg"]; got != "started" {
+		t.Errorf("payload msg = %v, want %q", got, "started")
+	}
+	if got := payload["port"]; got != float64(8585) {
+		t.Errorf("payload port = %v, want 8585", got)
+	}
+	if got := payload["level"]; got != "INFO" {
+		t.Errorf("payload level = %v, want INFO", got)
+	}
+}
+
+func TestBuildLogHandler_ProductionDropsDebug(t *testing.T) {
+	var buf bytes.Buffer
+
+	handler := buildLogHandler(&buf, false)
+	logger := slog.New(handler)
+	logger.Debug("noisy", "detail", "should-be-dropped")
+
+	if buf.Len() != 0 {
+		t.Errorf("expected debug log to be filtered out in production mode, got: %q", buf.String())
+	}
+}
+
+func TestBuildLogHandler_DevModeIncludesDebug(t *testing.T) {
+	var buf bytes.Buffer
+
+	handler := buildLogHandler(&buf, true)
+	logger := slog.New(handler)
+	logger.Debug("visible", "detail", "should-be-emitted")
+
+	if buf.Len() == 0 {
+		t.Error("expected debug log to be emitted in dev mode, got empty output")
+	}
+	if !strings.Contains(buf.String(), "visible") {
+		t.Errorf("expected debug log to contain %q, got %q", "visible", buf.String())
 	}
 }
