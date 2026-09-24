@@ -388,54 +388,11 @@ func GetDemoFlatcarNodes() []k8s.FlatcarNodeInfo {
 	}
 }
 
-// GetDemoLimaInstances returns demo Lima instances for GET /api/lima.
+// GetDemoLimaInstances delegates to the k8s subpackage (moved along with
+// LimaInstanceSummary in epic #23685 phase 1). Exported here for backward
+// compatibility.
 func GetDemoLimaInstances() []LimaInstanceSummary {
-	return []LimaInstanceSummary{
-		{
-			Name:        "lima-k3s",
-			Status:      "running",
-			CPUCores:    4,
-			MemoryGB:    8,
-			DiskGB:      60,
-			Arch:        "x86_64",
-			OS:          "Ubuntu 22.04 LTS",
-			LimaVersion: "0.18.0",
-			LastSeen:    time.Now().Add(-30 * time.Second).UTC().Format(time.RFC3339),
-		},
-		{
-			Name:        "lima-default",
-			Status:      "running",
-			CPUCores:    2,
-			MemoryGB:    4,
-			DiskGB:      30,
-			Arch:        "x86_64",
-			OS:          "Ubuntu 22.04 LTS",
-			LimaVersion: "0.18.0",
-			LastSeen:    time.Now().Add(-45 * time.Second).UTC().Format(time.RFC3339),
-		},
-		{
-			Name:        "lima-dev",
-			Status:      "running",
-			CPUCores:    4,
-			MemoryGB:    8,
-			DiskGB:      80,
-			Arch:        "aarch64",
-			OS:          "Ubuntu 23.10",
-			LimaVersion: "0.17.2",
-			LastSeen:    time.Now().Add(-2 * time.Minute).UTC().Format(time.RFC3339),
-		},
-		{
-			Name:        "lima-test",
-			Status:      "stopped",
-			CPUCores:    2,
-			MemoryGB:    4,
-			DiskGB:      20,
-			Arch:        "x86_64",
-			OS:          "Fedora 39",
-			LimaVersion: "0.17.2",
-			LastSeen:    time.Now().Add(-30 * time.Minute).UTC().Format(time.RFC3339),
-		},
-	}
+	return handlersk8s.GetDemoLimaInstances()
 }
 
 // Demo NVIDIA Operator Status
