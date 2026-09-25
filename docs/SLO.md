@@ -76,9 +76,11 @@ broken.
 is a P1 per the escalation guidance in
 [`runbooks/upgrade-smoke-no-alert.md`](runbooks/upgrade-smoke-no-alert.md).
 
-**Known gap:** this canary currently has no automated failure alert (see the
-linked runbook and tracking issue #23144) — until that is fixed, this SLO can
-only be checked manually.
+**Alerting:** a scheduled failure of `upgrade-smoke.yml` now opens/updates a
+`workflow-failure` labelled issue automatically via the catch-all in
+`.github/workflows/workflow-failure-issue.yml` — see
+[`runbooks/upgrade-smoke-no-alert.md`](runbooks/upgrade-smoke-no-alert.md) for
+detail. Tracking issue #23144 (the original gap) is closed.
 
 ---
 
@@ -114,9 +116,11 @@ operator adopting these targets should alert on:
 
 - `/healthz` returning non-200 for more than 1 consecutive scrape interval.
 - `/health` `status` field being `"degraded"` for more than 5 minutes.
-- A `schedule`-triggered failure of `upgrade-smoke.yml` or
-  `auth-login-smoke.yml` (see the linked runbooks for manual detection until
-  the automated alert gaps tracked in #23144 are closed).
+- A `schedule`-triggered failure of `upgrade-smoke.yml` (opens a
+  `workflow-failure` issue via the catch-all above) or `auth-login-smoke.yml`
+  (opens its own dedicated failure issue — see the workflow's "Create issue
+  on failure" step). Both already have automated issue-creation; neither
+  depends on manual `gh run list` polling.
 
 This guidance is informational only — it does not add an exporter, dashboard,
 or external data flow to this repository.
