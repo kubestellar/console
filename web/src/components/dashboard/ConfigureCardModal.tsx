@@ -4,7 +4,7 @@ import { Settings, Sparkles, ToggleLeft } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useTokenUsage } from '../../hooks/useTokenUsage'
 import { BaseModal } from '../../lib/modals'
-import { PROGRESS_SIMULATION_MS } from '../../lib/constants/network'
+import { PROGRESS_SIMULATION_MS, SUCCESS_CLOSE_DELAY_MS } from '../../lib/constants/network'
 import { CARD_BEHAVIORS, CARD_CONFIG_FIELDS } from './cardConfigData'
 import { ConfigureCardAiTab } from './ConfigureCardAiTab'
 import { ConfigureCardBehaviorsTab } from './ConfigureCardBehaviorsTab'
@@ -133,7 +133,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
       if (closeTimeoutRef.current !== null) clearTimeout(closeTimeoutRef.current)
       closeTimeoutRef.current = setTimeout(() => {
         onClose()
-      }, 1500)
+      }, SUCCESS_CLOSE_DELAY_MS)
       return
     }
 
