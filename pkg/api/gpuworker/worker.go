@@ -1,4 +1,4 @@
-package api
+package gpuworker
 
 import (
 	"context"
@@ -54,8 +54,8 @@ const (
 	maxConcurrentReservationCollectors = 10
 )
 
-// GPUUtilizationWorker periodically collects GPU utilization data for active reservations
-type GPUUtilizationWorker struct {
+// Worker periodically collects GPU utilization data for active reservations
+type Worker struct {
 	store               store.Store
 	k8sClient           *k8s.MultiClusterClient
 	interval            time.Duration
@@ -77,8 +77,8 @@ type GPUUtilizationWorker struct {
 	dcgmService   string
 }
 
-// NewGPUUtilizationWorker creates a new GPU utilization worker
-func NewGPUUtilizationWorker(s store.Store, k8sClient *k8s.MultiClusterClient, notificationService *notifications.Service) *GPUUtilizationWorker {
+// New creates a new GPU utilization worker
+func New(s store.Store, k8sClient *k8s.MultiClusterClient, notificationService *notifications.Service) *Worker {
 	intervalMs := defaultUtilPollIntervalMs
 	if envVal := os.Getenv("GPU_UTIL_POLL_INTERVAL_MS"); envVal != "" {
 		if parsed, err := strconv.Atoi(envVal); err == nil && parsed > 0 {
@@ -113,7 +113,7 @@ func NewGPUUtilizationWorker(s store.Store, k8sClient *k8s.MultiClusterClient, n
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	return &GPUUtilizationWorker{
+	return &Worker{
 		store:               s,
 		k8sClient:           k8sClient,
 		interval:            time.Duration(intervalMs) * time.Millisecond,
@@ -131,7 +131,7 @@ func NewGPUUtilizationWorker(s store.Store, k8sClient *k8s.MultiClusterClient, n
 }
 
 // Start begins the background polling loop
-func (w *GPUUtilizationWorker) Start() {
+func (w *Worker) Start() {
 	w.wg.Add(1)
 	safego.GoWith("gpu-utilization-worker", func() {
 		defer w.wg.Done()
@@ -158,7 +158,7 @@ func (w *GPUUtilizationWorker) Start() {
 
 // Stop signals the worker to stop and waits for the background goroutine to exit.
 // It is safe to call multiple times; only the first call actually closes the stop channel.
-func (w *GPUUtilizationWorker) Stop() {
+func (w *Worker) Stop() {
 	w.stopOnce.Do(func() {
 		w.baseCancel() // cancel all in-flight Kubernetes API calls (#6966)
 		close(w.stopCh)
@@ -167,7 +167,7 @@ func (w *GPUUtilizationWorker) Stop() {
 }
 
 // collectUtilization queries active reservations and records utilization snapshots
-func (w *GPUUtilizationWorker) collectUtilization() {
+func (w *Worker) collectUtilization() {
 	if w.k8sClient == nil {
 		return
 	}
@@ -219,7 +219,7 @@ func (w *GPUUtilizationWorker) collectUtilization() {
 // per-namespace framebuffer utilization from the nested map. Returns
 // nil when DCGM is disabled via env flag — callers handle nil as
 // "no DCGM data, use legacy zero fallback".
-func (w *GPUUtilizationWorker) scrapeDCGMPerCluster(
+func (w *Worker) scrapeDCGMPerCluster(
 	reservations []models.GPUReservation,
 	timeout time.Duration,
 ) map[string]map[string]*gpu.NamespaceMetrics {
@@ -266,7 +266,7 @@ func (w *GPUUtilizationWorker) scrapeDCGMPerCluster(
 // dcgmClusterMetrics is the per-namespace DCGM framebuffer map for the
 // reservation's cluster (or nil when DCGM is disabled / unreachable);
 // callers pass nil for the legacy zero-memory fallback.
-func (w *GPUUtilizationWorker) collectForReservation(
+func (w *Worker) collectForReservation(
 	ctx context.Context,
 	reservation *models.GPUReservation,
 	dcgmClusterMetrics map[string]*gpu.NamespaceMetrics,
@@ -400,7 +400,7 @@ func (w *GPUUtilizationWorker) collectForReservation(
 }
 
 // cleanupOldSnapshots removes snapshots older than the retention period
-func (w *GPUUtilizationWorker) cleanupOldSnapshots() {
+func (w *Worker) cleanupOldSnapshots() {
 	cutoff := time.Now().AddDate(0, 0, -snapshotRetentionDays)
 	deleted, err := w.store.DeleteOldUtilizationSnapshots(w.baseCtx, cutoff)
 	if err != nil {

@@ -15,6 +15,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/ai"
 	"github.com/kubestellar/console/pkg/api/audit"
+	"github.com/kubestellar/console/pkg/api/gpuworker"
 	"github.com/kubestellar/console/pkg/api/metrics"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/api/tracing"
@@ -269,7 +270,7 @@ func NewServer(cfg Config) (*Server, error) {
 
 	// Start GPU utilization background worker (collects hourly snapshots)
 	if k8sClient != nil {
-		server.background.gpuUtilWorker = NewGPUUtilizationWorker(db, k8sClient, notificationService)
+		server.background.gpuUtilWorker = gpuworker.New(db, k8sClient, notificationService)
 		server.background.gpuUtilWorker.Start()
 	} else {
 		slog.Info("[Server] GPU utilization worker skipped — no Kubernetes client available")
