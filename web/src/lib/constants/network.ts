@@ -283,6 +283,10 @@ export const NAV_AFTER_ANIMATION_MS = 1_500
 /** Simulated delay for mock Argo CD sync operations (UI demonstration only) */
 export const MOCK_SYNC_DELAY_MS = 1_200
 
+/** Delay before closing an inline panel/modal after showing a success state
+ * (lets the user see the confirmation before the UI collapses/closes) */
+export const SUCCESS_CLOSE_DELAY_MS = 1_500
+
 // ============================================================================
 // Polling & Refresh Intervals
 // ============================================================================
