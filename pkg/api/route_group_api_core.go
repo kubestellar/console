@@ -11,13 +11,14 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
-	"github.com/kubestellar/console/pkg/api/transport"
+	"github.com/kubestellar/console/pkg/api/handlers/admin"
 	"github.com/kubestellar/console/pkg/api/handlers/compliance"
 	"github.com/kubestellar/console/pkg/api/handlers/github"
 	"github.com/kubestellar/console/pkg/api/handlers/missions"
+	"github.com/kubestellar/console/pkg/api/middleware"
+	"github.com/kubestellar/console/pkg/api/transport"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/notifications"
-	"github.com/kubestellar/console/pkg/settings"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -29,10 +30,11 @@ type apiCoreRouteGroup struct {
 	notificationService *notifications.Service
 	persistenceStore    *store.PersistenceStore
 	k8sClient           *k8s.MultiClusterClient
+	failureTracker      *middleware.FailureTracker
 	done                <-chan struct{}
 }
 
-func newAPICoreRouteGroup(app *fiber.App, store store.Store, cfg Config, hub *transport.Hub, notificationService *notifications.Service, persistenceStore *store.PersistenceStore, k8sClient *k8s.MultiClusterClient, done <-chan struct{}) *apiCoreRouteGroup {
+func newAPICoreRouteGroup(app *fiber.App, store store.Store, cfg Config, hub *transport.Hub, notificationService *notifications.Service, persistenceStore *store.PersistenceStore, k8sClient *k8s.MultiClusterClient, failureTracker *middleware.FailureTracker, done <-chan struct{}) *apiCoreRouteGroup {
 	return &apiCoreRouteGroup{
 		app:                 app,
 		store:               store,
@@ -41,6 +43,7 @@ func newAPICoreRouteGroup(app *fiber.App, store store.Store, cfg Config, hub *tr
 		notificationService: notificationService,
 		persistenceStore:    persistenceStore,
 		k8sClient:           k8sClient,
+		failureTracker:      failureTracker,
 		done:                done,
 	}
 }
@@ -63,7 +66,7 @@ func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 		return c.JSON(fiber.Map{"token": agentToken})
 	})
 
-	user := handlers.NewUserHandler(g.store)
+	user := admin.NewUserHandler(g.store)
 	g.app.Get("/api/me", routes.bodyGuard, routes.csrfGuard, routes.jwtAuth, user.GetCurrentUser)
 	g.app.Put("/api/me", routes.bodyGuard, routes.csrfGuard, routes.jwtAuth, user.UpdateCurrentUser)
 
@@ -139,11 +142,17 @@ func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 	api.Get("/acmm/scan", compliance.ACMMScanHandler)
 	api.Get("/acmm/badge", compliance.ACMMBadgeHandler)
 
-	settingsHandler := handlers.NewSettingsHandler(settings.GetSettingsManager(), g.store)
-	api.Get("/settings", settingsHandler.GetSettings)
-	api.Put("/settings", settingsHandler.SaveSettings)
-	api.Post("/settings/export", settingsHandler.ExportSettings)
-	api.Post("/settings/import", settingsHandler.ImportSettings)
+	// Admin domain (settings, teams, RBAC, rate-limit status) registers itself
+	// from its subpackage; auth middleware stays on the /api group.
+	admin.NewRegistrar().Register(api, handlers.Deps{
+		Store:               g.store,
+		Hub:                 g.hub,
+		K8sClient:           g.k8sClient,
+		PersistenceStore:    g.persistenceStore,
+		NotificationService: g.notificationService,
+		FailureTracker:      g.failureTracker,
+		GitHubToken:         g.config.GitHubToken,
+	})
 
 	onboarding := handlers.NewOnboardingHandler(g.store)
 	api.Get("/onboarding/questions", onboarding.GetQuestions)

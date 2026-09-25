@@ -35,7 +35,7 @@ func TestAPICoreRouteGroup_RegistersExpectedRoutes(t *testing.T) {
 		jwtAuth:   func(c *fiber.Ctx) error { return c.Next() },
 	}
 
-	group := newAPICoreRouteGroup(app, mockStore, cfg, hub, notifService, persistStore, k8sClient, done)
+	group := newAPICoreRouteGroup(app, mockStore, cfg, hub, notifService, persistStore, k8sClient, nil, done)
 	group.Register(routeCtx)
 
 	routes := routeTable(app)
@@ -151,7 +151,7 @@ func TestAPICoreRouteGroup_MissionsSubroutes(t *testing.T) {
 		jwtAuth:   func(c *fiber.Ctx) error { return c.Next() },
 	}
 
-	group := newAPICoreRouteGroup(app, mockStore, cfg, hub, notifService, persistStore, k8sClient, done)
+	group := newAPICoreRouteGroup(app, mockStore, cfg, hub, notifService, persistStore, k8sClient, nil, done)
 	group.Register(routeCtx)
 
 	routes := routeTable(app)
@@ -199,7 +199,7 @@ func TestAPICoreRouteGroup_OrbitSubroutes(t *testing.T) {
 		jwtAuth:   func(c *fiber.Ctx) error { return c.Next() },
 	}
 
-	group := newAPICoreRouteGroup(app, mockStore, cfg, hub, notifService, persistStore, k8sClient, done)
+	group := newAPICoreRouteGroup(app, mockStore, cfg, hub, notifService, persistStore, k8sClient, nil, done)
 	group.Register(routeCtx)
 
 	routes := routeTable(app)
@@ -248,7 +248,7 @@ func TestAPICoreRouteGroup_MinHandlerChainLength(t *testing.T) {
 		jwtAuth:   jwtAuthMiddleware,
 	}
 
-	group := newAPICoreRouteGroup(app, mockStore, cfg, hub, notifService, persistStore, k8sClient, done)
+	group := newAPICoreRouteGroup(app, mockStore, cfg, hub, notifService, persistStore, k8sClient, nil, done)
 	group.Register(routeCtx)
 
 	routes := routeTable(app)
