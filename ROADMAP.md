@@ -2,6 +2,8 @@
 
 This document outlines the planned direction for KubeStellar Console. It is a living document and will be updated as priorities evolve based on community feedback, user needs, and ecosystem changes.
 
+**Last Updated:** 2026-09-25
+
 ## Completed Milestones
 
 ### v0.1 — Foundation (Q3 2025)
@@ -49,7 +51,7 @@ This document outlines the planned direction for KubeStellar Console. It is a li
 - **Learn dropdown** — Auto-populated from YouTube playlist with video tutorials
 - **Claude Code GitHub Action** — AI-assisted PR review and issue triage via Claude Opus 4.6
 
-## v0.4 — AI-Native Observability (Target: Q3 2026)
+## v0.4 — AI-Native Observability (Target: Q4 2026–Q1 2027)
 
 This milestone crystallizes the near-term roadmap items into a cohesive theme: establishing KubeStellar Console as the canonical AI/ML workload visibility and operations layer for Kubernetes.
 
@@ -77,9 +79,11 @@ This milestone crystallizes the near-term roadmap items into a cohesive theme: e
 - **Contributor onboarding** — Establish PR triage SLA, define `ai-needs-human` escalation path, and publish contributor guide update
 - **Adoption metrics** — Replace all `TBD` fields in `docs/adoption-metrics.md` with real measurements before any CNCF application
 
-## Near-Term (Q2–Q3 2026)
+## Near-Term (Q4 2026)
 
-## Mid-Term (Q3–Q4 2026)
+Focus: CNCF incubation readiness, adopters program expansion, contributor onboarding.
+
+## Mid-Term (Q1–Q2 2027)
 
 - **GitOps integration milestone** — First-class Flux + Argo CD support with observability parity, declarative Console configuration, and Mission Control deep links; see `docs/plans/GITOPS-INTEGRATION-RFC.md`
 - **Multi-tenant RBAC** — Role-based access control for teams sharing a Console instance, with namespace-scoped permissions
