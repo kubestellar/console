@@ -18,6 +18,7 @@ import {
 import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable'
 import { LayoutGrid, ChevronDown, ChevronRight } from 'lucide-react'
 import { EmptyState, EmptyStateAction } from '../../../components/ui/EmptyState'
+import { DashboardHealthIndicator } from '../../../components/dashboard/DashboardHealthIndicator'
 import { SortableDashboardCard, DragPreviewCard, DASHBOARD_CARD_ROW_HEIGHT_PX } from '../DashboardComponents'
 import type { DashboardCard } from '../types'
 
@@ -103,6 +104,7 @@ export function DashboardPageCardsSection({
           <span>{title} Cards ({cards.length})</span>
           {showCards ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
+        {cards.length > 0 && <DashboardHealthIndicator size="sm" />}
       </div>
 
       {/* Cards grid */}
