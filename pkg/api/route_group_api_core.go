@@ -48,6 +48,20 @@ func newAPICoreRouteGroup(app *fiber.App, store store.Store, cfg Config, hub *tr
 	}
 }
 
+// handlerDeps builds the shared dependency set handed to subpackage
+// registrars (epic #23685 phase 2).
+func (g *apiCoreRouteGroup) handlerDeps() handlers.Deps {
+	return handlers.Deps{
+		Store:               g.store,
+		Hub:                 g.hub,
+		K8sClient:           g.k8sClient,
+		PersistenceStore:    g.persistenceStore,
+		NotificationService: g.notificationService,
+		FailureTracker:      g.failureTracker,
+		GitHubToken:         g.config.GitHubToken,
+	}
+}
+
 func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 	api := routes.api
 
@@ -66,9 +80,10 @@ func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 		return c.JSON(fiber.Map{"token": agentToken})
 	})
 
-	user := admin.NewUserHandler(g.store)
-	g.app.Get("/api/me", routes.bodyGuard, routes.csrfGuard, routes.jwtAuth, user.GetCurrentUser)
-	g.app.Put("/api/me", routes.bodyGuard, routes.csrfGuard, routes.jwtAuth, user.UpdateCurrentUser)
+	// The current-user routes live outside the /api group so they skip the API
+	// rate limiter; the guard chain is still supplied here so auth policy stays
+	// in the route group.
+	admin.NewUserRegistrar(routes.bodyGuard, routes.csrfGuard, routes.jwtAuth).Register(g.app, g.handlerDeps())
 
 	allowedAgentSubPaths := map[string]bool{
 		"status":  true,
@@ -144,15 +159,7 @@ func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 
 	// Admin domain (settings, teams, RBAC, rate-limit status) registers itself
 	// from its subpackage; auth middleware stays on the /api group.
-	admin.NewRegistrar().Register(api, handlers.Deps{
-		Store:               g.store,
-		Hub:                 g.hub,
-		K8sClient:           g.k8sClient,
-		PersistenceStore:    g.persistenceStore,
-		NotificationService: g.notificationService,
-		FailureTracker:      g.failureTracker,
-		GitHubToken:         g.config.GitHubToken,
-	})
+	admin.NewRegistrar().Register(api, g.handlerDeps())
 
 	onboarding := handlers.NewOnboardingHandler(g.store)
 	api.Get("/onboarding/questions", onboarding.GetQuestions)
