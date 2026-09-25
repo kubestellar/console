@@ -9,7 +9,7 @@ import { useApiKeyCheck, ApiKeyPromptModal } from '../cards/console-missions/sha
 import { useAIMode } from '../../hooks/useAIMode'
 import { extractJsonFromMarkdown } from '../../lib/ai/extractJson'
 import { cn } from '../../lib/cn'
-import { CLOSE_ANIMATION_MS } from '../../lib/constants/network'
+import { CLOSE_ANIMATION_MS, SUCCESS_CLOSE_DELAY_MS } from '../../lib/constants/network'
 
 interface InlineAIAssistProps<T> {
   systemPrompt: string
@@ -64,7 +64,7 @@ export function InlineAIAssist<T>({
             phaseTimerRef.current = setTimeout(() => {
               setPhase('collapsed')
               setInput('')
-            }, 1500)
+            }, SUCCESS_CLOSE_DELAY_MS)
           } else {
             setError(validation.error)
             setPhase('error')
@@ -76,7 +76,7 @@ export function InlineAIAssist<T>({
           phaseTimerRef.current = setTimeout(() => {
             setPhase('collapsed')
             setInput('')
-          }, 1500)
+          }, SUCCESS_CLOSE_DELAY_MS)
         }
       } else {
         setError(parseErr || 'Failed to parse AI response')

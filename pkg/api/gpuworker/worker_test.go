@@ -1,4 +1,4 @@
-package api
+package gpuworker
 
 import (
 	"context"
@@ -21,7 +21,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
-func TestGPUUtilizationWorker_MetricAccuracy(t *testing.T) {
+func TestWorker_MetricAccuracy(t *testing.T) {
 	mockStore := new(test.MockStore)
 	k8sClient, _ := k8s.NewMultiClusterClient("")
 	fakeClient := k8sfake.NewSimpleClientset()
@@ -35,7 +35,7 @@ func TestGPUUtilizationWorker_MetricAccuracy(t *testing.T) {
 		},
 	})
 
-	worker := NewGPUUtilizationWorker(mockStore, k8sClient, nil)
+	worker := New(mockStore, k8sClient, nil)
 
 	t.Run("collectForReservation - Accurate GPU calculation", func(t *testing.T) {
 		reservation := &models.GPUReservation{
@@ -172,9 +172,9 @@ func TestGPUUtilizationWorker_MetricAccuracy(t *testing.T) {
 	})
 }
 
-func TestGPUUtilizationWorker_Cleanup(t *testing.T) {
+func TestWorker_Cleanup(t *testing.T) {
 	mockStore := new(test.MockStore)
-	worker := NewGPUUtilizationWorker(mockStore, nil, nil)
+	worker := New(mockStore, nil, nil)
 
 	t.Run("cleanupOldSnapshots calls store", func(t *testing.T) {
 		mockStore.On("DeleteOldUtilizationSnapshots", mock.Anything).Return(int64(5), nil).Once()
@@ -183,16 +183,16 @@ func TestGPUUtilizationWorker_Cleanup(t *testing.T) {
 	})
 }
 
-func TestGPUUtilizationWorker_IntervalFromEnv(t *testing.T) {
+func TestWorker_IntervalFromEnv(t *testing.T) {
 	os.Setenv("GPU_UTIL_POLL_INTERVAL_MS", "5000")
 	defer os.Unsetenv("GPU_UTIL_POLL_INTERVAL_MS")
 
-	worker := NewGPUUtilizationWorker(nil, nil, nil)
+	worker := New(nil, nil, nil)
 	assert.Equal(t, 5*time.Second, worker.interval)
 }
 
-func TestGPUUtilizationWorker_StopCancel(t *testing.T) {
-	worker := NewGPUUtilizationWorker(nil, nil, nil)
+func TestWorker_StopCancel(t *testing.T) {
+	worker := New(nil, nil, nil)
 
 	ctx := worker.baseCtx
 	worker.Stop()
@@ -206,7 +206,7 @@ func TestGPUUtilizationWorker_StopCancel(t *testing.T) {
 	}
 }
 
-func TestGPUUtilizationWorker_ThresholdAlerting(t *testing.T) {
+func TestWorker_ThresholdAlerting(t *testing.T) {
 	mockStore := new(test.MockStore)
 	notificationService := notifications.NewService()
 
@@ -226,7 +226,7 @@ func TestGPUUtilizationWorker_ThresholdAlerting(t *testing.T) {
 			},
 		})
 
-		worker := NewGPUUtilizationWorker(mockStore, k8sClient, notificationService)
+		worker := New(mockStore, k8sClient, notificationService)
 		assert.Equal(t, 80.0, worker.overThreshold)
 
 		reservation := &models.GPUReservation{
@@ -278,7 +278,7 @@ func TestGPUUtilizationWorker_ThresholdAlerting(t *testing.T) {
 			},
 		})
 
-		worker := NewGPUUtilizationWorker(mockStore, k8sClient, notificationService)
+		worker := New(mockStore, k8sClient, notificationService)
 		assert.Equal(t, 50.0, worker.underThreshold)
 
 		reservation := &models.GPUReservation{
@@ -332,7 +332,7 @@ func TestGPUUtilizationWorker_ThresholdAlerting(t *testing.T) {
 			},
 		})
 
-		worker := NewGPUUtilizationWorker(mockStore, k8sClient, notificationService)
+		worker := New(mockStore, k8sClient, notificationService)
 		assert.Equal(t, 90.0, worker.overThreshold)
 		assert.Equal(t, 10.0, worker.underThreshold)
 
@@ -372,13 +372,13 @@ func TestGPUUtilizationWorker_ThresholdAlerting(t *testing.T) {
 
 // Issue 9135 — DCGM GPU memory integration tests.
 
-func TestGPUUtilizationWorker_DCGMDisabled_MemoryZero(t *testing.T) {
+func TestWorker_DCGMDisabled_MemoryZero(t *testing.T) {
 	t.Setenv("GPU_METRICS_DCGM_ENABLED", "")
 
 	mockStore := new(test.MockStore)
 	k8sClient, _ := k8s.NewMultiClusterClient("")
 	k8sClient.InjectClient("c1", k8sfake.NewSimpleClientset())
-	worker := NewGPUUtilizationWorker(mockStore, k8sClient, nil)
+	worker := New(mockStore, k8sClient, nil)
 
 	if worker.dcgmEnabled {
 		t.Fatal("expected dcgmEnabled=false when GPU_METRICS_DCGM_ENABLED is unset")
@@ -404,14 +404,14 @@ func TestGPUUtilizationWorker_DCGMDisabled_MemoryZero(t *testing.T) {
 	mockStore.AssertExpectations(t)
 }
 
-func TestGPUUtilizationWorker_DCGMEnabled_EnvOverrides(t *testing.T) {
+func TestWorker_DCGMEnabled_EnvOverrides(t *testing.T) {
 	t.Setenv("GPU_METRICS_DCGM_ENABLED", "true")
 	t.Setenv("GPU_METRICS_DCGM_NAMESPACE", "custom-ns")
 	t.Setenv("GPU_METRICS_DCGM_SERVICE", "custom-svc")
 
 	mockStore := new(test.MockStore)
 	k8sClient, _ := k8s.NewMultiClusterClient("")
-	worker := NewGPUUtilizationWorker(mockStore, k8sClient, nil)
+	worker := New(mockStore, k8sClient, nil)
 
 	if !worker.dcgmEnabled {
 		t.Fatal("expected dcgmEnabled=true when GPU_METRICS_DCGM_ENABLED=true")
@@ -424,14 +424,14 @@ func TestGPUUtilizationWorker_DCGMEnabled_EnvOverrides(t *testing.T) {
 	}
 }
 
-func TestGPUUtilizationWorker_DCGMEnabled_MemoryFromScraper(t *testing.T) {
+func TestWorker_DCGMEnabled_MemoryFromScraper(t *testing.T) {
 	// Pass DCGM metrics directly to collectForReservation to verify the
 	// percentage computation and that non-matching namespaces fall back to 0.
 	mockStore := new(test.MockStore)
 	k8sClient, _ := k8s.NewMultiClusterClient("")
 	fakeClient := k8sfake.NewSimpleClientset()
 	k8sClient.InjectClient("c1", fakeClient)
-	worker := NewGPUUtilizationWorker(mockStore, k8sClient, nil)
+	worker := New(mockStore, k8sClient, nil)
 
 	// 75% framebuffer utilization: 30720 used out of 30720+10240 total.
 	const (
@@ -457,13 +457,13 @@ func TestGPUUtilizationWorker_DCGMEnabled_MemoryFromScraper(t *testing.T) {
 	mockStore.AssertExpectations(t)
 }
 
-func TestGPUUtilizationWorker_DCGMEnabled_NamespaceMiss_Zero(t *testing.T) {
+func TestWorker_DCGMEnabled_NamespaceMiss_Zero(t *testing.T) {
 	// DCGM returned data, but not for this reservation's namespace.
 	mockStore := new(test.MockStore)
 	k8sClient, _ := k8s.NewMultiClusterClient("")
 	fakeClient := k8sfake.NewSimpleClientset()
 	k8sClient.InjectClient("c1", fakeClient)
-	worker := NewGPUUtilizationWorker(mockStore, k8sClient, nil)
+	worker := New(mockStore, k8sClient, nil)
 
 	dcgmByNs := map[string]*agent.DCGMNamespaceMetrics{
 		"other-ns": {FBUsedMiB: 1000, FBFreeMiB: 1000, SampleCount: 1},
