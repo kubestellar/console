@@ -1,6 +1,9 @@
 package dashboards
 
 import (
+	"io"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
@@ -47,32 +50,27 @@ func TestRegistrar_RegistersDashboardsDomainRoutes(t *testing.T) {
 	}
 }
 
-// TestRegistrar_PreservesImportBeforeParamRouteOrder guards fiber's
-// first-registered-wins matching: POST /dashboards/import must be reachable
-// and not shadowed by a parameterised sibling.
-func TestRegistrar_PreservesImportBeforeParamRouteOrder(t *testing.T) {
+// TestRegistrar_ImportRouteIsReachable dispatches a real request to
+// POST /api/dashboards/import and asserts it lands in ImportDashboard rather
+// than falling through to fiber's 404/405 handling. A route-order assertion
+// cannot prove this: no parameterised POST sibling shares the segment count of
+// /dashboards/import, so reachability is the only meaningful guard.
+func TestRegistrar_ImportRouteIsReachable(t *testing.T) {
 	app := fiber.New()
 	NewRegistrar().Register(app.Group("/api"), handlers.Deps{})
 
-	var postPaths []string
-	for _, stack := range app.Stack() {
-		for _, route := range stack {
-			if route.Method == fiber.MethodPost {
-				postPaths = append(postPaths, route.Path)
-			}
-		}
-	}
+	// An unsupported format is rejected by ImportDashboard before it touches
+	// the store, so the nil Store in Deps is never dereferenced.
+	req := httptest.NewRequest(fiber.MethodPost, "/api/dashboards/import",
+		strings.NewReader(`{"format":"not-a-dashboard"}`))
+	req.Header.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
-	importIdx, paramIdx := -1, -1
-	for i, p := range postPaths {
-		switch p {
-		case "/api/dashboards/import":
-			importIdx = i
-		case "/api/dashboards/:id/cards":
-			paramIdx = i
-		}
-	}
-	require.NotEqual(t, -1, importIdx, "POST /api/dashboards/import must be registered")
-	require.NotEqual(t, -1, paramIdx, "POST /api/dashboards/:id/cards must be registered")
-	require.Less(t, importIdx, paramIdx, "import route must be registered before the parameterised card route")
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Equal(t, fiber.StatusBadRequest, resp.StatusCode, "import route must be dispatched to ImportDashboard")
+	require.Contains(t, string(body), "Unsupported format", "response must come from ImportDashboard, not a fallback handler")
 }
