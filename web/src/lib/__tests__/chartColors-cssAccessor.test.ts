@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { getChartColor, getChartColorByName } from '../chartColors'
+import {
+  getChartColor,
+  getChartColorByName,
+  getChartTextMuted,
+  getChartAxisStroke,
+  getChartGridStroke,
+  getChartTickColor } from '../chartColors'
 
 const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/
 
@@ -100,5 +106,37 @@ describe('chartColors (CSS variable accessor)', () => {
       const result = getChartColor(1)
       expect(result).toBe('#9333ea')
     })
+  })
+  describe('non-series token accessors', () => {
+    const accessors: Array<[string, () => string, string, string]> = [
+      ['getChartTextMuted', getChartTextMuted, '--chart-text-muted', '#aaa'],
+      ['getChartAxisStroke', getChartAxisStroke, '--chart-axis-stroke', '#333'],
+      ['getChartGridStroke', getChartGridStroke, '--chart-grid-stroke', '#333'],
+      ['getChartTickColor', getChartTickColor, '--chart-axis-tick', '#888'],
+    ]
+
+    for (const [name, accessor, cssVar, fallback] of accessors) {
+      it(`${name} returns the fallback when getComputedStyle is unavailable`, () => {
+        expect(accessor()).toBe(fallback)
+      })
+
+      it(`${name} reads ${cssVar} live on every call`, () => {
+        const getPropertyValue = vi.fn()
+          .mockReturnValueOnce(' #111111 ')
+          .mockReturnValueOnce('#222222')
+        vi.stubGlobal('getComputedStyle', vi.fn().mockReturnValue({ getPropertyValue }))
+
+        expect(accessor()).toBe('#111111')
+        expect(accessor()).toBe('#222222')
+        expect(getPropertyValue).toHaveBeenCalledWith(cssVar)
+      })
+
+      it(`${name} falls back when ${cssVar} is empty`, () => {
+        vi.stubGlobal('getComputedStyle', vi.fn().mockReturnValue({
+          getPropertyValue: vi.fn().mockReturnValue(''),
+        }))
+        expect(accessor()).toBe(fallback)
+      })
+    }
   })
 })

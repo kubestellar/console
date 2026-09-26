@@ -23,6 +23,9 @@ import {
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { CHART_MIN_HEIGHT_PX, CHART_TEXT_WHITE, CHART_AXIS_FONT_SIZE, CHART_AXIS_FONT_SIZE_SM, CHART_BODY_FONT_SIZE } from '../../../lib/constants/ui'
+import { getChartColorByName } from '../../../lib/chartColors'
+import { useChartTokens } from '../../../hooks/useChartTokens'
+import { useTheme } from '../../../contexts/ThemeContext'
 
 const GRID_LEFT_PX = 55
 const GRID_RIGHT_PX = 20
@@ -47,6 +50,8 @@ interface ChartRow {
 
 function LatencyBreakdownInternal() {
   const { t } = useTranslation()
+  const { chartColors } = useTheme()
+  const { textMuted, axisStroke, gridStroke } = useChartTokens()
   const { data: reports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing, lastRefresh } = useCachedBenchmarkReports()
   const effectiveReports = reports ?? []
   const hasData = effectiveReports.length > 0
@@ -114,6 +119,8 @@ function LatencyBreakdownInternal() {
 
   const chartOption = useMemo(() => {
     if (chartData.length === 0) return {}
+    // Theme palette slot 5 is the error colour; the CSS-token accessor is the fallback
+    const errorColor = chartColors[4] || getChartColorByName('error')
 
     const seriesData = groups.flatMap(g => [
       {
@@ -154,9 +161,9 @@ function LatencyBreakdownInternal() {
         name: 'QPS (queries/sec)',
         nameLocation: 'middle' as const,
         nameGap: 30,
-        nameTextStyle: { color: '#e4e4e7', fontSize: CHART_AXIS_FONT_SIZE },
-        axisLabel: { color: '#e4e4e7', fontSize: CHART_AXIS_FONT_SIZE },
-        axisLine: { lineStyle: { color: '#e4e4e7' } },
+        nameTextStyle: { color: textMuted, fontSize: CHART_AXIS_FONT_SIZE },
+        axisLabel: { color: textMuted, fontSize: CHART_AXIS_FONT_SIZE },
+        axisLine: { lineStyle: { color: axisStroke } },
         axisTick: { show: false },
       },
       yAxis: {
@@ -164,11 +171,11 @@ function LatencyBreakdownInternal() {
         name: tabInfo.unit,
         nameLocation: 'middle' as const,
         nameGap: 40,
-        nameTextStyle: { color: '#e4e4e7', fontSize: CHART_AXIS_FONT_SIZE },
-        axisLabel: { color: '#e4e4e7', fontSize: CHART_AXIS_FONT_SIZE },
-        axisLine: { lineStyle: { color: '#e4e4e7' } },
+        nameTextStyle: { color: textMuted, fontSize: CHART_AXIS_FONT_SIZE },
+        axisLabel: { color: textMuted, fontSize: CHART_AXIS_FONT_SIZE },
+        axisLine: { lineStyle: { color: axisStroke } },
         axisTick: { show: false },
-        splitLine: { lineStyle: { color: '#334155', opacity: 0.5, type: 'dashed' as const } },
+        splitLine: { lineStyle: { color: gridStroke, opacity: 0.5, type: 'dashed' as const } },
       },
       tooltip: {
         trigger: 'axis' as const,
@@ -196,15 +203,15 @@ function LatencyBreakdownInternal() {
             symbol: 'none',
             data: [{
               yAxis: tabInfo.sla,
-              label: { formatter: `SLA: ${tabInfo.sla}ms`, position: 'end' as const, color: '#ef4444', fontSize: CHART_AXIS_FONT_SIZE_SM },
-              lineStyle: { color: '#ef4444', type: 'dashed' as const, opacity: 0.6 },
+              label: { formatter: `SLA: ${tabInfo.sla}ms`, position: 'end' as const, color: errorColor, fontSize: CHART_AXIS_FONT_SIZE_SM },
+              lineStyle: { color: errorColor, type: 'dashed' as const, opacity: 0.6 },
             }],
           },
           data: [],
         }] : []),
       ],
     }
-  }, [chartData, groups, tabInfo, maxLatency])
+  }, [chartData, groups, tabInfo, maxLatency, chartColors, textMuted, axisStroke, gridStroke])
 
   return (
     <div className="p-4 h-full flex flex-col">

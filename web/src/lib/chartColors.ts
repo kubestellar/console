@@ -83,3 +83,45 @@ export function getChartColorByName(name: 'warning' | 'success' | 'error' | 'inf
   
   return getChartColor(colorMap[name] || 1)
 }
+
+/** Fallbacks for the non-series chart tokens — match the `:root` values in index.css */
+const CHART_TEXT_MUTED_FALLBACK = '#aaa'
+const CHART_AXIS_STROKE_FALLBACK = '#333'
+const CHART_GRID_STROKE_FALLBACK = '#333'
+const CHART_TICK_COLOR_FALLBACK = '#888'
+
+/**
+ * Resolve a chart CSS token at call time.
+ *
+ * The `CHART_*` constants in `lib/constants/ui.ts` snapshot their CSS variables
+ * once at module load, so ECharts options built from them stay on the initial
+ * theme after a runtime switch. Call these accessors from inside the option
+ * `useMemo` (with the theme id in its dependencies) to pick up the live value.
+ */
+function getChartCssToken(name: string, fallback: string): string {
+  if (typeof window !== 'undefined' && typeof getComputedStyle !== 'undefined') {
+    const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+    if (value) return value
+  }
+  return fallback
+}
+
+/** Muted secondary text for chart labels and axis names (`--chart-text-muted`) */
+export function getChartTextMuted(): string {
+  return getChartCssToken('--chart-text-muted', CHART_TEXT_MUTED_FALLBACK)
+}
+
+/** Axis line stroke (`--chart-axis-stroke`) */
+export function getChartAxisStroke(): string {
+  return getChartCssToken('--chart-axis-stroke', CHART_AXIS_STROKE_FALLBACK)
+}
+
+/** Grid / split line stroke (`--chart-grid-stroke`) */
+export function getChartGridStroke(): string {
+  return getChartCssToken('--chart-grid-stroke', CHART_GRID_STROKE_FALLBACK)
+}
+
+/** Axis tick label color (`--chart-axis-tick`) */
+export function getChartTickColor(): string {
+  return getChartCssToken('--chart-axis-tick', CHART_TICK_COLOR_FALLBACK)
+}
