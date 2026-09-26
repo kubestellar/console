@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import re
 import sys
 from pathlib import Path
 
@@ -29,6 +30,9 @@ import yaml
 
 DEFAULT_SCHEDULE = Path(".github/on-call-schedule.yml")
 DAYS_PER_WEEK = 7
+# GitHub login rules: 1-39 alphanumerics or hyphens, no leading/trailing or
+# consecutive hyphens. Anything else would render as a broken @-mention.
+GITHUB_LOGIN_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$")
 EXIT_OK = 0
 EXIT_BAD_SCHEDULE = 1
 EXIT_NO_SHERIFF = 2
@@ -57,9 +61,13 @@ def _week_start(day: dt.date) -> dt.date:
 def _logins(value, field: str) -> list[str]:
     if value is None:
         return []
-    if not isinstance(value, list) or not all(isinstance(v, str) and v for v in value):
-        raise ScheduleError(f"{field}: expected a list of non-empty GitHub logins")
-    return [v.lstrip("@") for v in value]
+    if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
+        raise ScheduleError(f"{field}: expected a list of GitHub logins")
+    logins = [v.strip().lstrip("@") for v in value]
+    for raw, login in zip(value, logins):
+        if not GITHUB_LOGIN_RE.match(login):
+            raise ScheduleError(f"{field}: {raw!r} is not a valid GitHub login")
+    return logins
 
 
 def load_schedule(path: Path) -> dict:

@@ -70,11 +70,22 @@ and, when one of them **fails on a push to `main`**:
 2. Applies `main-broken` to the PR whose merge produced the failing commit
 3. Opens an incident issue titled `Main branch broken: <workflow>` (label
    `main-broken`) that @-mentions the Build Sheriff resolved from
-   `.github/on-call-schedule.yml` and records the SLA start time — or, if an open
-   incident for that workflow already exists, appends a comment instead of
-   opening a duplicate (same pattern as `workflow-failure-issue.yml`)
+   `.github/on-call-schedule.yml` and records the SLA start time (the failing
+   run's completion time) — or, if an open incident for that workflow already
+   exists, appends a comment instead of opening a duplicate (same pattern as
+   `workflow-failure-issue.yml`; runs are serialized per gate so rapid repeat
+   failures cannot race into two incidents)
 4. Posts to Slack **only if** the `SLACK_CI_WEBHOOK_URL` secret is configured;
    there is no `#kubestellar-dev` bot integration until a maintainer adds it
+
+Only a failed run conclusion counts: matrix legs a gate marks
+`continue-on-error: true` (the windows/macos legs of `Cross-Platform Build`)
+are informational and never open an incident on their own.
+
+Edits to `.github/on-call-schedule.yml` or the resolver are validated on the
+PR by the workflow's `resolver-tests` job
+(`scripts/__tests__/resolve-build-sheriff.test.sh`), so a malformed rotation
+cannot reach `main` unnoticed.
 
 The incident issue is the SLA clock. If main is red and no incident issue
 appears within a few minutes of the failing run, open one by hand and follow

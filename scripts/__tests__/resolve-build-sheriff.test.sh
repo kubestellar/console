@@ -15,6 +15,9 @@
 #   8. Malformed YAML → exits 1
 #   9. No rotation and no fallback → exits 2
 #  10. The committed .github/on-call-schedule.yml resolves to someone
+#  11. Logins that normalize to empty ("@", whitespace) → exits 1
+#  12. Logins with characters GitHub rejects → exits 1
+#  13. Leading "@" and surrounding whitespace are normalized away
 #
 # Usage:
 #   bash scripts/__tests__/resolve-build-sheriff.test.sh
@@ -105,6 +108,20 @@ assert_eq "2" "$?" "no rotation and no fallback exits 2"
 # 10. Committed schedule resolves
 OUT="$(cd "$REPO_ROOT" && python3 "$RESOLVER")"
 if [ -n "$OUT" ]; then pass "committed .github/on-call-schedule.yml resolves a sheriff"; else fail "committed schedule resolves nobody"; fi
+
+# 11. Values that normalize to an empty login → exit 1 (not an empty mention)
+printf 'rotation: []\nfallback: ["@", "   "]\n' > "$TMP/empty-logins.yml"
+python3 "$RESOLVER" --schedule "$TMP/empty-logins.yml" --date 2026-10-01 >/dev/null 2>&1
+assert_eq "1" "$?" "logins that normalize to empty exit 1"
+
+# 12. Invalid login characters → exit 1
+printf 'epoch: 2026-09-28\nrotation: ["not a login", "double--hyphen"]\n' > "$TMP/invalid-logins.yml"
+python3 "$RESOLVER" --schedule "$TMP/invalid-logins.yml" --date 2026-10-01 >/dev/null 2>&1
+assert_eq "1" "$?" "invalid login characters exit 1"
+
+# 13. "@" prefix and whitespace are normalized
+printf 'rotation: []\nfallback: [" @m1 ", "m-2"]\n' > "$TMP/normalize.yml"
+assert_eq "@m1 @m-2" "$(python3 "$RESOLVER" --schedule "$TMP/normalize.yml" --date 2026-10-01 --mentions)" "@ prefix and whitespace are normalized"
 
 echo
 echo "Tests: $TESTS_RUN, Passed: $TESTS_PASSED, Failed: $TESTS_FAILED"
