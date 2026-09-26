@@ -1,0 +1,248 @@
+name: Main Branch Broken
+
+# Implements the "Detection (Automated)" step of the Main Branch Build Recovery
+# SLA in docs/INCIDENT-RESPONSE.md (#23616, part of #23534).
+#
+# Fires when one of the main-branch build/test workflows below fails on a push
+# to `main`. It then:
+#   1. ensures the `main-broken` label exists (#23615),
+#   2. labels the PR that produced the failing commit with `main-broken`,
+#   3. opens — or, on repeat failures, comments on — a single incident issue,
+#      @-mentioning the Build Sheriff resolved from .github/on-call-schedule.yml
+#      (same create-or-update pattern as workflow-failure-issue.yml),
+#   4. posts to Slack if the optional SLACK_CI_WEBHOOK_URL secret is set.
+#
+# Recovery (the incident issue is closed and the label removed) is manual —
+# see "Verification (Post-Fix)" in docs/INCIDENT-RESPONSE.md.
+
+on:
+  workflow_run:
+    workflows:
+      # Main-branch build/test gates that run on push to main
+      - "Build and Deploy KC"
+      - "Go Tests"
+      - "Cross-Platform Build"
+      - "Startup Smoke Tests"
+      - "Helm Chart Test"
+    types:
+      - completed
+
+permissions: read-all  # default read; writes scoped to job below
+
+env:
+  INCIDENT_LABEL: main-broken
+  SCHEDULE_FILE: .github/on-call-schedule.yml
+
+jobs:
+  incident:
+    name: Open or update main-broken incident
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: >-
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    env:
+      # Optional; empty unless a maintainer configures the secret.
+      SLACK_CI_WEBHOOK_URL: ${{ secrets.SLACK_CI_WEBHOOK_URL }}
+    steps:
+      - name: Checkout (schedule + resolver only)
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github/on-call-schedule.yml
+            scripts/resolve-build-sheriff.py
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Resolve Build Sheriff
+        id: sheriff
+        run: |
+          python3 -c 'import yaml' 2>/dev/null || python3 -m pip install --quiet --user pyyaml
+          if MENTIONS=$(python3 scripts/resolve-build-sheriff.py --schedule "$SCHEDULE_FILE" --mentions); then
+            echo "mentions=${MENTIONS}" >> "$GITHUB_OUTPUT"
+            echo "Build Sheriff: ${MENTIONS}"
+          else
+            echo "mentions=" >> "$GITHUB_OUTPUT"
+            echo "::warning::Could not resolve a Build Sheriff from ${SCHEDULE_FILE}; incident will not @-mention anyone"
+          fi
+
+      - name: Ensure main-broken label exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          gh label create "$INCIDENT_LABEL" \
+            --repo "$REPOSITORY" \
+            --description "Automated: main branch CI is red (see docs/INCIDENT-RESPONSE.md)" \
+            --color "b60205" \
+            2>/dev/null || true
+
+      - name: Collect failure details
+        id: details
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          FAILED_JOBS=$(gh run view "$RUN_ID" \
+            --repo "$REPOSITORY" \
+            --json jobs \
+            --jq '[.jobs[] | select(.conclusion == "failure") | .name] | join(", ")' 2>/dev/null || echo "")
+          echo "failed_jobs=${FAILED_JOBS}" >> "$GITHUB_OUTPUT"
+
+          # PR whose merge produced the failing commit (empty for direct pushes)
+          PR_NUMBER=$(gh api "repos/${REPOSITORY}/commits/${HEAD_SHA}/pulls" \
+            --jq '[.[] | select(.merged_at != null)] | sort_by(.merged_at) | last | .number // empty' 2>/dev/null || echo "")
+          echo "pr_number=${PR_NUMBER}" >> "$GITHUB_OUTPUT"
+          echo "Failed jobs: ${FAILED_JOBS:-<none reported>}; source PR: ${PR_NUMBER:-<direct push>}"
+
+      - name: Label the PR that broke main
+        if: steps.details.outputs.pr_number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.details.outputs.pr_number }}
+        run: |
+          gh pr edit "$PR_NUMBER" --repo "$REPOSITORY" --add-label "$INCIDENT_LABEL" \
+            || echo "::warning::Could not label PR #${PR_NUMBER}"
+
+      - name: Check for existing open incident
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+        run: |
+          SEARCH_TITLE="Main branch broken: ${WORKFLOW_NAME}"
+          export SEARCH_TITLE
+
+          EXISTING=$(gh issue list \
+            --repo "$REPOSITORY" \
+            --state open \
+            --label "$INCIDENT_LABEL" \
+            --search "in:title \"${SEARCH_TITLE}\"" \
+            --json number,title \
+            --jq '.[] | select(.title == env.SEARCH_TITLE) | .number' \
+          )
+
+          if [ -n "$EXISTING" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "issue_number=$EXISTING" >> "$GITHUB_OUTPUT"
+            echo "Found existing incident #${EXISTING}"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Comment on existing incident
+        if: steps.check.outputs.exists == 'true'
+        id: comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ steps.check.outputs.issue_number }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          FAILED_JOBS: ${{ steps.details.outputs.failed_jobs }}
+          PR_NUMBER: ${{ steps.details.outputs.pr_number }}
+        run: |
+          BODY_FILE="$GITHUB_WORKSPACE/main-broken-comment.md"
+          {
+            printf '**Still red** — `%s` failed again on `main`.\n\n' "$WORKFLOW_NAME"
+            printf -- '- **Run:** [#%s](%s)\n' "$RUN_ID" "$RUN_URL"
+            printf -- '- **Commit:** %s\n' "$HEAD_SHA"
+            if [ -n "$PR_NUMBER" ]; then
+              printf -- '- **Source PR:** #%s\n' "$PR_NUMBER"
+            fi
+            if [ -n "$FAILED_JOBS" ]; then
+              printf -- '- **Failed jobs:** `%s`\n' "$FAILED_JOBS"
+            fi
+            printf -- '- **Time:** %s\n' "$(date -u '+%Y-%m-%d %H:%M UTC')"
+          } > "$BODY_FILE"
+
+          gh issue comment "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --body-file "$BODY_FILE"
+          echo "issue_url=https://github.com/${REPOSITORY}/issues/${ISSUE_NUMBER}" >> "$GITHUB_OUTPUT"
+
+          rm -f "$BODY_FILE"
+
+      - name: Open incident issue
+        if: steps.check.outputs.exists == 'false'
+        id: open
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          WORKFLOW_FILE: ${{ github.event.workflow_run.path }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          FAILED_JOBS: ${{ steps.details.outputs.failed_jobs }}
+          PR_NUMBER: ${{ steps.details.outputs.pr_number }}
+          MENTIONS: ${{ steps.sheriff.outputs.mentions }}
+        run: |
+          BODY_FILE="$GITHUB_WORKSPACE/main-broken-issue.md"
+          TITLE="Main branch broken: ${WORKFLOW_NAME}"
+
+          {
+            printf '## 🚨 Main branch is red\n\n'
+            if [ -n "$MENTIONS" ]; then
+              printf 'Build Sheriff on call: %s — the 4-hour recovery SLA clock started at **%s**.\n\n' \
+                "$MENTIONS" "$(date -u '+%Y-%m-%d %H:%M UTC')"
+            else
+              printf 'No Build Sheriff could be resolved from `%s` — the 4-hour recovery SLA clock started at **%s**.\n\n' \
+                ".github/on-call-schedule.yml" "$(date -u '+%Y-%m-%d %H:%M UTC')"
+            fi
+            printf '| Detail | Value |\n'
+            printf '|--------|-------|\n'
+            printf '| **Workflow** | `%s` (`%s`) |\n' "$WORKFLOW_NAME" "$WORKFLOW_FILE"
+            printf '| **Run** | [#%s](%s) |\n' "$RUN_ID" "$RUN_URL"
+            printf '| **Commit** | %s |\n' "$HEAD_SHA"
+            if [ -n "$PR_NUMBER" ]; then
+              printf '| **Source PR** | #%s (labelled `main-broken`) |\n' "$PR_NUMBER"
+            fi
+            if [ -n "$FAILED_JOBS" ]; then
+              printf '| **Failed jobs** | `%s` |\n' "$FAILED_JOBS"
+            fi
+            printf '\n### Playbook\n\n'
+            printf 'Follow the **Main Branch Build Recovery SLA** in `docs/INCIDENT-RESPONSE.md`:\n\n'
+            printf '1. **Triage (0-30 min):** identify the failing commit and decide flaky vs. real breakage\n'
+            printf '2. **Resolve (30 min - 4 h):** revert (preferred) or forward-fix; escalate after 2 h\n'
+            printf '3. **Verify:** wait for `main` to go green, then close this issue and remove the `main-broken` label\n'
+            printf '4. **Post-mortem (within 24 h):** document root cause and prevention in this issue\n\n'
+            printf -- '---\n'
+            printf '*Opened automatically by the `Main Branch Broken` workflow. Repeat failures are appended as comments.*\n'
+          } > "$BODY_FILE"
+
+          URL=$(gh issue create \
+            --repo "$REPOSITORY" \
+            --title "$TITLE" \
+            --label "$INCIDENT_LABEL" \
+            --body-file "$BODY_FILE")
+          echo "issue_url=${URL}" >> "$GITHUB_OUTPUT"
+          echo "Opened ${URL}"
+
+          rm -f "$BODY_FILE"
+
+      - name: Notify Slack (optional)
+        # Only runs when a maintainer has configured the SLACK_CI_WEBHOOK_URL
+        # secret; otherwise the incident issue is the sole notification channel.
+        if: env.SLACK_CI_WEBHOOK_URL != ''
+        env:
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          ISSUE_URL: ${{ steps.open.outputs.issue_url || steps.comment.outputs.issue_url }}
+          MENTIONS: ${{ steps.sheriff.outputs.mentions }}
+        run: |
+          TEXT=":rotating_light: main is red — \`${WORKFLOW_NAME}\` failed. Build Sheriff: ${MENTIONS:-unassigned}. Run: ${RUN_URL} Incident: ${ISSUE_URL}"
+          jq -cn --arg text "$TEXT" '{text: $text}' \
+            | curl -sS -X POST -H 'Content-type: application/json' --data @- "$SLACK_CI_WEBHOOK_URL" \
+            || echo "::warning::Slack notification failed"
