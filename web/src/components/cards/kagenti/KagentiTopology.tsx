@@ -13,6 +13,8 @@ const FRAMEWORK_COLORS: Record<string, string> = {
   ag2: '#fb923c',
   generic: '#9ca3af',
 }
+/** Tool node stroke (Tailwind gray-500) — ≥3:1 non-text contrast on the dark card background */
+const TOOL_NODE_COLOR = '#6b7280'
 
 interface TopoNode {
   id: string
@@ -85,7 +87,7 @@ export function KagentiTopology({ config }: { config?: Record<string, unknown> }
           label: tool.toolPrefix || tool.name,
           type: 'tool',
           cluster: cl,
-          color: '#6b7280',
+          color: TOOL_NODE_COLOR,
           x: rightX,
           y: yOffset + i * rowHeight,
         })

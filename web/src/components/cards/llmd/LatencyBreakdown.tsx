@@ -22,7 +22,8 @@ import {
   TOOLTIP_SWATCH_SIZE_PX } from '../../../lib/llmd/tooltipSpacing'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../../ui/StatusBadge'
-import { CHART_MIN_HEIGHT_PX, CHART_TEXT_WHITE, CHART_AXIS_FONT_SIZE, CHART_AXIS_FONT_SIZE_SM, CHART_BODY_FONT_SIZE } from '../../../lib/constants/ui'
+import { CHART_MIN_HEIGHT_PX, CHART_TEXT_WHITE, CHART_TEXT_MUTED, CHART_AXIS_STROKE, CHART_GRID_STROKE, CHART_AXIS_FONT_SIZE, CHART_AXIS_FONT_SIZE_SM, CHART_BODY_FONT_SIZE } from '../../../lib/constants/ui'
+import { getChartColorByName } from '../../../lib/chartColors'
 
 const GRID_LEFT_PX = 55
 const GRID_RIGHT_PX = 20
@@ -154,9 +155,9 @@ function LatencyBreakdownInternal() {
         name: 'QPS (queries/sec)',
         nameLocation: 'middle' as const,
         nameGap: 30,
-        nameTextStyle: { color: '#e4e4e7', fontSize: CHART_AXIS_FONT_SIZE },
-        axisLabel: { color: '#e4e4e7', fontSize: CHART_AXIS_FONT_SIZE },
-        axisLine: { lineStyle: { color: '#e4e4e7' } },
+        nameTextStyle: { color: CHART_TEXT_MUTED, fontSize: CHART_AXIS_FONT_SIZE },
+        axisLabel: { color: CHART_TEXT_MUTED, fontSize: CHART_AXIS_FONT_SIZE },
+        axisLine: { lineStyle: { color: CHART_AXIS_STROKE } },
         axisTick: { show: false },
       },
       yAxis: {
@@ -164,11 +165,11 @@ function LatencyBreakdownInternal() {
         name: tabInfo.unit,
         nameLocation: 'middle' as const,
         nameGap: 40,
-        nameTextStyle: { color: '#e4e4e7', fontSize: CHART_AXIS_FONT_SIZE },
-        axisLabel: { color: '#e4e4e7', fontSize: CHART_AXIS_FONT_SIZE },
-        axisLine: { lineStyle: { color: '#e4e4e7' } },
+        nameTextStyle: { color: CHART_TEXT_MUTED, fontSize: CHART_AXIS_FONT_SIZE },
+        axisLabel: { color: CHART_TEXT_MUTED, fontSize: CHART_AXIS_FONT_SIZE },
+        axisLine: { lineStyle: { color: CHART_AXIS_STROKE } },
         axisTick: { show: false },
-        splitLine: { lineStyle: { color: '#334155', opacity: 0.5, type: 'dashed' as const } },
+        splitLine: { lineStyle: { color: CHART_GRID_STROKE, opacity: 0.5, type: 'dashed' as const } },
       },
       tooltip: {
         trigger: 'axis' as const,
@@ -196,8 +197,8 @@ function LatencyBreakdownInternal() {
             symbol: 'none',
             data: [{
               yAxis: tabInfo.sla,
-              label: { formatter: `SLA: ${tabInfo.sla}ms`, position: 'end' as const, color: '#ef4444', fontSize: CHART_AXIS_FONT_SIZE_SM },
-              lineStyle: { color: '#ef4444', type: 'dashed' as const, opacity: 0.6 },
+              label: { formatter: `SLA: ${tabInfo.sla}ms`, position: 'end' as const, color: getChartColorByName('error'), fontSize: CHART_AXIS_FONT_SIZE_SM },
+              lineStyle: { color: getChartColorByName('error'), type: 'dashed' as const, opacity: 0.6 },
             }],
           },
           data: [],

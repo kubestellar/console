@@ -10,6 +10,7 @@ import {
   CHART_BODY_FONT_SIZE,
   CHART_TEXT_MUTED } from '../../lib/constants'
 import { MS_PER_HOUR } from '../../lib/constants/time'
+import { getChartColor, getChartColorRgba } from '../../lib/chartColors'
 
 // ---------------------------------------------------------------------------
 // Constants — no magic numbers
@@ -233,11 +234,11 @@ function GPUInventoryChart({ displayChartData, chartMode, chartGPUTypes, t }: {
           stack: 'total',
           step: 'end' as const,
           data: (displayChartData || []).map(d => d.allocated),
-          lineStyle: { color: '#9333ea', width: 2 },
-          itemStyle: { color: '#9333ea' },
+          lineStyle: { color: getChartColor(1), width: 2 },
+          itemStyle: { color: getChartColor(1) },
           areaStyle: {
             color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-              colorStops: [{ offset: 0, color: 'rgba(147,51,234,0.6)' }, { offset: 1, color: 'rgba(147,51,234,0.1)' }] },
+              colorStops: [{ offset: 0, color: getChartColorRgba(1, 0.6) }, { offset: 1, color: getChartColorRgba(1, 0.1) }] },
           },
           showSymbol: false,
         },
