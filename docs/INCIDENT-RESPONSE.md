@@ -41,12 +41,11 @@ for current status and detection steps, and
 
 #### Planned Automation (Not Yet Wired)
 
-The following pieces are designed but not yet implemented, and each requires
-access this agent's App token does not have:
+The `main-broken` label now exists in the repo
+([#23615](https://github.com/kubestellar/console/issues/23615)) and can be
+applied by hand today. The following pieces are designed but not yet
+implemented, and each requires access this agent's App token does not have:
 
-- **`main-broken` label** — tracked by
-  [#23615](https://github.com/kubestellar/console/issues/23615); `gh label create`
-  returns `HTTP 403` for the App token, so creation requires a maintainer.
 - **Workflow step to apply the label and open/update an incident issue on CI
   failure** — tracked by
   [#23616](https://github.com/kubestellar/console/issues/23616); this needs a
@@ -77,10 +76,9 @@ for the live tracker. Until that wiring lands:
 - Whoever notices should manually watch the Actions tab and, on a main-branch
   failure, manually open (or update) an incident-tracking issue — following the
   same search-by-title-and-label / comment-on-repeat-failure pattern already
-  implemented in `.github/workflows/workflow-failure-issue.yml` — and apply a
-  `main-broken`-style label by hand once one exists (see
-  [#23615](https://github.com/kubestellar/console/issues/23615)) so the SLA
-  clock below has a visible start
+  implemented in `.github/workflows/workflow-failure-issue.yml` — and apply the
+  `main-broken` label by hand to the last merged PR so the SLA clock below has a
+  visible start
 - There is no `#kubestellar-dev` Slack bot integration today
 
 **Intended future state (not yet implemented, tracked by

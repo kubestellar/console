@@ -32,7 +32,9 @@ SLA clock. All three of the following are assumed to exist by that doc but do no
    truth and as the SLA owner) but never created; both references are still
    literally marked "(to be created)".
 2. **The `main-broken` label** — the doc says this is auto-applied to the last
-   merged PR when main CI fails. It does not exist in the repo's label list.
+   merged PR when main CI fails. The label now exists
+   ([#23615](https://github.com/kubestellar/console/issues/23615)), but nothing
+   applies it automatically yet.
 3. **A Slack-posting / label-applying workflow step** — the doc's "Detection
    (Automated)" section says a bot posts to `#kubestellar-dev` and pings the build
    sheriff. No workflow in `.github/workflows/` references `main-broken`,
@@ -51,22 +53,22 @@ on.
 # Confirm no on-call schedule file exists:
 test -f .github/on-call-schedule.yml && echo "exists" || echo "MISSING"
 
-# Confirm no main-broken label exists:
+# Confirm the main-broken label exists (created via #23615):
 gh label list --repo kubestellar/console --search main-broken
 
 # Confirm no workflow references the label or the CI Slack channels:
 grep -rln "main-broken\|kubestellar-dev\|kubestellar-maintainers" .github/workflows/*.yml
 ```
 
-An empty result from the last two commands (as of this writing) means the SLA in
+An empty result from the last command (as of this writing) means the SLA in
 `docs/INCIDENT-RESPONSE.md` still has no working trigger.
 
 ## Proposed Fix
 
-1. Create the `main-broken` label (`gh label create main-broken ...`) — tracked by
-   [#23615](https://github.com/kubestellar/console/issues/23615); `gh label create`
-   returns `HTTP 403` for the `operations`/`scanner` App tokens, so this needs a
-   maintainer.
+1. Create the `main-broken` label — **Done** via
+   [#23615](https://github.com/kubestellar/console/issues/23615)
+   (`gh label create main-broken --color B60205 --description "Auto-applied to
+   last merged PR when main branch CI fails"`).
 2. A maintainer creates `.github/on-call-schedule.yml` naming the actual current
    Build Sheriff rotation, and a maintainer/agent with `workflows` scope adds a
    workflow step, gated on the main-branch build/test jobs with `if: failure()`,
