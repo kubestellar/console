@@ -7,88 +7,78 @@
 
 ## Current Status
 
-**None of the automation the incident-response SLA depends on is merged.** The
-`operations` agent's GitHub App token lacks the `workflows` permission required to
-create or update any file under `.github/workflows/` (verified in prior sessions
-against `nightly-dast.yml` and `upgrade-smoke.yml`; see
-`docs/runbooks/upgrade-smoke-no-alert.md`). Naming an actual on-call rotation also
-requires maintainer input this agent cannot supply. Until a maintainer applies the
-fixes below, the "Main Branch Build Recovery SLA" has no automated trigger and no
-named owner. The original tracking issue,
+**Largely resolved.** As of [#23616](https://github.com/kubestellar/console/issues/23616)
+the automation the incident-response SLA depends on is wired:
+
+| Piece | State |
+|-------|-------|
+| `.github/on-call-schedule.yml` | **Exists** — rotation schema with `fallback` = OWNERS approvers. The weekly `rotation` list is still empty; naming it is a maintainer decision. |
+| `main-broken` label | **Created on demand** by `main-broken.yml` on first failure (also tracked by [#23615](https://github.com/kubestellar/console/issues/23615)). |
+| Failure → label + incident issue | **Wired** — [`.github/workflows/main-broken.yml`](../../.github/workflows/main-broken.yml), `workflow_run` on the main-branch build/test gates, `if: conclusion == 'failure' && event == 'push' && head_branch == 'main'`. |
+| Slack post to `#kubestellar-dev` | **Optional / unconfigured** — runs only if the `SLACK_CI_WEBHOOK_URL` repository secret is set. |
+
+The history below is kept so the escalation guidance still makes sense if the
+workflow itself is disabled or fails to fire. The original tracking issue,
 [#23265](https://github.com/kubestellar/console/issues/23265), was closed as
-completed once this runbook was merged (in #23266), even though the automation gap
-it describes was never fixed. A follow-up, [#23367](https://github.com/kubestellar/console/issues/23367),
-was itself closed after only fixing this runbook's dead-tracker *reference* (PR
-#23368) — the underlying automation gap was re-confirmed still open this session
-and is now tracked by [#23534](https://github.com/kubestellar/console/issues/23534).
+completed once this runbook was merged (in #23266), before the automation gap it
+describes was fixed; a follow-up, [#23367](https://github.com/kubestellar/console/issues/23367),
+only fixed this runbook's dead-tracker *reference* (PR #23368). The gap was then
+tracked by [#23534](https://github.com/kubestellar/console/issues/23534) and
+closed out by the wiring listed above.
 
 ## Why This Matters
 
 `docs/INCIDENT-RESPONSE.md` defines a 4-hour recovery SLA for a broken main branch,
 an escalation matrix, and a "Build Sheriff" weekly-rotation role responsible for the
-SLA clock. All three of the following are assumed to exist by that doc but do not:
+SLA clock. That playbook assumes three things exist, and until #23616 none did:
 
-1. **`.github/on-call-schedule.yml`** — referenced twice (as the rotation source of
-   truth and as the SLA owner) but never created; both references are still
-   literally marked "(to be created)".
-2. **The `main-broken` label** — the doc says this is auto-applied to the last
-   merged PR when main CI fails. It does not exist in the repo's label list.
-3. **A Slack-posting / label-applying workflow step** — the doc's "Detection
-   (Automated)" section says a bot posts to `#kubestellar-dev` and pings the build
-   sheriff. No workflow in `.github/workflows/` references `main-broken`,
-   `kubestellar-dev`, or `kubestellar-maintainers`. (`docs/ALERT_NOTIFICATIONS.md`
-   documents a real Slack-webhook feature, but it's a user-configurable *product*
-   notification channel for cluster/GPU alerts — unrelated to CI build health.)
+1. **`.github/on-call-schedule.yml`** — the rotation source of truth and SLA owner.
+   Now present; the weekly `rotation` is still empty and falls back to OWNERS approvers.
+2. **The `main-broken` label** — auto-applied to the PR that broke main. Now created
+   on demand by the workflow.
+3. **A label-applying / issue-opening workflow step** — now `main-broken.yml`. The
+   Slack post to `#kubestellar-dev` remains opt-in via the `SLACK_CI_WEBHOOK_URL`
+   secret. (`docs/ALERT_NOTIFICATIONS.md` documents a separate, user-configurable
+   *product* Slack-webhook feature for cluster/GPU alerts — unrelated to CI health.)
 
-Without these, a broken main branch today produces only a red ❌ in the Actions tab:
-no automated notification, no label, and no named owner for the 4-hour clock the
-rest of the playbook (escalation matrix, circuit breaker, post-mortem step) is built
-on.
+If any of these regress, a broken main branch produces only a red ❌ in the Actions
+tab: no automated notification, no label, and no named owner for the 4-hour clock
+the rest of the playbook (escalation matrix, circuit breaker, post-mortem step) is
+built on.
 
-## Detecting The Gap Today
+## Verifying The Wiring
 
 ```bash
-# Confirm no on-call schedule file exists:
-test -f .github/on-call-schedule.yml && echo "exists" || echo "MISSING"
+# Schedule file exists and resolves someone (fallback until rotation is named):
+python3 scripts/resolve-build-sheriff.py --mentions
 
-# Confirm no main-broken label exists:
+# Workflow references the label and is gated on main-branch push failures:
+grep -n "main-broken\|head_branch == 'main'" .github/workflows/main-broken.yml
+
+# Label exists once the workflow has fired at least once:
 gh label list --repo kubestellar/console --search main-broken
 
-# Confirm no workflow references the label or the CI Slack channels:
-grep -rln "main-broken\|kubestellar-dev\|kubestellar-maintainers" .github/workflows/*.yml
+# Recent runs of the incident workflow:
+gh run list --repo kubestellar/console --workflow "Main Branch Broken" --limit 10
 ```
 
-An empty result from the last two commands (as of this writing) means the SLA in
-`docs/INCIDENT-RESPONSE.md` still has no working trigger.
+## Remaining Follow-ups
 
-## Proposed Fix
-
-1. Create the `main-broken` label (`gh label create main-broken ...`) — tracked by
-   [#23615](https://github.com/kubestellar/console/issues/23615); `gh label create`
-   returns `HTTP 403` for the `operations`/`scanner` App tokens, so this needs a
-   maintainer.
-2. A maintainer creates `.github/on-call-schedule.yml` naming the actual current
-   Build Sheriff rotation, and a maintainer/agent with `workflows` scope adds a
-   workflow step, gated on the main-branch build/test jobs with `if: failure()`,
-   that applies the label and opens/updates an incident-tracking issue — reusing
-   the same create-or-update-issue pattern already implemented in
-   `.github/workflows/workflow-failure-issue.yml` (search-by-title-and-label, then
-   comment on repeat failures instead of opening duplicates). Both are tracked by
-   [#23616](https://github.com/kubestellar/console/issues/23616).
-3. Either wire the existing product Slack-webhook feature
-   (`docs/ALERT_NOTIFICATIONS.md`) to a CI-health channel, or edit
-   `docs/INCIDENT-RESPONSE.md` §"Detection (Automated)" to stop describing
-   automation that doesn't exist, so the doc doesn't overstate current coverage
-   until the wiring lands. **Done** — `docs/INCIDENT-RESPONSE.md` now describes
-   the current manual process and links a "Planned Automation (Not Yet Wired)"
-   subsection to [#23534](https://github.com/kubestellar/console/issues/23534),
-   [#23615](https://github.com/kubestellar/console/issues/23615), and
-   [#23616](https://github.com/kubestellar/console/issues/23616).
+1. **Name the weekly rotation** — a maintainer fills `rotation` (and `epoch`) in
+   `.github/on-call-schedule.yml`. Until then every incident @-mentions the
+   `fallback` list.
+2. **Slack** — to get the `#kubestellar-dev` post described in
+   `docs/INCIDENT-RESPONSE.md`, a maintainer adds an incoming-webhook URL as the
+   `SLACK_CI_WEBHOOK_URL` repository secret. No workflow change is needed.
+3. **Pre-create the label** (optional) — `gh label create main-broken` so the
+   label exists before the first incident ([#23615](https://github.com/kubestellar/console/issues/23615)).
 
 ## Escalation
 
-If main branch breaks and no automated notification or label appears within a few
-minutes of the failing run completing, treat the "Automated Detection" step of
-`docs/INCIDENT-RESPONSE.md` as **not yet implemented** — do not wait for a
-notification that will not arrive. Manually open an incident issue and follow the
-rest of the playbook's manual triage/escalation steps.
+If main branch breaks and no `main-broken` incident issue appears within a few
+minutes of the failing run completing, check the `Main Branch Broken` workflow's
+own runs (command above). If it did not fire or failed, do not wait for a
+notification that will not arrive: manually open an incident issue, apply the
+`main-broken` label, and follow the rest of the playbook's triage/escalation
+steps. Open a `workflow-failure`-style issue against `main-broken.yml` itself so
+the detection gap is tracked.
