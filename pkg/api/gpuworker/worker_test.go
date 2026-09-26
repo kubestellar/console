@@ -482,3 +482,73 @@ func TestWorker_DCGMEnabled_NamespaceMiss_Zero(t *testing.T) {
 	worker.collectForReservation(context.Background(), reservation, dcgmByNs)
 	mockStore.AssertExpectations(t)
 }
+
+// Issue 9135 — scrapeDCGMPerCluster direct coverage.
+// The wrapper around gpu.ScrapeByNamespace has three observable behaviours
+// the per-reservation collector relies on:
+//   1. DCGM disabled → returns nil, so callers fall back to the legacy zero.
+//   2. Unique clusters are deduplicated so a shared exporter is not hit N times.
+//   3. Clusters whose rest config is unavailable are silently dropped from the
+//      returned map instead of failing the whole scrape.
+// None of these were exercised previously, leaving scrapeDCGMPerCluster at
+// 0% coverage even under the aggregated pkg/api go-test run.
+
+func TestScrapeDCGMPerCluster_Disabled_ReturnsNil(t *testing.T) {
+	t.Setenv("GPU_METRICS_DCGM_ENABLED", "")
+
+	mockStore := new(test.MockStore)
+	k8sClient, _ := k8s.NewMultiClusterClient("")
+	worker := New(mockStore, k8sClient, nil)
+
+	reservations := []models.GPUReservation{
+		{ID: uuid.New(), Cluster: "c1", Namespace: "ns-a", GPUCount: 1},
+		{ID: uuid.New(), Cluster: "c2", Namespace: "ns-b", GPUCount: 1},
+	}
+
+	got := worker.scrapeDCGMPerCluster(reservations, 100*time.Millisecond)
+	if got != nil {
+		t.Fatalf("dcgmEnabled=false: want nil map, got %v", got)
+	}
+}
+
+func TestScrapeDCGMPerCluster_Enabled_NoReservations_EmptyMap(t *testing.T) {
+	t.Setenv("GPU_METRICS_DCGM_ENABLED", "true")
+
+	mockStore := new(test.MockStore)
+	k8sClient, _ := k8s.NewMultiClusterClient("")
+	worker := New(mockStore, k8sClient, nil)
+
+	got := worker.scrapeDCGMPerCluster(nil, 100*time.Millisecond)
+	if got == nil {
+		t.Fatal("dcgmEnabled=true with no reservations: want non-nil empty map, got nil")
+	}
+	if len(got) != 0 {
+		t.Fatalf("want empty map, got %d entries", len(got))
+	}
+}
+
+func TestScrapeDCGMPerCluster_Enabled_UnreachableClusters_SilentSkip(t *testing.T) {
+	t.Setenv("GPU_METRICS_DCGM_ENABLED", "true")
+
+	mockStore := new(test.MockStore)
+	k8sClient, _ := k8s.NewMultiClusterClient("")
+	worker := New(mockStore, k8sClient, nil)
+
+	// Multiple reservations across two clusters, neither has a rest config
+	// registered. GetRestConfig must fail for both, and the function must
+	// silently drop them from the output map (no panic, no partial data).
+	// The duplicate "c1" entries also exercise the unique-cluster set path.
+	reservations := []models.GPUReservation{
+		{ID: uuid.New(), Cluster: "c1", Namespace: "ns-a", GPUCount: 1},
+		{ID: uuid.New(), Cluster: "c1", Namespace: "ns-b", GPUCount: 1},
+		{ID: uuid.New(), Cluster: "c2", Namespace: "ns-c", GPUCount: 1},
+	}
+
+	got := worker.scrapeDCGMPerCluster(reservations, 100*time.Millisecond)
+	if got == nil {
+		t.Fatal("want non-nil map (per-cluster errors are silent), got nil")
+	}
+	if len(got) != 0 {
+		t.Fatalf("all clusters unreachable: want empty map, got %d entries: %v", len(got), got)
+	}
+}
