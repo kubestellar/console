@@ -1594,6 +1594,7 @@
       "widthWide": "Wide (8)",
       "widthFull": "Full (12)",
       "addColumn": "Add",
+      "removeColumn": "Remove column {{label}}",
       "fieldPlaceholder": "field",
       "labelPlaceholder": "Label",
       "createCard": "Create Card",

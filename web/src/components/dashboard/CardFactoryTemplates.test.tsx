@@ -69,6 +69,18 @@ describe('CardFactoryTemplates Component', () => {
     expect(fieldInputsAfter.length).toBe(fieldInputsBefore.length + 1)
   })
 
+  it('labels each icon-only remove-column button for screen readers', () => {
+    render(<CardFactoryTemplates onSaveMessage={vi.fn()} />)
+
+    const fieldInputsBefore = screen.getAllByPlaceholderText('dashboard.cardFactory.fieldPlaceholder')
+    const removeButtons = screen.getAllByRole('button', { name: /dashboard.cardFactory.removeColumn/ })
+    expect(removeButtons.length).toBe(fieldInputsBefore.length)
+
+    fireEvent.click(removeButtons[0])
+    const fieldInputsAfter = screen.getAllByPlaceholderText('dashboard.cardFactory.fieldPlaceholder')
+    expect(fieldInputsAfter.length).toBe(fieldInputsBefore.length - 1)
+  })
+
   it('shows an error message and does not save when the data JSON is invalid', () => {
     const onSaveMessage = vi.fn()
     const { container } = render(<CardFactoryTemplates onSaveMessage={onSaveMessage} />)
