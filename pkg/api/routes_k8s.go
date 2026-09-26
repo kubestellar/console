@@ -3,7 +3,7 @@ package api
 import (
 	"github.com/gofiber/fiber/v2"
 
-	"github.com/kubestellar/console/pkg/api/handlers"
+	k8shandlers "github.com/kubestellar/console/pkg/api/handlers/k8s"
 	"github.com/kubestellar/console/pkg/api/handlers/workloads"
 )
 
@@ -13,44 +13,16 @@ import (
 // have startup side effects (cache refresh, persisted groups).
 // aiLimiter is a per-user rate limiter applied to AI-calling endpoints (#17294).
 func (s *Server) setupK8sResourceRoutes(api fiber.Router, aiLimiter fiber.Handler) {
-	// MCS (Multi-Cluster Service) routes
-	mcsHandlers := handlers.NewMCSHandlers(s.k8sClient, s.hub)
-	api.Get("/mcs/status", mcsHandlers.GetMCSStatus)
-	api.Get("/mcs/exports", mcsHandlers.ListServiceExports)
-	api.Get("/mcs/exports/:cluster/:namespace/:name", mcsHandlers.GetServiceExport)
-	// Create/Delete ServiceExport routes removed in #7993 Phase 1.5 PR B.
-	// User-initiated mutations now run via kc-agent /serviceexports under
-	// the user's kubeconfig. The backend handlers had no frontend consumer.
-	api.Get("/mcs/imports", mcsHandlers.ListServiceImports)
-	api.Get("/mcs/imports/:cluster/:namespace/:name", mcsHandlers.GetServiceImport)
-
-	// Gateway API routes
-	gatewayHandlers := handlers.NewGatewayHandlers(s.k8sClient, s.hub)
-	api.Get("/gateway/status", gatewayHandlers.GetGatewayAPIStatus)
-	api.Get("/gateway/gateways", gatewayHandlers.ListGateways)
-	api.Get("/gateway/gateways/:cluster/:namespace/:name", gatewayHandlers.GetGateway)
-	api.Get("/gateway/httproutes", gatewayHandlers.ListHTTPRoutes)
-	api.Get("/gateway/httproutes/:cluster/:namespace/:name", gatewayHandlers.GetHTTPRoute)
-
-	// CRD routes (Custom Resource Definition browser)
-	crdHandlers := handlers.NewCRDHandlers(s.k8sClient)
-	api.Get("/crds", crdHandlers.ListCRDs)
-
-	// Lima routes (Lima VM status)
-	limaHandlers := handlers.NewLimaHandlers(s.k8sClient)
-	api.Get("/lima", limaHandlers.ListLima)
-
-	// MCS ServiceExport routes
-	svcExportHandlers := handlers.NewServiceExportHandlers(s.k8sClient)
-	api.Get("/service-exports", svcExportHandlers.ListServiceExports)
-
-	// Admission webhook routes
-	webhookHandlers := handlers.NewWebhookHandlers(s.k8sClient)
-	api.Get("/admission-webhooks", webhookHandlers.ListWebhooks)
-
-	// Service Topology routes
-	topologyHandlers := handlers.NewTopologyHandlers(s.k8sClient, s.hub)
-	api.Get("/topology", topologyHandlers.GetTopology)
+	// MCS, Gateway API, CRD, Lima, ServiceExport, admission-webhook, and
+	// topology handlers now register through the k8s domain registrar
+	// (#23725 slice 2b.6). Route order is preserved by the registrar so
+	// fiber's first-match semantics are unchanged. Config-derived deps
+	// (GitHubToken) are not used here; passing them is harmless.
+	// MCS, Gateway API, CRD, Lima, ServiceExport, admission-webhook, and
+	// topology handlers now register through the k8s domain registrar
+	// (#23725 slice 2b.6). Route order is preserved by the registrar so
+	// fiber's first-match semantics are unchanged.
+	k8shandlers.Register(api, s.k8sClient, s.hub)
 
 	// Workload routes
 	workloadHandlers := workloads.NewWorkloadHandlers(s.k8sClient, s.hub, s.store)
