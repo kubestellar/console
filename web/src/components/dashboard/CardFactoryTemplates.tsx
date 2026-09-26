@@ -271,10 +271,12 @@ export function CardFactoryTemplates({ onCardCreated, onSaveMessage }: CardFacto
                   <option value="number">{t('cardFactory.formatNumber')}</option>
                 </Select>
                 <button
+                  type="button"
                   onClick={() => removeColumn(idx)}
+                  aria-label={t('dashboard.cardFactory.removeColumn', { label: col.label || col.field || idx + 1 })}
                   className="p-1 text-muted-foreground hover:text-red-400 transition-colors"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-3.5 h-3.5" aria-hidden="true" />
                 </button>
               </div>
             ))}
