@@ -13,8 +13,10 @@ import (
 	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/api/handlers/admin"
 	"github.com/kubestellar/console/pkg/api/handlers/compliance"
+	"github.com/kubestellar/console/pkg/api/handlers/dashboards"
 	"github.com/kubestellar/console/pkg/api/handlers/github"
 	"github.com/kubestellar/console/pkg/api/handlers/missions"
+	"github.com/kubestellar/console/pkg/api/handlers/persistence"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/api/transport"
 	"github.com/kubestellar/console/pkg/k8s"
@@ -166,24 +168,9 @@ func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 	api.Post("/onboarding/responses", onboarding.SaveResponses)
 	api.Post("/onboarding/complete", onboarding.CompleteOnboarding)
 
-	dashboard := handlers.NewDashboardHandler(g.store)
-	api.Get("/dashboards", dashboard.ListDashboards)
-	api.Get("/dashboards/:id", dashboard.GetDashboard)
-	api.Get("/dashboards/:id/export", dashboard.ExportDashboard)
-	api.Post("/dashboards/import", dashboard.ImportDashboard)
-	api.Post("/dashboards", dashboard.CreateDashboard)
-	api.Put("/dashboards/:id", dashboard.UpdateDashboard)
-	api.Delete("/dashboards/:id", dashboard.DeleteDashboard)
-
-	cards := handlers.NewCardHandler(g.store, g.hub)
-	api.Get("/dashboards/:id/cards", cards.ListCards)
-	api.Post("/dashboards/:id/cards", cards.CreateCard)
-	api.Put("/cards/:id", cards.UpdateCard)
-	api.Delete("/cards/:id", cards.DeleteCard)
-	api.Post("/cards/:id/focus", cards.RecordFocus)
-	api.Post("/cards/:id/move", cards.MoveCard)
-	api.Get("/card-types", cards.GetCardTypes)
-	api.Get("/card-history", cards.GetHistory)
+	// Dashboards domain (dashboards, cards, card types/history) registers
+	// itself from its subpackage.
+	dashboards.NewRegistrar().Register(api, g.handlerDeps())
 
 	cardProxy := handlers.NewCardProxyHandler(g.store)
 	api.Get("/card-proxy", cardProxy.Proxy)
@@ -223,18 +210,8 @@ func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 	api.Get("/notifications/config", notificationHandler.GetNotificationConfig)
 	api.Post("/notifications/config", notificationHandler.SaveNotificationConfig)
 
-	persistenceHandler := handlers.NewConsolePersistenceHandlers(g.persistenceStore, g.k8sClient, g.hub, g.store)
-	api.Get("/persistence/config", persistenceHandler.GetConfig)
-	api.Put("/persistence/config", persistenceHandler.UpdateConfig)
-	api.Get("/persistence/status", persistenceHandler.GetStatus)
-	api.Post("/persistence/sync", persistenceHandler.SyncNow)
-	api.Post("/persistence/test", persistenceHandler.TestConnection)
-	api.Get("/persistence/workloads", persistenceHandler.ListManagedWorkloads)
-	api.Get("/persistence/workloads/:name", persistenceHandler.GetManagedWorkload)
-	api.Get("/persistence/groups", persistenceHandler.ListClusterGroups)
-	api.Get("/persistence/groups/:name", persistenceHandler.GetClusterGroup)
-	api.Get("/persistence/deployments", persistenceHandler.ListWorkloadDeployments)
-	api.Get("/persistence/deployments/:name", persistenceHandler.GetWorkloadDeployment)
+	// Console persistence domain registers itself from its subpackage.
+	persistence.NewRegistrar().Register(api, g.handlerDeps())
 
 	nightlyE2E := github.NewNightlyE2EHandler(g.config.GitHubToken)
 	api.Get("/nightly-e2e/runs", nightlyE2E.GetRuns)

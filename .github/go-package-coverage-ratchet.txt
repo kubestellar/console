@@ -27,6 +27,7 @@ pkg/settings 77.1
 pkg/rewards 100.0
 pkg/safego 100.0
 pkg/fileutil 54.2
+pkg/api/gpuworker 46.0
 
 # --- Tier 3: Previously untracked (have tests, need ratchet baseline) ---
 pkg/apis/v1alpha1 81.8
