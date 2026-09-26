@@ -3,8 +3,8 @@ package api
 import (
 	"github.com/gofiber/fiber/v2"
 
-	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/api/handlers/gitops"
+	"github.com/kubestellar/console/pkg/api/handlers/ops"
 )
 
 // setupGitOpsRoutes registers GitOps, ArgoCD, and self-upgrade routes.
@@ -29,9 +29,10 @@ func (s *Server) setupGitOpsRoutes(api fiber.Router) {
 	// kubeconfig instead of the backend pod ServiceAccount.
 
 	// Helm self-upgrade (in-cluster Deployment patch)
-	selfUpgradeHandler := handlers.NewSelfUpgradeHandler(s.k8sClient, s.hub, s.store)
-	api.Get("/self-upgrade/status", selfUpgradeHandler.GetStatus)
-	api.Post("/self-upgrade/trigger", selfUpgradeHandler.TriggerUpgrade)
+	// Wired through the ops domain registrar (#23725 slice 2b.7). Route
+	// order is preserved by RegisterSelfUpgrade so fiber's first-match
+	// semantics are unchanged.
+	ops.RegisterSelfUpgrade(api, s.k8sClient, s.hub, s.store)
 
 	// ArgoCD routes (Application CRD discovery and sync)
 	api.Get("/gitops/argocd/applications", gitopsHandlers.ListArgoApplications)
