@@ -7,8 +7,11 @@
 
 ## Current Status
 
-**None of the automation the incident-response SLA depends on is merged.** The
-`operations` agent's GitHub App token lacks the `workflows` permission required to
+**The automation the incident-response SLA depends on is incomplete.** The
+`main-broken` label exists
+([#23615](https://github.com/kubestellar/console/issues/23615)) but nothing
+applies it yet; the on-call schedule file and the label-applying/Slack workflow
+step are still unmerged. The `operations` agent's GitHub App token lacks the `workflows` permission required to
 create or update any file under `.github/workflows/` (verified in prior sessions
 against `nightly-dast.yml` and `upgrade-smoke.yml`; see
 `docs/runbooks/upgrade-smoke-no-alert.md`). Naming an actual on-call rotation also
@@ -26,7 +29,8 @@ and is now tracked by [#23534](https://github.com/kubestellar/console/issues/235
 
 `docs/INCIDENT-RESPONSE.md` defines a 4-hour recovery SLA for a broken main branch,
 an escalation matrix, and a "Build Sheriff" weekly-rotation role responsible for the
-SLA clock. All three of the following are assumed to exist by that doc but do not:
+SLA clock. All three of the following are assumed by that doc to exist and be
+wired up; only the label exists today, and nothing drives it:
 
 1. **`.github/on-call-schedule.yml`** — referenced twice (as the rotation source of
    truth and as the SLA owner) but never created; both references are still
@@ -53,8 +57,9 @@ on.
 # Confirm no on-call schedule file exists:
 test -f .github/on-call-schedule.yml && echo "exists" || echo "MISSING"
 
-# Confirm the main-broken label exists (created via #23615):
-gh label list --repo kubestellar/console --search main-broken
+# Confirm the main-broken label exists (created via #23615); exact lookup, not a
+# substring search:
+gh api repos/kubestellar/console/labels/main-broken --jq .name
 
 # Confirm no workflow references the label or the CI Slack channels:
 grep -rln "main-broken\|kubestellar-dev\|kubestellar-maintainers" .github/workflows/*.yml

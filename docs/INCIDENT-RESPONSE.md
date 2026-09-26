@@ -44,7 +44,8 @@ for current status and detection steps, and
 The `main-broken` label now exists in the repo
 ([#23615](https://github.com/kubestellar/console/issues/23615)) and can be
 applied by hand today. The following pieces are designed but not yet
-implemented, and each requires access this agent's App token does not have:
+implemented, and each requires access that this agent's App token does not
+have:
 
 - **Workflow step to apply the label and open/update an incident issue on CI
   failure** — tracked by
