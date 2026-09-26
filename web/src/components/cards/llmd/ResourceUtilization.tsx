@@ -21,7 +21,8 @@ import {
   TOOLTIP_TIGHT_GAP_PX } from '../../../lib/llmd/tooltipSpacing'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../../ui/StatusBadge'
-import { CHART_MIN_HEIGHT_PX, CHART_TEXT_WHITE, CHART_TICK_COLOR, CHART_AXIS_STROKE, CHART_GRID_STROKE, CHART_AXIS_FONT_SIZE, CHART_BODY_FONT_SIZE } from '../../../lib/constants/ui'
+import { CHART_MIN_HEIGHT_PX, CHART_TEXT_WHITE, CHART_AXIS_FONT_SIZE, CHART_BODY_FONT_SIZE } from '../../../lib/constants/ui'
+import { useChartTokens } from '../../../hooks/useChartTokens'
 
 const GRID_LEFT_PX = 145
 const GRID_RIGHT_PX = 20
@@ -48,6 +49,7 @@ interface BarEntry {
 
 export function ResourceUtilization() {
   const { t } = useTranslation()
+  const { tickColor, axisStroke, gridStroke } = useChartTokens()
   const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing, lastRefresh } = useCachedBenchmarkReports()
   const effectiveReports = isDemoFallback ? generateBenchmarkReports() : (liveReports ?? [])
   useReportCardDataState({
@@ -114,13 +116,13 @@ export function ResourceUtilization() {
       xAxis: {
         type: 'value' as const,
         axisLabel: {
-          color: CHART_TICK_COLOR,
+          color: tickColor,
           fontSize: CHART_AXIS_FONT_SIZE,
           formatter: (v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(Math.round(v)),
         },
-        axisLine: { lineStyle: { color: CHART_AXIS_STROKE } },
+        axisLine: { lineStyle: { color: axisStroke } },
         axisTick: { show: false },
-        splitLine: { lineStyle: { color: CHART_GRID_STROKE, opacity: 0.3 } },
+        splitLine: { lineStyle: { color: gridStroke, opacity: 0.3 } },
       },
       yAxis: {
         type: 'category' as const,
@@ -140,7 +142,7 @@ export function ResourceUtilization() {
             return entry?.isBest ? `\u2605 ${value}` : value
           },
         },
-        axisLine: { lineStyle: { color: CHART_AXIS_STROKE } },
+        axisLine: { lineStyle: { color: axisStroke } },
         axisTick: { show: false },
       },
       tooltip: {
@@ -172,7 +174,7 @@ export function ResourceUtilization() {
         })),
       }],
     }
-  }, [data])
+  }, [data, tickColor, axisStroke, gridStroke])
 
   return (
     <div className="p-4 h-full flex flex-col">

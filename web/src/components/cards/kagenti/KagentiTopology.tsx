@@ -13,8 +13,8 @@ const FRAMEWORK_COLORS: Record<string, string> = {
   ag2: '#fb923c',
   generic: '#9ca3af',
 }
-/** Tool node stroke (Tailwind gray-500) — ≥3:1 non-text contrast on the dark card background */
-const TOOL_NODE_COLOR = '#6b7280'
+/** Tool node stroke — design-system muted foreground token (SVG resolves the CSS variable live, so it follows theme switches) */
+const TOOL_NODE_COLOR = 'hsl(var(--muted-foreground))'
 
 interface TopoNode {
   id: string

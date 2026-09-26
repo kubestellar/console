@@ -10,7 +10,9 @@ import {
   CHART_BODY_FONT_SIZE,
   CHART_TEXT_MUTED } from '../../lib/constants'
 import { MS_PER_HOUR } from '../../lib/constants/time'
-import { getChartColor, getChartColorRgba } from '../../lib/chartColors'
+import { getChartColor } from '../../lib/chartColors'
+import { hexToRgba } from '../../lib/theme/chartColors'
+import { useTheme } from '../../contexts/ThemeContext'
 
 // ---------------------------------------------------------------------------
 // Constants — no magic numbers
@@ -191,8 +193,12 @@ function GPUInventoryChart({ displayChartData, chartMode, chartGPUTypes, t }: {
   chartGPUTypes: string[]
   t: TranslateFn
 }) {
+  // Theme palette from context (render-synchronous) so the series follows runtime theme switches;
+  // the CSS-token accessor is only the fallback for themes without an explicit palette.
+  const { chartColors } = useTheme()
   const chartOption = useMemo(() => {
     const timeData = (displayChartData || []).map(d => d.time)
+    const allocatedColor = chartColors[0] || getChartColor(1)
 
     const buildSeries = () => {
       if (chartMode === 'by-type' && chartGPUTypes.length > 0) {
@@ -234,11 +240,11 @@ function GPUInventoryChart({ displayChartData, chartMode, chartGPUTypes, t }: {
           stack: 'total',
           step: 'end' as const,
           data: (displayChartData || []).map(d => d.allocated),
-          lineStyle: { color: getChartColor(1), width: 2 },
-          itemStyle: { color: getChartColor(1) },
+          lineStyle: { color: allocatedColor, width: 2 },
+          itemStyle: { color: allocatedColor },
           areaStyle: {
             color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-              colorStops: [{ offset: 0, color: getChartColorRgba(1, 0.6) }, { offset: 1, color: getChartColorRgba(1, 0.1) }] },
+              colorStops: [{ offset: 0, color: hexToRgba(allocatedColor, 0.6) }, { offset: 1, color: hexToRgba(allocatedColor, 0.1) }] },
           },
           showSymbol: false,
         },
@@ -308,7 +314,7 @@ function GPUInventoryChart({ displayChartData, chartMode, chartGPUTypes, t }: {
       },
       series,
     }
-  }, [displayChartData, chartMode, chartGPUTypes, t])
+  }, [displayChartData, chartMode, chartGPUTypes, t, chartColors])
 
   return (
     <LazyEChart
