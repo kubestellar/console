@@ -607,23 +607,15 @@ jobs:
         continue-on-error: true
         run: |
           echo "Checking for keyboard navigation issues..."
-          ISSUES=""
 
-          # onClick without onKeyDown/onKeyPress
-          CLICK_NO_KEY=$(grep -rn "onClick=" src/ --include="*.tsx" 2>/dev/null | grep -v "onKey" | grep -v "<button" | grep -v "<a " | grep -v "<input" | grep -v "<select" | grep -v node_modules | head -15 || true)
-          if [ -n "$CLICK_NO_KEY" ]; then
-            ISSUES="${ISSUES}### Click handlers without keyboard equivalents\n\`\`\`\n${CLICK_NO_KEY}\n\`\`\`\n\n"
-          fi
-
-          # Divs with onClick (should be buttons)
-          DIV_CLICK=$(grep -rn "<div.*onClick" src/ --include="*.tsx" 2>/dev/null | grep -v 'role=' | grep -v 'tabIndex' | grep -v node_modules | head -10 || true)
-          if [ -n "$DIV_CLICK" ]; then
-            ISSUES="${ISSUES}### Clickable divs without role or tabIndex\n\`\`\`\n${DIV_CLICK}\n\`\`\`\n\n"
-          fi
+          # Tag-aware scan (scripts/keyboard-a11y-scan.mjs): evaluates the whole
+          # opening JSX tag so multi-line <button onClick> / <Button onClick> and
+          # nested buttons inside a <div> are not reported as gaps (#23748).
+          ISSUES=$(node ../scripts/keyboard-a11y-scan.mjs src --max 15 2>/dev/null || true)
 
           if [ -n "$ISSUES" ]; then
             echo "found=true" >> "$GITHUB_OUTPUT"
-            printf "%b" "$ISSUES" > /tmp/focus-keyboard.txt
+            printf "%s\n" "$ISSUES" > /tmp/focus-keyboard.txt
             echo "Keyboard navigation gaps found"
           else
             echo "found=false" >> "$GITHUB_OUTPUT"
