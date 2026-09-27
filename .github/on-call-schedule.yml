@@ -1,0 +1,42 @@
+# Build Sheriff on-call rotation — source of truth for the
+# "Main Branch Build Recovery SLA" in docs/INCIDENT-RESPONSE.md.
+#
+# Consumed by .github/workflows/main-broken.yml via
+# scripts/resolve-build-sheriff.py, which resolves who is on call for a given
+# UTC date and @-mentions them in the incident issue.
+#
+# How the rotation works
+# ----------------------
+# `rotation` is an ordered list of GitHub logins. `epoch` is a Monday
+# (YYYY-MM-DD, UTC) on which rotation[0] is on call. Each subsequent ISO week
+# advances to the next login, wrapping around at the end of the list:
+#
+#   sheriff(date) = rotation[ weeks_since(epoch, date) mod len(rotation) ]
+#
+# `overrides` pins a specific week (identified by its Monday) to a login,
+# e.g. to cover vacations, and takes precedence over the computed rotation.
+#
+# `fallback` is used when `rotation` is empty or `date` is before `epoch`.
+# It defaults to the OWNERS approvers — the maintainers already accountable
+# for main — so the incident issue always has a named owner.
+#
+# Maintainers: fill in `rotation` (and `epoch`) to name the actual weekly
+# rotation. Until then every main-branch incident escalates to `fallback`.
+
+timezone: UTC
+
+# Monday on which rotation[0] is on call. Ignored while `rotation` is empty.
+epoch: 2026-09-28
+
+# Ordered weekly rotation of GitHub logins (no leading "@").
+rotation: []
+
+# Per-week overrides: { week_start: <Monday YYYY-MM-DD>, sheriff: <login> }.
+overrides: []
+
+# Used when no rotation entry covers the date. Mirrors OWNERS approvers.
+fallback:
+  - clubanderson
+  - eeshaanSA
+  - MikeSpreitzer
+  - nupurshivani
