@@ -257,6 +257,21 @@ var (
 		},
 	)
 
+	// selfUpgradeTriggerTotal counts POST /api/self-upgrade/trigger requests
+	// by outcome, a small fixed set (see SelfUpgradeOutcome* constants below)
+	// — never a user ID, image tag, or other unbounded value. This is a
+	// rare, security-sensitive operation (pkg/api/handlers/ops/self_upgrade.go)
+	// that today is only observable via slog lines; the counter lets an
+	// operator alert on repeated RBAC denials or patch failures without
+	// grepping logs.
+	selfUpgradeTriggerTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "console_self_upgrade_trigger_total",
+			Help: "Total number of self-upgrade trigger attempts, labeled by outcome.",
+		},
+		[]string{"outcome"},
+	)
+
 	initOnce sync.Once
 )
 
@@ -296,6 +311,7 @@ func Init() {
 		prometheus.MustRegister(websocketConnectsTotal)
 		prometheus.MustRegister(websocketDisconnectsTotal)
 		prometheus.MustRegister(websocketRejectedTotal)
+		prometheus.MustRegister(selfUpgradeTriggerTotal)
 	})
 }
 
@@ -516,4 +532,32 @@ func RecordNotificationSend(channelType, outcome string, duration time.Duration)
 	Init()
 	notificationSendsTotal.WithLabelValues(channelType, outcome).Inc()
 	notificationSendDuration.WithLabelValues(channelType).Observe(duration.Seconds())
+}
+
+// Self-upgrade trigger outcomes for RecordSelfUpgradeTrigger. This is the
+// complete, fixed set of values the "outcome" label may take — every one
+// corresponds to an existing slog line in
+// pkg/api/handlers/ops/self_upgrade.go's TriggerUpgrade handler.
+const (
+	SelfUpgradeOutcomeSuccess            = "success"
+	SelfUpgradeOutcomeStoreUnavailable   = "store_unavailable"
+	SelfUpgradeOutcomeUserLookupFailed   = "user_lookup_failed"
+	SelfUpgradeOutcomeUserNotFound       = "user_not_found"
+	SelfUpgradeOutcomeNonAdmin           = "non_admin"
+	SelfUpgradeOutcomeInvalidRequest     = "invalid_request"
+	SelfUpgradeOutcomeNotInCluster       = "not_in_cluster"
+	SelfUpgradeOutcomeClientUnavailable  = "client_unavailable"
+	SelfUpgradeOutcomeDeploymentNotFound = "deployment_not_found"
+	SelfUpgradeOutcomeRBACDenied         = "rbac_denied"
+	SelfUpgradeOutcomePatchFailed        = "patch_failed"
+)
+
+// RecordSelfUpgradeTrigger records one POST /api/self-upgrade/trigger
+// attempt. outcome must be one of the SelfUpgradeOutcome* constants above.
+// This is a rare, security-sensitive, admin-only action — the counter lets
+// an operator alert on repeated non_admin/rbac_denied/patch_failed outcomes
+// without grepping logs.
+func RecordSelfUpgradeTrigger(outcome string) {
+	Init()
+	selfUpgradeTriggerTotal.WithLabelValues(outcome).Inc()
 }
