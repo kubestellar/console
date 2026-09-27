@@ -57,6 +57,65 @@ export interface CardDataConfig<T, S extends string = string> {
 }
 
 // ============================================================================
+// useLocalClusterFilter - Local cluster-filter dropdown state
+// ============================================================================
+
+export interface UseLocalClusterFilterResult {
+  /** Clusters selected in the card-local filter */
+  localClusterFilter: string[]
+  /** Replace the local cluster selection */
+  setLocalClusterFilter: (clusters: string[]) => void
+  /** Toggle a cluster in the local filter */
+  toggleClusterFilter: (cluster: string) => void
+  /** Clear the local filter */
+  clearClusterFilter: () => void
+  /** Whether the cluster filter dropdown is open */
+  showClusterFilter: boolean
+  /** Set dropdown visibility */
+  setShowClusterFilter: (show: boolean) => void
+  /** Attach to the dropdown container so outside clicks close it */
+  clusterFilterRef: RefObject<HTMLDivElement | null>
+}
+
+/**
+ * Shared state for cards that render `CardClusterFilter` on top of their own
+ * data pipeline (i.e. without `useCardFilters`). Owns the selection, the
+ * dropdown open flag, and the mousedown-outside handler that closes it.
+ */
+export function useLocalClusterFilter(): UseLocalClusterFilterResult {
+  const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
+  const [showClusterFilter, setShowClusterFilter] = useState(false)
+  const clusterFilterRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (clusterFilterRef.current && !clusterFilterRef.current.contains(event.target as Node)) {
+        setShowClusterFilter(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const toggleClusterFilter = (cluster: string) => {
+    setLocalClusterFilter(prev =>
+      prev.includes(cluster) ? prev.filter(c => c !== cluster) : [...prev, cluster]
+    )
+  }
+
+  const clearClusterFilter = () => setLocalClusterFilter([])
+
+  return {
+    localClusterFilter,
+    setLocalClusterFilter,
+    toggleClusterFilter,
+    clearClusterFilter,
+    showClusterFilter,
+    setShowClusterFilter,
+    clusterFilterRef }
+}
+
+// ============================================================================
 // useCardFilters - Generic filtering hook
 // ============================================================================
 

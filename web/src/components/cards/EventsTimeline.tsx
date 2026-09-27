@@ -1,4 +1,4 @@
-import { memo, useState, useEffect, useRef, useMemo } from 'react'
+import { memo, useState, useMemo } from 'react'
 import { Activity, AlertTriangle, CheckCircle, Clock, Server } from 'lucide-react'
 import { LazyEChart } from '../charts/LazyEChart'
 import { useClusters } from '../../hooks/useMCP'
@@ -10,6 +10,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { MS_PER_MINUTE } from '../../lib/constants/time'
 import { CardClusterFilter } from '../../lib/cards/CardComponents'
+import { useLocalClusterFilter } from '../../lib/cards/cardHooks'
 import { useTranslation } from 'react-i18next'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import {
@@ -157,20 +158,13 @@ function EventsTimelineInternal() {
   const selectedClusters = Array.isArray(rawSelectedClusters) ? rawSelectedClusters : []
   const clusterInfoMap = rawClusterInfoMap || {}
   const [timeRange, setTimeRange] = useState<TimeRange>(DEFAULT_TIME_RANGE)
-  const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
-  const [showClusterFilter, setShowClusterFilter] = useState(false)
-  const clusterFilterRef = useRef<HTMLDivElement>(null)
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (clusterFilterRef.current && !clusterFilterRef.current.contains(event.target as Node)) {
-        setShowClusterFilter(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  const {
+    localClusterFilter,
+    toggleClusterFilter,
+    clearClusterFilter,
+    showClusterFilter,
+    setShowClusterFilter,
+    clusterFilterRef } = useLocalClusterFilter()
 
   // Get reachable clusters
   const reachableClusters = useMemo(
@@ -188,15 +182,6 @@ function EventsTimelineInternal() {
   const filteredClusterCount = localClusterFilter.length > 0
     ? localClusterFilter.length
     : availableClustersForFilter.length
-
-  const toggleClusterFilter = (clusterName: string) => {
-    setLocalClusterFilter(prev => {
-      if (prev.includes(clusterName)) {
-        return prev.filter(c => c !== clusterName)
-      }
-      return [...prev, clusterName]
-    })
-  }
 
   // Filter events by selected clusters AND exclude offline/unreachable clusters
   const filteredEvents = useMemo(() => {
@@ -395,7 +380,7 @@ function EventsTimelineInternal() {
             availableClusters={availableClustersForFilter}
             selectedClusters={localClusterFilter}
             onToggle={toggleClusterFilter}
-            onClear={() => setLocalClusterFilter([])}
+            onClear={clearClusterFilter}
             isOpen={showClusterFilter}
             setIsOpen={setShowClusterFilter}
             containerRef={clusterFilterRef}

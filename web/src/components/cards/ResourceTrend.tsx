@@ -5,6 +5,7 @@ import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useCardLoadingState, useCardDemoState } from './CardDataContext'
 import { CardClusterFilter } from '../../lib/cards/CardComponents'
+import { useLocalClusterFilter } from '../../lib/cards/cardHooks'
 import { useTranslation } from 'react-i18next'
 import {
   MS_PER_MINUTE,
@@ -48,9 +49,13 @@ export const ResourceTrend = memo(function ResourceTrend() {
   const { shouldUseDemoData: isDemoMode } = useCardDemoState({ requires: 'agent' })
   const [view, setView] = useState<MetricView>('all')
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
-  const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
-  const [showClusterFilter, setShowClusterFilter] = useState(false)
-  const clusterFilterRef = useRef<HTMLDivElement>(null)
+  const {
+    localClusterFilter,
+    toggleClusterFilter,
+    clearClusterFilter,
+    showClusterFilter,
+    setShowClusterFilter,
+    clusterFilterRef } = useLocalClusterFilter()
 
   // Report state to CardWrapper for refresh animation
   const hasData = clusters.length > 0
@@ -61,17 +66,6 @@ export const ResourceTrend = memo(function ResourceTrend() {
     isDemoData: isDemoMode,
     isFailed,
     consecutiveFailures })
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (clusterFilterRef.current && !clusterFilterRef.current.contains(event.target as Node)) {
-        setShowClusterFilter(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
 
   // Track historical data points with persistence
   const STORAGE_KEY = 'resource-trend-history'
@@ -129,15 +123,6 @@ export const ResourceTrend = memo(function ResourceTrend() {
     }
     return filtered
   })()
-
-  const toggleClusterFilter = (clusterName: string) => {
-    setLocalClusterFilter(prev => {
-      if (prev.includes(clusterName)) {
-        return prev.filter(c => c !== clusterName)
-      }
-      return [...prev, clusterName]
-    })
-  }
 
   // Calculate current totals
   const currentTotals = useMemo(() => {
@@ -302,7 +287,7 @@ export const ResourceTrend = memo(function ResourceTrend() {
             availableClusters={availableClustersForFilter}
             selectedClusters={localClusterFilter}
             onToggle={toggleClusterFilter}
-            onClear={() => setLocalClusterFilter([])}
+            onClear={clearClusterFilter}
             isOpen={showClusterFilter}
             setIsOpen={setShowClusterFilter}
             containerRef={clusterFilterRef}

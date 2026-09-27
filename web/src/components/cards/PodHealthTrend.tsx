@@ -6,6 +6,7 @@ import { useCachedPodIssues } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useCardLoadingState } from './CardDataContext'
 import { CardClusterFilter } from '../../lib/cards/CardComponents'
+import { useLocalClusterFilter } from '../../lib/cards/cardHooks'
 import { isDemoMode } from '../../lib/demoMode'
 import { useTranslation } from 'react-i18next'
 import { MS_PER_MINUTE } from '../../lib/constants/time'
@@ -71,20 +72,13 @@ const PodHealthTrend = memo(function PodHealthTrend() {
     isFailed: clustersFailed || issuesFailed,
     consecutiveFailures: Math.max(clustersFailures, issuesFailures) })
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
-  const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
-  const [showClusterFilter, setShowClusterFilter] = useState(false)
-  const clusterFilterRef = useRef<HTMLDivElement>(null)
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (clusterFilterRef.current && !clusterFilterRef.current.contains(event.target as Node)) {
-        setShowClusterFilter(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  const {
+    localClusterFilter,
+    toggleClusterFilter,
+    clearClusterFilter,
+    showClusterFilter,
+    setShowClusterFilter,
+    clusterFilterRef } = useLocalClusterFilter()
 
   // Track historical data points with persistence
   const STORAGE_KEY = 'pod-health-trend-history'
@@ -143,15 +137,6 @@ const PodHealthTrend = memo(function PodHealthTrend() {
     }
     return filtered
   })()
-
-  const toggleClusterFilter = (clusterName: string) => {
-    setLocalClusterFilter(prev => {
-      if (prev.includes(clusterName)) {
-        return prev.filter(c => c !== clusterName)
-      }
-      return [...prev, clusterName]
-    })
-  }
 
   // Get names of reachable clusters for issue filtering
   const reachableClusterNames = new Set(clusters.filter(c => c.reachable !== false).map(c => c.name))
@@ -389,7 +374,7 @@ const PodHealthTrend = memo(function PodHealthTrend() {
             availableClusters={availableClustersForFilter}
             selectedClusters={localClusterFilter}
             onToggle={toggleClusterFilter}
-            onClear={() => setLocalClusterFilter([])}
+            onClear={clearClusterFilter}
             isOpen={showClusterFilter}
             setIsOpen={setShowClusterFilter}
             containerRef={clusterFilterRef}
