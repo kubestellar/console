@@ -9,6 +9,14 @@ on:
         description: Issue number to work on
         required: true
 
+# Pin the Copilot model. The compiled lock files fall back to this value when
+# neither GH_AW_MODEL_*_COPILOT nor GH_AW_DEFAULT_MODEL_COPILOT repo vars are set;
+# a recompile without this pin would restore the compiler's default (claude-sonnet-5,
+# retired -- see #23769).
+engine:
+  id: copilot
+  model: claude-sonnet-4.5
+
 permissions:
   issues: write
   pull-requests: write
