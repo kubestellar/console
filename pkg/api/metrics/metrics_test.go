@@ -252,3 +252,40 @@ func TestWebSocketMetrics(t *testing.T) {
 		t.Errorf("expected 1 recorded rejection, got:\n%s", body)
 	}
 }
+
+// TestRecordSelfUpgradeTrigger verifies the self-upgrade trigger counter
+// tracks outcomes by label, including a couple of the security-relevant
+// rejection outcomes alongside success.
+func TestRecordSelfUpgradeTrigger(t *testing.T) {
+	RecordSelfUpgradeTrigger(SelfUpgradeOutcomeSuccess)
+	RecordSelfUpgradeTrigger(SelfUpgradeOutcomeNonAdmin)
+	RecordSelfUpgradeTrigger(SelfUpgradeOutcomeNonAdmin)
+	RecordSelfUpgradeTrigger(SelfUpgradeOutcomeRBACDenied)
+	RecordSelfUpgradeTrigger(SelfUpgradeOutcomePatchFailed)
+
+	app := fiber.New()
+	app.Get("/metrics", Handler())
+
+	req := httptest.NewRequest("GET", "/metrics", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("metrics scrape failed: %v", err)
+	}
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("failed to read metrics body: %v", err)
+	}
+	body := string(bodyBytes)
+
+	for _, want := range []string{
+		`console_self_upgrade_trigger_total{outcome="success"} 1`,
+		`console_self_upgrade_trigger_total{outcome="non_admin"} 2`,
+		`console_self_upgrade_trigger_total{outcome="rbac_denied"} 1`,
+		`console_self_upgrade_trigger_total{outcome="patch_failed"} 1`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("expected metrics output to contain %q, got:\n%s", want, body)
+		}
+	}
+}

@@ -19,6 +19,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	"github.com/kubestellar/console/pkg/api/handlers/auth"
+	consolemetrics "github.com/kubestellar/console/pkg/api/metrics"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/api/transport"
 	k8sclient "github.com/kubestellar/console/pkg/k8s"
@@ -244,6 +245,7 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 	if h.store == nil {
 		slog.Warn("[self-upgrade] SECURITY: self-upgrade requested but store is not configured — refusing fail-open",
 			"user_id", userID)
+		consolemetrics.RecordSelfUpgradeTrigger(consolemetrics.SelfUpgradeOutcomeStoreUnavailable)
 		return c.Status(fiber.StatusServiceUnavailable).JSON(SelfUpgradeTriggerResponse{
 			Error: "self-upgrade unavailable — user store is not configured",
 		})
@@ -252,6 +254,7 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 	if err != nil {
 		slog.Warn("[self-upgrade] SECURITY: failed to look up user for role check",
 			"user_id", userID, "error", err)
+		consolemetrics.RecordSelfUpgradeTrigger(consolemetrics.SelfUpgradeOutcomeUserLookupFailed)
 		return c.Status(fiber.StatusForbidden).JSON(SelfUpgradeTriggerResponse{
 			Error: "unable to verify user role — access denied",
 		})
@@ -259,6 +262,7 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 	if user == nil {
 		slog.Warn("[self-upgrade] SECURITY: user not found for role check",
 			"user_id", userID)
+		consolemetrics.RecordSelfUpgradeTrigger(consolemetrics.SelfUpgradeOutcomeUserNotFound)
 		return c.Status(fiber.StatusForbidden).JSON(SelfUpgradeTriggerResponse{
 			Error: "user not found — access denied",
 		})
@@ -268,6 +272,7 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 			"user_id", userID,
 			"github_login", middleware.GetGitHubLogin(c),
 			"role", user.Role)
+		consolemetrics.RecordSelfUpgradeTrigger(consolemetrics.SelfUpgradeOutcomeNonAdmin)
 		return c.Status(fiber.StatusForbidden).JSON(SelfUpgradeTriggerResponse{
 			Error: "self-upgrade requires admin role",
 		})
@@ -278,12 +283,14 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 
 	var req SelfUpgradeTriggerRequest
 	if err := c.BodyParser(&req); err != nil {
+		consolemetrics.RecordSelfUpgradeTrigger(consolemetrics.SelfUpgradeOutcomeInvalidRequest)
 		return c.Status(fiber.StatusBadRequest).JSON(SelfUpgradeTriggerResponse{
 			Error: "invalid request body",
 		})
 	}
 
 	if req.ImageTag == "" {
+		consolemetrics.RecordSelfUpgradeTrigger(consolemetrics.SelfUpgradeOutcomeInvalidRequest)
 		return c.Status(fiber.StatusBadRequest).JSON(SelfUpgradeTriggerResponse{
 			Error: "imageTag is required",
 		})
@@ -292,12 +299,14 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 	// Validate image tag: strict regex rejects path traversal (../, /), at-signs (@),
 	// colons (:), and any other characters that could alter the image reference.
 	if len(req.ImageTag) > imageTagMaxLen || !validImageTagRe.MatchString(req.ImageTag) {
+		consolemetrics.RecordSelfUpgradeTrigger(consolemetrics.SelfUpgradeOutcomeInvalidRequest)
 		return c.Status(fiber.StatusBadRequest).JSON(SelfUpgradeTriggerResponse{
 			Error: "invalid imageTag format — must be alphanumeric with dots, hyphens, or underscores only",
 		})
 	}
 
 	if h.k8sClient == nil || !h.k8sClient.IsInCluster() {
+		consolemetrics.RecordSelfUpgradeTrigger(consolemetrics.SelfUpgradeOutcomeNotInCluster)
 		return c.Status(fiber.StatusBadRequest).JSON(SelfUpgradeTriggerResponse{
 			Error: "not running in-cluster",
 		})
@@ -305,6 +314,7 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 
 	namespace := getNamespace()
 	if namespace == "" {
+		consolemetrics.RecordSelfUpgradeTrigger(consolemetrics.SelfUpgradeOutcomeNotInCluster)
 		return c.Status(fiber.StatusInternalServerError).JSON(SelfUpgradeTriggerResponse{
 			Error: "could not determine pod namespace",
 		})
@@ -316,6 +326,7 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 	client, err := h.getInClusterClient()
 	if err != nil {
 		slog.Error("[self-upgrade] failed to get in-cluster client", "error", err)
+		consolemetrics.RecordSelfUpgradeTrigger(consolemetrics.SelfUpgradeOutcomeClientUnavailable)
 		return c.Status(fiber.StatusInternalServerError).JSON(SelfUpgradeTriggerResponse{
 			Error: "cluster client unavailable",
 		})
@@ -325,6 +336,7 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 	dep, err := h.findDeployment(ctx, client, namespace)
 	if err != nil {
 		slog.Error("[self-upgrade] failed to find deployment", "namespace", sanitize.LogString(namespace), "error", err)
+		consolemetrics.RecordSelfUpgradeTrigger(consolemetrics.SelfUpgradeOutcomeDeploymentNotFound)
 		return c.Status(fiber.StatusInternalServerError).JSON(SelfUpgradeTriggerResponse{
 			Error: "deployment not found",
 		})
@@ -332,6 +344,7 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 
 	// Verify RBAC before proceeding
 	if !h.canPatchDeployment(ctx, client, namespace, dep.Name) {
+		consolemetrics.RecordSelfUpgradeTrigger(consolemetrics.SelfUpgradeOutcomeRBACDenied)
 		return c.Status(fiber.StatusForbidden).JSON(SelfUpgradeTriggerResponse{
 			Error: "insufficient RBAC permissions — deploy with selfUpgrade.enabled=true",
 		})
@@ -339,6 +352,7 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 
 	// Build the new image reference — require at least one container.
 	if len(dep.Spec.Template.Spec.Containers) == 0 {
+		consolemetrics.RecordSelfUpgradeTrigger(consolemetrics.SelfUpgradeOutcomeInvalidRequest)
 		return c.Status(fiber.StatusBadRequest).JSON(SelfUpgradeTriggerResponse{
 			Error: fmt.Sprintf("deployment %s has no containers — cannot determine image to patch", dep.Name),
 		})
@@ -399,6 +413,7 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 	}
 	patchBytes, err := json.Marshal(patch)
 	if err != nil {
+		consolemetrics.RecordSelfUpgradeTrigger(consolemetrics.SelfUpgradeOutcomeInvalidRequest)
 		return c.Status(fiber.StatusInternalServerError).JSON(SelfUpgradeTriggerResponse{
 			Error: "failed to marshal patch",
 		})
@@ -414,6 +429,7 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 	)
 	if err != nil {
 		slog.Error("[self-upgrade] patch failed", "error", err)
+		consolemetrics.RecordSelfUpgradeTrigger(consolemetrics.SelfUpgradeOutcomePatchFailed)
 		// Terminal error — no intermediate progress was claimed, so clients
 		// transition directly from "idle" to "failed" without a misleading
 		// 20% checkpoint.
@@ -430,6 +446,7 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 	}
 
 	slog.Info("[self-upgrade] Deployment patched successfully, rollout starting")
+	consolemetrics.RecordSelfUpgradeTrigger(consolemetrics.SelfUpgradeOutcomeSuccess)
 
 	// Broadcast progress: the patch has actually been applied. We emit step 1
 	// (image patched) and step 2 (waiting for rollout) back-to-back so the UI
