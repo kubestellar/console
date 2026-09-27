@@ -218,7 +218,7 @@ exports[`EPPHealth > matches snapshot in happy-path state 1`] = `
         class="h-1.5 rounded-full bg-muted/30 overflow-hidden"
       >
         <div
-          class="h-full rounded-full transition-all bg-green-500/70"
+          class="h-full rounded-full transition-all bg-status-success"
           style="width: 10%;"
         />
       </div>
