@@ -2,7 +2,7 @@
  * Tests for useLocalClusterFilter — the shared dropdown-state hook used by
  * cards that render CardClusterFilter without going through useCardFilters.
  */
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useLocalClusterFilter } from '../cardFilters'
 
@@ -60,10 +60,25 @@ describe('useLocalClusterFilter', () => {
   })
 
   it('removes the document listener on unmount', () => {
-    const { result, unmount } = renderHook(() => useLocalClusterFilter())
-    act(() => result.current.setShowClusterFilter(true))
-    unmount()
-    // No throw / no stale update when a mousedown fires after unmount
-    document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+    const addSpy = vi.spyOn(document, 'addEventListener')
+    const removeSpy = vi.spyOn(document, 'removeEventListener')
+    try {
+      const { unmount } = renderHook(() => useLocalClusterFilter())
+
+      const added = addSpy.mock.calls.filter(([type]) => type === 'mousedown')
+      expect(added).toHaveLength(1)
+      const handler = added[0][1]
+      expect(removeSpy.mock.calls.filter(([type]) => type === 'mousedown')).toHaveLength(0)
+
+      unmount()
+
+      // The exact handler that was registered must be the one detached.
+      const removed = removeSpy.mock.calls.filter(([type]) => type === 'mousedown')
+      expect(removed).toHaveLength(1)
+      expect(removed[0][1]).toBe(handler)
+    } finally {
+      addSpy.mockRestore()
+      removeSpy.mockRestore()
+    }
   })
 })
