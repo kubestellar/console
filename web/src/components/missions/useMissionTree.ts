@@ -8,6 +8,7 @@ import {
   getKubaraConfig,
 } from './browser'
 import type { TreeNode } from './browser'
+import { useToast } from '../ui/Toast'
 
 interface MissionTreeTarget {
   rootId: 'community' | 'github' | 'kubara'
@@ -102,6 +103,7 @@ export function useMissionTree({
   watchedRepos: string[]
   watchedPaths: string[]
 }) {
+  const { showToast } = useToast()
   const [treeNodes, setTreeNodes] = useState<TreeNode[]>([])
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())
   const [selectedPath, setSelectedPath] = useState<string | null>(null)
@@ -165,6 +167,7 @@ export function useMissionTree({
       })
     }).catch((error: unknown) => {
       console.error('[MissionBrowser] failed to load kubara config:', error)
+      showToast('Failed to load kubara catalog config — using defaults', 'error')
     })
 
     if (isAuthenticated && user) {
@@ -213,7 +216,7 @@ export function useMissionTree({
     setExpandedNodes(new Set())
     setSelectedPath(null)
     setRevealPath(null)
-  }, [isAuthenticated, isOpen, user, watchedPaths, watchedRepos])
+  }, [isAuthenticated, isOpen, user, watchedPaths, watchedRepos, showToast])
 
   const expandNode = async (node: TreeNode): Promise<TreeNode | null> => {
     const nodeId = node.id
