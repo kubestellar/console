@@ -61,15 +61,12 @@
     }
   },
   "weekly_insights": {
-    "best_pr_size": "XS",
+    "best_pr_size": "XXL",
     "size_acceptance": {},
     "type_acceptance": {},
-    "common_rejection_reasons": [
-      "- PR #23288: Looks like vitest is up-to-date now, so this is no longer needed.",
-      "- PR #23287: Looks like joi is up-to-date now, so this is no longer needed."
-    ],
+    "common_rejection_reasons": [],
     "best_change_type": "bug_fix",
-    "last_report_date": "2026-09-13"
+    "last_report_date": "2026-09-27"
   },
   "cncf_insights": {
     "last_scan_date": "2026-09-23",
