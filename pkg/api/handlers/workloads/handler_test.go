@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/gofiber/fiber/v2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -568,5 +569,102 @@ func TestGetDeployLogs(t *testing.T) {
 		resp, err := env.App.Test(req, 5000)
 		require.NoError(t, err)
 		assert.Equal(t, 500, resp.StatusCode)
+	})
+}
+
+// TestGetClusterCapabilities covers /api/workloads/capabilities.
+// Closes a zero-coverage gap on WorkloadHandlers.GetClusterCapabilities and
+// exercises the errNoClusterAccess helper for the nil-client branch.
+func TestGetClusterCapabilities(t *testing.T) {
+	t.Run("NilClient_Returns503", func(t *testing.T) {
+		app := fiber.New()
+		h := NewWorkloadHandlers(nil, nil, nil)
+		app.Get("/api/workloads/capabilities", h.GetClusterCapabilities)
+
+		req, err := http.NewRequest("GET", "/api/workloads/capabilities", nil)
+		require.NoError(t, err)
+		req.Host = "localhost"
+		resp, err := app.Test(req, 5000)
+		require.NoError(t, err)
+		assert.Equal(t, 503, resp.StatusCode)
+
+		var body map[string]interface{}
+		require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+		assert.Equal(t, "No cluster access", body["error"])
+	})
+
+	t.Run("ReturnsCapabilities", func(t *testing.T) {
+		env := setupTestEnv(t)
+		handler := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
+		env.App.Get("/api/workloads/capabilities", handler.GetClusterCapabilities)
+
+		req, err := http.NewRequest("GET", "/api/workloads/capabilities", nil)
+		require.NoError(t, err)
+		req.Host = "localhost"
+		resp, err := env.App.Test(req, 5000)
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+
+		var caps struct {
+			Items      []map[string]interface{} `json:"items"`
+			TotalCount int                      `json:"totalCount"`
+		}
+		require.NoError(t, json.NewDecoder(resp.Body).Decode(&caps))
+		// test-cluster has no nodes in the fake clientset, so it must be
+		// reported as unavailable rather than omitted (#6661 regression).
+		require.NotEmpty(t, caps.Items)
+		found := false
+		for _, item := range caps.Items {
+			if item["cluster"] == "test-cluster" {
+				found = true
+				assert.Equal(t, false, item["available"])
+			}
+		}
+		assert.True(t, found, "test-cluster should appear in capabilities list")
+	})
+}
+
+// TestListBindingPolicies covers /api/workloads/policies.
+// Closes a zero-coverage gap on WorkloadHandlers.ListBindingPolicies.
+func TestListBindingPolicies(t *testing.T) {
+	t.Run("NilClient_Returns503", func(t *testing.T) {
+		app := fiber.New()
+		h := NewWorkloadHandlers(nil, nil, nil)
+		app.Get("/api/workloads/policies", h.ListBindingPolicies)
+
+		req, err := http.NewRequest("GET", "/api/workloads/policies", nil)
+		require.NoError(t, err)
+		req.Host = "localhost"
+		resp, err := app.Test(req, 5000)
+		require.NoError(t, err)
+		assert.Equal(t, 503, resp.StatusCode)
+
+		var body map[string]interface{}
+		require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+		assert.Equal(t, "No cluster access", body["error"])
+	})
+
+	t.Run("ReturnsEmptyList", func(t *testing.T) {
+		env := setupTestEnv(t)
+		handler := NewWorkloadHandlers(env.K8sClient, env.Hub, env.Store)
+		env.App.Get("/api/workloads/policies", handler.ListBindingPolicies)
+
+		req, err := http.NewRequest("GET", "/api/workloads/policies", nil)
+		require.NoError(t, err)
+		req.Host = "localhost"
+		resp, err := env.App.Test(req, 5000)
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+
+		var body struct {
+			Items      []interface{} `json:"items"`
+			TotalCount int           `json:"totalCount"`
+		}
+		require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+		// ListBindingPolicies is a placeholder that always returns an empty
+		// list; test locks in that contract until real BindingPolicy backing
+		// lands.
+		assert.Empty(t, body.Items)
+		assert.Equal(t, 0, body.TotalCount)
 	})
 }
