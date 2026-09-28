@@ -343,12 +343,30 @@ jobs:
           echo "Focus overrides: ${FOCUS_OVERRIDES:-none}"
           echo "Repeat patterns: $REPEAT_TITLE_COUNT"
 
+      # PRs created with GITHUB_TOKEN are authored by github-actions[bot], and
+      # GitHub now holds every pull_request workflow on such PRs in
+      # action_required until a human clicks "Approve and run" — so the
+      # required build-gate never runs and the hive cannot auto-merge them.
+      # Pushing and opening the PR as the KubeStellar Console App avoids the
+      # gate: App-authored PRs run CI unattended.
+      - name: Mint KubeStellar Console App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.KUBESTELLAR_CONSOLE_APP_ID }}
+          private-key: ${{ secrets.KUBESTELLAR_CONSOLE_APP_PRIVATE_KEY }}
+
       - name: Commit tuning config
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          BOT_LOGIN="${APP_SLUG}[bot]"
+          BOT_ID=$(gh api "/users/${BOT_LOGIN}" --jq .id)
+          echo "Authoring as ${BOT_LOGIN} (id ${BOT_ID})"
+          git config user.name "$BOT_LOGIN"
+          git config user.email "${BOT_ID}+${BOT_LOGIN}@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git add "$CONFIG_FILE"
           git diff --cached --quiet && echo "No changes to commit" && exit 0
           BRANCH="auto-qa-tuner/daily-$(date +%Y%m%d-%H%M%S)"
@@ -605,12 +623,30 @@ jobs:
             .weekly_insights.last_report_date = (now | strftime("%Y-%m-%d"))
           ' "$CONFIG" > "$TMP" && mv "$TMP" "$CONFIG"
 
+      # PRs created with GITHUB_TOKEN are authored by github-actions[bot], and
+      # GitHub now holds every pull_request workflow on such PRs in
+      # action_required until a human clicks "Approve and run" — so the
+      # required build-gate never runs and the hive cannot auto-merge them.
+      # Pushing and opening the PR as the KubeStellar Console App avoids the
+      # gate: App-authored PRs run CI unattended.
+      - name: Mint KubeStellar Console App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.KUBESTELLAR_CONSOLE_APP_ID }}
+          private-key: ${{ secrets.KUBESTELLAR_CONSOLE_APP_PRIVATE_KEY }}
+
       - name: Commit tuning config
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          BOT_LOGIN="${APP_SLUG}[bot]"
+          BOT_ID=$(gh api "/users/${BOT_LOGIN}" --jq .id)
+          echo "Authoring as ${BOT_LOGIN} (id ${BOT_ID})"
+          git config user.name "$BOT_LOGIN"
+          git config user.email "${BOT_ID}+${BOT_LOGIN}@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git add "$CONFIG_FILE"
           git diff --cached --quiet && echo "No changes to commit" && exit 0
           BRANCH="auto-qa-tuner/weekly-$(date +%Y%m%d-%H%M%S)"
@@ -910,12 +946,30 @@ jobs:
             .cncf_insights.suggested_checks = $suggestions
           ' "$CONFIG" > "$TMP" && mv "$TMP" "$CONFIG"
 
+      # PRs created with GITHUB_TOKEN are authored by github-actions[bot], and
+      # GitHub now holds every pull_request workflow on such PRs in
+      # action_required until a human clicks "Approve and run" — so the
+      # required build-gate never runs and the hive cannot auto-merge them.
+      # Pushing and opening the PR as the KubeStellar Console App avoids the
+      # gate: App-authored PRs run CI unattended.
+      - name: Mint KubeStellar Console App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.KUBESTELLAR_CONSOLE_APP_ID }}
+          private-key: ${{ secrets.KUBESTELLAR_CONSOLE_APP_PRIVATE_KEY }}
+
       - name: Commit tuning config
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          BOT_LOGIN="${APP_SLUG}[bot]"
+          BOT_ID=$(gh api "/users/${BOT_LOGIN}" --jq .id)
+          echo "Authoring as ${BOT_LOGIN} (id ${BOT_ID})"
+          git config user.name "$BOT_LOGIN"
+          git config user.email "${BOT_ID}+${BOT_LOGIN}@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git add "$CONFIG_FILE"
           git diff --cached --quiet && echo "No changes to commit" && exit 0
           BRANCH="auto-qa-tuner/cncf-$(date +%Y%m%d-%H%M%S)"
