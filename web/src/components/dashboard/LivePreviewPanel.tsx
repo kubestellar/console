@@ -161,12 +161,19 @@ function T1Preview({ config }: { config?: LivePreviewPanelProps['t1Config'] }) {
 // Tier 2 Preview (debounced compilation)
 // ============================================================================
 
+interface T2CompileState {
+  compiling: boolean
+  error: string | null
+  CardComponent: CardComponent | null
+}
+
+const T2_IDLE_STATE: T2CompileState = { compiling: false, error: null, CardComponent: null }
+
 function T2Preview({ source }: { source?: string }) {
   const { t } = useTranslation()
   const [debouncedSource, setDebouncedSource] = useState(source)
-  const [compiling, setCompiling] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [CardComponent, setCardComponent] = useState<CardComponent | null>(null)
+  const [compileState, setCompileState] = useState<T2CompileState>(T2_IDLE_STATE)
+  const { compiling, error, CardComponent } = compileState
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   // Debounce source changes
@@ -179,9 +186,7 @@ function T2Preview({ source }: { source?: string }) {
   // Compile when debounced source updates
   useEffect(() => {
     if (!debouncedSource) {
-      setCompiling(false)
-      setError(null)
-      setCardComponent(null)
+      setCompileState(T2_IDLE_STATE)
       return
     }
 
@@ -190,40 +195,34 @@ function T2Preview({ source }: { source?: string }) {
     const timeoutId = setTimeout(() => {
       if (cancelled) return
       timedOut = true
-      setError(getPreviewCompileTimeoutError())
-      setCardComponent(null)
-      setCompiling(false)
+      setCompileState({ compiling: false, error: getPreviewCompileTimeoutError(), CardComponent: null })
     }, PREVIEW_COMPILE_TIMEOUT_MS)
 
     const compilePreview = async () => {
       if (cancelled) return
-      setCompiling(true)
-      setError(null)
+      setCompileState(prev => ({ ...prev, compiling: true, error: null }))
 
       try {
         const result = await compileCardCode(debouncedSource)
         if (cancelled || timedOut) return
         if (result.error) {
-          setError(result.error)
-          setCompiling(false)
-          setCardComponent(null)
+          setCompileState({ compiling: false, error: result.error, CardComponent: null })
           return
         }
         const componentResult = await createCardComponent(result.code!)
         if (cancelled || timedOut) return
         if (componentResult.error) {
-          setError(componentResult.error)
-          setCompiling(false)
-          setCardComponent(null)
+          setCompileState({ compiling: false, error: componentResult.error, CardComponent: null })
           return
         }
-        setCardComponent(() => componentResult.component)
-        setCompiling(false)
+        setCompileState({ compiling: false, error: null, CardComponent: componentResult.component })
       } catch (err: unknown) {
         if (cancelled || timedOut) return
-        setError(err instanceof Error ? err.message : 'Compilation failed')
-        setCardComponent(null)
-        setCompiling(false)
+        setCompileState({
+          compiling: false,
+          error: err instanceof Error ? err.message : 'Compilation failed',
+          CardComponent: null,
+        })
       } finally {
         clearTimeout(timeoutId)
       }
