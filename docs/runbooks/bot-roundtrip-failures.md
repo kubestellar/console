@@ -121,7 +121,7 @@ attributed it to a different user. Either:
 - The App was renamed. Update `EXPECTED_USER_LOGIN` and
   `EXPECTED_SLUG` env in `.github/workflows/console-app-roundtrip.yml`
   to the new slug (and open a follow-up PR to align
-  `DefaultConsoleAppSlug` in `pkg/api/handlers/github_app_auth.go`).
+  `DefaultConsoleAppSlug` in `pkg/api/handlers/feedback/github_app_auth.go`).
 - The installation token credential does not belong to the expected
   App. Re-check the three `KUBESTELLAR_CONSOLE_APP_*` secrets; they
   may point at a different App now.
@@ -145,7 +145,7 @@ installations, open an upstream ticket with GitHub Support referencing:
   the workflow with `GITHUB_TOKEN` — showing `.user.login` is a bot
   but `.performed_via_github_app` is null.
 
-The rewards classifier (`pkg/api/handlers/rewards.go`
+The rewards classifier (`pkg/api/handlers/rewards/handler.go`
 `isConsoleAppSubmitted`) currently reads `performed_via_github_app`.
 If GitHub permanently drops that field, switch the classifier to read
 `.user.login` as its primary signal as a follow-up PR; the attribution
