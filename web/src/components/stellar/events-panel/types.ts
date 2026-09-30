@@ -12,14 +12,14 @@ export const GROUP_CONFIGS: GroupConfig[] = [
     label: 'Critical alerts',
     subtitle: 'Auto-investigation in progress',
     color: 'var(--s-critical)',
-    background: 'rgba(229,73,73,0.06)',
+    background: 'rgba(var(--s-error-rgb), 0.06)',
   },
   {
     key: 'warning',
     label: 'High priority',
     subtitle: 'Investigation complete, awaiting input',
     color: 'var(--s-warning)',
-    background: 'rgba(227,179,65,0.05)',
+    background: 'rgba(var(--s-warning-rgb), 0.05)',
   },
   {
     key: 'info',

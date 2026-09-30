@@ -1,6 +1,6 @@
 import type { StellarObservation } from '../../types/stellar'
 
-const PROACTIVE_NUDGE_CONTAINER_STYLE = { background: 'rgba(56,139,253,0.08)', border: '1px solid rgba(56,139,253,0.3)', borderRadius: 'var(--s-r)' }
+const PROACTIVE_NUDGE_CONTAINER_STYLE = { background: 'rgba(var(--s-info-rgb), 0.08)', border: '1px solid rgba(var(--s-info-rgb), 0.3)', borderRadius: 'var(--s-r)' }
 const PROACTIVE_NUDGE_ICON_STYLE = { color: 'var(--s-brand)', fontSize: 13 }
 const PROACTIVE_NUDGE_CONTENT_STYLE = { flex: 1 }
 const PROACTIVE_NUDGE_SUMMARY_STYLE = { fontSize: 12, color: 'var(--s-text)' }

@@ -11,7 +11,7 @@ const MESSAGE_BUBBLE_STELLAR_STYLE = { maxWidth: '93%', background: 'transparent
 const MESSAGE_BUBBLE_LOADING_DOT_STYLE = { width: 5, height: 5, borderRadius: '50%', background: 'var(--s-brand)' }
 const MESSAGE_BUBBLE_TEXT_STYLE = { whiteSpace: 'pre-wrap' as const, wordBreak: 'break-word' as const }
 const MESSAGE_BUBBLE_WATCH_INFO_STYLE = { color: 'var(--s-info)' }
-const MESSAGE_BUBBLE_WATCH_INDICATOR_STYLE = { width: 6, height: 6, borderRadius: '50%', background: 'var(--s-info)', boxShadow: '0 0 0 2px rgba(56,139,253,0.2)', animation: 's-pulse 2s ease-in-out infinite' }
+const MESSAGE_BUBBLE_WATCH_INDICATOR_STYLE = { width: 6, height: 6, borderRadius: '50%', background: 'var(--s-info)', boxShadow: '0 0 0 2px rgba(var(--s-info-rgb), 0.2)', animation: 's-pulse 2s ease-in-out infinite' }
 const MESSAGE_BUBBLE_META_STYLE = { color: 'var(--s-text-dim)', fontFamily: 'var(--s-mono)' }
 
 interface MessageMeta {
