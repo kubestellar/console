@@ -1,5 +1,5 @@
 import type { RefObject } from 'react'
-import { Play, RotateCcw, {t('kubeKart.pause', 'Pause')}, Trophy, Flag, Timer, Gauge } from 'lucide-react'
+import { Play, RotateCcw, Pause, Trophy, Flag, Timer, Gauge } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../ui/StatusBadge'
 import { AI_COUNT, CANVAS_HEIGHT, CANVAS_WIDTH, MAX_SPEED, type GameState } from './KubeKart.constants'
