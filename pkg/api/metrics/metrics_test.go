@@ -95,6 +95,41 @@ func TestStellarSchedulerMetrics(t *testing.T) {
 	}
 }
 
+// TestStellarWatcherMetrics verifies that recording watcher poll cycles and
+// errors increments the expected bounded series without introducing
+// unbounded label values (e.g. no cluster name).
+func TestStellarWatcherMetrics(t *testing.T) {
+	RecordStellarWatcherPollCycle(0)
+	RecordStellarWatcherPollError(StellarWatcherErrorListClusters)
+	RecordStellarWatcherPollError(StellarWatcherErrorClusterPollPanic)
+
+	app := fiber.New()
+	app.Get("/metrics", Handler())
+
+	req := httptest.NewRequest("GET", "/metrics", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("metrics scrape failed: %v", err)
+	}
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("failed to read metrics body: %v", err)
+	}
+	body := string(bodyBytes)
+
+	for _, want := range []string{
+		"console_stellar_watcher_poll_cycles_total",
+		"console_stellar_watcher_poll_duration_seconds",
+		`console_stellar_watcher_poll_errors_total{error_type="list_clusters"}`,
+		`console_stellar_watcher_poll_errors_total{error_type="cluster_poll_panic"}`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("expected metrics output to contain %q, got:\n%s", want, body)
+		}
+	}
+}
+
 // TestGPUUtilizationWorkerMetrics verifies that recording GPU utilization
 // worker scrape cycles, per-reservation outcomes, DCGM scrape errors, and
 // alert send errors increments the expected bounded series.
