@@ -17,6 +17,10 @@
   --s-brand: hsl(var(--primary));
   --s-brand-foreground: hsl(var(--primary-foreground));
   --s-brand-dim: hsl(var(--primary) / 0.16);
+  /* Base RGB triples for semantic tint/border overlays (rgba(var(--s-*-rgb), alpha)). */
+  --s-warning-rgb: 227, 179, 65;
+  --s-success-rgb: 63, 185, 80;
+  --s-info-rgb: 56, 139, 253;
   --s-mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', ui-monospace, monospace;
   --s-sans: 'Geist', 'Outfit', system-ui, sans-serif;
   --s-r: 6px;

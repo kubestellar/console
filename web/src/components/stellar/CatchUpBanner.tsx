@@ -43,8 +43,8 @@ export function CatchUpBanner({ catchUp, onDismiss }: Props) {
     <div style={{
       margin: BANNER_MARGIN,
       padding: BANNER_PADDING,
-      background: isClean ? 'rgba(63,185,80,0.07)' : 'rgba(56,139,253,0.07)',
-      border: `1px solid ${isClean ? 'rgba(63,185,80,0.25)' : 'rgba(56,139,253,0.25)'}`,
+      background: isClean ? 'rgba(var(--s-success-rgb), 0.07)' : 'rgba(var(--s-info-rgb), 0.07)',
+      border: `1px solid ${isClean ? 'rgba(var(--s-success-rgb), 0.25)' : 'rgba(var(--s-info-rgb), 0.25)'}`,
       borderRadius: 'var(--s-r)',
     }}>
       <div className="flex items-start gap-2">

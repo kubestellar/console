@@ -35,8 +35,8 @@ export function TasksPanel({ tasks, expanded, onToggle, onStatusChange }: TasksP
         <span className="px-1.5" style={{
           fontSize: 10,
           color: 'var(--s-warning)',
-          background: 'rgba(227,179,65,0.12)',
-          border: '1px solid rgba(227,179,65,0.3)',
+          background: 'rgba(var(--s-warning-rgb), 0.12)',
+          border: '1px solid rgba(var(--s-warning-rgb), 0.3)',
           borderRadius: 10,
         }}>
           {tasks.length} open
