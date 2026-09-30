@@ -187,21 +187,21 @@ export const ResourceTrend = memo(function ResourceTrend() {
     switch (view) {
       case 'compute':
         return [
-          { dataKey: 'cpuCores', color: getChartColor(2), name: 'CPU Cores' },
-          { dataKey: 'memoryGB', color: getChartColor(3), name: 'Memory (GB)' },
+          { dataKey: 'cpuCores', color: getChartColor(2), name: t('cards:resourceTrend.cpuCores'), unit: 'cores' as const },
+          { dataKey: 'memoryGB', color: getChartColor(3), name: t('cards:resourceTrend.memoryGB'), unit: 'gb' as const },
         ]
       case 'workloads':
         return [
-          { dataKey: 'pods', color: getChartColor(1), name: 'Pods' },
-          { dataKey: 'nodes', color: getChartColor(4), name: 'Nodes' },
+          { dataKey: 'pods', color: getChartColor(1), name: t('cards:resourceTrend.pods'), unit: 'count' as const },
+          { dataKey: 'nodes', color: getChartColor(4), name: t('cards:resourceTrend.nodes'), unit: 'count' as const },
         ]
       default:
         return [
-          { dataKey: 'cpuCores', color: getChartColor(2), name: 'CPU' },
-          { dataKey: 'pods', color: getChartColor(1), name: 'Pods' },
+          { dataKey: 'cpuCores', color: getChartColor(2), name: t('cards:resourceTrend.cpu'), unit: 'cores' as const },
+          { dataKey: 'pods', color: getChartColor(1), name: t('cards:resourceTrend.pods'), unit: 'count' as const },
         ]
     }
-  }, [view])
+  }, [view, t])
 
   const chartOption = useMemo(() => ({
     backgroundColor: 'transparent',
@@ -226,6 +226,21 @@ export const ResourceTrend = memo(function ResourceTrend() {
       backgroundColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).backgroundColor as string,
       borderColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).borderColor as string,
       textStyle: { color: CHART_TICK_COLOR, fontSize: CHART_BODY_FONT_SIZE },
+      // Append the metric's unit (cores/GB) to each tooltip row so values are
+      // unambiguous at a glance instead of bare numbers — issue #23822.
+      formatter: (params: Array<{ seriesName: string; value: number; color: string }>) => {
+        let html = ''
+        for (const p of (params || [])) {
+          const line = lines.find((l) => l.name === p.seriesName)
+          const formattedValue = line?.unit === 'cores'
+            ? t('cards:resourceTrend.tooltipCpuCores', { value: p.value })
+            : line?.unit === 'gb'
+              ? t('cards:resourceTrend.tooltipMemoryGB', { value: p.value.toFixed(1) })
+              : String(p.value)
+          html += `<div><span style="color:${p.color}">\u25CF</span> ${p.seriesName}: ${formattedValue}</div>`
+        }
+        return html
+      },
     },
     legend: {
       data: lines.map(l => l.name),
@@ -246,13 +261,13 @@ export const ResourceTrend = memo(function ResourceTrend() {
       },
       itemStyle: { color: line.color },
     })),
-  }), [history, lines])
+  }), [history, lines, t])
 
   // Loading gate — runs AFTER all hooks to keep hook order stable (React #310).
   if (isLoading && history.length === 0) {
     return (
       <div className="h-full flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading resources...</div>
+        <div className="animate-pulse text-muted-foreground">{t('cards:resourceTrend.loading')}</div>
       </div>
     )
   }
@@ -350,9 +365,9 @@ export const ResourceTrend = memo(function ResourceTrend() {
         {history.length < 2 ? (
           <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-sm">
             <TrendingUp className="w-6 h-6 mb-2 opacity-50" aria-hidden="true" />
-            <span>{history.length === 0 ? 'No resource data available' : 'Collecting data...'}</span>
+            <span>{history.length === 0 ? t('cards:resourceTrend.noData') : t('cards:resourceTrend.collecting')}</span>
             {history.length === 1 && (
-              <span className="text-xs mt-1">Chart will appear after next interval</span>
+              <span className="text-xs mt-1">{t('cards:resourceTrend.nextInterval')}</span>
             )}
           </div>
         ) : (

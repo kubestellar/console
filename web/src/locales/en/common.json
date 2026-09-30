@@ -95,6 +95,7 @@
     "critical": "Critical",
     "swappingTo": "Swapping to \"{{cardName}}\" in 30s",
     "noClusters": "No clusters available",
+    "noClustersCta": "Connect a cluster to get started",
     "moreItems": "+{{count}} more",
     "moreItems_one": "+{{count}} more",
     "moreItems_other": "+{{count}} more"
