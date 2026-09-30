@@ -16,35 +16,38 @@ not apply — treat it as a real security finding instead.
 
 ## Current Status
 
-**The `Alert on scan failure` companion step described below is not merged into
-`nightly-dast.yml`.** The `operations` agent's GitHub App token lacks the `workflows`
-permission required to create or update any file under `.github/workflows/` — a
-verified test push to this exact file was rejected by GitHub before a PR could even
-be opened:
+**Fixed — with a different implementation than the "Proposed Fix" below.** PR
+[#23525](https://github.com/kubestellar/console/pull/23525) (merged 2026-09-17,
+closing tracking issue [#23085](https://github.com/kubestellar/console/issues/23085))
+removed `continue-on-error: true` from both the `Run ZAP Baseline Scan` and `Run
+Nuclei Scan` steps, so a scanner crash/timeout/action failure now fails the job/run
+outright instead of being masked as "zero findings". `"Nightly DAST Security Scan"`
+was also added to the `workflows:` catch-all in
+`.github/workflows/workflow-failure-issue.yml`, so that job failure now
+opens/updates a tracked issue automatically — no dedicated
+`nightly-dast:pipeline-failure` label or standalone alert step was added. The same
+PR added an `id:` to each scan step and threaded its `outcome` through to the
+`Create or Close ZAP/Nuclei Issue` step, which now skips the auto-close-on-clean-scan
+branch (and comments a warning instead) when the scan step itself failed — a
+scanner crash can no longer auto-close a genuine open security-finding issue with a
+false "resolved" message. Verified on current `master`:
+`.github/workflows/nightly-dast.yml`'s scan steps carry no `continue-on-error`, and
+both `steps.zap-results.outputs.scan_outcome` / `steps.nuclei-results.outputs.scan_outcome`
+gate the create-or-close logic.
 
-```
-! [remote rejected] operations/test-workflow-perm-check -> operations/test-workflow-perm-check
-  (refusing to allow a GitHub App to create or update workflow
-  `.github/workflows/nightly-dast.yml` without `workflows` permission)
-```
+## Why This Could Happen Silently (historical — fixed by #23525)
 
-Until a maintainer with that permission applies the step manually (see the
-[Proposed Fix](#proposed-fix) diff below), a crash in either scan step still produces
-a **green** workflow run and is indistinguishable from a clean scan. Use the "Missing
-findings pattern" signal in the table below as the only currently-working detection
-method. See tracking issue [#23085](https://github.com/kubestellar/console/issues/23085).
+Before PR #23525, both `Run ZAP Baseline Scan` and `Run Nuclei Scan` in
+`nightly-dast.yml` were declared with `continue-on-error: true` so a transient
+failure (container crash, network error reaching `console.kubestellar.io`, upstream
+action breakage, timeout) wouldn't fail the whole scheduled run. The downstream parse
+steps guarded on the results file existing (`if [ -f report_json.json ]` / `if [ -f
+nuclei-results.json ] && [ -s nuclei-results.json ]`), and defaulted the count to `0`
+when it was missing. That made `has_findings` come out `false` — exactly the same
+value as a genuinely clean scan. This section is kept to explain the failure class the
+fix addressed; `continue-on-error` is no longer present on either step.
 
-## Why This Can Happen Silently
-
-Both `Run ZAP Baseline Scan` and `Run Nuclei Scan` in `nightly-dast.yml` are declared
-with `continue-on-error: true` so a transient failure (container crash, network error
-reaching `console.kubestellar.io`, upstream action breakage, timeout) doesn't fail the
-whole scheduled run. The downstream parse steps then guard on the results file
-existing (`if [ -f report_json.json ]` / `if [ -f nuclei-results.json ] && [ -s
-nuclei-results.json ]`), and default the count to `0` when it's missing. That makes
-`has_findings` come out `false` — exactly the same value as a genuinely clean scan.
-
-Two compounding effects:
+Two compounding effects (both now closed by the `scan_outcome` gate above):
 
 1. **No alert on scanner failure.** The job's overall conclusion is masked by
    `continue-on-error`, so the run always shows `success` in the Actions tab, with no
@@ -60,17 +63,18 @@ Two compounding effects:
 
 | Signal | Where to look | Status |
 |---|---|---|
-| Dedicated alert issue | Issues labeled `nightly-dast:pipeline-failure` | Not yet available — see [Current Status](#current-status) |
-| Workflow run log | Actions → `Nightly DAST Security Scan` → the `Run ZAP Baseline Scan` / `Run Nuclei Scan` step logs | Works today, but requires manually checking every run |
-| Missing findings pattern | No new `[nightly:dast-zap]` / `[nightly:dast-nuclei]` activity, or a previously-open finding issue closing with no genuinely fixed root cause | The only reliable signal today |
+| Automated failure issue | `workflow-failure-issue.yml`'s catch-all opens/updates an issue whenever `Nightly DAST Security Scan` completes with a non-success conclusion | Works today — no manual polling required |
+| Workflow run log | Actions → `Nightly DAST Security Scan` → the `Run ZAP Baseline Scan` / `Run Nuclei Scan` step logs | Still useful for root-causing a reported failure |
+| Missing findings pattern | No new `[nightly:dast-zap]` / `[nightly:dast-nuclei]` activity, or a previously-open finding issue closing with a "scan itself failed" warning comment instead of a false "resolved" auto-close | Secondary corroboration only — the automated failure issue above is now primary |
 
 ## Triage
 
-1. Open the relevant workflow run (Actions → `Nightly DAST Security Scan`) and inspect
-   the `Run ZAP Baseline Scan` / `Run Nuclei Scan` step logs for the failure reason
-   (container error, network timeout reaching `console.kubestellar.io`, action-version
-   breakage, etc.) — the step's red ❌ marker is visible in the logs even though
-   `continue-on-error: true` keeps the job green.
+1. Start from the automated failure issue opened by `workflow-failure-issue.yml`
+   (or, if triaging directly, open the relevant workflow run at Actions →
+   `Nightly DAST Security Scan`) and inspect the `Run ZAP Baseline Scan` / `Run
+   Nuclei Scan` step logs for the failure reason (container error, network timeout
+   reaching `console.kubestellar.io`, action-version breakage, etc.) — the failed
+   step now fails the job/run itself (no `continue-on-error` masking it).
 2. Reproduce locally:
    ```bash
    # ZAP
@@ -80,10 +84,12 @@ Two compounding effects:
    # Nuclei
    nuclei -u https://console.kubestellar.io -severity medium,high,critical -json
    ```
-3. If a previously-open `[nightly:dast-zap]` or `[nightly:dast-nuclei]` issue was
-   auto-closed on the same date as the failed run, **reopen it** — the "Auto-closing"
-   comment does not distinguish a real clean scan from a crash, and closing on a
-   crash removes tracking for a genuine unresolved finding.
+3. If a previously-open `[nightly:dast-zap]` or `[nightly:dast-nuclei]` issue has a
+   warning comment saying the scan itself failed (rather than a clean-scan
+   auto-close), leave it open and use it to track the real finding — the
+   `scan_outcome` gate added in #23085/#23525 prevents the auto-close branch from
+   running in that case, so no reopen action should be needed unless the gate
+   itself regresses.
 
 ## Recovery
 
@@ -97,21 +103,27 @@ Two compounding effects:
 
 ## Verifying Recovery
 
-- Confirm the next scheduled or manual run completes the scan step without failing,
+- Confirm the next scheduled or manual run completes both scan steps without failing,
   and that `has_findings` reflects an actual parsed result (not the zero-by-default
   fallback).
-- Confirm no incorrect auto-close happened on a previously-open finding issue.
+- Confirm no incorrect auto-close happened on a previously-open finding issue — a
+  scan-step failure should now produce a warning comment instead.
+- Confirm no new automated failure issue remains open from `workflow-failure-issue.yml`
+  for `Nightly DAST Security Scan`.
 
-## Proposed Fix
+## Proposed Fix (superseded — kept for historical context)
+
+The paragraph below described the originally proposed remediation before #23085 was
+fixed by #23525. It was **not** applied as such; the actual fix (removing
+`continue-on-error` and adding the workflow to the shared failure-issue catch-all)
+achieves the same detection goal through the repo's existing generic mechanism
+instead of a dedicated label/step. Kept only for how the gap was first analyzed.
 
 Add an `if: always() && steps.<scan-id>.outcome == 'failure'` step immediately after
 each scan step (requires giving each scan step an `id:`) that files/updates a
 dedicated issue labeled `nightly-dast:pipeline-failure`, and skip the existing
 "Create or Close" step when the scan itself failed rather than treating a missing
-results file as "no findings". A maintainer with the `workflows` GitHub App
-permission (or push access) needs to apply this directly to
-`.github/workflows/nightly-dast.yml`; it cannot be delivered as an automated PR from
-this agent for the reason described in [Current Status](#current-status).
+results file as "no findings".
 
 ## Recording the Incident
 
