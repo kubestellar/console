@@ -558,7 +558,7 @@ describe('Tab switching', () => {
 
   it('renders install link for disabled tab', () => {
     render(<UnifiedDashboard config={tabConfig} />)
-    const installLink = screen.getByText('Install')
+    const installLink = screen.getByText('common.install')
     expect(installLink.closest('a')?.href).toBe('https://example.com/')
   })
 

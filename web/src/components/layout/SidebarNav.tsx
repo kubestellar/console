@@ -1,12 +1,15 @@
 import { Fragment, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Plus } from 'lucide-react'
+import { Plus, Search, X } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { moveFocusByKey } from '../../lib/a11y/rovingFocus'
+import { Input } from '../ui/Input'
 import { SidebarNavItemRow, type SidebarNavItemRowProps } from './sidebar/SidebarNavItemRow'
 import type { NavSection, SidebarNavItem } from './SidebarShell'
 
 const PRIMARY_SECTION_INDEX = 0
+/** Minimum total nav entries (across sections) before the search affordance is worth showing */
+const SIDEBAR_SEARCH_MIN_ITEMS = 6
 
 interface SidebarNavProps {
   navSections: NavSection[]
@@ -57,13 +60,29 @@ export function SidebarNav({
 }: SidebarNavProps) {
   const { t } = useTranslation()
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({})
+  const [searchQuery, setSearchQuery] = useState('')
 
   const toggleSection = (id: string) => {
     setCollapsedSections(prev => ({ ...prev, [id]: !prev[id] }))
   }
 
+  const totalItemCount = navSections.reduce((sum, section) => sum + section.items.length, 0)
+  const showSearch = !isCollapsed && totalItemCount >= SIDEBAR_SEARCH_MIN_ITEMS
+  const trimmedQuery = searchQuery.trim().toLowerCase()
+  const isSearching = showSearch && trimmedQuery.length > 0
+
+  const filteredSections: NavSection[] = isSearching
+    ? navSections.map(section => ({
+        ...section,
+        items: section.items.filter(item => item.label.toLowerCase().includes(trimmedQuery)),
+      }))
+    : navSections
+  const totalMatchCount = filteredSections.reduce((sum, section) => sum + section.items.length, 0)
+
   const renderSection = (section: NavSection, index: number) => {
-    const isOpen = !collapsedSections[section.id]
+    if (isSearching && section.items.length === 0) return null
+
+    const isOpen = isSearching || !collapsedSections[section.id]
 
     return (
       <div key={section.id}>
@@ -128,12 +147,46 @@ export function SidebarNav({
 
   return (
     <>
-      {navSections.map((section, index) => {
+      {showSearch && (
+        <div className="mb-3">
+          <Input
+            data-testid="sidebar-nav-search"
+            inputSize="sm"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t('sidebar.searchNavPlaceholder', 'Search navigation…')}
+            aria-label={t('sidebar.searchNav', 'Search navigation')}
+            leadingIcon={<Search className="w-3.5 h-3.5" />}
+            trailingIcon={searchQuery ? (
+              <button
+                type="button"
+                data-testid="sidebar-nav-search-clear"
+                onClick={() => setSearchQuery('')}
+                className="pointer-events-auto text-muted-foreground hover:text-foreground"
+                aria-label={t('common.clearSearch')}
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            ) : undefined}
+          />
+        </div>
+      )}
+
+      {isSearching && totalMatchCount === 0 && (
+        <p
+          data-testid="sidebar-nav-search-empty"
+          className="px-3 py-4 text-xs text-muted-foreground text-center"
+        >
+          {t('sidebar.noNavResults', 'No matching navigation items')}
+        </p>
+      )}
+
+      {filteredSections.map((section, index) => {
         return (
           <Fragment key={section.id}>
             {renderSection(section, index)}
 
-            {index === PRIMARY_SECTION_INDEX && showAddMore && !isCollapsed && (
+            {index === PRIMARY_SECTION_INDEX && showAddMore && !isCollapsed && !isSearching && (
               <button
                 data-testid="sidebar-customize"
                 onClick={onAddMore}
