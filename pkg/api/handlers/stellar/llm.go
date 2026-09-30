@@ -121,8 +121,11 @@ func buildLLMContext(state *OperationalState, memories []store.StellarMemoryEntr
 }
 
 func scoreAndSortMemories(memories []store.StellarMemoryEntry) []store.StellarMemoryEntry {
-	scored := make([]store.StellarMemoryEntry, 0, len(memories))
-	scored = append(scored, memories...)
+	if len(memories) == 0 {
+		return []store.StellarMemoryEntry{}
+	}
+	scored := make([]store.StellarMemoryEntry, len(memories))
+	copy(scored, memories)
 	sort.Slice(scored, func(i, j int) bool {
 		iScore := memoryScore(scored[i])
 		jScore := memoryScore(scored[j])
