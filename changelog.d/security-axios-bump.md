@@ -1,0 +1,1 @@
+- Bumped axios to ^1.20.0 and dompurify to ^3.4.16 to resolve npm audit high/low vulnerabilities (GHSA-vh66-26gq-q6x8 and related).
