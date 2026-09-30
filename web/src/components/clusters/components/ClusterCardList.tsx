@@ -1,11 +1,12 @@
 import { memo } from 'react'
-import { AlertCircle, Box, ChevronRight, Cpu, Globe, KeyRound, RefreshCw, Server, ShieldAlert, Star, WifiOff } from 'lucide-react'
+import { AlertCircle, Box, ChevronRight, Clock, Cpu, Globe, KeyRound, RefreshCw, Server, ShieldAlert, Star, WifiOff } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { FlashingValue } from '../../ui/FlashingValue'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import { CloudProviderIcon, detectCloudProvider, getProviderColor } from '../../ui/CloudProviderIcon'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { isClusterHealthy, isClusterLoading, isClusterUnreachable } from '../utils'
+import { formatLastSeen } from '../../../lib/errorClassifier'
 import type { ClusterCardProps } from './ClusterGrid.types'
 import { ActionTooltipWrapper, RemoveClusterButton, handleCardKeyDown } from './ClusterGrid.common'
 import { CLUSTER_GRID_DIV_STYLE_2, DISABLED_CLUSTER_ACTION_CLASS, LOCAL_PLATFORMS, THEME_COLOR } from './ClusterGrid.constants'
@@ -102,6 +103,16 @@ aka: ${(cluster.aliases || []).join(', ')}` : cluster.context || cluster.name}
             <Globe className="w-3 h-3 shrink-0" />
             <span className="truncate">{cluster.server?.replace(/^https?:\/\//, '') || '-'}</span>
           </div>
+
+          {cluster.lastSeen && (
+            <div
+              className="hidden lg:flex items-center gap-1 text-2xs text-muted-foreground shrink-0"
+              title={typeof cluster.lastSeen === 'string' ? cluster.lastSeen : undefined}
+            >
+              <Clock className="w-3 h-3" />
+              <span>{formatLastSeen(cluster.lastSeen)}</span>
+            </div>
+          )}
 
           <ClusterIAMRefreshHint cluster={cluster} className="hidden md:flex items-center gap-1 text-2xs text-muted-foreground shrink-0" label={null} />
 

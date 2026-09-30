@@ -7,6 +7,7 @@ import { CloudProviderIcon, detectCloudProvider, getConsoleUrl, getProviderColor
 import { StatusBadge } from '../../ui/StatusBadge'
 import { isClusterHealthy, isClusterLoading, isClusterUnreachable } from '../utils'
 import { sanitizeUrl } from '../../../lib/utils/sanitizeUrl'
+import { formatLastSeen } from '../../../lib/errorClassifier'
 import type { ClusterCardProps } from './ClusterGrid.types'
 import { ActionTooltipWrapper, RemoveClusterButton, handleCardKeyDown } from './ClusterGrid.common'
 import { CLUSTER_GRID_DIV_STYLE_1, DISABLED_CLUSTER_ACTION_CLASS, LOCAL_PLATFORMS, THEME_COLOR } from './ClusterGrid.constants'
@@ -223,7 +224,10 @@ aka: ${(cluster.aliases || []).join(', ')}` : cluster.context || cluster.name}
             </div>
           )}
           <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Source: {cluster.source || 'kubeconfig'}</span>
+            <span className="text-muted-foreground" title={typeof cluster.lastSeen === 'string' ? cluster.lastSeen : undefined}>
+              Source: {cluster.source || 'kubeconfig'}
+              {cluster.lastSeen && ` · Updated ${formatLastSeen(cluster.lastSeen)}`}
+            </span>
             <div className="flex items-center gap-2">
               {LOCAL_PLATFORMS.has(provider) && (
                 <LocalClusterControls clusterName={cluster.name} provider={provider} unreachable={unreachable} />
