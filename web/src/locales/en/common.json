@@ -5339,7 +5339,10 @@
       "dismissAriaLabel": "Dismiss catch-up summary"
     },
     "watchDetail": {
-      "executeViaChat": "Execute via chat →"
+      "executeViaChat": "Execute via chat →",
+      "markResolved": "✓ Mark resolved",
+      "snoozeOneHour": "⏸ Snooze 1h",
+      "stopWatching": "✕ Stop watching"
     },
     "auditLog": {
       "title": "Stellar audit log",
