@@ -83,7 +83,8 @@ const GPUUsageTrend = memo(function GPUUsageTrend() {
     isRefreshing,
     isDemoFallback,
     isFailed,
-    consecutiveFailures } = useCachedGPUNodes()
+    consecutiveFailures,
+    lastRefresh } = useCachedGPUNodes()
   const { deduplicatedClusters: clusters } = useClusters()
   const { shouldUseDemoData: isDemoMode } = useCardDemoState({ requires: 'agent' })
   // Use the shared metrics-history snapshots as a last-known-good fallback
@@ -200,7 +201,8 @@ const GPUUsageTrend = memo(function GPUUsageTrend() {
     hasAnyData: hasData,
     isDemoData: isDemoMode || isDemoFallback,
     isFailed,
-    consecutiveFailures })
+    consecutiveFailures,
+    lastRefresh })
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
   const [showClusterFilter, setShowClusterFilter] = useState(false)

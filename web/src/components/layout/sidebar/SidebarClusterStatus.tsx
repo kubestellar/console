@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next'
-import { CheckCircle2, AlertTriangle, WifiOff } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { CheckCircle2, AlertTriangle, WifiOff, Plus } from 'lucide-react'
+import { ROUTES } from '../../../config/routes'
 
 interface SidebarClusterStatusProps {
   healthyClusters: number
@@ -15,6 +17,7 @@ export function SidebarClusterStatus({
   onStatusClick,
 }: SidebarClusterStatusProps) {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const total = healthyClusters + unhealthyClusters + unreachableClusters
 
   return (
@@ -23,7 +26,17 @@ export function SidebarClusterStatus({
         {t('labels.clusterStatus')}
       </h4>
       {total === 0 ? (
-        <p className="text-xs text-muted-foreground">{t('labels.noClusters')}</p>
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">{t('labels.noClusters')}</p>
+          <button
+            data-testid="sidebar-no-clusters-cta"
+            onClick={() => navigate(ROUTES.CLUSTERS)}
+            className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg border border-dashed border-border text-xs text-muted-foreground hover:text-foreground hover:border-purple-500/50 hover:bg-purple-500/10 transition-all duration-200"
+          >
+            <Plus className="w-3.5 h-3.5" aria-hidden="true" />
+            {t('labels.noClustersCta')}
+          </button>
+        </div>
       ) : (
         <div className="space-y-2">
           {healthyClusters > 0 && (

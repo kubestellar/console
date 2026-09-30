@@ -4938,5 +4938,18 @@
     "displayMask": "Display Mask",
     "lockMask": "Lock mask selection",
     "unlockMask": "Unlock mask selection"
+  },
+  "resourceTrend": {
+    "loading": "Loading resources...",
+    "noData": "No resource data available",
+    "collecting": "Collecting data...",
+    "nextInterval": "Chart will appear after next interval",
+    "cpu": "CPU",
+    "cpuCores": "CPU Cores",
+    "memoryGB": "Memory (GB)",
+    "pods": "Pods",
+    "nodes": "Nodes",
+    "tooltipCpuCores": "{{value}} cores",
+    "tooltipMemoryGB": "{{value}} GB"
   }
 }
