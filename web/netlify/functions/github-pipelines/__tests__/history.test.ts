@@ -76,10 +76,14 @@ describe('readHistory', () => {
 describe('writeHistory', () => {
   it('writes history to store', async () => {
     const store = makeStore()
+    // Use "today" rather than a hardcoded date so this test stays inside the
+    // 90-day retention window regardless of when it runs — a fixed past date
+    // eventually crosses the trim cutoff and gets deleted by writeHistory.
+    const recentDate = new Date().toISOString().slice(0, 10)
     const history: HistoryBlob = {
       updatedAt: '2026-01-01T00:00:00Z',
       days: {
-        'repo': { 'wf': { '2026-07-01': { runId: 1, conclusion: 'success', htmlUrl: 'x' } } },
+        'repo': { 'wf': { [recentDate]: { runId: 1, conclusion: 'success', htmlUrl: 'x' } } },
       },
     }
 
@@ -87,7 +91,7 @@ describe('writeHistory', () => {
 
     expect(store.set).toHaveBeenCalledWith('history-v1', expect.any(String))
     const written = JSON.parse(store.set.mock.calls[0][1])
-    expect(written.days.repo.wf['2026-07-01']).toBeDefined()
+    expect(written.days.repo.wf[recentDate]).toBeDefined()
     expect(new Date(written.updatedAt).getTime()).toBeGreaterThan(0)
   })
 
