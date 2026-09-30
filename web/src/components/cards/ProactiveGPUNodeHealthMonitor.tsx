@@ -9,7 +9,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useCachedGPUNodeHealth } from '../../hooks/useCachedData'
 import type { GPUNodeHealthStatus, GPUNodeHealthCheck } from '../../hooks/useMCP'
-import { StatusBadge, CheckRow, GPUNodeAIActions } from './ProactiveGPUNodeHealthMonitor.StatusParts'
+import { StatusBadge, CheckRow, GPUNodeAIActions } from './ProactiveGPUNodeHealthMonitor.StatusPanels'
 import { CronJobClusterPanel } from './ProactiveGPUNodeHealthMonitor.CronJobPanel'
 import { SORT_OPTIONS, STATUS_ORDER, PAGE_SIZE, type SortField, type SortDirection } from './ProactiveGPUNodeHealthMonitor.constants'
 

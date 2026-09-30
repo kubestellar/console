@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useGPUHealthCronJob } from '../../hooks/useCachedData'
-import { StatusBadge, CheckRow } from './ProactiveGPUNodeHealthMonitor.StatusParts'
+import { StatusBadge, CheckRow } from './ProactiveGPUNodeHealthMonitor.StatusPanels'
 import {
   DEFAULT_SCHEDULE,
   DEFAULT_NAMESPACE,
