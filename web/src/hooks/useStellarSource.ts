@@ -30,8 +30,8 @@ export interface StellarMissionTriggerPayload {
 export interface CatchUpState { summary: string; kind: string; highlights?: string[] }
 
 function hasStellarAuthCredentials(): boolean {
-  if (localStorage.getItem('token')) return true
-  if (localStorage.getItem('kc-has-session') === 'true') return true
+  if (safeGetItem('token')) return true
+  if (safeGetItem('kc-has-session') === 'true') return true
   return false
 }
 function parseStellarEvent<T>(event: Event, eventName: string): T | null {

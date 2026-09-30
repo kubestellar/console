@@ -7,6 +7,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Fixed
+- Routed unguarded `localStorage` reads/writes through the existing safe-storage helpers so quota/private-browsing errors cannot crash components.
+
 ## [v0.3.29] - 2026-05-31
 
 ### Added
