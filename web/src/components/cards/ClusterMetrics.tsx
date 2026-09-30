@@ -32,6 +32,10 @@ import {
   type TimeRange,
 } from './ClusterMetrics.data'
 
+// Re-export data helpers that form part of this module's public API
+// (consumed by ClusterMetrics.test.tsx and external callers).
+export { SUPPORTED_TIME_RANGE_KEYS, buildDemoMetricHistory } from './ClusterMetrics.data'
+
 // Lazy-load chart components to defer the echarts vendor chunk (~1.14 MB)
 // from the critical loading path. The card itself stays eager — only the
 // chart subtrees are deferred behind React.lazy + Suspense.
