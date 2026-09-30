@@ -272,6 +272,37 @@ var (
 		[]string{"outcome"},
 	)
 
+	// stellarWatcherPollCyclesTotal and stellarWatcherPollDuration cover the
+	// Stellar notification watcher's ticker-driven poll loop
+	// (pkg/stellar/watcher/watcher.go), which today only logs completion via
+	// slog and — unlike the sibling Stellar scheduler and stale-approval
+	// sweep loops above — has no cycle or error counters.
+	stellarWatcherPollCyclesTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "console_stellar_watcher_poll_cycles_total",
+			Help: "Total number of completed Stellar watcher poll cycles (cluster list succeeded).",
+		},
+	)
+
+	stellarWatcherPollDuration = prometheus.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "console_stellar_watcher_poll_duration_seconds",
+			Help:    "Duration of a full Stellar watcher poll cycle across all clusters, in seconds.",
+			Buckets: prometheus.DefBuckets,
+		},
+	)
+
+	stellarWatcherPollErrorsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "console_stellar_watcher_poll_errors_total",
+			Help: "Total Stellar watcher poll errors, by error type.",
+		},
+		// error_type is a fixed, bounded set ("list_clusters",
+		// "cluster_poll_panic") — never a cluster name or other
+		// unbounded value.
+		[]string{"error_type"},
+	)
+
 	initOnce sync.Once
 )
 
@@ -312,6 +343,9 @@ func Init() {
 		prometheus.MustRegister(websocketDisconnectsTotal)
 		prometheus.MustRegister(websocketRejectedTotal)
 		prometheus.MustRegister(selfUpgradeTriggerTotal)
+		prometheus.MustRegister(stellarWatcherPollCyclesTotal)
+		prometheus.MustRegister(stellarWatcherPollDuration)
+		prometheus.MustRegister(stellarWatcherPollErrorsTotal)
 	})
 }
 
@@ -560,4 +594,27 @@ const (
 func RecordSelfUpgradeTrigger(outcome string) {
 	Init()
 	selfUpgradeTriggerTotal.WithLabelValues(outcome).Inc()
+}
+
+// Stellar watcher poll error types for RecordStellarWatcherPollError. This
+// is the complete, fixed set of values the "error_type" label may take —
+// never a cluster name, user ID, or other unbounded value.
+const (
+	StellarWatcherErrorListClusters     = "list_clusters"
+	StellarWatcherErrorClusterPollPanic = "cluster_poll_panic"
+)
+
+// RecordStellarWatcherPollCycle records one completed Stellar watcher poll
+// cycle (cluster list succeeded) and its wall-clock duration.
+func RecordStellarWatcherPollCycle(duration time.Duration) {
+	Init()
+	stellarWatcherPollCyclesTotal.Inc()
+	stellarWatcherPollDuration.Observe(duration.Seconds())
+}
+
+// RecordStellarWatcherPollError records one Stellar watcher poll error.
+// errorType must be one of the StellarWatcherError* constants above.
+func RecordStellarWatcherPollError(errorType string) {
+	Init()
+	stellarWatcherPollErrorsTotal.WithLabelValues(errorType).Inc()
 }

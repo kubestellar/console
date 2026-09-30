@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	consolemetrics "github.com/kubestellar/console/pkg/api/metrics"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/store"
@@ -99,6 +100,7 @@ func (w *Watcher) poll(ctx context.Context) {
 	clusters, err := w.client.ListClusters(pollCtx)
 	if err != nil {
 		slog.Warn("stellar/watcher: list clusters failed", "error", err)
+		consolemetrics.RecordStellarWatcherPollError(consolemetrics.StellarWatcherErrorListClusters)
 		return
 	}
 
@@ -117,6 +119,7 @@ func (w *Watcher) poll(ctx context.Context) {
 			defer func() {
 				if r := recover(); r != nil {
 					slog.Error("stellar/watcher: pollCluster panicked", "cluster", name, "recover", r)
+					consolemetrics.RecordStellarWatcherPollError(consolemetrics.StellarWatcherErrorClusterPollPanic)
 				}
 			}()
 			added := w.pollCluster(pollCtx, name)
@@ -126,7 +129,9 @@ func (w *Watcher) poll(ctx context.Context) {
 		})
 	}
 	wg.Wait()
-	slog.Info("stellar/watcher: poll complete", "clusters", len(clusters), "new_notifs", newNotifs, "duration_ms", int(time.Since(start).Milliseconds()))
+	duration := time.Since(start)
+	consolemetrics.RecordStellarWatcherPollCycle(duration)
+	slog.Info("stellar/watcher: poll complete", "clusters", len(clusters), "new_notifs", newNotifs, "duration_ms", int(duration.Milliseconds()))
 }
 
 func (w *Watcher) pollCluster(ctx context.Context, cluster string) int {
