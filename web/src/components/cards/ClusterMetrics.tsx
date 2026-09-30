@@ -8,7 +8,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { safeGetJSON, safeSetJSON } from '../../lib/utils/localStorage'
-import { ClusterMetricsSummary } from './ClusterMetrics.summary'
+import { ClusterMetricsSummary } from './ClusterMetrics.SummaryPanel'
 import {
   CHART_AREA_MIN_HEIGHT,
   CHART_AREA_STYLE,

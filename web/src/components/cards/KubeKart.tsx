@@ -24,7 +24,7 @@ import {
   type PowerUp,
 } from './KubeKart.constants'
 import { renderKubeKartFrame } from './KubeKart.canvas'
-import { KubeKartView } from './KubeKart.ui'
+import { KubeKartView } from './KubeKart.ViewPanel'
 
 export function KubeKart() {
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
