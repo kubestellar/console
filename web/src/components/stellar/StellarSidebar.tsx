@@ -14,7 +14,6 @@ import '../../styles/stellar.css'
 
 const STELLAR_RAIL_WIDTH_PX = 40
 const STELLAR_RAIL_PADDING_TOP_PX = 12
-const STELLAR_RAIL_GAP_PX = 10
 const STELLAR_NAV_BUTTON_SIZE_PX = 24
 const STELLAR_NAV_FONT_SIZE_PX = 11
 const STELLAR_UNREAD_BADGE_SIZE_PX = 16
@@ -60,17 +59,14 @@ export function StellarSidebar() {
     <div className="stellar-theme relative">
       <nav
         aria-label="Stellar shortcuts"
+        className="flex flex-col items-center gap-2.5"
         style={{
           width: STELLAR_RAIL_WIDTH_PX,
           flexShrink: 0,
           height: '100%',
           background: 'var(--s-surface)',
           borderLeft: '1px solid var(--s-border)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
           paddingTop: STELLAR_RAIL_PADDING_TOP_PX,
-          gap: STELLAR_RAIL_GAP_PX,
         }}
       >
         <div

@@ -31,9 +31,10 @@ export function ResetDialog({ isOpen, onClose, onReset }: ResetDialogProps) {
       <BaseModal.Content>
         <div className="space-y-3">
           {/* Add Missing Option */}
-          <button
+          <Button
+            variant="ghost"
             onClick={() => onReset('add_missing')}
-            className="w-full p-4 rounded-lg border border-border/50 hover:border-green-500/50 hover:bg-green-500/5 text-left transition-all group"
+            className="w-full h-auto p-4 rounded-lg border border-border/50 hover:border-green-500/50 hover:bg-green-500/5 text-left justify-start transition-all group"
           >
             <div className="flex items-start gap-4">
               <div className="p-2 rounded-lg bg-green-500/10 text-green-400 group-hover:bg-green-500/20">
@@ -46,12 +47,13 @@ export function ResetDialog({ isOpen, onClose, onReset }: ResetDialogProps) {
                 </p>
               </div>
             </div>
-          </button>
+          </Button>
 
           {/* Replace All Option */}
-          <button
+          <Button
+            variant="ghost"
             onClick={() => onReset('replace')}
-            className="w-full p-4 rounded-lg border border-border/50 hover:border-orange-500/50 hover:bg-orange-500/5 text-left transition-all group"
+            className="w-full h-auto p-4 rounded-lg border border-border/50 hover:border-orange-500/50 hover:bg-orange-500/5 text-left justify-start transition-all group"
           >
             <div className="flex items-start gap-4">
               <div className="p-2 rounded-lg bg-orange-500/10 text-orange-400 group-hover:bg-orange-500/20">
@@ -68,7 +70,7 @@ export function ResetDialog({ isOpen, onClose, onReset }: ResetDialogProps) {
                 </div>
               </div>
             </div>
-          </button>
+          </Button>
         </div>
       </BaseModal.Content>
 
