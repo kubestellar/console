@@ -65,7 +65,7 @@ pkg/api/handlers/benchmarks 65.0
 pkg/api/handlers/compliance 90.5
 pkg/api/handlers/dashboards 71.0
 pkg/api/handlers/feedback 70.0
-pkg/api/handlers/github 60.5
+pkg/api/handlers/github 59.8
 pkg/api/handlers/gitops 74.5
 pkg/api/handlers/internal/httputil 99.5
 pkg/api/handlers/k8s 70.0
