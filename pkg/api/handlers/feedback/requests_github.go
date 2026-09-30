@@ -20,6 +20,7 @@ import (
 	"github.com/kubestellar/console/pkg/api/middleware"
 	httpclient "github.com/kubestellar/console/pkg/client"
 	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 // docsRepoName is the GitHub repository name for console documentation issues.
@@ -406,14 +407,14 @@ func (h *FeedbackHandler) getCachedOrFetchPRs(ctx context.Context) []GitHubPR {
 		var openPRs, closedPRs []GitHubPR
 		var wg sync.WaitGroup
 		wg.Add(2)
-		go func() {
+		safego.GoWith("feedback/prs-open", func() {
 			defer wg.Done()
 			openPRs = h.fetchPRPages(ctx, "open")
-		}()
-		go func() {
+		})
+		safego.GoWith("feedback/prs-closed", func() {
 			defer wg.Done()
 			closedPRs = h.fetchPRPages(ctx, "closed")
-		}()
+		})
 		wg.Wait()
 		allPRs := make([]GitHubPR, 0, len(openPRs)+len(closedPRs))
 		allPRs = append(allPRs, openPRs...)

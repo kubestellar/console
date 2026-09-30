@@ -24,6 +24,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/api/middleware"
+	"github.com/kubestellar/console/pkg/safego"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -138,14 +139,14 @@ func (h *GitHubPipelinesHandler) buildPulseFromRequest(req ghpBuildRequest) (any
 	var releaseTag, weeklyTag *string
 	var tagWg sync.WaitGroup
 	tagWg.Add(2)
-	go func() {
+	safego.GoWith("gh-pipelines/release-tag", func() {
 		defer tagWg.Done()
 		releaseTag = ghpLatestReleaseTag(req.ctx, h, pulseRepo)
-	}()
-	go func() {
+	})
+	safego.GoWith("gh-pipelines/weekly-tag", func() {
 		defer tagWg.Done()
 		weeklyTag = ghpLatestWeeklyTag(req.ctx, h, pulseRepo)
-	}()
+	})
 	tagWg.Wait()
 
 	var lastRun *ghpPulseLastRun
@@ -201,7 +202,8 @@ func (h *GitHubPipelinesHandler) buildMatrixFromRequest(req ghpBuildRequest) (an
 	sem := make(chan struct{}, ghpMaxConcurrentFetches)
 	for _, repo := range repos {
 		wg.Add(1)
-		go func(r string) {
+		r := repo
+		safego.GoWith("gh-pipelines/matrix-runs", func() {
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
@@ -212,7 +214,7 @@ func (h *GitHubPipelinesHandler) buildMatrixFromRequest(req ghpBuildRequest) (an
 			mu.Lock()
 			fresh = append(fresh, runs...)
 			mu.Unlock()
-		}(repo)
+		})
 	}
 	wg.Wait()
 	h.history.merge(fresh)
@@ -268,7 +270,8 @@ func (h *GitHubPipelinesHandler) buildFlowFromRequest(req ghpBuildRequest) (any,
 	repoSem := make(chan struct{}, ghpMaxConcurrentFetches)
 	for _, repo := range repos {
 		repoWg.Add(1)
-		go func(repo string) {
+		repo := repo
+		safego.GoWith("gh-pipelines/flow-repo", func() {
 			defer repoWg.Done()
 			repoSem <- struct{}{}
 			defer func() { <-repoSem }()
@@ -291,7 +294,8 @@ func (h *GitHubPipelinesHandler) buildFlowFromRequest(req ghpBuildRequest) (any,
 			jobSem := make(chan struct{}, ghpMaxConcurrentFetches)
 			for i, r := range runs {
 				wg.Add(1)
-				go func(idx int, run ghpWorkflowRun) {
+				idx, run := i, r
+				safego.GoWith("gh-pipelines/flow-jobs", func() {
 					defer wg.Done()
 					jobSem <- struct{}{}
 					defer func() { <-jobSem }()
@@ -300,7 +304,7 @@ func (h *GitHubPipelinesHandler) buildFlowFromRequest(req ghpBuildRequest) (any,
 						return
 					}
 					results[idx] = flowResult{run: run, jobs: jobs}
-				}(i, r)
+				})
 			}
 			wg.Wait()
 			flowMu.Lock()
@@ -310,7 +314,7 @@ func (h *GitHubPipelinesHandler) buildFlowFromRequest(req ghpBuildRequest) (any,
 				}
 			}
 			flowMu.Unlock()
-		}(repo)
+		})
 	}
 	repoWg.Wait()
 	// Newest first by createdAt (lexical works for ISO strings)
@@ -337,7 +341,8 @@ func (h *GitHubPipelinesHandler) buildFailuresFromRequest(req ghpBuildRequest) (
 	repoSem := make(chan struct{}, ghpMaxConcurrentFetches)
 	for _, repo := range repos {
 		failWg.Add(1)
-		go func(repo string) {
+		repo := repo
+		safego.GoWith("gh-pipelines/failures-repo", func() {
 			defer failWg.Done()
 			repoSem <- struct{}{}
 			defer func() { <-repoSem }()
@@ -363,7 +368,7 @@ func (h *GitHubPipelinesHandler) buildFailuresFromRequest(req ghpBuildRequest) (
 			failMu.Lock()
 			rows = append(rows, localRows...)
 			failMu.Unlock()
-		}(repo)
+		})
 	}
 	failWg.Wait()
 	sort.Slice(rows, func(i, j int) bool {
@@ -378,7 +383,8 @@ func (h *GitHubPipelinesHandler) buildFailuresFromRequest(req ghpBuildRequest) (
 		jobSem := make(chan struct{}, ghpMaxConcurrentFetches)
 		for i := range rows {
 			wg.Add(1)
-			go func(idx int) {
+			idx := i
+			safego.GoWith("gh-pipelines/failed-step", func() {
 				defer wg.Done()
 				jobSem <- struct{}{}
 				defer func() { <-jobSem }()
@@ -387,7 +393,7 @@ func (h *GitHubPipelinesHandler) buildFailuresFromRequest(req ghpBuildRequest) (
 					return
 				}
 				rows[idx].FailedStep = ghpFirstFailedStep(jobs)
-			}(i)
+			})
 		}
 		wg.Wait()
 	}
