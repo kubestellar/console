@@ -28,7 +28,6 @@ const STICKY_HEADER_Z_INDEX = 10
 const PANEL_FLEX_SHRINK = 0
 const DEFAULT_OPACITY = 1
 const SCHEDULED_CARD_OPACITY = 0.55
-const PANEL_TITLE_GAP_PX = 6
 const PANEL_TITLE_PADDING_Y_PX = 7
 const PANEL_TITLE_PADDING_X_PX = 12
 const PANEL_TITLE_FONT_SIZE_PX = 10
@@ -226,15 +225,13 @@ export function RecommendedTasksPanel({ createTask }: Props) {
     <div style={{ flexShrink: PANEL_FLEX_SHRINK }}>
       <div
         onClick={() => setCollapsed(c => !c)}
+        className="flex items-center gap-1.5"
         style={{
           position: 'sticky',
           top: STICKY_HEADER_TOP_PX,
           zIndex: STICKY_HEADER_Z_INDEX,
           background: 'var(--s-surface)',
           borderBottom: '1px solid var(--s-border)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: PANEL_TITLE_GAP_PX,
           padding: `${PANEL_TITLE_PADDING_Y_PX}px ${PANEL_TITLE_PADDING_X_PX}px`,
           cursor: 'pointer',
           userSelect: 'none',

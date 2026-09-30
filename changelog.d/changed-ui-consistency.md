@@ -1,0 +1,1 @@
+- Normalized non-standard inline px spacing to Tailwind gap classes in the Stellar sidebar and recommended-tasks panel, and converted `ResetDialog`'s raw `<button>` options to the shared `Button` component.
