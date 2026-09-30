@@ -97,6 +97,11 @@ beforeEach(() => {
   mockStellarApi.resolveNotification.mockResolvedValue({ id: 'n1', status: 'resolved' })
   mockStellarApi.dismissNotification.mockResolvedValue({ id: 'n1', status: 'dismissed' })
   mockStellarApi.startSolve.mockResolvedValue({ solveId: 's1', status: 'running' })
+  // Reset to the default pass-through implementation before every test so that
+  // a test which overrides safeGetItem (e.g. Token polling) cannot leak its
+  // mocked return value into later tests in this file.
+  mockLocalStorage.safeGetItem.mockImplementation((key) => localStorage.getItem(key))
+  mockLocalStorage.safeSetItem.mockImplementation((key, value) => localStorage.setItem(key, value))
   localStorage.setItem('token', 'test-token')
 })
 afterEach(() => {
@@ -186,18 +191,12 @@ describe('useStellarSource — Token polling', () => {
     vi.useFakeTimers()
     localStorage.clear()
     let attempts = 0
-    const getItemSpy = vi.spyOn(localStorage, 'getItem').mockImplementation((key) => {
-      if (key === 'token') {
-        attempts++
-        if (attempts < STELLAR_TOKEN_POLL_MAX_ATTEMPTS) {
-          return null
-        }
-        return 'valid-token'
-      }
-      return null
-    })
+    // hasStellarAuthCredentials() reads via safeGetItem (not localStorage.getItem
+    // directly), so the poll-attempt counter must live in the safeGetItem mock
+    // implementation itself to be advanced on every poll tick.
     mockLocalStorage.safeGetItem.mockImplementation((key) => {
       if (key === 'token') {
+        attempts++
         if (attempts < STELLAR_TOKEN_POLL_MAX_ATTEMPTS) return null
         return 'valid-token'
       }
@@ -213,7 +212,6 @@ describe('useStellarSource — Token polling', () => {
       await vi.advanceTimersByTimeAsync(STELLAR_TOKEN_POLL_INTERVAL_MS * 2)
     })
     expect(eventSourceInstances).toHaveLength(1)
-    getItemSpy.mockRestore()
   })
   it('gives up polling after STELLAR_TOKEN_POLL_MAX_ATTEMPTS and does not open EventSource', async () => {
     vi.useFakeTimers()

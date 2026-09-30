@@ -1,0 +1,1 @@
+- Fixed `useStellarSource` lifecycle tests: the auth-token-polling test spied on the wrong localStorage accessor (bypassed by the `safeGetItem` storage-utility refactor) and left the shared `safeGetItem` mock permanently stubbed to return `null`, causing every subsequent test in the file to fail waiting for the SSE connection to open.
