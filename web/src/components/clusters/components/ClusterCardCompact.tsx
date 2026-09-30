@@ -5,6 +5,7 @@ import { FlashingValue } from '../../ui/FlashingValue'
 import { CloudProviderIcon, detectCloudProvider, getProviderColor } from '../../ui/CloudProviderIcon'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { isClusterHealthy, isClusterUnreachable } from '../utils'
+import { formatLastSeen } from '../../../lib/errorClassifier'
 import type { ClusterCardProps } from './ClusterGrid.types'
 import { RemoveClusterButton, handleCardKeyDown } from './ClusterGrid.common'
 import { THEME_COLOR } from './ClusterGrid.constants'
@@ -35,6 +36,7 @@ export const ClusterCardCompact = memo(function ClusterCardCompact({
       role="button"
       tabIndex={0}
       aria-label={`Select cluster ${cluster.context || cluster.name}`}
+      title={cluster.lastSeen ? `Updated ${formatLastSeen(cluster.lastSeen)}` : undefined}
       className="relative p-px rounded-lg cursor-pointer transition-all hover:shadow-lg hover:-translate-y-0.5 overflow-hidden"
       style={{
         background: `linear-gradient(135deg, color-mix(in srgb, ${providerColor} 38%, transparent) 0%, color-mix(in srgb, ${THEME_COLOR} 25%, transparent) 100%)`,
