@@ -30,7 +30,7 @@ export function EventRow({ event }: EventRowProps) {
       style={{
         border: '1px solid var(--s-border)',
         borderRadius: 'var(--s-rs)',
-        background: event.status === 'in_progress' ? 'rgba(99,150,237,0.05)' : 'var(--s-surface-1)',
+        background: event.status === 'in_progress' ? 'rgba(var(--s-info-rgb), 0.05)' : 'var(--s-surface-1)',
         overflow: 'hidden',
       }}
     >

@@ -196,7 +196,7 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
       {watch.lastUpdate && (
         <div className="mt-1 pl-3 pr-1.5 py-1 text-[11px]" style={{
           color: 'var(--s-text-muted)',
-          background: 'rgba(56,139,253,0.05)',
+          background: 'rgba(var(--s-info-rgb), 0.05)',
           borderRadius: 'var(--s-rs)',
         }}>
           {watch.lastUpdate}
