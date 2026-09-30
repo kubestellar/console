@@ -29,8 +29,8 @@ export function EventsPanelHeader({ unreadCount, hasNotifications, onDismissAll 
           fontSize: 10,
           fontWeight: 700,
           color: 'var(--s-warning)',
-          background: 'rgba(227,179,65,0.12)',
-          border: '1px solid rgba(227,179,65,0.3)',
+          background: 'rgba(var(--s-warning-rgb), 0.12)',
+          border: '1px solid rgba(var(--s-warning-rgb), 0.3)',
           borderRadius: 10,
         }}>
           {unreadCount} new

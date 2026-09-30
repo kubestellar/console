@@ -16,8 +16,8 @@ export function BatchProcessingBanner({ currentBatch, onOpen }: BatchProcessingB
       className="mx-1 mb-2.5 mt-1.5 px-3 py-2.5"
       style={{
         borderLeft: '3px solid var(--s-info)',
-        background: 'rgba(99,150,237,0.08)',
-        border: '1px solid rgba(99,150,237,0.3)',
+        background: 'rgba(var(--s-info-rgb), 0.08)',
+        border: '1px solid rgba(var(--s-info-rgb), 0.3)',
         borderRadius: 'var(--s-r)',
         cursor: 'pointer',
         transition: 'all 0.2s',
@@ -27,10 +27,10 @@ export function BatchProcessingBanner({ currentBatch, onOpen }: BatchProcessingB
         overflow: 'hidden',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.background = 'rgba(99,150,237,0.12)'
+        e.currentTarget.style.background = 'rgba(var(--s-info-rgb), 0.12)'
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.background = 'rgba(99,150,237,0.08)'
+        e.currentTarget.style.background = 'rgba(var(--s-info-rgb), 0.08)'
       }}
     >
       <div style={{

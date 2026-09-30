@@ -72,7 +72,7 @@ export function EventsPanel({
         <div className="px-2.5 py-2" style={{
           flexShrink: 0,
           borderBottom: '1px solid var(--s-border)',
-          background: 'rgba(227,179,65,0.05)',
+          background: 'rgba(var(--s-warning-rgb), 0.05)',
         }}>
           <div className="mb-1.5" style={{
             fontFamily: 'var(--s-mono)',

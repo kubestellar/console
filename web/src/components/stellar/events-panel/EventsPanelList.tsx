@@ -108,7 +108,7 @@ export function EventsPanelList({
       {stellarResolved.length > 0 && (
         <div className="mt-2 px-1">
           <div className="mb-1 flex items-baseline gap-2 px-1.5 py-1" style={{
-            background: 'rgba(63,185,80,0.06)',
+            background: 'rgba(var(--s-success-rgb), 0.06)',
             borderLeft: '3px solid var(--s-success)',
             borderRadius: 'var(--s-rs)',
           }}>

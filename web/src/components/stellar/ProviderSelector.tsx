@@ -150,7 +150,7 @@ export function ProviderSelector({ session, onSelect }: Props) {
             }}
             className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[11px]"
             style={{
-              background: !session?.provider ? 'rgba(99,102,241,0.12)' : 'transparent',
+              background: !session?.provider ? 'var(--s-brand-dim)' : 'transparent',
               border: 'none', color: 'var(--s-text)',
               cursor: 'pointer',
             }}
@@ -180,7 +180,7 @@ export function ProviderSelector({ session, onSelect }: Props) {
                     }}
                     className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[11px]"
                     style={{
-                      background: isSelected ? 'rgba(99,102,241,0.12)' : 'transparent',
+                      background: isSelected ? 'var(--s-brand-dim)' : 'transparent',
                       border: 'none', color: 'var(--s-text)',
                       cursor: 'pointer',
                     }}
@@ -244,7 +244,7 @@ export function ProviderSelector({ session, onSelect }: Props) {
                       }}
                       className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[11px]"
                       style={{
-                        background: isSelected ? 'rgba(99,102,241,0.12)' : 'transparent',
+                        background: isSelected ? 'var(--s-brand-dim)' : 'transparent',
                         border: 'none', color: opt.available ? 'var(--s-text)' : 'var(--s-text-dim)',
                         cursor: opt.available ? 'pointer' : 'default',
                       }}
