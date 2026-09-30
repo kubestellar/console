@@ -2,6 +2,7 @@ import type { Mission, SaveMissionParams } from '../../../hooks/useMissions'
 import type { MissionExport } from '../../../lib/missions/types'
 import type { Resolution } from '../../../hooks/useResolutions'
 import { SAVED_TOAST_MS } from '../../../lib/constants/network'
+import { safeGetItem, safeSetItem } from '../../../lib/utils/localStorage'
 
 export function handleApplyResolution(
   activeMission: Mission | null,
@@ -91,9 +92,9 @@ export function handleImportMission(
   setActiveMission(missionId)
 
   // Show extended help toast only on first import
-  const hasImportedBefore = localStorage.getItem('ksc-has-imported')
+  const hasImportedBefore = safeGetItem('ksc-has-imported')
   if (!hasImportedBefore) {
-    localStorage.setItem('ksc-has-imported', new Date().toISOString())
+    safeSetItem('ksc-has-imported', new Date().toISOString())
     setShowSavedToast(mission.title)
     const FIRST_IMPORT_COUNTDOWN_S = 60
     setToastCountdown(FIRST_IMPORT_COUNTDOWN_S)
