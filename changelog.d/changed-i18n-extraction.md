@@ -1,0 +1,1 @@
+- Extracted hardcoded button labels in `WatchDetailFooter` to react-i18next translation keys (`stellar.watchDetail.markResolved`, `snoozeOneHour`, `stopWatching`).
