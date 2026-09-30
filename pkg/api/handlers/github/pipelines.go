@@ -24,6 +24,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/api/middleware"
+	"github.com/kubestellar/console/pkg/safego"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -138,14 +139,14 @@ func (h *GitHubPipelinesHandler) buildPulseFromRequest(req ghpBuildRequest) (any
 	var releaseTag, weeklyTag *string
 	var tagWg sync.WaitGroup
 	tagWg.Add(2)
-	go func() {
+	safego.GoWith("github-pipelines/release-tag", func() {
 		defer tagWg.Done()
 		releaseTag = ghpLatestReleaseTag(req.ctx, h, pulseRepo)
-	}()
-	go func() {
+	})
+	safego.GoWith("github-pipelines/weekly-tag", func() {
 		defer tagWg.Done()
 		weeklyTag = ghpLatestWeeklyTag(req.ctx, h, pulseRepo)
-	}()
+	})
 	tagWg.Wait()
 
 	var lastRun *ghpPulseLastRun
@@ -201,18 +202,18 @@ func (h *GitHubPipelinesHandler) buildMatrixFromRequest(req ghpBuildRequest) (an
 	sem := make(chan struct{}, ghpMaxConcurrentFetches)
 	for _, repo := range repos {
 		wg.Add(1)
-		go func(r string) {
+		safego.GoWith("github-pipelines/matrix-runs", func() {
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
-			runs, fetchErr := h.fetchRuns(ctx, r, fmt.Sprintf("per_page=%d", ghpMatrixRunsPerRepo))
+			runs, fetchErr := h.fetchRuns(ctx, repo, fmt.Sprintf("per_page=%d", ghpMatrixRunsPerRepo))
 			if fetchErr != nil {
 				return
 			}
 			mu.Lock()
 			fresh = append(fresh, runs...)
 			mu.Unlock()
-		}(repo)
+		})
 	}
 	wg.Wait()
 	h.history.merge(fresh)
@@ -268,7 +269,7 @@ func (h *GitHubPipelinesHandler) buildFlowFromRequest(req ghpBuildRequest) (any,
 	repoSem := make(chan struct{}, ghpMaxConcurrentFetches)
 	for _, repo := range repos {
 		repoWg.Add(1)
-		go func(repo string) {
+		safego.GoWith("github-pipelines/flow-runs", func() {
 			defer repoWg.Done()
 			repoSem <- struct{}{}
 			defer func() { <-repoSem }()
@@ -291,16 +292,16 @@ func (h *GitHubPipelinesHandler) buildFlowFromRequest(req ghpBuildRequest) (any,
 			jobSem := make(chan struct{}, ghpMaxConcurrentFetches)
 			for i, r := range runs {
 				wg.Add(1)
-				go func(idx int, run ghpWorkflowRun) {
+				safego.GoWith("github-pipelines/flow-jobs", func() {
 					defer wg.Done()
 					jobSem <- struct{}{}
 					defer func() { <-jobSem }()
-					jobs, jobsErr := h.fetchJobs(ctx, repo, run.ID)
+					jobs, jobsErr := h.fetchJobs(ctx, repo, r.ID)
 					if jobsErr != nil {
 						return
 					}
-					results[idx] = flowResult{run: run, jobs: jobs}
-				}(i, r)
+					results[i] = flowResult{run: r, jobs: jobs}
+				})
 			}
 			wg.Wait()
 			flowMu.Lock()
@@ -310,7 +311,7 @@ func (h *GitHubPipelinesHandler) buildFlowFromRequest(req ghpBuildRequest) (any,
 				}
 			}
 			flowMu.Unlock()
-		}(repo)
+		})
 	}
 	repoWg.Wait()
 	// Newest first by createdAt (lexical works for ISO strings)
@@ -337,7 +338,7 @@ func (h *GitHubPipelinesHandler) buildFailuresFromRequest(req ghpBuildRequest) (
 	repoSem := make(chan struct{}, ghpMaxConcurrentFetches)
 	for _, repo := range repos {
 		failWg.Add(1)
-		go func(repo string) {
+		safego.GoWith("github-pipelines/failure-runs", func() {
 			defer failWg.Done()
 			repoSem <- struct{}{}
 			defer func() { <-repoSem }()
@@ -363,7 +364,7 @@ func (h *GitHubPipelinesHandler) buildFailuresFromRequest(req ghpBuildRequest) (
 			failMu.Lock()
 			rows = append(rows, localRows...)
 			failMu.Unlock()
-		}(repo)
+		})
 	}
 	failWg.Wait()
 	sort.Slice(rows, func(i, j int) bool {
@@ -378,16 +379,16 @@ func (h *GitHubPipelinesHandler) buildFailuresFromRequest(req ghpBuildRequest) (
 		jobSem := make(chan struct{}, ghpMaxConcurrentFetches)
 		for i := range rows {
 			wg.Add(1)
-			go func(idx int) {
+			safego.GoWith("github-pipelines/failure-jobs", func() {
 				defer wg.Done()
 				jobSem <- struct{}{}
 				defer func() { <-jobSem }()
-				jobs, jobsErr := h.fetchJobs(ctx, rows[idx].Repo, rows[idx].RunID)
+				jobs, jobsErr := h.fetchJobs(ctx, rows[i].Repo, rows[i].RunID)
 				if jobsErr != nil {
 					return
 				}
-				rows[idx].FailedStep = ghpFirstFailedStep(jobs)
-			}(i)
+				rows[i].FailedStep = ghpFirstFailedStep(jobs)
+			})
 		}
 		wg.Wait()
 	}

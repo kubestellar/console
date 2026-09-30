@@ -1,0 +1,1 @@
+- Routed the remaining raw background goroutines in feedback, GitHub pipelines, rewards and server startup through `pkg/safego` so panics are recovered and logged.

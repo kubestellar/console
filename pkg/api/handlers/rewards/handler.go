@@ -190,13 +190,13 @@ func (h *RewardsHandler) fetchUserRewards(ctx context.Context, login, token stri
 	sem := make(chan struct{}, rewardsMaxConcurrentFetches)
 	for i, repo := range h.repos {
 		wg.Add(1)
-		go func(idx int, r string) {
+		safego.GoWith("rewards/fetch-repo", func() {
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
-			items, err := h.listRepoItems(ctx, r, login, yearStart, token)
-			results[idx] = repoResult{items: items, err: err, repo: r}
-		}(i, repo)
+			items, err := h.listRepoItems(ctx, repo, login, yearStart, token)
+			results[i] = repoResult{items: items, err: err, repo: repo}
+		})
 	}
 	wg.Wait()
 

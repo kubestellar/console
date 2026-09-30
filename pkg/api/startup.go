@@ -276,10 +276,10 @@ func (s *Server) Shutdown() error {
 		// the sweeper's eager first runSweep() can race with RemoveAll and produce
 		// "unlinkat .../001: directory not empty" failures in tests (#21198).
 		bgDrained := make(chan struct{})
-		go func() {
+		safego.GoWith("server/bg-drain-wait", func() {
 			s.lifecycle.wg.Wait()
 			close(bgDrained)
-		}()
+		})
 		const bgDrainTimeout = 3 * time.Second
 		select {
 		case <-bgDrained:
