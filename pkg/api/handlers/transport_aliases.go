@@ -2,11 +2,14 @@ package handlers
 
 import "github.com/kubestellar/console/pkg/api/transport"
 
-// Type aliases allow handler files to continue using Hub, Message, and Client
-// without a qualifying package prefix. External consumers (route files,
-// sub-packages) should import pkg/api/transport directly.
+// Type aliases allow handler files to continue using Hub and Client without
+// a qualifying package prefix. External consumers (route files, sub-packages)
+// should import pkg/api/transport directly.
+//
+// Message was removed after #23896 confirmed no remaining caller — the type
+// is only referenced via transport.Message in sibling handler files that
+// already import pkg/api/transport.
 type Hub = transport.Hub
-type Message = transport.Message
 type Client = transport.Client
 
 // NewHub delegates to transport.NewHub.

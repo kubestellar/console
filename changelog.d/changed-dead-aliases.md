@@ -1,0 +1,1 @@
+- Removed 49 dead compat aliases from `pkg/api/handlers/{k8s,ops,proxy,transport}_aliases.go` after epic #23685 phase 2 migrated all callers to the respective subpackages. The four shim files now carry only the symbols with real callers in `pkg/`, `cmd/`, and tests (#23896).
