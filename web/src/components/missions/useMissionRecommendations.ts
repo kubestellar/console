@@ -8,6 +8,7 @@ import {
   setCachedRecommendations,
   startMissionCacheFetch,
 } from './browser'
+import { useToast } from '../ui/Toast'
 
 interface SearchProgress {
   step: string
@@ -17,8 +18,10 @@ interface SearchProgress {
 }
 
 export function useMissionRecommendations(isOpen: boolean, clusterContext: ClusterContext | null) {
+  const { showToast } = useToast()
   const clusterContextRef = useRef(clusterContext)
   clusterContextRef.current = clusterContext
+  const lastFetchErrorToastRef = useRef<string | null>(null)
 
   const [installerMissions, setInstallerMissions] = useState<MissionExport[]>(missionCache.installers)
   const [fixerMissions, setFixerMissions] = useState<MissionExport[]>(missionCache.fixes)
@@ -108,6 +111,19 @@ export function useMissionRecommendations(isOpen: boolean, clusterContext: Clust
       missionCache.listeners.delete(listener)
     }
   }, [isOpen])
+
+  useEffect(() => {
+    if (!isOpen) {
+      lastFetchErrorToastRef.current = null
+      return
+    }
+    if (missionFetchError && lastFetchErrorToastRef.current !== missionFetchError) {
+      showToast(missionFetchError, 'warning')
+      lastFetchErrorToastRef.current = missionFetchError
+    } else if (!missionFetchError) {
+      lastFetchErrorToastRef.current = null
+    }
+  }, [isOpen, missionFetchError, showToast])
 
   return {
     installerMissions,
