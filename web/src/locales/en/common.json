@@ -1317,6 +1317,9 @@
       "undo": "Undo",
       "redo": "Redo"
     },
+    "fieldSuggestions": {
+      "invalidJson": "Field suggestions unavailable — sample data isn't valid JSON"
+    },
     "welcome": {
       "gettingStarted": "Getting Started",
       "subtitle": "Up and running in two steps",
@@ -3998,6 +4001,8 @@
     "accessManagement": "Access Management",
     "adminAccessRequired": "Admin access required to view namespace details",
     "fetchAccessFailed": "Failed to fetch namespace access",
+    "confirmRevokeAccess": "Revoke access for {{subject}}?",
+    "revokeAccessFailed": "Failed to revoke access",
     "adminRequiredForAccess": "Admin access required to view role bindings",
     "noRoleBindings": "No role bindings found",
     "errors": {
@@ -5062,7 +5067,9 @@
       "opensPr": "Opens a PR on {{repo}}",
       "cancel": "Cancel",
       "submit": "Submit to KB",
-      "submitting": "Submitting..."
+      "submitting": "Submitting...",
+      "scanFailed": "Security scan failed. Please review the content manually before submitting.",
+      "openFailed": "Failed to open the knowledge base submission. Please try again."
     },
     "recommended": {
       "tokenError": {
