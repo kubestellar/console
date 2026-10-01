@@ -1,0 +1,1 @@
+- Added `aria-label` to the icon-only preview show/hide/resize buttons in `StatBlockFactoryBuilderTab`, and confirmed the remaining Auto-QA ARIA findings (`role="button"` elements, modal `role="dialog"` usage in `DeleteConfirmModal`, `FeatureRequestModal`, `DrasiReactiveGraph`'s modals, `AiGenerationPanel`, `InlineAIAssist`) were already compliant.
