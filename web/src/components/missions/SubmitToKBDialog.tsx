@@ -22,6 +22,7 @@ import type { MissionExport, MissionClass, FileScanResult } from '../../lib/miss
 import { fullScan } from '../../lib/missions/scanner/index'
 import { cn } from '../../lib/cn'
 import { BaseModal } from '../../lib/modals/BaseModal'
+import { useToast } from '../ui/Toast'
 import {
   CONSOLE_KB_OWNER,
   CONSOLE_KB_REPO,
@@ -39,6 +40,7 @@ interface SubmitToKBDialogProps {
 }
 
 export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDialogProps) {
+  const { showToast } = useToast()
   const { t } = useTranslation()
   const [missionClass, setMissionClass] = useState<MissionClass>('fixer')
   const [cncfProjectInput, setCncfProjectInput] = useState<{ key: string; value: string }>({ key: '', value: '' })
@@ -72,7 +74,9 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
     try {
       const result = fullScan(kbContent as unknown as MissionExport)
       setScanState({ key: dialogKey, result, scanning: false })
-    } catch {
+    } catch (err: unknown) {
+      console.error('[SubmitToKBDialog] Security scan failed:', err)
+      showToast('Security scan failed. Please review the content manually before submitting.', 'error')
       setScanState({ key: dialogKey, result: null, scanning: false })
     }
   }

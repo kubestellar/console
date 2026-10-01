@@ -58,7 +58,8 @@ export function FixerCard({ mission, onImport, onSelect, onCopyLink, compact }: 
       setLinkCopied(copied)
       setLinkCopyFailed(!copied)
       resetLinkFeedback()
-    } catch {
+    } catch (err: unknown) {
+      console.error('[FixerCard] Copy link failed:', err)
       setLinkCopied(false)
       setLinkCopyFailed(true)
       resetLinkFeedback()

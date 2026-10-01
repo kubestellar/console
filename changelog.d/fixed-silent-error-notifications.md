@@ -1,0 +1,1 @@
+- Surface user-facing error notifications in previously silent catch blocks across dashboard, namespaces, missions, and insights components
