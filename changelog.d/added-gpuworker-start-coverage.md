@@ -1,0 +1,1 @@
+- Added unit tests for `pkg/api/gpuworker/Worker.Start` and the nil-k8sClient early-return branch of `collectUtilization`, lifting package coverage from 49.7% to 73.1% and bringing `Start` to 100%.

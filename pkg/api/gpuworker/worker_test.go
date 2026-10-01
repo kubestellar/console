@@ -206,6 +206,41 @@ func TestWorker_StopCancel(t *testing.T) {
 	}
 }
 
+func TestWorker_StartStop_RunsLifecycle(t *testing.T) {
+	// Short interval so Start's initial collection plus at least one ticker
+	// fire within the test's wait window. Exercises Start and the empty-list
+	// branch of collectUtilization (both previously 0% covered).
+	os.Setenv("GPU_UTIL_POLL_INTERVAL_MS", "20")
+	defer os.Unsetenv("GPU_UTIL_POLL_INTERVAL_MS")
+
+	mockStore := new(test.MockStore)
+	mockStore.On("DeleteOldUtilizationSnapshots", mock.Anything).Return(int64(0), nil)
+	mockStore.On("ListActiveGPUReservations").
+		Return([]models.GPUReservation{}, nil)
+
+	k8sClient, _ := k8s.NewMultiClusterClient("")
+	worker := New(mockStore, k8sClient, nil)
+
+	worker.Start()
+	// Let the ticker fire at least once in addition to the initial collection.
+	time.Sleep(80 * time.Millisecond)
+	worker.Stop()
+
+	mockStore.AssertCalled(t, "DeleteOldUtilizationSnapshots", mock.Anything)
+	mockStore.AssertCalled(t, "ListActiveGPUReservations")
+}
+
+func TestWorker_CollectUtilization_NilK8sClient_NoOp(t *testing.T) {
+	// With a nil k8sClient collectUtilization must return before touching the
+	// store. Guards the early-return branch at the top of collectUtilization.
+	mockStore := new(test.MockStore)
+	worker := New(mockStore, nil, nil)
+
+	worker.collectUtilization()
+
+	mockStore.AssertNotCalled(t, "ListActiveGPUReservations")
+}
+
 func TestWorker_ThresholdAlerting(t *testing.T) {
 	mockStore := new(test.MockStore)
 	notificationService := notifications.NewService()
