@@ -1,0 +1,1 @@
+- Add unit tests for pure helpers in `pkg/api/handlers/workloads/cluster_query.go`: `buildClusterContextForAI`, `clusterMatchesQuery`, and `clusterMatchesLabelSelector`.
