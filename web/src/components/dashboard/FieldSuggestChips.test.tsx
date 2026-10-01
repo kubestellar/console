@@ -44,7 +44,7 @@ describe('FieldSuggestChips Component', () => {
     )
 
     expect(
-      screen.getByText("Field suggestions unavailable — sample data isn't valid JSON"),
+      screen.getByText('dashboard.fieldSuggestions.invalidJson'),
     ).toBeVisible()
   })
 

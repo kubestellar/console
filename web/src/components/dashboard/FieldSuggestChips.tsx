@@ -60,9 +60,7 @@ export function FieldSuggestChips({
     return (
       <div className="flex items-center gap-1.5 flex-wrap">
         <span className="text-xs text-amber-500/70">
-          {t('dashboard.fieldSuggestions.invalidJson', {
-            defaultValue: "Field suggestions unavailable — sample data isn't valid JSON",
-          })}
+          {t('dashboard.fieldSuggestions.invalidJson')}
         </span>
       </div>
     )
