@@ -1,0 +1,1 @@
+- Document intentional silent fallback in Card Factory's live preview JSON parsing; all remaining Auto-QA silent-failure findings from #23869 were already resolved by prior PRs (#23873, #23874, #23880, #23882, #23689, #23672).
