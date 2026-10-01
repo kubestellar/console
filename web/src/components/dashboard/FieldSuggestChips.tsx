@@ -22,40 +22,55 @@ export function FieldSuggestChips({
   const { isFeatureEnabled } = useAIMode()
   const enabled = isFeatureEnabled('naturalLanguage')
 
-  const suggestedFields = useMemo(() => {
-    if (!enabled) return []
+  // Parse once and reuse the result for both the suggested-field list and the
+  // per-field sample values below, so a parse failure only needs to be
+  // surfaced in one place instead of swallowed separately in two.
+  const { rows, parseFailed } = useMemo(() => {
+    if (!enabled || dataJson.trim().length === 0) {
+      return { rows: [] as Record<string, unknown>[], parseFailed: false }
+    }
     try {
       const parsed = JSON.parse(dataJson)
-      if (!Array.isArray(parsed) || parsed.length === 0) return []
-      const allKeys = new Set<string>()
-      for (const row of parsed.slice(0, 10)) {
-        if (typeof row === 'object' && row) {
-          Object.keys(row).forEach(k => allKeys.add(k))
-        }
-      }
-      return [...allKeys].filter(k => !existingFields.has(k))
+      if (!Array.isArray(parsed)) return { rows: [], parseFailed: true }
+      return { rows: parsed as Record<string, unknown>[], parseFailed: false }
     } catch {
       // The author is often mid-edit when this runs, so partial/invalid JSON
-      // is expected and not an error — just hide suggestions until it parses.
-      return []
+      // is expected — degrade to an inline notice below instead of throwing,
+      // but don't pretend nothing is wrong (#23869).
+      return { rows: [], parseFailed: true }
     }
-  }, [dataJson, existingFields, enabled])
+  }, [dataJson, enabled])
 
-  if (!enabled || suggestedFields.length === 0) return null
+  const suggestedFields = useMemo(() => {
+    if (rows.length === 0) return []
+    const allKeys = new Set<string>()
+    for (const row of rows.slice(0, 10)) {
+      if (typeof row === 'object' && row) {
+        Object.keys(row).forEach(k => allKeys.add(k))
+      }
+    }
+    return [...allKeys].filter(k => !existingFields.has(k))
+  }, [rows, existingFields])
+
+  if (!enabled) return null
+
+  if (parseFailed) {
+    return (
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <span className="text-xs text-amber-500/70">
+          Field suggestions unavailable — sample data isn&apos;t valid JSON
+        </span>
+      </div>
+    )
+  }
+
+  if (suggestedFields.length === 0) return null
 
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
       <span className="text-xs text-muted-foreground/50">Fields:</span>
       {suggestedFields.map(field => {
-        const sampleValues = (() => {
-          try {
-            const parsed = JSON.parse(dataJson)
-            return parsed.slice(0, 5).map((row: Record<string, unknown>) => row[field])
-          } catch {
-            // Same best-effort parsing as above — fall back to no samples.
-            return []
-          }
-        })()
+        const sampleValues = rows.slice(0, 5).map(row => row[field])
         const detected = detectFieldFormat(field, sampleValues)
 
         return (

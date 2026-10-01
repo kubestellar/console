@@ -271,8 +271,16 @@ export async function generateAISummary(
             }
           })
         }
-      } catch {
-        // Ignore parse errors for non-JSON messages
+      } catch (err: unknown) {
+        // The agent protocol only ever sends JSON frames; a frame that fails
+        // to parse means something is broken server-side. Previously this
+        // was swallowed entirely, leaving the caller waiting silently until
+        // the 60s timeout fired. Surface it immediately instead (#23869).
+        console.error('[generateAISummary] Received malformed message from agent:', err)
+        settle(() => {
+          ws.close()
+          reject(new Error('Received an unreadable response from the local agent while generating the summary'))
+        })
       }
     }
 

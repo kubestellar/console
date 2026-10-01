@@ -34,8 +34,8 @@ describe('FieldSuggestChips Component', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('renders nothing when the data is not valid JSON', () => {
-    const { container } = render(
+  it('shows an inline notice when the data is not valid JSON', () => {
+    render(
       <FieldSuggestChips
         dataJson="not valid json"
         existingFields={new Set()}
@@ -43,7 +43,9 @@ describe('FieldSuggestChips Component', () => {
       />,
     )
 
-    expect(container).toBeEmptyDOMElement()
+    expect(
+      screen.getByText("Field suggestions unavailable — sample data isn't valid JSON"),
+    ).toBeVisible()
   })
 
   it('renders a chip for each field not already present', () => {
