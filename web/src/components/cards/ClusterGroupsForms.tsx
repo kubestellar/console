@@ -25,7 +25,7 @@ import {
 } from './ClusterGroups.constants'
 
 // Form sub-components for ClusterGroups card.
-// Demo data and loading state handled by parent ClusterGroups card.
+// demoData-exempt: demo data and loading state are handled by the parent ClusterGroups card.
 
 // Create Group Form
 // ============================================================================
