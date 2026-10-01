@@ -136,7 +136,11 @@ export function CardFactoryTemplates({ onCardCreated, onSaveMessage }: CardFacto
     try {
       const parsed = JSON.parse(t1DataJson)
       if (Array.isArray(parsed) && parsed.length > 0) return parsed
-    } catch { /* use sample */ }
+    } catch {
+      // The user is often mid-edit when this runs, so partial/invalid JSON
+      // is expected and not an error — fall back to generated sample data
+      // for the live preview instead of surfacing a notification.
+    }
     return generateSampleData(t1Columns)
   }, [t1DataJson, t1Columns])
 
