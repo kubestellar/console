@@ -54,6 +54,7 @@ function BuilderPreviewPane({ title, blocks }: BuilderPreviewPaneProps) {
           onClick={() => setPreviewCollapsed(false)}
           className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
           title={t('dashboard.preview.showPreview')}
+          aria-label={t('dashboard.preview.showPreview')}
         >
           <Eye className="w-4 h-4" />
         </button>
@@ -76,6 +77,7 @@ function BuilderPreviewPane({ title, blocks }: BuilderPreviewPaneProps) {
             onClick={() => setPreviewSize(previewSize === 'card' ? 'full' : 'card')}
             className="p-1 rounded text-muted-foreground/60 hover:text-foreground transition-colors min-h-11 min-w-11 flex items-center justify-center"
             title={previewSize === 'card' ? t('dashboard.preview.fullWidth') : t('dashboard.preview.cardWidth')}
+            aria-label={previewSize === 'card' ? t('dashboard.preview.fullWidth') : t('dashboard.preview.cardWidth')}
           >
             {previewSize === 'card' ? <Maximize2 className="w-3 h-3" /> : <Minimize2 className="w-3 h-3" />}
           </button>
@@ -83,6 +85,7 @@ function BuilderPreviewPane({ title, blocks }: BuilderPreviewPaneProps) {
             onClick={() => setPreviewCollapsed(true)}
             className="p-1 rounded text-muted-foreground/60 hover:text-foreground transition-colors min-h-11 min-w-11 flex items-center justify-center"
             title={t('dashboard.preview.hidePreview')}
+            aria-label={t('dashboard.preview.hidePreview')}
           >
             <EyeOff className="w-3 h-3" />
           </button>
