@@ -138,6 +138,14 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
       }
 
       onClose()
+    } catch (err: unknown) {
+      console.error('[SubmitToKBDialog] Failed to open submission:', err)
+      showToast(
+        err instanceof Error
+          ? err.message
+          : 'Failed to open the knowledge base submission. Please try again.',
+        'error',
+      )
     } finally {
       setIsSubmitting(false)
     }

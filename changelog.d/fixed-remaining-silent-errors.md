@@ -1,0 +1,1 @@
+- Surface user-facing errors in remaining silent catch blocks across dashboard, namespaces, missions, insights, and feedback components

@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next'
 import { AlertCircle, Link, Check } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { StatusBadge } from '../ui/StatusBadge'
+import { useToast } from '../ui/Toast'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 import type { MissionExport } from '../../lib/missions/types'
 
@@ -30,6 +31,7 @@ interface FixerCardProps {
 
 export function FixerCard({ mission, onImport, onSelect, onCopyLink, compact }: FixerCardProps) {
   const { t } = useTranslation()
+  const { showToast } = useToast()
   const [linkCopied, setLinkCopied] = useState(false)
   const [linkCopyFailed, setLinkCopyFailed] = useState(false)
   const typeStyle = TYPE_COLORS[mission.type] ?? TYPE_COLORS.custom
@@ -57,11 +59,15 @@ export function FixerCard({ mission, onImport, onSelect, onCopyLink, compact }: 
       const copied = await Promise.resolve(onCopyLink(event))
       setLinkCopied(copied)
       setLinkCopyFailed(!copied)
+      if (!copied) {
+        showToast(t('missions.browser.copyLinkFailed'), 'error')
+      }
       resetLinkFeedback()
     } catch (err: unknown) {
       console.error('[FixerCard] Copy link failed:', err)
       setLinkCopied(false)
       setLinkCopyFailed(true)
+      showToast(t('missions.browser.copyLinkFailed'), 'error')
       resetLinkFeedback()
     }
   }
