@@ -4,6 +4,7 @@
  *
  * Extracted from ProactiveGPUNodeHealthMonitor.tsx to keep the main
  * component focused on data orchestration and rendering.
+ * demoData-exempt: pure UI; parent ProactiveGPUNodeHealthMonitor passes isDemoData.
  */
 import { useMemo, memo } from 'react'
 import { CheckCircle, AlertTriangle, XCircle } from 'lucide-react'
