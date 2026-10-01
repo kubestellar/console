@@ -279,7 +279,7 @@ export function useQuantumControls() {
       })
 
       if (!response.ok) {
-        const errBody = await response.text().catch(() => '')
+        const errBody = await response.text()
         if (errBody) {
           console.error('[QuantumControlPanel] execute failed', { status: response.status, body: errBody })
         }

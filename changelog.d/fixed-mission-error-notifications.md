@@ -1,0 +1,1 @@
+- Fixed mission browser cache errors and quantum execution failures so users receive visible error feedback instead of silent fallbacks.
