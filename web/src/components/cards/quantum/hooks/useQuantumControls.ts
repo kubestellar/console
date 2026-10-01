@@ -222,7 +222,9 @@ export function useQuantumControls() {
       showToast(t('quantumControlPanel.ibmCredentialsCleared'), 'success')
     } catch (err) {
       console.error('Error clearing credentials:', err)
-      setMutationError(err instanceof Error ? err.message : t('quantumControlPanel.unknownError'))
+      const message = err instanceof Error ? err.message : t('quantumControlPanel.unknownError')
+      setMutationError(message)
+      showToast(message, 'error')
     } finally {
       setIsClearing(false)
     }
@@ -303,11 +305,15 @@ export function useQuantumControls() {
           setMutationError(null)
         } catch (err) {
           console.error('Error polling after execution:', err)
-          setMutationError(t('quantumControlPanel.executionRefreshFailed'))
+          const message = t('quantumControlPanel.executionRefreshFailed')
+          setMutationError(message)
+          showToast(message, 'warning')
         }
       }, EXECUTION_STATUS_POLL_DELAY_MS)
     } catch (err) {
-      setMutationError(err instanceof Error ? err.message : t('quantumControlPanel.executionError'))
+      const message = err instanceof Error ? err.message : t('quantumControlPanel.executionError')
+      setMutationError(message)
+      showToast(message, 'error')
     } finally {
       setControl(prev => ({ ...prev, executing: false }))
       setIsExecuting(false)
