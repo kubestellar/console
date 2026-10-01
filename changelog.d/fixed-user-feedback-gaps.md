@@ -1,1 +1,1 @@
-Fixed missing success feedback for user-triggered quantum control actions and verified destructive deletes use confirmation dialogs.
+- Fixed missing success feedback for user-triggered quantum control actions and verified destructive deletes use confirmation dialogs.
