@@ -13,7 +13,7 @@ export function ModalTabs({
   onTabChange,
   className = '',
 }: ModalTabsProps) {
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     const nextTab = moveFocusByKey(e, { selector: '[role="tab"]:not([disabled])', orientation: 'horizontal' })
     const nextTabId = nextTab?.dataset.tabId
     if (nextTabId) onTabChange(nextTabId)
