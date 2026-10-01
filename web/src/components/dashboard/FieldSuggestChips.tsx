@@ -35,6 +35,8 @@ export function FieldSuggestChips({
       }
       return [...allKeys].filter(k => !existingFields.has(k))
     } catch {
+      // The author is often mid-edit when this runs, so partial/invalid JSON
+      // is expected and not an error — just hide suggestions until it parses.
       return []
     }
   }, [dataJson, existingFields, enabled])
@@ -49,7 +51,10 @@ export function FieldSuggestChips({
           try {
             const parsed = JSON.parse(dataJson)
             return parsed.slice(0, 5).map((row: Record<string, unknown>) => row[field])
-          } catch { return [] }
+          } catch {
+            // Same best-effort parsing as above — fall back to no samples.
+            return []
+          }
         })()
         const detected = detectFieldFormat(field, sampleValues)
 
