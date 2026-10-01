@@ -5,6 +5,7 @@
  */
 
 import { ModalTabsProps } from '../types'
+import { moveFocusByKey } from '../../a11y/rovingFocus'
 
 export function ModalTabs({
   tabs,
@@ -12,10 +13,10 @@ export function ModalTabs({
   onTabChange,
   className = '',
 }: ModalTabsProps) {
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    const idx = tabs.findIndex(t => t.id === activeTab)
-    if (e.key === 'ArrowRight') onTabChange(tabs[Math.min(idx + 1, tabs.length - 1)].id)
-    else if (e.key === 'ArrowLeft') onTabChange(tabs[Math.max(idx - 1, 0)].id)
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const nextTab = moveFocusByKey(e, { selector: '[role="tab"]:not([disabled])', orientation: 'horizontal' })
+    const nextTabId = nextTab?.dataset.tabId
+    if (nextTabId) onTabChange(nextTabId)
   }
   return (
     <div role="tablist" onKeyDown={handleKeyDown} className={`flex border-b border-border ${className}`}>
@@ -28,6 +29,7 @@ export function ModalTabs({
             key={tab.id}
             type="button"
             role="tab"
+            data-tab-id={tab.id}
             aria-selected={isActive}
             tabIndex={isActive ? 0 : -1}
             onClick={() => onTabChange(tab.id)}

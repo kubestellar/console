@@ -5,6 +5,7 @@ import {
   CheckCircle } from 'lucide-react'
 import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import { cn } from '../../lib/cn'
+import { moveFocusByKey } from '../../lib/a11y/rovingFocus'
 import { useToast } from '../ui/Toast'
 import { deleteDynamicCard, getAllDynamicCards } from '../../lib/dynamic-cards'
 import type { DynamicCardDefinition } from '../../lib/dynamic-cards/types'
@@ -81,10 +82,9 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
           role="tablist"
           className="flex items-center gap-1 border-b border-border pb-2 mb-4"
           onKeyDown={(e) => {
-            const tabIds: Tab[] = ['declarative', 'code', 'ai', 'manage']
-            const idx = tabIds.indexOf(tab)
-            if (e.key === 'ArrowRight') handleTabChange(tabIds[Math.min(idx + 1, tabIds.length - 1)])
-            else if (e.key === 'ArrowLeft') handleTabChange(tabIds[Math.max(idx - 1, 0)])
+            const nextTab = moveFocusByKey(e, { selector: '[role="tab"]', orientation: 'horizontal' })
+            const nextTabId = nextTab?.dataset.tabId as Tab | undefined
+            if (nextTabId) handleTabChange(nextTabId)
           }}
         >
           {[
@@ -96,6 +96,7 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
             <button
               key={t.id}
               role="tab"
+              data-tab-id={t.id}
               aria-selected={tab === t.id}
               tabIndex={tab === t.id ? 0 : -1}
               onClick={() => handleTabChange(t.id)}

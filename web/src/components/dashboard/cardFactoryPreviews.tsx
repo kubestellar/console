@@ -26,6 +26,7 @@ export function TemplateDropdown<T extends { name: string }>({
   const [open, setOpen] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!open) return
@@ -40,11 +41,21 @@ export function TemplateDropdown<T extends { name: string }>({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [open])
 
+  useEffect(() => {
+    if (open) menuRef.current?.focus()
+  }, [open])
+
   const handleTriggerKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
       setOpen(!open)
       setSelectedIndex(0)
+      return
+    }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      setSelectedIndex(e.key === 'ArrowUp' ? templates.length - 1 : 0)
+      setOpen(true)
     }
   }
 
@@ -90,6 +101,7 @@ export function TemplateDropdown<T extends { name: string }>({
       </button>
       {open && (
         <div 
+          ref={menuRef}
           role="menu"
           onKeyDown={handleMenuKeyDown}
           tabIndex={-1}
