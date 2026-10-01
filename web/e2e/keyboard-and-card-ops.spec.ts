@@ -119,14 +119,22 @@ test.describe('Card Operations', () => {
     expect(foundTextContent).toBe(true)
   })
 
-  test('add card button is visible', async ({ page }) => {
+  // #23883 — `sidebar-add-card` resolves but stays `hidden` on mobile
+  // viewports (sidebar is collapsed by design, see Dashboard.spec.ts). The
+  // hard `toBeVisible` assertion below retried for the full assertion
+  // timeout on every mobile-chrome/mobile-safari run, repeatedly, which
+  // blew the 30-minute `mobile-tests` CI budget. Skip on mobile projects
+  // until the sidebar-add-card flow is reachable from the mobile layout.
+  test('add card button is visible', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name.startsWith('mobile-'), 'sidebar-add-card hidden on mobile — see #23883')
     const addCardBtn = page.getByTestId('sidebar-add-card')
       .or(page.getByRole('button', { name: /add card/i }))
 
     await expect(addCardBtn.first()).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
   })
 
-  test('clicking add card opens card picker modal', async ({ page }) => {
+  test('clicking add card opens card picker modal', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name.startsWith('mobile-'), 'sidebar-add-card hidden on mobile — see #23883')
     const addCardBtn = page.getByTestId('sidebar-add-card')
       .or(page.getByRole('button', { name: /add card/i }))
 
@@ -136,7 +144,8 @@ test.describe('Card Operations', () => {
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: MODAL_TIMEOUT_MS })
   })
 
-  test('card picker modal has card categories', async ({ page }) => {
+  test('card picker modal has card categories', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name.startsWith('mobile-'), 'sidebar-add-card hidden on mobile — see #23883')
     const addCardBtn = page.getByTestId('sidebar-add-card')
       .or(page.getByRole('button', { name: /add card/i }))
 
