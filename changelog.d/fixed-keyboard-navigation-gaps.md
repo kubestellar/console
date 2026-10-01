@@ -1,1 +1,1 @@
-Fixed keyboard navigation gaps in dashboard menus and tabs.
+- Fixed keyboard navigation gaps in dashboard menus and tabs.
