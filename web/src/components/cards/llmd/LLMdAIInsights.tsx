@@ -402,7 +402,9 @@ export function LLMdAIInsights() {
       showToast(t('cards:llmdAIInsights.chatSubmitted'), 'success')
     } catch (err: unknown) {
       console.error('[LLMdAIInsights] Chat generation failed:', err)
-      setChatHistory(prev => [...prev, { role: 'ai', message: t('cards:llmdAIInsights.chatError', { defaultValue: 'Failed to generate response. Please try again.' }) }])
+      const message = t('cards:llmdAIInsights.chatError', { defaultValue: 'Failed to generate response. Please try again.' })
+      showToast(message, 'error')
+      setChatHistory(prev => [...prev, { role: 'ai', message }])
     } finally {
       setIsGenerating(false)
     }

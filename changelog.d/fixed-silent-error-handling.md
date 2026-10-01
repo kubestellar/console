@@ -1,0 +1,1 @@
+- Surface user-facing toasts for silent AI insights and quantum action failures.
