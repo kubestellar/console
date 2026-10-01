@@ -193,6 +193,22 @@ export function MissionSuggestions() {
     setExpandedId(null)
   }
 
+  const handleSuggestionTriggerKeyDown = (
+    e: React.KeyboardEvent<HTMLButtonElement>,
+    suggestionId: string,
+    isExpanded: boolean,
+  ) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      setExpandedId(suggestionId)
+      return
+    }
+    if (e.key === 'Escape' && isExpanded) {
+      e.preventDefault()
+      setExpandedId(null)
+    }
+  }
+
   // Show skeleton when agent is offline and demo mode is OFF
   if (forceSkeletonForOffline) {
     return (
@@ -238,6 +254,7 @@ export function MissionSuggestions() {
                     else triggerRefs.current.delete(suggestion.id)
                   }}
                   onClick={() => setExpandedId(isExpanded ? null : suggestion.id)}
+                  onKeyDown={(e) => handleSuggestionTriggerKeyDown(e, suggestion.id, isExpanded)}
                   aria-expanded={isExpanded}
                   aria-haspopup="menu"
                   aria-controls={`mission-dropdown-${suggestion.id}`}
@@ -335,6 +352,7 @@ export function MissionSuggestions() {
                   else triggerRefs.current.delete(suggestion.id)
                 }}
                 onClick={() => setExpandedId(isExpanded ? null : suggestion.id)}
+                onKeyDown={(e) => handleSuggestionTriggerKeyDown(e, suggestion.id, isExpanded)}
                 aria-expanded={isExpanded}
                 aria-haspopup="menu"
                 aria-controls={`mission-dropdown-${suggestion.id}`}

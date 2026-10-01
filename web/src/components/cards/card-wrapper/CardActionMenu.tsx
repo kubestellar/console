@@ -107,6 +107,13 @@ export const CardActionMenu = memo(function CardActionMenu({
   const menuId = `card-action-menu-${cardId || cardType}`
   const resizeMenuId = `${menuId}-resize`
   const heightMenuId = `${menuId}-height`
+  const openRootMenu = () => {
+    if (menuButtonRef.current) {
+      setMenuPosition(computeMenuPosition(menuButtonRef.current.getBoundingClientRect()))
+    }
+    window.dispatchEvent(new CustomEvent('card-menu-open', { detail: cardId }))
+    openMenu()
+  }
 
   // Close resize/height submenus when main menu closes (#7869)
   useEffect(() => {
@@ -249,15 +256,17 @@ export const CardActionMenu = memo(function CardActionMenu({
       <button
         ref={menuButtonRef}
         onClick={() => {
-          if (!showMenu && menuButtonRef.current) {
-            setMenuPosition(computeMenuPosition(menuButtonRef.current.getBoundingClientRect()))
-          }
           const opening = !showMenu
           if (opening) {
-            window.dispatchEvent(new CustomEvent('card-menu-open', { detail: cardId }))
-            openMenu()
+            openRootMenu()
           } else {
             closeMenu()
+          }
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault()
+            if (!showMenu) openRootMenu()
           }
         }}
         className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
@@ -308,6 +317,13 @@ export const CardActionMenu = memo(function CardActionMenu({
             <div className="relative" ref={menuContainerRef}>
               <button
                 onClick={() => { if (showResizeMenu) { closeResizeMenu() } else { openResizeMenu() } closeHeightMenu() }}
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowRight') {
+                    e.preventDefault()
+                    openResizeMenu()
+                    closeHeightMenu()
+                  }
+                }}
                 className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex flex-wrap items-center justify-between gap-y-2"
                 role="menuitem"
                 aria-haspopup="menu"
@@ -356,6 +372,13 @@ export const CardActionMenu = memo(function CardActionMenu({
             <div className="relative" ref={heightMenuContainerRef}>
               <button
                 onClick={() => { if (showHeightMenu) { closeHeightMenu() } else { openHeightMenu() } closeResizeMenu() }}
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowRight') {
+                    e.preventDefault()
+                    openHeightMenu()
+                    closeResizeMenu()
+                  }
+                }}
                 className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex flex-wrap items-center justify-between gap-y-2"
                 role="menuitem"
                 aria-haspopup="menu"
