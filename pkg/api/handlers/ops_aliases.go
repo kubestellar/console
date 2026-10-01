@@ -15,16 +15,10 @@ import "github.com/kubestellar/console/pkg/api/handlers/ops"
 // because they are used throughout the remaining root handlers; the
 // canonical implementations now live in internal/httputil.
 
-// Type aliases for the ops handler structs.
-type (
-	AirGapHandler       = ops.AirGapHandler
-	ManifestHandler     = ops.ManifestHandler
-	NotificationHandler = ops.NotificationHandler
-	OnboardingHandler   = ops.OnboardingHandler
-	SelfUpgradeHandler  = ops.SelfUpgradeHandler
-	TimelineHandler     = ops.TimelineHandler
-	TokenUsageHandler   = ops.TokenUsageHandler
-)
+// Type aliases for the ops handler structs that still have a caller.
+// The 7 type aliases from the original phase-1 shim were swept after phase 2
+// migrated callers to pkg/api/handlers/ops directly (#23896) — none of the
+// handler struct types were referenced qualified-via-handlers.* anywhere.
 
 // Constructors delegate to the ops subpackage.
 var (
@@ -32,7 +26,6 @@ var (
 	NewManifestHandler     = ops.NewManifestHandler
 	NewNotificationHandler = ops.NewNotificationHandler
 	NewOnboardingHandler   = ops.NewOnboardingHandler
-	NewSelfUpgradeHandler  = ops.NewSelfUpgradeHandler
 	NewTimelineHandler     = ops.NewTimelineHandler
 	NewTokenUsageHandler   = ops.NewTokenUsageHandler
 )

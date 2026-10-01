@@ -7,14 +7,11 @@ import "github.com/kubestellar/console/pkg/api/handlers/proxy"
 // pkg/api/handlers/proxy subpackage (epic #23685 phase 1). New code should
 // import pkg/api/handlers/proxy directly.
 
-// Type aliases for the proxy handler structs.
-type (
-	CardProxyHandler            = proxy.CardProxyHandler
-	QuantumProxyHandler         = proxy.QuantumProxyHandler
-	KagentProxyHandler          = proxy.KagentProxyHandler
-	KagentiProviderProxyHandler = proxy.KagentiProviderProxyHandler
-	KubaraCatalogHandler        = proxy.KubaraCatalogHandler
-)
+// Type aliases for the proxy handler structs that still have a caller.
+// The 5 type aliases from the original phase-1 shim were swept after phase 2
+// migrated callers to pkg/api/handlers/proxy directly (#23896) — the 5
+// handler-struct type aliases had no remaining qualified or sibling-file
+// references.
 
 // Constructors delegate to the proxy subpackage.
 var (
