@@ -7,6 +7,7 @@ import {
   type StellarMissionTriggerPayload,
 } from '../../hooks/useStellar'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants/network'
+import { useToast } from '../ui/Toast'
 
 /**
  * StellarMissionBridge converts Stellar's `mission_trigger` SSE events into
@@ -27,6 +28,7 @@ import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants/network'
  */
 export function StellarMissionBridge() {
   const { startMission, missions } = useMissions()
+  const { showToast } = useToast()
 
   // Map missionId → { solveId, eventId } for missions Stellar spawned. We
   // need this so the lifecycle-watch effect knows which solves to close out
@@ -123,15 +125,17 @@ export function StellarMissionBridge() {
         .then(res => {
           if (!res.ok) {
             console.warn(`Stellar solve complete returned ${res.status} for ${link.solveId}`)
+            showToast('Could not update Stellar solve status. You can dismiss it manually.', 'warning')
           }
         })
         .catch((error) => {
           // Non-fatal: card stays at "Solving" and the user can dismiss
           // manually. We don't want a stuck retry loop. Log for debugging.
           console.warn(`Failed to complete Stellar solve ${link.solveId}:`, error instanceof Error ? error.message : String(error))
+          showToast('Could not update Stellar solve status. You can dismiss it manually.', 'warning')
         })
     }
-  }, [missions])
+  }, [missions, showToast])
 
   return null
 }

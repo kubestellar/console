@@ -22,6 +22,7 @@ import { sanitizeUrl } from '../../../lib/utils/sanitizeUrl'
 import { ApiKeyPromptModal, useApiKeyCheck } from '../console-missions/shared'
 import { moveFocusByKey } from '../../../lib/a11y/rovingFocus'
 import { Skeleton } from '../../ui/Skeleton'
+import { useToast } from '../../ui/Toast'
 
 const GUIDE_RUN_DOT_COUNT = 7
 
@@ -41,6 +42,7 @@ export function RunDot({ run, guide, isDemoMode, isHighlighted, onMouseEnter, on
   const [popupPos, setPopupPos] = useState<{ top: number; left: number } | null>(null)
   const { startMission } = useMissions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
+  const { showToast } = useToast()
   const isRunning = run.status !== 'completed'
   const isFailed = run.conclusion === 'failure'
   const isGPUFailure = isFailed && run.failureReason === 'gpu_unavailable'
@@ -159,6 +161,7 @@ export function RunDot({ run, guide, isDemoMode, isHighlighted, onMouseEnter, on
             // Network error / timeout — keep the default fallback message so
             // the mission still starts with a usable prompt (#23655).
             console.warn('Failed to fetch nightly E2E run logs', fetchErr)
+            showToast('Could not fetch run logs; starting diagnosis with fallback context.', 'warning')
           }
         }
 
