@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { detectFieldFormat } from '../../lib/ai/sampleData'
 import { useAIMode } from '../../hooks/useAIMode'
 import type { DynamicCardColumn } from '../../lib/dynamic-cards/types'
@@ -19,6 +20,7 @@ export function FieldSuggestChips({
   existingFields,
   onAddColumn,
 }: FieldSuggestChipsProps) {
+  const { t } = useTranslation()
   const { isFeatureEnabled } = useAIMode()
   const enabled = isFeatureEnabled('naturalLanguage')
 
@@ -58,7 +60,7 @@ export function FieldSuggestChips({
     return (
       <div className="flex items-center gap-1.5 flex-wrap">
         <span className="text-xs text-amber-500/70">
-          Field suggestions unavailable — sample data isn&apos;t valid JSON
+          {t('dashboard.fieldSuggestions.invalidJson')}
         </span>
       </div>
     )

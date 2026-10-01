@@ -76,7 +76,7 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
       setScanState({ key: dialogKey, result, scanning: false })
     } catch (err: unknown) {
       console.error('[SubmitToKBDialog] Security scan failed:', err)
-      showToast('Security scan failed. Please review the content manually before submitting.', 'error')
+      showToast(t('missions.submitToKB.scanFailed'), 'error')
       setScanState({ key: dialogKey, result: null, scanning: false })
     }
   }
@@ -143,7 +143,7 @@ export function SubmitToKBDialog({ resolution, isOpen, onClose }: SubmitToKBDial
       showToast(
         err instanceof Error
           ? err.message
-          : 'Failed to open the knowledge base submission. Please try again.',
+          : t('missions.submitToKB.openFailed'),
         'error',
       )
     } finally {

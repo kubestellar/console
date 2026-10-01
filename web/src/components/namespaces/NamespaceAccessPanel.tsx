@@ -46,7 +46,7 @@ export function NamespaceAccessPanel({
     if (!isAdmin) return
     if (!namespace) return
 
-    if (!window.confirm(`Revoke access for ${binding.subjectName}?`)) {
+    if (!window.confirm(t('namespaces.confirmRevokeAccess', { subject: binding.subjectName }))) {
       return
     }
 
@@ -62,12 +62,12 @@ export function NamespaceAccessPanel({
       })
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ error: 'unknown error' }))
-        throw new Error(errorData.error || 'Failed to revoke access')
+        throw new Error(errorData.error || t('namespaces.revokeAccessFailed'))
       }
       fetchAccess(namespace)
     } catch (err: unknown) {
       console.error('Failed to revoke access:', err)
-      showToast('Failed to revoke access', 'error')
+      showToast(t('namespaces.revokeAccessFailed'), 'error')
     } finally {
       setRevokingBindingName(null)
     }
