@@ -1,0 +1,1 @@
+- Document the remaining Auto-QA silent-failure findings in `FieldSuggestChips.tsx` as intentional best-effort JSON parsing (no user-facing error) rather than leaving the catch blocks unexplained
