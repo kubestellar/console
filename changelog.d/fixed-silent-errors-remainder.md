@@ -1,0 +1,1 @@
+Surface remaining silent error paths with existing user-facing warnings or error state.

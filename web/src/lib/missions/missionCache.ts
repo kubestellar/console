@@ -201,6 +201,8 @@ export async function fetchMissionContent(
   } catch (err) {
     // Network error, timeout, or unexpected failure — fall back gracefully (#11033)
     console.error('[MissionBrowser] fetchMissionContent failed:', err)
+    missionCache.fetchError = 'Failed to load full mission content. Showing cached mission details.'
+    notifyCacheListeners()
     return { mission: indexMission, raw: JSON.stringify(indexMission, null, 2) }
   }
 }
