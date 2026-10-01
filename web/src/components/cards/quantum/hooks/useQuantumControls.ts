@@ -322,8 +322,9 @@ export function useQuantumControls() {
 
   const handleLoopModeToggle = async () => {
     setMutationError(null)
+    const shouldStartLoopMode = !control.loop_mode
     try {
-      const endpoint = control.loop_mode ? '/api/quantum/loop/stop' : '/api/quantum/loop/start'
+      const endpoint = shouldStartLoopMode ? '/api/quantum/loop/start' : '/api/quantum/loop/stop'
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: buildQuantumMutationHeaders(token),
@@ -336,8 +337,16 @@ export function useQuantumControls() {
       await new Promise(resolve => setTimeout(resolve, LOOP_MODE_STATUS_SYNC_DELAY_MS))
       await refetchStatus()
       setMutationError(null)
+      showToast(
+        shouldStartLoopMode
+          ? t('quantumControlPanel.loopModeStarted')
+          : t('quantumControlPanel.loopModeStopped'),
+        'success',
+      )
     } catch (err) {
-      setMutationError(err instanceof Error ? err.message : t('quantumControlPanel.loopModeToggleFailed'))
+      const message = err instanceof Error ? err.message : t('quantumControlPanel.loopModeToggleFailed')
+      setMutationError(message)
+      showToast(message, 'error')
     }
   }
 

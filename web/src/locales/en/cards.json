@@ -233,6 +233,8 @@
     "executionRefreshFailed": "Execution started, but status refresh failed",
     "executionError": "Execution error",
     "loopModeToggleFailed": "Failed to toggle loop mode",
+    "loopModeStarted": "Loop mode enabled",
+    "loopModeStopped": "Loop mode disabled",
     "unknownError": "Unknown error",
     "ibmUpstreamUnavailable": "IBM Quantum is temporarily unavailable. We'll keep retrying — your saved credentials are unaffected.",
     "customQasmSaved": "Custom QASM configuration saved",
