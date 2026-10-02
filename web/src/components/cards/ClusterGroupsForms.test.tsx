@@ -54,8 +54,7 @@ describe('CreateGroupForm', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockClusterGroups.mockReturnValue(baseClusterGroups as any)
+    mockClusterGroups.mockReturnValue(baseClusterGroups as unknown as ReturnType<typeof useClusterGroups>)
   })
 
   it('renders form with name input and cluster list', () => {
@@ -128,8 +127,7 @@ describe('EditGroupForm', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockClusterGroups.mockReturnValue(baseClusterGroups as any)
+    mockClusterGroups.mockReturnValue(baseClusterGroups as unknown as ReturnType<typeof useClusterGroups>)
   })
 
   it('renders edit form with group name pre-filled', () => {

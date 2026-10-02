@@ -54,10 +54,8 @@ const baseClusters = {
 describe('ControlPlaneHealth', () => {
   beforeEach(() => {
     mockLoadingState.mockReturnValue(baseLoadingState)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockCachedPods.mockReturnValue(basePods as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockClusters.mockReturnValue(baseClusters as any)
+    mockCachedPods.mockReturnValue(basePods as unknown as ReturnType<typeof useCachedPods>)
+    mockClusters.mockReturnValue(baseClusters as unknown as ReturnType<typeof useClusters>)
   })
 
   it('renders skeleton while loading', () => {
@@ -67,17 +65,14 @@ describe('ControlPlaneHealth', () => {
   })
 
   it('renders managed-cluster empty state when no control-plane pods found', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockClusters.mockReturnValue({ ...baseClusters, deduplicatedClusters: [{ name: 'prod', reachable: true }] } as any)
+    mockClusters.mockReturnValue({ ...baseClusters, deduplicatedClusters: [{ name: 'prod', reachable: true }] } as unknown as ReturnType<typeof useClusters>)
     render(<ControlPlaneHealth />)
     expect(screen.getByText('controlPlaneHealth.managedCluster')).toBeInTheDocument()
   })
 
   it('renders error state on consecutive failures', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockCachedPods.mockReturnValue({ ...basePods, isFailed: true, consecutiveFailures: 3 } as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockClusters.mockReturnValue({ ...baseClusters, deduplicatedClusters: [{ name: 'prod', reachable: true }] } as any)
+    mockCachedPods.mockReturnValue({ ...basePods, isFailed: true, consecutiveFailures: 3 } as unknown as ReturnType<typeof useCachedPods>)
+    mockClusters.mockReturnValue({ ...baseClusters, deduplicatedClusters: [{ name: 'prod', reachable: true }] } as unknown as ReturnType<typeof useClusters>)
     const { container } = render(<ControlPlaneHealth />)
     expect(container.firstChild).toBeTruthy()
   })
@@ -88,8 +83,7 @@ describe('ControlPlaneHealth', () => {
       { name: 'kube-scheduler-node1', namespace: 'kube-system', status: 'Running', cluster: 'prod', labels: { component: 'kube-scheduler' }, restarts: 0 },
       { name: 'etcd-node1', namespace: 'kube-system', status: 'Running', cluster: 'prod', labels: { component: 'etcd' }, restarts: 0 },
     ]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockCachedPods.mockReturnValue({ ...basePods, pods } as any)
+    mockCachedPods.mockReturnValue({ ...basePods, pods } as unknown as ReturnType<typeof useCachedPods>)
     render(<ControlPlaneHealth />)
     expect(screen.getByText('API Server')).toBeInTheDocument()
     expect(screen.getByText('etcd')).toBeInTheDocument()
@@ -99,8 +93,7 @@ describe('ControlPlaneHealth', () => {
     const pods = [
       { name: 'kube-apiserver-node1', namespace: 'kube-system', status: 'Running', cluster: 'prod', labels: { component: 'kube-apiserver' }, restarts: 0 },
     ]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockCachedPods.mockReturnValue({ ...basePods, pods } as any)
+    mockCachedPods.mockReturnValue({ ...basePods, pods } as unknown as ReturnType<typeof useCachedPods>)
     const { container } = render(<ControlPlaneHealth />)
     expect(container).toMatchSnapshot()
   })

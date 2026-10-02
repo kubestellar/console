@@ -88,12 +88,9 @@ describe('ClusterGroups', () => {
   beforeEach(() => {
     mockLoadingState.mockReturnValue(baseLoadingState)
     mockCardDemoState.mockReturnValue({ shouldUseDemoData: false, reason: null, showDemoBadge: false })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockClusters.mockReturnValue({ deduplicatedClusters: [], isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0 } as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockClusterGroups.mockReturnValue({ groups: [], createGroup: vi.fn(), updateGroup: vi.fn(), deleteGroup: vi.fn(), isPersisted: false } as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockFederation.mockReturnValue({ groups: [] } as any)
+    mockClusters.mockReturnValue({ deduplicatedClusters: [], isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0 } as unknown as ReturnType<typeof useClusters>)
+    mockClusterGroups.mockReturnValue({ groups: [], createGroup: vi.fn(), updateGroup: vi.fn(), deleteGroup: vi.fn(), isPersisted: false } as unknown as ReturnType<typeof useClusterGroups>)
+    mockFederation.mockReturnValue({ groups: [] } as unknown as ReturnType<typeof useFederationAwareness>)
   })
 
   it('renders skeleton via loading state', () => {
@@ -123,10 +120,8 @@ describe('ClusterGroups', () => {
       { name: 'staging', kind: 'static', clusters: ['staging-1'], color: 'blue', builtIn: false },
     ]
     const clusters = [{ name: 'prod-1', healthy: true }, { name: 'prod-2', healthy: true }, { name: 'staging-1', healthy: true }]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockClusterGroups.mockReturnValue({ groups, createGroup: vi.fn(), updateGroup: vi.fn(), deleteGroup: vi.fn(), isPersisted: false } as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockClusters.mockReturnValue({ deduplicatedClusters: clusters, isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0 } as any)
+    mockClusterGroups.mockReturnValue({ groups, createGroup: vi.fn(), updateGroup: vi.fn(), deleteGroup: vi.fn(), isPersisted: false } as unknown as ReturnType<typeof useClusterGroups>)
+    mockClusters.mockReturnValue({ deduplicatedClusters: clusters, isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0 } as unknown as ReturnType<typeof useClusters>)
     render(<ClusterGroups />)
     expect(screen.getByText('production')).toBeInTheDocument()
     expect(screen.getByText('staging')).toBeInTheDocument()
