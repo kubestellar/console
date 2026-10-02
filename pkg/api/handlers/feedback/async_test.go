@@ -13,7 +13,29 @@ import (
 // instead of hanging until the package-level `go test` timeout (#22870).
 const asyncTestWaitTimeout = 5 * time.Second
 
+// asyncTestDrainPollInterval is how often waitForSemaphoreDrain re-checks
+// the semaphore while waiting for background goroutines to release slots.
+const asyncTestDrainPollInterval = 10 * time.Millisecond
+
+// waitForSemaphoreDrain blocks until every githubOpSem slot has been
+// released. Slots are released in a goroutine defer AFTER fn signals
+// completion, so a test observing fn's completion can still see a full
+// semaphore briefly; capacity-dependent tests must drain first to avoid
+// cross-test flakes (#23906).
+func waitForSemaphoreDrain(t *testing.T) {
+	t.Helper()
+	deadline := time.After(asyncTestWaitTimeout)
+	for len(githubOpSem) > 0 {
+		select {
+		case <-deadline:
+			t.Fatalf("timeout waiting for semaphore to drain: %d slots still held", len(githubOpSem))
+		case <-time.After(asyncTestDrainPollInterval):
+		}
+	}
+}
+
 func TestRunAsyncGitHubOp_SemaphoreLimit(t *testing.T) {
+	waitForSemaphoreDrain(t)
 	completedCount := 0
 	done := make(chan struct{})
 	finished := make(chan struct{}, maxConcurrentGitHubOps)
@@ -82,6 +104,8 @@ func TestRunAsyncGitHubOp_OperationExecutes(t *testing.T) {
 }
 
 func TestRunAsyncGitHubOp_MultipleOperations(t *testing.T) {
+	waitForSemaphoreDrain(t)
+
 	const numOps = 5
 	completed := make(chan struct{}, numOps)
 
