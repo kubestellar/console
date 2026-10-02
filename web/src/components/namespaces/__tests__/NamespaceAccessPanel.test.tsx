@@ -40,7 +40,20 @@ vi.mock('react-i18next', () => {
   // fetchAccess on every render, re-triggering useEffect and making extra api.get
   // calls. Defining `t` once inside the factory closure gives a single stable
   // reference across all useTranslation() invocations.
-  const t = (key: string, fallback?: string): string => fallback ?? key
+  const translations: Record<string, string> = {
+    'namespaces.confirmRevokeAccess': 'Revoke access for {{subject}}?',
+    'namespaces.revokeAccessFailed': 'Failed to revoke access',
+  }
+  const t = (
+    key: string,
+    optsOrDefault?: string | Record<string, unknown>,
+    maybeOpts?: Record<string, unknown>
+  ): string => {
+    const opts = typeof optsOrDefault === 'object' && optsOrDefault !== null ? optsOrDefault : maybeOpts
+    const template = translations[key] ?? (typeof optsOrDefault === 'string' ? optsOrDefault : key)
+    if (!opts) return template
+    return template.replace(/\{\{(\w+)\}\}/g, (_, name) => String(opts[name] ?? `{{${name}}}`))
+  }
   return {
     initReactI18next: { type: '3rdParty', init: () => {} },
     useTranslation: () => ({ t }),
