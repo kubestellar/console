@@ -54,10 +54,8 @@ const baseGlobalFilters = {
 describe('ClusterNetwork', () => {
   beforeEach(() => {
     mockLoadingState.mockReturnValue(baseLoadingState)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockClusters.mockReturnValue(baseClusters as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockGlobalFilters.mockReturnValue(baseGlobalFilters as any)
+    mockClusters.mockReturnValue(baseClusters as unknown as ReturnType<typeof useClusters>)
+    mockGlobalFilters.mockReturnValue(baseGlobalFilters as unknown as ReturnType<typeof useGlobalFilters>)
   })
 
   it('renders skeleton while loading', () => {
@@ -74,16 +72,14 @@ describe('ClusterNetwork', () => {
   })
 
   it('renders select-cluster prompt when clusters available but none selected', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockClusters.mockReturnValue({ ...baseClusters, deduplicatedClusters: [{ name: 'prod', healthy: true }] } as any)
+    mockClusters.mockReturnValue({ ...baseClusters, deduplicatedClusters: [{ name: 'prod', healthy: true }] } as unknown as ReturnType<typeof useClusters>)
     render(<ClusterNetwork />)
     expect(screen.getByText('cards:clusterNetwork.selectClusterToView')).toBeInTheDocument()
   })
 
   it('renders happy-path with a configured cluster', () => {
     const clusters = [{ name: 'prod', healthy: true, reachable: true, nodeCount: 5, server: 'https://prod.api.example.com:6443' }]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockClusters.mockReturnValue({ ...baseClusters, deduplicatedClusters: clusters } as any)
+    mockClusters.mockReturnValue({ ...baseClusters, deduplicatedClusters: clusters } as unknown as ReturnType<typeof useClusters>)
     render(<ClusterNetwork config={{ cluster: 'prod' }} />)
     expect(screen.getByText('prod')).toBeInTheDocument()
     expect(screen.getByText('cards:clusterNetwork.apiServer')).toBeInTheDocument()

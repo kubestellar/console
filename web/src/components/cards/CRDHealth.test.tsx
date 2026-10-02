@@ -104,10 +104,8 @@ const baseCardData = {
 describe('CRDHealth', () => {
   beforeEach(() => {
     mockLoadingState.mockReturnValue(baseLoadingState)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockUseCRDs.mockReturnValue(baseCRDs as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockUseCardData.mockReturnValue(baseCardData as any)
+    mockUseCRDs.mockReturnValue(baseCRDs as unknown as ReturnType<typeof useCRDs>)
+    mockUseCardData.mockReturnValue(baseCardData as unknown as ReturnType<typeof useCardData>)
   })
 
   it('renders skeleton while loading', () => {
@@ -133,10 +131,8 @@ describe('CRDHealth', () => {
       { name: 'widgets.example.com', group: 'example.com', version: 'v1', cluster: 'prod', status: 'Established', instances: 3, scope: 'Namespaced' },
       { name: 'gadgets.example.com', group: 'example.com', version: 'v1beta1', cluster: 'prod', status: 'Established', instances: 1, scope: 'Cluster' },
     ]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockUseCRDs.mockReturnValue({ ...baseCRDs, crds } as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockUseCardData.mockReturnValue({ ...baseCardData, items: crds, totalItems: 2, filters: { ...baseCardData.filters, availableClusters: ['prod'] } } as any)
+    mockUseCRDs.mockReturnValue({ ...baseCRDs, crds } as unknown as ReturnType<typeof useCRDs>)
+    mockUseCardData.mockReturnValue({ ...baseCardData, items: crds, totalItems: 2, filters: { ...baseCardData.filters, availableClusters: ['prod'] } } as unknown as ReturnType<typeof useCardData>)
     const { container } = render(<CRDHealth />)
     expect(container.firstChild).toBeTruthy()
   })

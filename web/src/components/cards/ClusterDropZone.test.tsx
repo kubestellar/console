@@ -44,8 +44,7 @@ const baseDraggedWorkload = {
 describe('ClusterDropZone', () => {
   beforeEach(() => {
     mockLoadingState.mockReturnValue(baseLoadingState)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockClusterCaps.mockReturnValue({ data: [], isLoading: false, isRefreshing: false } as any)
+    mockClusterCaps.mockReturnValue({ data: [], isLoading: false, isRefreshing: false } as unknown as ReturnType<typeof useClusterCapabilities>)
   })
 
   it('renders nothing when not dragging', () => {
@@ -59,8 +58,7 @@ describe('ClusterDropZone', () => {
   })
 
   it('renders loading spinner while fetching clusters', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockClusterCaps.mockReturnValue({ data: undefined, isLoading: true, isRefreshing: false } as any)
+    mockClusterCaps.mockReturnValue({ data: undefined, isLoading: true, isRefreshing: false } as unknown as ReturnType<typeof useClusterCapabilities>)
     const { container } = render(<ClusterDropZone isDragging={true} draggedWorkload={baseDraggedWorkload} />)
     expect(container.firstChild).toBeTruthy()
     // Loading spinner present
@@ -70,8 +68,7 @@ describe('ClusterDropZone', () => {
 
   it('renders empty state when all clusters already deployed', () => {
     const clusters = [{ cluster: 'prod', nodeCount: 5, cpuCapacity: '40 cores', memCapacity: '160Gi', available: true }]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockClusterCaps.mockReturnValue({ data: clusters, isLoading: false, isRefreshing: false } as any)
+    mockClusterCaps.mockReturnValue({ data: clusters, isLoading: false, isRefreshing: false } as unknown as ReturnType<typeof useClusterCapabilities>)
     render(<ClusterDropZone
       isDragging={true}
       draggedWorkload={{ ...baseDraggedWorkload, currentClusters: ['prod'] }}
@@ -84,8 +81,7 @@ describe('ClusterDropZone', () => {
       { cluster: 'staging', nodeCount: 3, cpuCapacity: '24 cores', memCapacity: '96Gi', available: true },
       { cluster: 'dev', nodeCount: 2, cpuCapacity: '16 cores', memCapacity: '64Gi', available: true },
     ]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockClusterCaps.mockReturnValue({ data: clusters, isLoading: false, isRefreshing: false } as any)
+    mockClusterCaps.mockReturnValue({ data: clusters, isLoading: false, isRefreshing: false } as unknown as ReturnType<typeof useClusterCapabilities>)
     render(<ClusterDropZone isDragging={true} draggedWorkload={baseDraggedWorkload} />)
     expect(screen.getByText('staging')).toBeInTheDocument()
     expect(screen.getByText('dev')).toBeInTheDocument()
@@ -93,8 +89,7 @@ describe('ClusterDropZone', () => {
 
   it('renders without crashing', () => {
     const clusters = [{ cluster: 'staging', nodeCount: 3, cpuCapacity: '24 cores', memCapacity: '96Gi', available: true }]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockClusterCaps.mockReturnValue({ data: clusters, isLoading: false, isRefreshing: false } as any)
+    mockClusterCaps.mockReturnValue({ data: clusters, isLoading: false, isRefreshing: false } as unknown as ReturnType<typeof useClusterCapabilities>)
     const { container } = render(<ClusterDropZone isDragging={true} draggedWorkload={baseDraggedWorkload} />)
     expect(container.firstChild).toBeTruthy()
   })
