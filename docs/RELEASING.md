@@ -166,7 +166,7 @@ fields changed since, `kubectl rollout undo deployment/<name> -n <namespace>`).
 
 ### In-place self-upgrade (`POST /api/self-upgrade/trigger`)
 
-The self-upgrade feature (`pkg/api/handlers/self_upgrade.go`) patches the
+The self-upgrade feature (`pkg/api/handlers/ops/self_upgrade.go`) patches the
 running Deployment's container image directly — it does **not** call Helm
 and has **no dedicated rollback endpoint or automatic revert on failure**.
 Because it is a plain `Deployment` image patch, standard Kubernetes rollout
