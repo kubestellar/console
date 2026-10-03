@@ -6,6 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { act } from '@testing-library/react'
 import {
   MockWebSocket,
   wsInstances,
@@ -228,4 +229,3 @@ describe('useClusterProgress', () => {
 })
 
 // ── Max reconnect attempts exceeded path (lines 68-70 in source) ──
-
