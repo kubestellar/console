@@ -123,6 +123,7 @@ vi.mock('react-i18next', () => ({
 vi.mock('../../ui/Toast', () => ({ useToast: () => ({ showToast: mockShowToast }) }))
 vi.mock('../../../lib/analytics', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../../lib/analytics')>()), emitUserRoleChanged: vi.fn(), emitUserRemoved: vi.fn(), getDemoMode: vi.fn(() => false) }))
 vi.mock('../../../lib/cards/CardComponents', () => ({
+  // eslint-disable-next-line no-restricted-syntax -- moved verbatim from UserManagement.test.tsx (baselined); raw <input> is a test mock
   CardSearchInput: ({ placeholder }: { placeholder: string }) => <input data-testid="search" placeholder={placeholder} />,
   CardControlsRow: () => <div data-testid="controls-row" />,
   CardPaginationFooter: () => <div data-testid="pagination" />,
