@@ -14,6 +14,7 @@ import {
   AVAILABLE_COLORS,
   POPULAR_ICONS,
   VALUE_FORMATS,
+  GRID_COLUMN_OPTIONS,
   getIcon,
   getSmartDefault,
   validateStatAssistResult } from './statBlockFactoryModal.utils'
@@ -186,14 +187,11 @@ export function StatBlockFactoryBuilderTab({
               onChange={event => onGridColsChange(Number(event.target.value))}
               className="w-full text-sm px-3 py-2 rounded-lg bg-secondary text-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
             >
-              <option value={0}>{t('dashboard.statFactory.autoOption')}</option>
-              <option value={2}>2</option>
-              <option value={3}>3</option>
-              <option value={4}>4</option>
-              <option value={5}>5</option>
-              <option value={6}>6</option>
-              <option value={8}>8</option>
-              <option value={10}>10</option>
+              {GRID_COLUMN_OPTIONS.map(columns => (
+                <option key={columns} value={columns}>
+                  {columns === 0 ? t('dashboard.statFactory.autoOption') : columns}
+                </option>
+              ))}
             </Select>
           </div>
         </div>

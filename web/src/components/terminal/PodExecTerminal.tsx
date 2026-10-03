@@ -24,10 +24,10 @@ import { useKeyboardNav } from '../../hooks/useKeyboardNav'
 // ============================================================================
 
 /** Debounce delay for terminal resize events */
-const RESIZE_DEBOUNCE_MS = 100
+const RESIZE_DEBOUNCE_MS = 100 // Debounce terminal resize handling to avoid thrashing on rapid container resizes
 
 /** Default terminal font size in pixels */
-const TERMINAL_FONT_SIZE = 13
+const TERMINAL_FONT_SIZE = 13 // Default xterm.js font size (px)
 
 /** Default terminal line height */
 const TERMINAL_LINE_HEIGHT = 1.2

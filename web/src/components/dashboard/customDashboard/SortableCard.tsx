@@ -10,6 +10,7 @@ import { formatCardTitle } from '../../../lib/formatCardTitle'
 import type { Card } from './types'
 
 /** Clamp small cards in the md–lg range (768–1023px) for readability */
+// Tablet-width range treated as "narrow" for compact card layout
 const NARROW_MIN = 768
 const NARROW_MAX = 1023
 
@@ -22,7 +23,7 @@ const MIN_NARROW_COLS = 6
  * visible effect on `auto-rows-min` grids (#8289, #8298). Mirrors the
  * legacy `auto-rows-[minmax(180px,auto)]` baseline (180px per row).
  */
-const EXPANDED_CARD_ROW_MIN_HEIGHT_PX = 180
+const EXPANDED_CARD_ROW_MIN_HEIGHT_PX = 180 // Minimum height per grid row when a card is expanded
 
 /** Default row span when a card has no persisted position.h */
 const DEFAULT_CARD_ROW_SPAN = 2

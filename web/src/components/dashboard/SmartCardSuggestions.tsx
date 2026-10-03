@@ -32,10 +32,10 @@ interface Suggestion {
 }
 
 /** How long to show the "Added!" confirmation before hiding the suggestion */
-const ADDED_FEEDBACK_MS = 1500
+const ADDED_FEEDBACK_MS = 1500 // Duration to show "added" confirmation before resetting
 
 /** Delay before showing suggestions after dashboard mount (ms) */
-const SUGGESTION_SHOW_DELAY_MS = 30_000
+const SUGGESTION_SHOW_DELAY_MS = 30_000 // Wait before surfacing suggestions so the dashboard isn't cluttered immediately
 
 /**
  * Maps cluster capabilities to recommended card types.

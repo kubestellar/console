@@ -26,6 +26,9 @@ export const POPULAR_ICONS = [
   'Gauge', 'TrendingUp', 'TrendingDown', 'ArrowUpRight', 'Flame',
 ]
 
+// Selectable grid column counts for the stat block layout (0 = auto layout)
+export const GRID_COLUMN_OPTIONS = [0, 2, 3, 4, 5, 6, 8, 10] as const
+
 export const VALUE_FORMATS = [
   { value: '', label: 'None' },
   { value: 'number', label: 'Number (K/M)' },
