@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { resources, languages, defaultNS, namespaces } from '../i18n'
+import { resources, languages, defaultNS, namespaces, ensureLanguageLoaded } from '../i18n'
+import i18n from '../i18n'
 
 describe('i18n', () => {
   describe('resources', () => {
@@ -14,57 +15,35 @@ describe('i18n', () => {
       expect(resources.en.errors).toBeDefined()
     })
 
-    it('supports Spanish locale', () => {
-      expect(resources.es).toBeDefined()
-      expect(resources.es.common).toBeDefined()
+    it('does not statically bundle non-English resources (lazy-loaded instead)', () => {
+      // Only 'en' ships eagerly; other languages are fetched on demand via
+      // ensureLanguageLoaded() to keep the main bundle under the 300KB
+      // chunk-size budget.
+      expect(Object.keys(resources)).toEqual(['en'])
+    })
+  })
+
+  describe('ensureLanguageLoaded', () => {
+    it('loads and registers a non-English bundle with i18next', async () => {
+      await ensureLanguageLoaded('zh')
+
+      expect(i18n.getResourceBundle('zh', 'common')?.navigation?.dashboard).toBe('仪表板')
+      expect(i18n.getResourceBundle('zh', 'cards')?.titles?.cluster_health).toBe('集群健康')
+      expect(i18n.getResourceBundle('zh', 'status')?.cluster?.healthy).toBe('健康')
     })
 
-    it('supports French locale', () => {
-      expect(resources.fr).toBeDefined()
+    it('shares the zh bundle for zh-TW', async () => {
+      await ensureLanguageLoaded('zh-TW')
+
+      expect(i18n.getResourceBundle('zh-TW', 'common')?.navigation?.dashboard).toBe('仪表板')
     })
 
-    it('supports German locale', () => {
-      expect(resources.de).toBeDefined()
+    it('is a no-op for already-loaded languages', async () => {
+      await expect(ensureLanguageLoaded('en')).resolves.toBeUndefined()
     })
 
-    it('supports Japanese locale', () => {
-      expect(resources.ja).toBeDefined()
-    })
-
-    it('supports Simplified Chinese locale', () => {
-      expect(resources.zh).toBeDefined()
-    })
-
-    it('loads non-English resource bundles instead of English placeholders', () => {
-      expect(resources.zh.common.navigation.dashboard).toBe('仪表板')
-      expect(resources.zh.cards.titles.cluster_health).toBe('集群健康')
-      expect(resources.zh.status.cluster.healthy).toBe('健康')
-      expect(resources.zh.common.navigation.dashboard).not.toBe(resources.en.common.navigation.dashboard)
-    })
-
-    it('supports Traditional Chinese locale', () => {
-      expect(resources['zh-TW']).toBeDefined()
-    })
-
-    it('supports Italian locale', () => {
-      expect(resources.it).toBeDefined()
-    })
-
-    it('supports Portuguese locale', () => {
-      expect(resources.pt).toBeDefined()
-    })
-
-    it('supports Hindi locale', () => {
-      expect(resources.hi).toBeDefined()
-    })
-
-    it('all locales have the same namespace structure as English', () => {
-      const enKeys = Object.keys(resources.en).sort()
-      for (const [lang, langResources] of Object.entries(resources)) {
-        if (lang === 'en') continue
-        const langKeys = Object.keys(langResources).sort()
-        expect(langKeys).toEqual(enKeys)
-      }
+    it('is a no-op for unsupported language codes', async () => {
+      await expect(ensureLanguageLoaded('xx')).resolves.toBeUndefined()
     })
   })
 
@@ -86,9 +65,10 @@ describe('i18n', () => {
       }
     })
 
-    it('every language code has a corresponding resource entry', () => {
+    it('every non-English language code can be lazy-loaded', async () => {
       for (const lang of languages) {
-        expect((resources as Record<string, unknown>)[lang.code]).toBeDefined()
+        if (lang.code === 'en') continue
+        await expect(ensureLanguageLoaded(lang.code)).resolves.toBeUndefined()
       }
     })
   })

@@ -99,6 +99,7 @@ vi.mock('../../../hooks/useVersionCheck', () => ({
 
 vi.mock('../../../lib/i18n', () => ({
   LANGUAGE_STORAGE_KEY: 'i18nextLng',
+  ensureLanguageLoaded: vi.fn().mockResolvedValue(undefined),
   languages: [
     { code: 'en', name: 'English', flag: '🇺🇸' },
     { code: 'zh', name: '中文 (简体)', flag: '🇨🇳' },

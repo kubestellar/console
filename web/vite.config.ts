@@ -189,6 +189,19 @@ export default defineConfig(({ mode }) => ({
             ['dashboard-main', ['/src/components/dashboard/Dashboard.tsx']],
             ['dashboard-unified', ['/src/lib/unified/dashboard/']],
             ['dashboard-lib', ['/src/lib/dashboards/']],
+            // Dashboard dir (172 files, 1.9M source) had no catch-all and fell through
+            // into the 6.1M app-routes chunk. Split into domain sub-chunks.
+            ['dashboard-customizer', ['/src/components/dashboard/customizer/']],
+            ['dashboard-custom-grid', ['/src/components/dashboard/customDashboard/']],
+            ['dashboard-card-factory', ['/src/components/dashboard/CardFactory', '/src/components/dashboard/cardFactory', '/src/components/dashboard/StatBlockFactory', '/src/components/dashboard/statBlockFactoryModal', '/src/components/dashboard/useStatBlockFactoryModal']],
+            ['dashboard-add-card', ['/src/components/dashboard/AddCard', '/src/components/dashboard/addCardModal']],
+            ['dashboard-configure-card', ['/src/components/dashboard/ConfigureCard']],
+            ['dashboard-shared', ['/src/components/dashboard/shared/']],
+            ['dashboard-components', ['/src/components/dashboard/']],
+            // lib/unified/card tree (38 files, 446K source) had no catch-all.
+            ['unified-card-viz', ['/src/lib/unified/card/visualizations/']],
+            ['unified-card', ['/src/lib/unified/card/']],
+            ['unified-misc', ['/src/lib/unified/stats/', '/src/lib/unified/demo/', '/src/lib/unified/registerHooks']],
             // Split layout-shell into smaller chunks to reduce 396KB chunk
             ['layout-header', ['/src/components/layout/Header', '/src/components/layout/Sidebar.tsx']],
             ['layout-sidebar-customizer', ['/src/components/layout/SidebarCustomizer', '/src/components/layout/sidebar-customizer/']],
@@ -234,7 +247,12 @@ export default defineConfig(({ mode }) => ({
             ['app-routes-config', ['/src/routes/AppRoutes']],
             ['app-routes', ['/src/App.tsx']],
             ['app-shell', ['/src/hooks/usePersistedSettings']],
-            ['i18n-app', ['/src/lib/i18n.ts', '/src/locales/']],
+            // Only i18n.ts + the eagerly-bundled English locale files share this
+            // chunk. Other languages are dynamically imported from i18n.ts
+            // (see ensureLanguageLoaded) and must NOT get this same manual
+            // chunk name, otherwise Rollup merges them all into one eager
+            // chunk and defeats the lazy-loading.
+            ['i18n-app', ['/src/lib/i18n.ts', '/src/locales/en/']],
           ] as const
           for (const [chunkName, needles] of sourceChunkRules) {
             if (!needles.some(needle => id.includes(needle))) continue
