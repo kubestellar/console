@@ -1,0 +1,1 @@
+- Bump @fastify/busboy to 3.2.2 to fix high-severity DoS advisories (GHSA-xjh9-v7x6-24jw, GHSA-x8mw-p69m-v3mx) flagged by the nightly dependency audit.
