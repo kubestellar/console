@@ -59,10 +59,6 @@ var errGitHubUnauthorized = errors.New("github: token invalid or expired")
 // re-authenticate / open-on-GitHub message instead of the raw API payload.
 var errGitHubInsufficientPermissions = errors.New("github: insufficient issue permissions")
 
-// githubAPIBase is the default public GitHub API base URL.
-// Used as the fallback by resolveGitHubAPIBase() when GITHUB_URL is unset.
-const githubAPIBase = "https://api.github.com"
-
 // maxClientPageLimit is the largest page size a client may request on any
 // list endpoint that routes through parsePageParams (feedback, RBAC user
 // listing, dashboards, swaps). #6601/#6602: the handler rejects anything
@@ -108,25 +104,12 @@ func parsePageParams(c *fiber.Ctx) (int, int, error) {
 // https://github.com/api/v3, which doesn't exist — github.com's API lives at
 // api.github.com. Recognize public github.com (with or without scheme, with
 // or without www.) as a special case.
+//
+// This duplicated httputil.ResolveGitHubAPIBase() byte-for-byte until this
+// package was migrated to delegate to it, the same way parsePageParams
+// above delegates to httputil.ParsePageParams (epic #23685).
 func resolveGitHubAPIBase() string {
-	raw := strings.TrimSpace(os.Getenv("GITHUB_URL"))
-	if raw == "" {
-		return githubAPIBase
-	}
-	// Special case: public github.com → api.github.com. Handle bare hosts
-	// ("github.com") as well as fully-qualified URLs ("https://github.com").
-	if host, err := extractHost(raw); err == nil {
-		switch host {
-		case "github.com", "www.github.com", "api.github.com":
-			return "https://api.github.com"
-		}
-	}
-	// Otherwise assume GitHub Enterprise Server: <base>/api/v3.
-	trimmed := strings.TrimRight(raw, "/")
-	if strings.HasSuffix(trimmed, "/api/v3") {
-		return trimmed
-	}
-	return trimmed + "/api/v3"
+	return httputil.ResolveGitHubAPIBase()
 }
 
 // resolveGitHubUIBase returns the web UI base URL for GitHub/GHE.

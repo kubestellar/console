@@ -161,6 +161,11 @@ func TestResolveGitHubAPIBase(t *testing.T) {
 			want:      "https://github.enterprise.example.com/api/v3",
 		},
 		{
+			name:      "does not double-append api/v3 when already present",
+			githubURL: "https://ghe.example.com/api/v3",
+			want:      "https://ghe.example.com/api/v3",
+		},
+		{
 			name:      "preserves http scheme for enterprise host",
 			githubURL: "http://ghe.example.com/",
 			want:      "http://ghe.example.com/api/v3",
