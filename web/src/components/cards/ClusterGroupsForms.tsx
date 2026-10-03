@@ -10,7 +10,7 @@ import {
   type ClusterGroupQuery,
 } from '../../hooks/useClusterGroups'
 import { GROUP_COLORS } from './ClusterGroups.constants'
-import { CreateGroupForm } from './ClusterGroupsCreateForm'
+import { CreateGroupForm } from '../shared/ClusterGroupsCreateForm'
 import { StaticClusterPicker, QueryBuilder } from '../shared/ClusterGroupsFormFields'
 
 // Form sub-components for ClusterGroups card.

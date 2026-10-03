@@ -9,8 +9,8 @@ import {
   type ClusterFilter,
   type ClusterGroupQuery,
 } from '../../hooks/useClusterGroups'
-import { GROUP_COLORS } from './ClusterGroups.constants'
-import { StaticClusterPicker, QueryBuilder, AIAssistant } from '../shared/ClusterGroupsFormFields'
+import { GROUP_COLORS } from '../cards/ClusterGroups.constants'
+import { StaticClusterPicker, QueryBuilder, AIAssistant } from './ClusterGroupsFormFields'
 import { Input } from '../ui/Input'
 
 // Form sub-component for ClusterGroups card.
@@ -275,3 +275,43 @@ export function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, o
               onClick={handlePreview}
               disabled={isPreviewing || (!labelSelector.trim() && filters.length === 0)}
               className={cn(
+                'w-full flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-md transition-colors',
+                (!labelSelector.trim() && filters.length === 0)
+                  ? 'bg-secondary text-muted-foreground cursor-not-allowed'
+                  : 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
+              )}
+            >
+              {isPreviewing ? <span className="refresh-dots inline-flex items-center gap-0.5 text-purple-400"><span className="w-1 h-1 rounded-full bg-current" /><span className="w-1 h-1 rounded-full bg-current" /><span className="w-1 h-1 rounded-full bg-current" /></span> : <Search className="w-3 h-3" />}
+              {t('cards:clusterGroups.previewMatches')}
+            </button>
+            {previewClusters !== null && (
+              <div className="text-2xs text-muted-foreground">
+                {t('cards:clusterGroups.matchCount', { count: previewClusters.length })}
+                <span className="ml-1 text-purple-400">
+                  {previewClusters.length > 0 ? previewClusters.join(', ') : t('cards:clusterGroups.none')}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Save button */}
+      <button
+        onClick={handleSave}
+        disabled={!canSave}
+        className={cn(
+          'w-full py-1.5 text-xs font-medium rounded-md transition-colors',
+          canSave
+            ? kind === 'dynamic'
+              ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+              : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+            : 'bg-secondary text-muted-foreground cursor-not-allowed'
+        )}
+      >
+        {kind === 'dynamic' ? t('cards:clusterGroups.createDynamicGroup') : t('cards:clusterGroups.createGroup')}
+      </button>
+    </div>
+  )
+}
+
