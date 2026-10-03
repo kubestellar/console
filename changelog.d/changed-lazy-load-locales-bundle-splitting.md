@@ -1,0 +1,1 @@
+- Lazy-load non-English locale bundles and split the dashboard/unified-card source trees into dedicated chunks to shrink oversized JS bundle chunks

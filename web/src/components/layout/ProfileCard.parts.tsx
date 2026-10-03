@@ -12,7 +12,7 @@ import { REWARD_ACTIONS } from '../../hooks/useRewards'
 import type { RewardActionType } from '../../types/rewards'
 import { checkOAuthConfigured } from '../../lib/api'
 import { isDemoModeForced } from '../../lib/demoMode'
-import { LANGUAGE_STORAGE_KEY, languages } from '../../lib/i18n'
+import { LANGUAGE_STORAGE_KEY, ensureLanguageLoaded, languages } from '../../lib/i18n'
 import { emitLinkedInShare, emitLanguageChanged } from '../../lib/analytics'
 import { safeSetItem } from '../../lib/utils/localStorage'
 import { OrgSwitcher } from './OrgSwitcher'
@@ -153,6 +153,9 @@ export function ProfileStatRows({
   const currentLanguage = languages.find(language => language.code === activeLanguageCode) || languages[0]
 
   const handleLanguageChange = async (langCode: string) => {
+    // Non-English bundles are lazy-loaded; fetch before switching so the UI
+    // doesn't flash English/missing keys while the chunk downloads.
+    await ensureLanguageLoaded(langCode)
     await i18n.changeLanguage(langCode)
     safeSetItem(LANGUAGE_STORAGE_KEY, langCode)
     emitLanguageChanged(langCode)

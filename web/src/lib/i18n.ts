@@ -2,43 +2,17 @@ import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
 
-// Import translations
-import commonDE from '../locales/de/common.json'
-import cardsDE from '../locales/de/cards.json'
-import statusDE from '../locales/de/status.json'
-import errorsDE from '../locales/de/errors.json'
+// Import translations. Only English is bundled eagerly -- it's the
+// fallbackLng and must be available synchronously. The other 9 languages
+// (40 more JSON files) were previously all statically imported here, which
+// inflated the main app-routes chunk by ~2MB of raw JSON. They're now
+// lazy-loaded on demand via `ensureLanguageLoaded()` below, either when the
+// detected/persisted language isn't English or when the user switches
+// languages in the profile menu.
 import commonEN from '../locales/en/common.json'
 import cardsEN from '../locales/en/cards.json'
 import statusEN from '../locales/en/status.json'
 import errorsEN from '../locales/en/errors.json'
-import commonES from '../locales/es/common.json'
-import cardsES from '../locales/es/cards.json'
-import statusES from '../locales/es/status.json'
-import errorsES from '../locales/es/errors.json'
-import commonFR from '../locales/fr/common.json'
-import cardsFR from '../locales/fr/cards.json'
-import statusFR from '../locales/fr/status.json'
-import errorsFR from '../locales/fr/errors.json'
-import commonHI from '../locales/hi/common.json'
-import cardsHI from '../locales/hi/cards.json'
-import statusHI from '../locales/hi/status.json'
-import errorsHI from '../locales/hi/errors.json'
-import commonIT from '../locales/it/common.json'
-import cardsIT from '../locales/it/cards.json'
-import statusIT from '../locales/it/status.json'
-import errorsIT from '../locales/it/errors.json'
-import commonJA from '../locales/ja/common.json'
-import cardsJA from '../locales/ja/cards.json'
-import statusJA from '../locales/ja/status.json'
-import errorsJA from '../locales/ja/errors.json'
-import commonPT from '../locales/pt/common.json'
-import cardsPT from '../locales/pt/cards.json'
-import statusPT from '../locales/pt/status.json'
-import errorsPT from '../locales/pt/errors.json'
-import commonZH from '../locales/zh/common.json'
-import cardsZH from '../locales/zh/cards.json'
-import statusZH from '../locales/zh/status.json'
-import errorsZH from '../locales/zh/errors.json'
 
 export const LANGUAGE_STORAGE_KEY = 'i18nextLng'
 
@@ -49,61 +23,87 @@ export const resources = {
     status: statusEN,
     errors: errorsEN,
   },
-  es: {
-    common: commonES,
-    cards: cardsES,
-    status: statusES,
-    errors: errorsES,
-  },
-  fr: {
-    common: commonFR,
-    cards: cardsFR,
-    status: statusFR,
-    errors: errorsFR,
-  },
-  de: {
-    common: commonDE,
-    cards: cardsDE,
-    status: statusDE,
-    errors: errorsDE,
-  },
-  ja: {
-    common: commonJA,
-    cards: cardsJA,
-    status: statusJA,
-    errors: errorsJA,
-  },
-  zh: {
-    common: commonZH,
-    cards: cardsZH,
-    status: statusZH,
-    errors: errorsZH,
-  },
-  it: {
-    common: commonIT,
-    cards: cardsIT,
-    status: statusIT,
-    errors: errorsIT,
-  },
-  pt: {
-    common: commonPT,
-    cards: cardsPT,
-    status: statusPT,
-    errors: errorsPT,
-  },
-  hi: {
-    common: commonHI,
-    cards: cardsHI,
-    status: statusHI,
-    errors: errorsHI,
-  },
-  'zh-TW': {
-    common: commonZH,
-    cards: cardsZH,
-    status: statusZH,
-    errors: errorsZH,
-  },
 } as const
+
+type LazyLoadedLanguage = 'es' | 'fr' | 'de' | 'ja' | 'zh' | 'it' | 'pt' | 'hi' | 'zh-TW'
+type NamespaceBundle = Record<(typeof namespaces)[number], object>
+
+// One dynamic import() per locale directory keeps each language in its own
+// chunk, fetched only when actually needed.
+const LOCALE_LOADERS: Record<Exclude<LazyLoadedLanguage, 'zh-TW'>, () => Promise<NamespaceBundle>> = {
+  es: async () => ({
+    common: (await import('../locales/es/common.json')).default,
+    cards: (await import('../locales/es/cards.json')).default,
+    status: (await import('../locales/es/status.json')).default,
+    errors: (await import('../locales/es/errors.json')).default,
+  }),
+  fr: async () => ({
+    common: (await import('../locales/fr/common.json')).default,
+    cards: (await import('../locales/fr/cards.json')).default,
+    status: (await import('../locales/fr/status.json')).default,
+    errors: (await import('../locales/fr/errors.json')).default,
+  }),
+  de: async () => ({
+    common: (await import('../locales/de/common.json')).default,
+    cards: (await import('../locales/de/cards.json')).default,
+    status: (await import('../locales/de/status.json')).default,
+    errors: (await import('../locales/de/errors.json')).default,
+  }),
+  ja: async () => ({
+    common: (await import('../locales/ja/common.json')).default,
+    cards: (await import('../locales/ja/cards.json')).default,
+    status: (await import('../locales/ja/status.json')).default,
+    errors: (await import('../locales/ja/errors.json')).default,
+  }),
+  zh: async () => ({
+    common: (await import('../locales/zh/common.json')).default,
+    cards: (await import('../locales/zh/cards.json')).default,
+    status: (await import('../locales/zh/status.json')).default,
+    errors: (await import('../locales/zh/errors.json')).default,
+  }),
+  it: async () => ({
+    common: (await import('../locales/it/common.json')).default,
+    cards: (await import('../locales/it/cards.json')).default,
+    status: (await import('../locales/it/status.json')).default,
+    errors: (await import('../locales/it/errors.json')).default,
+  }),
+  pt: async () => ({
+    common: (await import('../locales/pt/common.json')).default,
+    cards: (await import('../locales/pt/cards.json')).default,
+    status: (await import('../locales/pt/status.json')).default,
+    errors: (await import('../locales/pt/errors.json')).default,
+  }),
+  hi: async () => ({
+    common: (await import('../locales/hi/common.json')).default,
+    cards: (await import('../locales/hi/cards.json')).default,
+    status: (await import('../locales/hi/status.json')).default,
+    errors: (await import('../locales/hi/errors.json')).default,
+  }),
+}
+
+const loadedLanguages = new Set<string>(['en'])
+const inFlightLoads = new Map<string, Promise<void>>()
+
+/**
+ * Loads (and registers with i18next) the resource bundle for `lng` the
+ * first time it's needed. Safe to call repeatedly -- subsequent calls for
+ * an already-loaded language resolve immediately. `zh-TW` shares the `zh`
+ * bundle, matching the prior statically-bundled behavior.
+ */
+export function ensureLanguageLoaded(lng: string): Promise<void> {
+  const loaderKey = (lng === 'zh-TW' ? 'zh' : lng) as keyof typeof LOCALE_LOADERS
+  if (loadedLanguages.has(lng) || !(loaderKey in LOCALE_LOADERS)) return Promise.resolve()
+  const existing = inFlightLoads.get(lng)
+  if (existing) return existing
+  const promise = LOCALE_LOADERS[loaderKey]().then(bundle => {
+    for (const ns of namespaces) {
+      i18n.addResourceBundle(lng, ns, bundle[ns], true, true)
+    }
+    loadedLanguages.add(lng)
+  })
+  inFlightLoads.set(lng, promise)
+  return promise
+}
 
 // Available languages with display names
 export const languages = [
@@ -154,6 +154,17 @@ configuredI18n.init({
     useSuspense: false, // Disable suspense to avoid loading states
   },
 })
+
+// The detector above may resolve a persisted/browser language other than
+// English before its bundle has been lazy-loaded; fetch it now so returning
+// non-English users don't see an English flash. `i18n.changeLanguage` with
+// the already-resolved language still emits 'languageChanged', which
+// react-i18next listens for to re-render bound components once the bundle
+// lands.
+const initialLng = i18n.resolvedLanguage || i18n.language
+if (initialLng && initialLng !== 'en') {
+  void ensureLanguageLoaded(initialLng).then(() => i18n.changeLanguage(initialLng))
+}
 
 export default i18n
 
