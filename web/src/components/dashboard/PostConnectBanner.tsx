@@ -26,7 +26,7 @@ interface PostConnectBannerProps {
 }
 
 /** How long (ms) after agent connects before showing the banner */
-const SHOW_DELAY_MS = 2000
+const SHOW_DELAY_MS = 2000 // Delay before showing the post-connect banner so the UI settles first
 
 export function PostConnectBanner({
   onRunHealthCheck,

@@ -18,9 +18,9 @@ interface Props {
 }
 
 /** Seconds before the panel auto-collapses */
-const AUTO_COLLAPSE_SECONDS = 20
+const AUTO_COLLAPSE_SECONDS = 20 // Countdown before recommendations panel auto-collapses
 /** Interval between each countdown tick in milliseconds (1 second) */
-const COUNTDOWN_TICK_MS = 1000
+const COUNTDOWN_TICK_MS = 1000 // Countdown timer tick interval (1 second)
 
 /** Neutral card-gray styling for all priority levels */
 const CHIP_STYLE = {

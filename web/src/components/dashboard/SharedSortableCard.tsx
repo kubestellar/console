@@ -28,7 +28,7 @@ const COLLAPSED_CARD_ROW_SPAN = 1
  * reserves N grid rows but `auto-rows-min` collapses those rows to the
  * card's content, so taller row counts had no visible effect.
  */
-const EXPANDED_CARD_ROW_MIN_HEIGHT_PX = 180
+const EXPANDED_CARD_ROW_MIN_HEIGHT_PX = 180 // Minimum height per grid row when a card is expanded
 
 interface SortableCardProps {
   card: Card
@@ -57,7 +57,7 @@ function shallowEqualConfig(
 }
 
 /** Below this width, clamp small cards to half-width (6 cols) for readability */
-const NARROW_BREAKPOINT = 1024
+const NARROW_BREAKPOINT = 1024 // Below this width, use the compact card layout
 
 /** Minimum card column span at narrow viewports */
 const MIN_NARROW_COLS = 6

@@ -4,7 +4,7 @@ import { loadDashboardCardsFromStorage } from '../../lib/dashboards/dashboardCar
 import type { Card, DashboardData } from './dashboardUtils'
 
 /** How often the auto-refresh timer fires (ms). */
-export const AUTO_REFRESH_INTERVAL_MS = 30_000
+export const AUTO_REFRESH_INTERVAL_MS = 30_000 // Dashboard data auto-refresh cadence
 
 /** localStorage key used to persist the main dashboard card list. */
 export const DASHBOARD_STORAGE_KEY = STORAGE_KEY_MAIN_DASHBOARD_CARDS
