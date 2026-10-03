@@ -219,6 +219,12 @@ export default defineConfig(({ mode }) => ({
             ['lib-demo', ['/src/lib/demo/']],
             ['lib-themes', ['/src/lib/themes/']],
             ['config-dashboards', ['/src/config/dashboards/']],
+            // More lib/ trees with no rule that fell through into the 1.1M app-routes chunk.
+            // MSW handlers are only reached via the dynamic import('./mocks/browser') in main.tsx.
+            ['msw-handlers', ['/src/mocks/browser', '/src/mocks/handlers']],
+            ['lib-acmm', ['/src/lib/acmm/']],
+            ['lib-llmd', ['/src/lib/llmd/']],
+            ['lib-insights', ['/src/lib/insights/', '/src/lib/runbooks/']],
             // Pages are route-level lazy imports; app-pages is split per page below so
             // each route only downloads its own page code (was a single 3.2M chunk).
             ['app-pages', ['/src/pages/']],
