@@ -99,6 +99,22 @@ export default defineConfig(({ mode }) => ({
     rolldownOptions: {
       output: {
         manualChunks: (id) => {
+          // One chunk per page file (e.g. WhiteLabel.tsx + WhiteLabel.sections.tsx → page-whitelabel)
+          const pageChunkName = (moduleId: string): string => {
+            const rest = moduleId.split('/src/pages/')[1] ?? ''
+            const base = rest.split('/')[0].split('.')[0].split('?')[0].toLowerCase()
+            return base ? `page-${base}` : 'app-pages'
+          }
+          // Bucket remaining root-level card files alphabetically to keep cards-misc under 300KB
+          const CARDS_MISC_BUCKETS: ReadonlyArray<readonly [string, string]> = [
+            ['a', 'c'], ['d', 'h'], ['i', 'o'], ['p', 's'], ['t', 'z'],
+          ]
+          const cardsMiscChunkName = (moduleId: string): string => {
+            const rest = moduleId.split('/src/components/cards/')[1] ?? ''
+            const first = rest.charAt(0).toLowerCase()
+            const bucket = CARDS_MISC_BUCKETS.find(([lo, hi]) => first >= lo && first <= hi)
+            return bucket ? `cards-misc-${bucket[0]}${bucket[1]}` : 'cards-misc'
+          }
           const sourceChunkRules = [
             // Specific card registry files first (most specific matches first)
             ['card-registry', ['/src/components/cards/cardRegistry.ts']],
@@ -200,8 +216,8 @@ export default defineConfig(({ mode }) => ({
             ['lib-demo', ['/src/lib/demo/']],
             ['lib-themes', ['/src/lib/themes/']],
             ['config-dashboards', ['/src/config/dashboards/']],
-            // Split internal test/perf-harness pages out of app-pages to reduce the 5.0MB chunk
-            ['app-pages-testing', ['/src/pages/AllCardsPerfTest', '/src/pages/CompliancePerfTest', '/src/pages/UnifiedCardTest', '/src/pages/UnifiedStatsTest', '/src/pages/UnifiedDashboardTest']],
+            // Pages are route-level lazy imports; app-pages is split per page below so
+            // each route only downloads its own page code (was a single 3.2M chunk).
             ['app-pages', ['/src/pages/']],
             // Split app shell to reduce massive 5.5M app-routes chunk
             ['app-router', ['/src/components/router/', '/src/lib/router/']],
@@ -212,7 +228,10 @@ export default defineConfig(({ mode }) => ({
             ['i18n-app', ['/src/lib/i18n.ts', '/src/locales/']],
           ] as const
           for (const [chunkName, needles] of sourceChunkRules) {
-            if (needles.some(needle => id.includes(needle))) return chunkName
+            if (!needles.some(needle => id.includes(needle))) continue
+            if (chunkName === 'app-pages') return pageChunkName(id)
+            if (chunkName === 'cards-misc') return cardsMiscChunkName(id)
+            return chunkName
           }
           if (!id.includes('node_modules')) return
           // React core (split scheduler separately to reduce main react bundle)
