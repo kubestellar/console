@@ -1,4 +1,4 @@
-# gh-aw-metadata: {"schema_version":"v4","frontmatter_hash":"eb7fa4c29d42870c45549ff2e17d65e0b7e3cce4fa32ba5de3a40c1bbb1e442c","body_hash":"65ac76ae8ffc79eeb643c3209ce2ad44bba747e5a44c1d8308d58e74612ac333","compiler_version":"v0.79.6","strict":true,"agent_id":"copilot","engine_versions":{"copilot":"1.0.60"}}
+# gh-aw-metadata: {"schema_version":"v4","frontmatter_hash":"7a7bc56f69714e0be5f1064c923e7e29dd6843c732e0b7b28bffee86d71247d3","body_hash":"65ac76ae8ffc79eeb643c3209ce2ad44bba747e5a44c1d8308d58e74612ac333","compiler_version":"v0.79.6","strict":true,"agent_id":"copilot","engine_versions":{"copilot":"1.0.60"}}
 # gh-aw-manifest: {"version":1,"secrets":["COPILOT_GITHUB_TOKEN","GH_AW_GITHUB_MCP_SERVER_TOKEN","GH_AW_GITHUB_TOKEN","GITHUB_TOKEN"],"actions":[{"repo":"actions/checkout","sha":"df4cb1c069e1874edd31b4311f1884172cec0e10","version":"v6.0.3"},{"repo":"actions/download-artifact","sha":"3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c","version":"v8.0.1"},{"repo":"actions/github-script","sha":"373c709c69115d41ff229c7e5df9f8788daa9553","version":"v9"},{"repo":"actions/github-script","sha":"3a2844b7e9c422d3c10d287c895573f7108da1b3","version":"v9.0.0"},{"repo":"actions/setup-node","sha":"48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","version":"v6.4.0"},{"repo":"actions/upload-artifact","sha":"043fb46d1a93c77aae656e7c1c64a875d1fc6a0a","version":"v7.0.1"},{"repo":"github/gh-aw-actions/setup","sha":"d059700c6a8ec3b5fd798b9ea60f5d048447b918","version":"v0.79.6"}],"containers":[{"image":"ghcr.io/github/gh-aw-firewall/agent:0.27.0"},{"image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.27.0"},{"image":"ghcr.io/github/gh-aw-firewall/squid:0.27.0"},{"image":"ghcr.io/github/gh-aw-mcpg:v0.3.25","digest":"sha256:c10331ad17668ef89f38f5e356678788a40b0cd5fef96e8f92e1d9c1de47cbaa","pinned_image":"ghcr.io/github/gh-aw-mcpg:v0.3.25@sha256:c10331ad17668ef89f38f5e356678788a40b0cd5fef96e8f92e1d9c1de47cbaa"},{"image":"ghcr.io/github/github-mcp-server:v1.1.2","digest":"sha256:30197479d8036c7811892bc07e06f9a05c9ef3cdd79bc59f256d50647f95788c","pinned_image":"ghcr.io/github/github-mcp-server:v1.1.2@sha256:30197479d8036c7811892bc07e06f9a05c9ef3cdd79bc59f256d50647f95788c"},{"image":"node:lts-alpine","digest":"sha256:2bdb65ed1dab192432bc31c95f94155ca5ad7fc1392fb7eb7526ab682fa5bf14","pinned_image":"node:lts-alpine@sha256:2bdb65ed1dab192432bc31c95f94155ca5ad7fc1392fb7eb7526ab682fa5bf14"}]}
 #    ___                   _   _      
 #   / _ \                 | | (_)     
@@ -107,7 +107,7 @@ jobs:
         env:
           GH_AW_INFO_ENGINE_ID: "copilot"
           GH_AW_INFO_ENGINE_NAME: "GitHub Copilot CLI"
-          GH_AW_INFO_MODEL: ${{ vars.GH_AW_MODEL_AGENT_COPILOT || vars.GH_AW_DEFAULT_MODEL_COPILOT || 'claude-sonnet-4.5' }}
+          GH_AW_INFO_MODEL: ${{ vars.GH_AW_MODEL_AGENT_COPILOT || vars.GH_AW_DEFAULT_MODEL_COPILOT || 'agent' }}
           GH_AW_INFO_VERSION: "1.0.60"
           GH_AW_INFO_AGENT_VERSION: "1.0.60"
           GH_AW_INFO_CLI_VERSION: "v0.79.6"
@@ -768,7 +768,7 @@ jobs:
           COPILOT_AGENT_RUNNER_TYPE: STANDALONE
           COPILOT_DUMMY_BYOK: dummy-byok-key-for-offline-mode
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
-          COPILOT_MODEL: ${{ vars.GH_AW_MODEL_AGENT_COPILOT || vars.GH_AW_DEFAULT_MODEL_COPILOT || 'claude-sonnet-4.5' }}
+          COPILOT_MODEL: ${{ vars.GH_AW_MODEL_AGENT_COPILOT || vars.GH_AW_DEFAULT_MODEL_COPILOT || 'agent' }}
           GH_AW_MAX_TURNS: ${{ vars.GH_AW_DEFAULT_MAX_TURNS || '' }}
           GH_AW_MCP_CONFIG: /home/runner/.copilot/mcp-config.json
           GH_AW_PHASE: agent
@@ -1289,7 +1289,7 @@ jobs:
           COPILOT_AGENT_RUNNER_TYPE: STANDALONE
           COPILOT_DUMMY_BYOK: dummy-byok-key-for-offline-mode
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
-          COPILOT_MODEL: ${{ vars.GH_AW_MODEL_DETECTION_COPILOT || vars.GH_AW_DEFAULT_MODEL_COPILOT || 'claude-sonnet-4.5' }}
+          COPILOT_MODEL: ${{ vars.GH_AW_MODEL_DETECTION_COPILOT || vars.GH_AW_DEFAULT_MODEL_COPILOT || 'agent' }}
           GH_AW_MAX_TURNS: ${{ vars.GH_AW_DEFAULT_MAX_TURNS || '' }}
           GH_AW_PHASE: detection
           GH_AW_PROMPT: /tmp/gh-aw/aw-prompts/prompt.txt
