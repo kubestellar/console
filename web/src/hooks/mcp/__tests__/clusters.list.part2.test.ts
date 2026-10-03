@@ -116,7 +116,6 @@ import {
   updateClusterCache,
   setInitialFetchStarted,
   sharedWebSocket,
-  CLUSTER_POLL_INTERVAL_MS,
 } from '../shared'
 
 // ---------------------------------------------------------------------------
