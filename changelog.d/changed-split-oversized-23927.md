@@ -1,0 +1,1 @@
+- Split remaining oversized source files (useStackDiscovery, namespaces, useDashboardCards tests; ClusterGroupsForms) into focused modules under 500 lines
