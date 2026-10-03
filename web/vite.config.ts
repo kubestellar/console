@@ -155,6 +155,9 @@ export default defineConfig(({ mode }) => ({
             ['cards-drasi-pipelines', ['/src/components/cards/DrasiPipelineHealth', '/src/components/cards/DrasiPipelines', '/src/components/cards/drasi/DrasiPipelineHealth', '/src/components/cards/drasi/DrasiPipelines']],
             // Split the CodeMirror editor wrapper out of the drasi catch-all to reduce the 548KB chunk
             ['cards-drasi-editor', ['/src/components/cards/drasi/CodeMirrorEditor.tsx', '/src/components/cards/drasi/LazyCodeMirror.tsx']],
+            // Split render-helper and data/type modules out of the drasi catch-all to reduce the 460KB chunk
+            ['cards-drasi-render', ['/src/components/cards/drasi/DrasiNodeCard.tsx', '/src/components/cards/drasi/DrasiFlowLine.tsx', '/src/components/cards/drasi/DrasiResultsTable.tsx', '/src/components/cards/drasi/DrasiStreamSamples.tsx', '/src/components/cards/drasi/DrasiReactiveGraph.geometry.ts', '/src/components/cards/drasi/DrasiReactiveGraph.state.ts']],
+            ['cards-drasi-data', ['/src/components/cards/drasi/DrasiDemoData.ts', '/src/components/cards/drasi/DrasiTypes.ts', '/src/components/cards/drasi/DrasiConstants.ts', '/src/components/cards/drasi/DrasiFlowUtils.ts', '/src/components/cards/drasi/DrasiReactiveGraph.utils.ts', '/src/components/cards/drasi/DrasiReactiveGraph.constants.ts']],
             ['cards-drasi', ['/src/components/cards/drasi/', '/src/components/cards/DrasiPipelineHealth', '/src/components/cards/DrasiPipelines', '/src/components/cards/DrasiTopology']],
             ['cards-karmada', ['/src/components/cards/karmada_status/', '/src/components/cards/openyurt_status/']],
             ['cards-multitenancy', ['/src/components/cards/multi-tenancy/']],
