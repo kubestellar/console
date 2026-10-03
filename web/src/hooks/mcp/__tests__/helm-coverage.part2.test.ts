@@ -1,6 +1,6 @@
+import { mockIsDemoMode, mockUseDemoMode, uniqueCluster, makeHistoryEntry } from './helm-coverage.setup'
 import { describe, it, expect, vi } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
-import { mockIsDemoMode, mockUseDemoMode, uniqueCluster, makeHistoryEntry } from './helm-coverage.setup'
 import {
   useHelmReleases,
   useHelmHistory,
@@ -8,22 +8,24 @@ import {
 } from '../helm'
 
 describe('useHelmReleases — demo mode edge cases', () => {
+  // Note: order matters — the no-cluster test warms the module-level cache,
+  // matching the warm-cache state this suite had in the original combined file.
+  it('updates module cache when demo mode without cluster param', async () => {
+    mockIsDemoMode.mockReturnValue(true)
+    mockUseDemoMode.mockReturnValue(true)
+
+    const { result } = renderHook(() => useHelmReleases())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.releases.length).toBeGreaterThan(0)
+  })
+
   it('does not update module cache when demo mode + cluster param', async () => {
     mockIsDemoMode.mockReturnValue(true)
     mockUseDemoMode.mockReturnValue(true)
 
     const cluster = uniqueCluster('demo-cluster')
     const { result } = renderHook(() => useHelmReleases(cluster))
-
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.releases.length).toBeGreaterThan(0)
-  })
-
-  it('updates module cache when demo mode without cluster param', async () => {
-    mockIsDemoMode.mockReturnValue(true)
-    mockUseDemoMode.mockReturnValue(true)
-
-    const { result } = renderHook(() => useHelmReleases())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.releases.length).toBeGreaterThan(0)

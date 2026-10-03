@@ -1,21 +1,21 @@
 import { beforeEach, afterEach, vi } from 'vitest'
-export const {
-  mockIsDemoMode,
-  mockUseDemoMode,
-  mockIsNetlifyDeployment,
-  mockFetchSSE,
-  mockRegisterRefetch,
-  mockRegisterCacheReset,
-  mockSubscribePolling,
-} = vi.hoisted(() => ({
+const hoisted = vi.hoisted(() => ({
   mockIsDemoMode: vi.fn(() => false),
   mockUseDemoMode: vi.fn(() => ({ isDemoMode: false })),
   mockIsNetlifyDeployment: { value: false },
   mockFetchSSE: vi.fn(),
-  mockRegisterRefetch: vi.fn(() => vi.fn()),
-  mockRegisterCacheReset: vi.fn(() => vi.fn()),
-  mockSubscribePolling: vi.fn(() => vi.fn()),
+  mockRegisterRefetch: vi.fn((..._args: unknown[]) => vi.fn()),
+  mockRegisterCacheReset: vi.fn((..._args: unknown[]) => vi.fn()),
+  mockSubscribePolling: vi.fn((..._args: unknown[]) => vi.fn()),
 }))
+
+export const mockIsDemoMode = hoisted.mockIsDemoMode
+export const mockUseDemoMode = hoisted.mockUseDemoMode
+export const mockIsNetlifyDeployment = hoisted.mockIsNetlifyDeployment
+export const mockFetchSSE = hoisted.mockFetchSSE
+export const mockRegisterRefetch = hoisted.mockRegisterRefetch
+export const mockRegisterCacheReset = hoisted.mockRegisterCacheReset
+export const mockSubscribePolling = hoisted.mockSubscribePolling
 
 vi.mock('../mcp/shared', () => ({
   agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
@@ -118,7 +118,7 @@ beforeEach(() => {
   localStorage.clear()
   localStorage.setItem('token', 'test-token')
   mockIsDemoMode.mockReturnValue(false)
-  mockUseDemoMode.mockReturnValue(false)
+  mockUseDemoMode.mockReturnValue({ isDemoMode: false })
   mockIsNetlifyDeployment.value = false
   mockRegisterRefetch.mockReturnValue(vi.fn())
   mockSubscribePolling.mockReturnValue(vi.fn())

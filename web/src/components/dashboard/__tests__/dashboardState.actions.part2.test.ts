@@ -20,7 +20,6 @@ import {
   addCardFromAI,
   applyDashboardTemplate,
   addSingleCard,
-  confirmDeployAction,
 } from '../dashboardState.actions'
 
 describe('removeCardFromBoard', () => {
@@ -285,5 +284,3 @@ describe('addSingleCard', () => {
     expect(mockEmitCardAdded).toHaveBeenCalledWith('bird_watch', 'smart_suggestion')
   })
 })
-
-// ─── confirmDeployAction ───────────────────────────────────────────────────

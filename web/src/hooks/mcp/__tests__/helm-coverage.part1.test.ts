@@ -1,6 +1,6 @@
+import { mockFetchSSE, uniqueCluster, makeRelease, makeHistoryEntry } from './helm-coverage.setup'
 import { describe, it, expect, vi } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
-import { mockFetchSSE, uniqueCluster, makeRelease, makeHistoryEntry } from './helm-coverage.setup'
 import {
   useHelmReleases,
   useHelmHistory,

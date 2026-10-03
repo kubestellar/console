@@ -5,7 +5,6 @@ import {
   makeCard,
   applyUpdater,
 } from './dashboardState.actions.setup'
-import type { Card } from './dashboardState.actions.setup'
 import {
   confirmDeployAction,
   exportDashboardAsFile,

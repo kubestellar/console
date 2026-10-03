@@ -1,6 +1,6 @@
+import { mockIsDemoMode, mockUseDemoMode, mockFetchSSE, uniqueCluster, makeRelease, makeHistoryEntry } from './helm-coverage.setup'
 import { describe, it, expect, vi } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
-import { mockIsDemoMode, mockUseDemoMode, mockFetchSSE, uniqueCluster, makeRelease, makeHistoryEntry } from './helm-coverage.setup'
 import {
   useHelmReleases,
   useHelmHistory,
