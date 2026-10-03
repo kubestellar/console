@@ -1,0 +1,1 @@
+- Extracted `pkg/k8s/workload.go`'s three per-kind unstructured-list parsers (`parseDeploymentsAsWorkloads`, `parseStatefulSetsAsWorkloads`, `parseDaemonSetsAsWorkloads`) into `pkg/k8s/workload_parsers.go`, and the shared `safeInt32`/`safeFloat64ToInt32` numeric-clamping helpers into `pkg/k8s/numeric.go`, shrinking `workload.go` from 570 to 274 lines (#23942).
