@@ -56,8 +56,10 @@ const { cachedDataHooks, hookRegistry, mcpHooks, mcsHooks, mockUseDemoMode } = v
   }
 })
 
-const proxyMocks = (hooks: Record<string, (...args: unknown[]) => unknown>) =>
-  Object.fromEntries(Object.entries(hooks).map(([name, fn]) => [name, (...args: unknown[]) => fn(...args)]))
+const { proxyMocks } = vi.hoisted(() => ({
+  proxyMocks: (hooks: Record<string, (...args: unknown[]) => unknown>) =>
+    Object.fromEntries(Object.entries(hooks).map(([name, fn]) => [name, (...args: unknown[]) => fn(...args)])),
+}))
 
 const {
   useCachedDeploymentIssues: mockUseCachedDeploymentIssues,
