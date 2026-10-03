@@ -68,6 +68,9 @@ func ResolveGitHubAPIBase() string {
 	if !strings.HasPrefix(base, "http://") && !strings.HasPrefix(base, "https://") {
 		base = "https://" + base
 	}
+	if strings.HasSuffix(base, "/api/v3") {
+		return base
+	}
 	return base + "/api/v3"
 }
 
