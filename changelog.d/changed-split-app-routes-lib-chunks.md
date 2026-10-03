@@ -1,0 +1,1 @@
+- Move MSW handlers and lib/acmm, lib/llmd, lib/insights modules out of the app-routes bundle chunk for smaller initial loads
