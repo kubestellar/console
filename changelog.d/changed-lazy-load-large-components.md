@@ -1,0 +1,1 @@
+- Split page and misc card bundle chunks into smaller per-page/alphabetical chunks and split oversized source files to reduce bundle chunk sizes
