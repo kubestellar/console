@@ -8,6 +8,7 @@ on:
       - "Build and Deploy KC"
       # Nightly health checks
       - "Nightly Compliance & Perf"
+      - "Nightly llm-d Guide E2E"
       # NOTE: "Nightly Test Suite" excluded — it has its own tracking issue (#11677)
       - "Nightly Dashboard Health"
       - "Nightly gh-aw Version Check"

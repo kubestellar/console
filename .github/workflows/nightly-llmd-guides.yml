@@ -274,6 +274,7 @@ jobs:
             echo "[Full run logs](${RUN_URL})"
             echo "COMMENT_EOF"
           } >> "$GITHUB_OUTPUT"
+          echo "failed=${FAILED}" >> "$GITHUB_OUTPUT"
 
       - name: Find or create tracking issue
         id: issue
@@ -336,3 +337,12 @@ jobs:
           ISSUE_NUMBER: ${{ steps.issue.outputs.issue_number }}
         run: |
           gh issue comment "$ISSUE_NUMBER" --body "${{ steps.summary.outputs.COMMENT_BODY }}"
+
+      - name: Report workflow status
+        if: always()
+        run: |
+          FAILED=${{ steps.summary.outputs.failed }}
+          if [ "$FAILED" -gt 0 ]; then
+            echo "::error::${FAILED} guide(s) failed — see tracking issue comment for detail"
+            exit 1
+          fi
