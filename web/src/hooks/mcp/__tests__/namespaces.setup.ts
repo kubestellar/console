@@ -98,5 +98,3 @@ afterEach(() => {
 // ===========================================================================
 // useNamespaces
 
-export { useNamespaces, useNamespaceStats } from '../namespaces'
-

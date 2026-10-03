@@ -7,14 +7,14 @@ import {
   REFRESH_INTERVAL_MS,
   flush,
   k8sResponse,
+  makeDeployment,
   makePod,
   makePool,
   mockExec,
   nsResponse,
   setupMockExec,
-  useStackDiscovery,
-  type LLMdStack,
 } from './useStackDiscovery.advanced.setup'
+import { useStackDiscovery, type LLMdStack } from '../useStackDiscovery'
 
 describe('useStackDiscovery', () => {
   // ── 12. Refresh interval ───────────────────────────────────────────────────

@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 import {
   DEFAULT_CARDS,
-  TEST_COLLAPSED_KEY,
   TEST_STORAGE_KEY,
   TEST_STORAGE_SCHEMA_KEY,
   makeCard,

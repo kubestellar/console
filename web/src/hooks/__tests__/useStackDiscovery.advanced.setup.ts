@@ -14,14 +14,12 @@ export const mockExec = hoisted.mockExec
 
 vi.mock('../useDemoMode', () => ({
   useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
-  getDemoMode: mockGetDemoMode,
+  getDemoMode: hoisted.mockGetDemoMode,
 }))
 
 vi.mock('../../lib/kubectlProxy', () => ({
-  kubectlProxy: { exec: (...args: unknown[]) => mockExec(...args) },
+  kubectlProxy: { exec: (...args: unknown[]) => hoisted.mockExec(...args) },
 }))
-
-import { useStackDiscovery, stackToServerMetrics } from '../useStackDiscovery'
 
 // ── Constants mirrored from source ───────────────────────────────────────────
 
@@ -217,10 +215,6 @@ export async function flush() {
   // useEffect -> refetch -> Phase 1 (Promise.all) -> Phase 2 (namespace query -> deployment batches)
   await new Promise(resolve => setTimeout(resolve, 200))
 }
-
-
-export { useStackDiscovery, stackToServerMetrics }
-export type { LLMdStack } from '../useStackDiscovery'
 
 beforeEach(() => {
   vi.clearAllMocks()

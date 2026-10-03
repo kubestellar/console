@@ -6,8 +6,8 @@ import {
   mockIsDemoMode,
   mockKubectlProxy,
   mockReportAgentDataSuccess,
-  useNamespaces,
 } from './namespaces.setup'
+import { useNamespaces } from '../namespaces'
 
 describe('useNamespaces', () => {
   it('returns empty namespaces when no cluster is provided', async () => {

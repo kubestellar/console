@@ -9,10 +9,8 @@ import {
   mockExec,
   nsResponse,
   setupMockExec,
-  stackToServerMetrics,
-  useStackDiscovery,
-  type LLMdStack,
 } from './useStackDiscovery.advanced.setup'
+import { stackToServerMetrics, useStackDiscovery, type LLMdStack } from '../useStackDiscovery'
 
 describe('useStackDiscovery', () => {
   // ── 20. stackToServerMetrics ───────────────────────────────────────────────
@@ -203,4 +201,5 @@ describe('useStackDiscovery', () => {
     expect(Array.isArray(result.current.stacks)).toBe(true)
     expect(typeof result.current.refetch).toBe('function')
     unmount()
+  })
 })

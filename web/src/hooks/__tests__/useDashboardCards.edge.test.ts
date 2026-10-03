@@ -151,4 +151,5 @@ describe('useDashboardCards', () => {
       expect(typeof result.current.isCollapsed).toBe('boolean')
       expect(typeof result.current.showCards).toBe('boolean')
     })
+  })
 })

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { act, renderHook, waitFor } from '@testing-library/react'
-import { useNamespaceStats } from './namespaces.setup'
+import './namespaces.setup'
+import { useNamespaceStats } from '../namespaces'
 
 describe('useNamespaceStats', () => {
   it('returns empty stats when no cluster is provided', async () => {
@@ -279,3 +280,4 @@ describe('useNamespaceStats', () => {
     expect(gamma.podCount).toBe(1)
     expect(gamma.failedPods).toBe(1) // Error counts as failed
   })
+})

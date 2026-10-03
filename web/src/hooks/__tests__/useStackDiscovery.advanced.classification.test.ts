@@ -5,9 +5,10 @@ import {
   makeDeployment,
   makeEPPService,
   makePod,
+  mockExec,
   setupMockExec,
-  useStackDiscovery,
 } from './useStackDiscovery.advanced.setup'
+import { useStackDiscovery } from '../useStackDiscovery'
 
 describe('useStackDiscovery', () => {
   it('skips namespaces already discovered in Phase 1 during Phase 2', async () => {
