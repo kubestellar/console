@@ -2,7 +2,10 @@ import { Server, Plus, Check, X, Sparkles, Tag, Filter } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import type { ClusterFilter } from '../../hooks/useClusterGroups'
-import { FILTER_FIELDS, TEXT_OPERATORS, NUM_OPERATORS } from './ClusterGroups.constants'
+import { FILTER_FIELDS, TEXT_OPERATORS, NUM_OPERATORS } from '../cards/ClusterGroups.constants'
+import { Input } from '../ui/Input'
+import { Select } from '../ui/Select'
+import { TextArea } from '../ui/TextArea'
 
 // Shared form field sub-components for the ClusterGroups card forms.
 // demoData-exempt: demo data and loading state are handled by the parent ClusterGroups card.
@@ -100,12 +103,13 @@ function QueryBuilder({
           <Tag className="w-2.5 h-2.5" />
           {t('cards:clusterGroups.labelSelector')}
         </label>
-        <input
+        <Input
           type="text"
+          inputSize="sm"
           value={labelSelector}
           onChange={(e) => onLabelSelectorChange(e.target.value)}
           placeholder="e.g. topology.kubernetes.io/zone in (us-east-1a)"
-          className="w-full px-2 py-1.5 text-xs font-mono rounded-md bg-gray-900/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:border-purple-500"
+          className="px-2 py-1.5 text-xs font-mono rounded-md bg-gray-900/50 focus:border-purple-500"
         />
       </div>
 
@@ -131,75 +135,93 @@ function QueryBuilder({
             return (
               <div key={i} className="flex items-center gap-1.5">
                 {/* Field */}
-                <select
-                  value={f.field}
-                  onChange={(e) => {
-                    const newField = FILTER_FIELDS.find(ff => ff.field === e.target.value)
-                    if (newField?.type === 'bool') {
-                      onUpdateFilter(i, { field: e.target.value, operator: 'eq', value: 'true' })
-                    } else if (newField?.type === 'text') {
-                      onUpdateFilter(i, { field: e.target.value, operator: 'eq', value: '' })
-                    } else {
-                      onUpdateFilter(i, { field: e.target.value, operator: 'gte', value: '1' })
-                    }
-                  }}
-                  className="flex-1 px-1.5 py-1 text-2xs rounded bg-gray-900/50 border border-border text-foreground focus:outline-hidden focus:border-purple-500"
-                >
-                  {FILTER_FIELDS.map(ff => (
-                    <option key={ff.field} value={ff.field}>{ff.label}</option>
-                  ))}
-                </select>
+                <div className="flex-1 min-w-0">
+                  <Select
+                    selectSize="sm"
+                    value={f.field}
+                    onChange={(e) => {
+                      const newField = FILTER_FIELDS.find(ff => ff.field === e.target.value)
+                      if (newField?.type === 'bool') {
+                        onUpdateFilter(i, { field: e.target.value, operator: 'eq', value: 'true' })
+                      } else if (newField?.type === 'text') {
+                        onUpdateFilter(i, { field: e.target.value, operator: 'eq', value: '' })
+                      } else {
+                        onUpdateFilter(i, { field: e.target.value, operator: 'gte', value: '1' })
+                      }
+                    }}
+                    className="px-1.5 py-1 pr-5 text-2xs rounded bg-gray-900/50 focus:border-purple-500"
+                  >
+                    {FILTER_FIELDS.map(ff => (
+                      <option key={ff.field} value={ff.field}>{ff.label}</option>
+                    ))}
+                  </Select>
+                </div>
 
                 {fieldType === 'bool' ? (
                   // Bool: just a toggle
-                  <select
-                    value={f.value}
-                    onChange={(e) => onUpdateFilter(i, { value: e.target.value })}
-                    className="w-16 px-1.5 py-1 text-2xs rounded bg-gray-900/50 border border-border text-foreground focus:outline-hidden focus:border-purple-500"
-                  >
-                    <option value="true">true</option>
-                    <option value="false">false</option>
-                  </select>
+                  <div className="w-16">
+                    <Select
+                      selectSize="sm"
+                      value={f.value}
+                      onChange={(e) => onUpdateFilter(i, { value: e.target.value })}
+                      className="px-1.5 py-1 pr-5 text-2xs rounded bg-gray-900/50 focus:border-purple-500"
+                    >
+                      <option value="true">true</option>
+                      <option value="false">false</option>
+                    </Select>
+                  </div>
                 ) : fieldType === 'text' ? (
                   <>
                     {/* Text operator */}
-                    <select
-                      value={f.operator}
-                      onChange={(e) => onUpdateFilter(i, { operator: e.target.value })}
-                      className="w-16 px-1 py-1 text-2xs rounded bg-gray-900/50 border border-border text-foreground focus:outline-hidden focus:border-purple-500"
-                    >
-                      {TEXT_OPERATORS.map(op => (
-                        <option key={op.value} value={op.value}>{op.label}</option>
-                      ))}
-                    </select>
+                    <div className="w-16">
+                      <Select
+                        selectSize="sm"
+                        value={f.operator}
+                        onChange={(e) => onUpdateFilter(i, { operator: e.target.value })}
+                        className="px-1 py-1 pr-5 text-2xs rounded bg-gray-900/50 focus:border-purple-500"
+                      >
+                        {TEXT_OPERATORS.map(op => (
+                          <option key={op.value} value={op.value}>{op.label}</option>
+                        ))}
+                      </Select>
+                    </div>
                     {/* Text value */}
-                    <input
-                      type="text"
-                      value={f.value}
-                      onChange={(e) => onUpdateFilter(i, { value: e.target.value })}
-                      placeholder="e.g. A100"
-                      className="w-20 px-1.5 py-1 text-2xs rounded bg-gray-900/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:border-purple-500"
-                    />
+                    <div className="w-20">
+                      <Input
+                        type="text"
+                        inputSize="sm"
+                        value={f.value}
+                        onChange={(e) => onUpdateFilter(i, { value: e.target.value })}
+                        placeholder="e.g. A100"
+                        className="px-1.5 py-1 text-2xs rounded bg-gray-900/50 focus:border-purple-500"
+                      />
+                    </div>
                   </>
                 ) : (
                   <>
                     {/* Numeric operator */}
-                    <select
-                      value={f.operator}
-                      onChange={(e) => onUpdateFilter(i, { operator: e.target.value })}
-                      className="w-12 px-1 py-1 text-2xs rounded bg-gray-900/50 border border-border text-foreground focus:outline-hidden focus:border-purple-500"
-                    >
-                      {NUM_OPERATORS.map(op => (
-                        <option key={op.value} value={op.value}>{op.label}</option>
-                      ))}
-                    </select>
+                    <div className="w-14">
+                      <Select
+                        selectSize="sm"
+                        value={f.operator}
+                        onChange={(e) => onUpdateFilter(i, { operator: e.target.value })}
+                        className="px-1 py-1 pr-5 text-2xs rounded bg-gray-900/50 focus:border-purple-500"
+                      >
+                        {NUM_OPERATORS.map(op => (
+                          <option key={op.value} value={op.value}>{op.label}</option>
+                        ))}
+                      </Select>
+                    </div>
                     {/* Numeric value */}
-                    <input
-                      type="number"
-                      value={f.value}
-                      onChange={(e) => onUpdateFilter(i, { value: e.target.value })}
-                      className="w-14 px-1.5 py-1 text-2xs rounded bg-gray-900/50 border border-border text-foreground focus:outline-hidden focus:border-purple-500"
-                    />
+                    <div className="w-14">
+                      <Input
+                        type="number"
+                        inputSize="sm"
+                        value={f.value}
+                        onChange={(e) => onUpdateFilter(i, { value: e.target.value })}
+                        className="px-1.5 py-1 text-2xs rounded bg-gray-900/50 focus:border-purple-500"
+                      />
+                    </div>
                   </>
                 )}
 
@@ -246,12 +268,13 @@ function AIAssistant({
         <Sparkles className="w-2.5 h-2.5" />
         {t('cards:clusterGroups.describeClusters')}
       </label>
-      <textarea
+      <TextArea
+        textAreaSize="sm"
         value={prompt}
         onChange={(e) => onPromptChange(e.target.value)}
         placeholder='e.g. "Healthy clusters with at least 4 CPU cores"'
         rows={2}
-        className="w-full px-2.5 py-1.5 text-xs rounded-md bg-gray-900/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:border-purple-500 resize-none"
+        className="px-2.5 py-1.5 text-xs rounded-md bg-gray-900/50 focus:border-purple-500"
       />
       <button
         onClick={onGenerate}

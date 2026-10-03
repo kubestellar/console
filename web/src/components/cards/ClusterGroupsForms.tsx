@@ -14,7 +14,8 @@ import {
   type ClusterGroupQuery } from '../../hooks/useClusterGroups'
 import { useTranslation } from 'react-i18next'
 import { GROUP_COLORS } from './ClusterGroups.constants'
-import { StaticClusterPicker, QueryBuilder, AIAssistant } from './ClusterGroupsFormFields'
+import { StaticClusterPicker, QueryBuilder, AIAssistant } from '../shared/ClusterGroupsFormFields'
+import { Input } from '../ui/Input'
 
 // Form sub-components for ClusterGroups card.
 // demoData-exempt: demo data and loading state are handled by the parent ClusterGroups card.
@@ -156,12 +157,13 @@ function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, onCancel
       </div>
 
       {/* Name input */}
-      <input
+      <Input
         type="text"
+        inputSize="sm"
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder={t('cards:clusterGroups.groupNamePlaceholder')}
-        className="w-full px-2.5 py-1.5 text-sm rounded-md bg-gray-900/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:border-blue-500"
+        className="px-2.5 py-1.5 text-sm rounded-md bg-gray-900/50 focus:border-blue-500"
         autoFocus
       />
 
