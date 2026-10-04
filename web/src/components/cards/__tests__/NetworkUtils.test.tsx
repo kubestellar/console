@@ -48,6 +48,10 @@ const mockUseCardLoadingState = vi.fn()
 vi.mock('../CardDataContext', () => ({
   useReportCardDataState: vi.fn(),
   useCardLoadingState: (opts: unknown) => mockUseCardLoadingState(opts),
+  useCardDemoState: () => {
+    const { isDemoMode } = mockUseDemoMode()
+    return { shouldUseDemoData: isDemoMode, reason: isDemoMode ? 'global-demo-mode' : null, showDemoBadge: isDemoMode }
+  },
 }))
 
 import { NetworkUtils } from '../NetworkUtils'

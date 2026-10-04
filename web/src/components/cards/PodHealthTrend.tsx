@@ -4,10 +4,9 @@ import { LazyEChart } from '../charts/LazyEChart'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedPodIssues } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { useCardLoadingState } from './CardDataContext'
+import { useCardDemoState, useCardLoadingState } from './CardDataContext'
 import { CardClusterFilter } from '../../lib/cards/CardComponents'
 import { useLocalClusterFilter } from '../../lib/cards/cardHooks'
-import { isDemoMode } from '../../lib/demoMode'
 import { useTranslation } from 'react-i18next'
 import { MS_PER_MINUTE } from '../../lib/constants/time'
 import {
@@ -18,7 +17,6 @@ import {
   CHART_TICK_COLOR,
   CHART_AXIS_FONT_SIZE,
   CHART_BODY_FONT_SIZE } from '../../lib/constants'
-import { useDemoMode } from '../../hooks/useDemoMode'
 import { safeGet, safeSet } from '../../lib/safeLocalStorage'
 import { ORANGE_500, YELLOW_500, GREEN_500_BRIGHT, hexToRgba } from '../../lib/theme/chartColors'
 
@@ -59,7 +57,7 @@ const PodHealthTrend = memo(function PodHealthTrend() {
   const { issues, isLoading: issuesLoading, isRefreshing: issuesRefreshing, isDemoFallback, isFailed: issuesFailed, consecutiveFailures: issuesFailures } = useCachedPodIssues()
 
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
-  const { isDemoMode: isDemoModeActive } = useDemoMode()
+  const { shouldUseDemoData, showDemoBadge } = useCardDemoState({ requires: 'agent' })
 
   // hasData should be true once loading completes (even with empty data)
   const hasData = clusters.length > 0 || issues.length > 0
@@ -68,7 +66,7 @@ const PodHealthTrend = memo(function PodHealthTrend() {
     isLoading: (clustersLoading || issuesLoading) && !hasData,
     isRefreshing: clustersRefreshing || issuesRefreshing,
     hasAnyData: hasData,
-    isDemoData: isDemoModeActive || isDemoFallback,
+    isDemoData: showDemoBadge || isDemoFallback,
     isFailed: clustersFailed || issuesFailed,
     consecutiveFailures: Math.max(clustersFailures, issuesFailures) })
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
@@ -203,7 +201,7 @@ const PodHealthTrend = memo(function PodHealthTrend() {
     if (history.length === 0 && currentStats.total > 0) {
       let cancelled = false
       const now = new Date()
-      if (isDemoMode()) {
+      if (shouldUseDemoData) {
         // Seed 8 historical points so the time-series chart renders immediately
         const DEMO_SEED_POINTS = 8
         const DEMO_INTERVAL_MS = 5 * MS_PER_MINUTE
@@ -235,7 +233,7 @@ const PodHealthTrend = memo(function PodHealthTrend() {
       }
       return () => { cancelled = true }
     }
-  }, [currentStats, history.length])
+  }, [currentStats, history.length, shouldUseDemoData])
 
   // Slice history to the number of points allowed by the selected time range
   const visibleHistory = useMemo(() => {

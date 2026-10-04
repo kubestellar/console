@@ -5,7 +5,7 @@ import {
   RotateCcw, Globe, Save, Trash2
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useDemoMode } from '../../hooks/useDemoMode'
+import { useCardDemoState } from './CardDataContext'
 import { Skeleton } from '../ui/Skeleton'
 import type { CSSProperties } from 'react'
 
@@ -69,7 +69,7 @@ const PRESET_EMBEDS = [
 export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
   const { t } = useTranslation(['common', 'cards'])
   const { isExpanded } = useCardExpanded()
-  const { isDemoMode } = useDemoMode()
+  const { shouldUseDemoData } = useCardDemoState({ requires: 'backend' })
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
   // Each card instance has its own ID based on config or generates one
@@ -135,14 +135,14 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
 
   // Auto-refresh (disabled in demo mode because the iframe itself is disabled)
   useEffect(() => {
-    if (isDemoMode || refreshInterval <= 0 || !url) return
+    if (shouldUseDemoData || refreshInterval <= 0 || !url) return
 
     const interval = setInterval(() => {
       handleRefresh()
     }, refreshInterval * 1000)
 
     return () => clearInterval(interval)
-  }, [isDemoMode, refreshInterval, url, handleRefresh])
+  }, [shouldUseDemoData, refreshInterval, url, handleRefresh])
 
   const handleLoad = () => {
     setIsLoading(false)
@@ -369,7 +369,7 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
         {!showSettings && (
           <div className="flex-1 relative rounded overflow-hidden border border-border/50">
             {/* Demo mode placeholder */}
-            {isDemoMode && (
+            {shouldUseDemoData && (
               <div
                 className="flex flex-col items-center justify-center bg-secondary/20 text-muted-foreground gap-2"
                 style={{ height: displayHeight }}
@@ -381,7 +381,7 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
             )}
 
             {/* Skeleton loading state */}
-            {!isDemoMode && isLoading && (
+            {!shouldUseDemoData && isLoading && (
               <div className="absolute inset-0 z-10 p-4 space-y-3 bg-background/80">
                 <Skeleton variant="text" width={180} height={16} />
                 <Skeleton variant="rounded" height={displayHeight - 60} />
@@ -390,7 +390,7 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
             )}
 
             {/* Error state */}
-            {!isDemoMode && loadError && (
+            {!shouldUseDemoData && loadError && (
               <div className="absolute inset-0 flex items-center justify-center bg-background/90 z-10">
                 <div className="flex flex-col items-center gap-3 text-center p-4 max-w-xs">
                   <AlertTriangle className="w-10 h-10 text-yellow-500" />
@@ -417,7 +417,7 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
             )}
 
             {/* Iframe */}
-            {!isDemoMode && url ? (
+            {!shouldUseDemoData && url ? (
               <iframe
                 ref={iframeRef}
                 src={url}
@@ -430,7 +430,7 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
                 onError={handleError}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               />
-            ) : !isDemoMode && (
+            ) : !shouldUseDemoData && (
               <div
                 className="flex items-center justify-center bg-secondary/20 text-muted-foreground"
                 style={{ height: displayHeight }}
