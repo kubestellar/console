@@ -3,6 +3,12 @@
  *
  * Opens when clicking any insight item on the 7 insight cards. Provides
  * drill-down without leaving the dashboard context.
+ *
+ * Intentionally does not call useCardData/useCardDemoState (lib/cards/cardHooks):
+ * this modal renders an `insight` prop supplied by its parent card and owns no
+ * data source or demo-mode decision of its own — those concerns live in the
+ * card that opens it (e.g. DeploymentRolloutTracker), the standardized card
+ * hook integration point for this data.
  */
 
 import { useState, useRef, useEffect } from 'react'

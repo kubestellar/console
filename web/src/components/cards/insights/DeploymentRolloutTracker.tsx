@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { Rocket, CheckCircle2, AlertTriangle, Clock, ChevronRight } from 'lucide-react'
 import { LazyEChart } from '../../charts/LazyEChart'
 import { useMultiClusterInsights } from '../../../hooks/useMultiClusterInsights'
-import { useCardLoadingState } from '../CardDataContext'
+import { useCardDemoState, useCardLoadingState } from '../CardDataContext'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
 import { InsightSourceBadge } from './InsightSourceBadge'
 import { StatusBadge } from '../../ui/StatusBadge'
@@ -46,6 +46,7 @@ function getStatusIcon(status: string) {
 export function DeploymentRolloutTracker() {
   const { insightsByCategory, isLoading, isRefreshing, isDemoData, isFailed, consecutiveFailures } = useMultiClusterInsights()
   const { selectedClusters } = useGlobalFilters()
+  const { showDemoBadge } = useCardDemoState({ requires: 'backend' })
 
   const rolloutInsightsRaw = (() => {
     const all = insightsByCategory['rollout-tracker'] || []
@@ -63,7 +64,7 @@ export function DeploymentRolloutTracker() {
     isLoading: isLoading && !hasData,
     isRefreshing,
     hasAnyData: hasData,
-    isDemoData,
+    isDemoData: showDemoBadge || isDemoData,
     isFailed,
     consecutiveFailures })
 

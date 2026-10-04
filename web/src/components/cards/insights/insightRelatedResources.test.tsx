@@ -71,6 +71,7 @@ vi.mock('../../../hooks/useMultiClusterInsights', () => ({
 }))
 vi.mock('../CardDataContext', () => ({
   useCardLoadingState: vi.fn(),
+  useCardDemoState: vi.fn(() => ({ shouldUseDemoData: false, reason: null, showDemoBadge: false })),
 }))
 vi.mock('./useInsightActions', () => ({
   useInsightActions: () => ({

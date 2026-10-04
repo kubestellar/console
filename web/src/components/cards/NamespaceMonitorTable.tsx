@@ -20,6 +20,10 @@ import { cn } from '@/lib/cn'
 // Pure UI component — renders namespace/resource table based on props; no data fetching.
 // useCardLoadingState is handled by the parent NamespaceMonitor card.
 // Demo data support provided by parent NamespaceMonitor card via useCached* hooks.
+// Intentionally does not call useCardData/useCardDemoState (lib/cards/cardHooks):
+// this component owns no data source or demo-mode decision of its own — those
+// concerns live in the parent NamespaceMonitor card, which is the standardized
+// card hook integration point for this feature.
 
 interface NamespaceMonitorTableProps {
   filteredClusters: ClusterInfo[]
