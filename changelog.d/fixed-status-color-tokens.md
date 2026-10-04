@@ -1,0 +1,1 @@
+- Use semantic status color tokens for solid health indicator dots
