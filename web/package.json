@@ -106,7 +106,7 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
     "@eslint/js": "^10.0.1",
-    "@netlify/functions": "^6.0.0",
+    "@netlify/functions": "^6.0.2",
     "@playwright/test": "1.61.1",
     "@storybook/addon-a11y": "^10.6.0",
     "@storybook/react": "^10.5.10",
