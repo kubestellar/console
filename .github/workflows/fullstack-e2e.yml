@@ -32,6 +32,10 @@ env:
   # Max time we'll wait for /healthz to respond OK (seconds).
   HEALTH_TIMEOUT_S: '60'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   fullstack-smoke:
     runs-on: ubuntu-latest

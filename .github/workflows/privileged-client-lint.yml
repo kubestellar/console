@@ -43,6 +43,10 @@ on:
 
 permissions: read-all  # default read; writes scoped to job below
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
     name: Verify no new pod-SA mutations in handlers
