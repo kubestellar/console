@@ -4,8 +4,7 @@ import {
   Play, Square, Trash2, Plus, CheckCircle, XCircle,
   AlertTriangle, Loader2
 } from 'lucide-react'
-import { useCardLoadingState } from './CardDataContext'
-import { useDemoMode } from '../../hooks/useDemoMode'
+import { useCardDemoState, useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { LATENCY_GOOD_MS, LATENCY_ACCEPTABLE_MS } from '@/lib/constants/network'
 
@@ -99,7 +98,7 @@ const DEFAULT_HOSTS = [
 
 export function NetworkUtils() {
   const { t } = useTranslation()
-  const { isDemoMode } = useDemoMode()
+  const { shouldUseDemoData } = useCardDemoState({ requires: 'backend' })
   const [activeTab, setActiveTab] = useState<'ping' | 'ports' | 'info'>('ping')
   const [isInitialized, setIsInitialized] = useState(false)
   const [savedHosts, setSavedHosts] = useState<SavedHost[]>(() => {
@@ -127,7 +126,7 @@ export function NetworkUtils() {
     isLoading: !isInitialized, 
     isRefreshing: isPinging,
     hasAnyData: isInitialized, 
-    isDemoData: isDemoMode 
+    isDemoData: shouldUseDemoData
   })
 
   // Update network info and mark as initialized
@@ -166,7 +165,7 @@ export function NetworkUtils() {
   // no-cors limitation where opaque responses hide failures.
   // In demo mode, returns simulated results to avoid backend dependency.
   const pingHost = useCallback(async (host: string): Promise<PingResult> => {
-    if (isDemoMode) {
+    if (shouldUseDemoData) {
       return getDemoPingResult(host)
     }
     try {
@@ -228,7 +227,7 @@ export function NetworkUtils() {
         timestamp: new Date(),
         error: error instanceof Error ? error.message : 'unknown error' }
     }
-  }, [isDemoMode])
+  }, [shouldUseDemoData])
 
   // Ping all saved hosts
   const pingAllHosts = useCallback(async () => {
