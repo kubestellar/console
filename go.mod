@@ -16,10 +16,10 @@ require (
 	github.com/prometheus/common v0.71.0
 	github.com/stretchr/testify v1.12.1
 	github.com/valyala/fasthttp v1.74.0
-	go.opentelemetry.io/otel v1.45.0
+	go.opentelemetry.io/otel v1.46.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.44.0
 	go.opentelemetry.io/otel/sdk v1.45.0
-	go.opentelemetry.io/otel/trace v1.45.0
+	go.opentelemetry.io/otel/trace v1.46.0
 	go.uber.org/goleak v1.3.0
 	golang.org/x/oauth2 v0.37.0
 	golang.org/x/sync v0.23.0
