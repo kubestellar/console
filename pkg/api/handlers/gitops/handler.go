@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"golang.org/x/sync/singleflight"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kubestellar/console/pkg/api/handlers/mcp"
@@ -698,101 +697,10 @@ func (h *GitOpsHandlers) getKustomizationsForCluster(ctx context.Context, cluste
 	return kustomizations
 }
 
-// OperatorSubscription represents an OLM subscription
-type OperatorSubscription struct {
-	Name                string `json:"name"`
-	Namespace           string `json:"namespace"`
-	Channel             string `json:"channel"`
-	Source              string `json:"source"`
-	InstallPlanApproval string `json:"installPlanApproval"`
-	CurrentCSV          string `json:"currentCSV"`
-	InstalledCSV        string `json:"installedCSV,omitempty"`
-	// PendingUpgrade is set when installedCSV differs from currentCSV,
-	// indicating an upgrade is waiting for approval (#7548).
-	PendingUpgrade string `json:"pendingUpgrade,omitempty"`
-	Cluster        string `json:"cluster,omitempty"`
-}
-
-// Operator/subscription timeouts — CSV queries take 90-100s for clusters with
-// 1000+ CSVs (e.g. vllm-d has 1381 CSVs). The jsonpath extraction in kubectl
-// is the bottleneck, not network transfer.
+// Shared gitops/helm timeouts used across handler.go and argo.go.
 const (
-	operatorPerClusterTimeout     = 180 * time.Second
-	operatorRestOverallTimeout    = 200 * time.Second
-	subscriptionPerClusterTimeout = 30 * time.Second
-	helmStreamPerClusterTimeout   = 30 * time.Second
-	operatorCacheTTL              = 5 * time.Minute
-	operatorCacheEmptyTTL         = 30 * time.Second
-	operatorCacheEvictionInterval = 5 * time.Minute
-	gitopsClusterTimeout          = 15 * time.Second
-	gitopsRetryDelay              = 2 * time.Second
-	gitopsLookupTimeout           = 10 * time.Second
-	gitopsDefaultTimeout          = 30 * time.Second
+	helmStreamPerClusterTimeout = 30 * time.Second
+	gitopsClusterTimeout        = 15 * time.Second
+	gitopsLookupTimeout         = 10 * time.Second
+	gitopsDefaultTimeout        = 30 * time.Second
 )
-
-// operatorCacheEntry holds cached operators for a single cluster.
-type operatorCacheEntry struct {
-	operators []Operator
-	fetchedAt time.Time
-}
-
-// operatorCache is a per-cluster in-memory cache for slow CSV queries.
-// Protected by operatorCacheMu. Background refresh populates the cache
-// so that subsequent page loads are instant.
-// operatorFetchGroup coalesces concurrent cache-miss fetches for the same
-// cluster into a single request, preventing the check-then-act race where
-// two goroutines both see an empty cache and fetch in parallel (#7783).
-var (
-	operatorCacheMu    sync.RWMutex
-	operatorCacheData  = make(map[string]*operatorCacheEntry)
-	operatorFetchGroup singleflight.Group
-	operatorEvictOnce  sync.Once
-	// operatorEvictCtx / operatorEvictCancel provide context-based
-	// cancellation for the background evictor goroutine (#11259).
-	operatorEvictCtx    context.Context
-	operatorEvictCancel context.CancelFunc
-)
-
-func init() {
-	operatorEvictCtx, operatorEvictCancel = context.WithCancel(context.Background())
-}
-
-// ListOperators returns OLM-managed operators (ClusterServiceVersions)
-
-// startOperatorCacheEvictor begins a background goroutine that evicts expired
-// operator cache entries every 5 minutes. Empty results use a 30s TTL, normal
-// results use a 5m TTL. Must be called exactly once from getOperatorsForCluster().
-func startOperatorCacheEvictor() {
-	operatorEvictOnce.Do(func() {
-		safego.Go(func() {
-			ticker := time.NewTicker(operatorCacheEvictionInterval)
-			defer ticker.Stop()
-
-			for {
-				select {
-				case <-operatorEvictCtx.Done():
-					return
-				case <-ticker.C:
-					operatorCacheMu.Lock()
-					now := time.Now()
-					for cacheKey, entry := range operatorCacheData {
-						ttl := operatorCacheTTL
-						if len(entry.operators) == 0 {
-							ttl = operatorCacheEmptyTTL
-						}
-						if now.Sub(entry.fetchedAt) > ttl {
-							delete(operatorCacheData, cacheKey)
-						}
-					}
-					operatorCacheMu.Unlock()
-				}
-			}
-		})
-	})
-}
-
-// StopOperatorCacheEvictor signals the background evictor goroutine to exit.
-// Safe to call multiple times. Intended for server shutdown and tests.
-func StopOperatorCacheEvictor() {
-	operatorEvictCancel()
-}
