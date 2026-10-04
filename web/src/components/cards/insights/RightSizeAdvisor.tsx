@@ -4,8 +4,7 @@ import { Scale, ChevronDown, ChevronUp, Cpu, MemoryStick, AlertTriangle, CheckCi
 import { useClusters } from '../../../hooks/useMCP'
 import { useCachedGPUNodes } from '../../../hooks/useCachedData'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
-import { useDemoMode } from '../../../hooks/useDemoMode'
-import { useCardLoadingState } from '../CardDataContext'
+import { useCardDemoState, useCardLoadingState } from '../CardDataContext'
 import { useChartFilters } from '../../../lib/cards/cardHooks'
 import { CardControlsRow } from '../../../lib/cards/CardComponents'
 import { StatusBadge } from '../../ui/StatusBadge'
@@ -111,7 +110,7 @@ export function RightSizeAdvisor() {
   const { deduplicatedClusters, isLoading, isRefreshing, isFailed, consecutiveFailures, error } = useClusters()
   const { nodes: gpuNodes, isRefreshing: gpuRefreshing, isDemoFallback } = useCachedGPUNodes()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
-  const { isDemoMode } = useDemoMode()
+  const { showDemoBadge } = useCardDemoState({ requires: 'backend' })
   const [headroom, setHeadroom] = useState(DEFAULT_HEADROOM_PCT)
   const [expandedCluster, setExpandedCluster] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState<SortField>('verdict')
@@ -214,7 +213,7 @@ export function RightSizeAdvisor() {
     isFailed,
     consecutiveFailures,
     errorMessage: error ?? undefined,
-    isDemoData: isDemoMode || isDemoFallback,
+    isDemoData: showDemoBadge || isDemoFallback,
   })
 
   if (showSkeleton) {
