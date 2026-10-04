@@ -12,7 +12,13 @@ export const worker = setupWorker(...handlers)
  *  Called from main.tsx via dynamic import so MSW code stays code-split. */
 export async function startMocking(): Promise<void> {
   await worker.start({
-    onUnhandledRequest(request, print) {
+    onUnhandledFrame({ frame, defaults }) {
+      // Only HTTP frames carry a Request; warn on anything else (e.g. WebSocket).
+      if (frame.protocol !== 'http') {
+        defaults.warn()
+        return
+      }
+      const { request } = frame.data as { request: Request }
       const url = new URL(request.url)
       const path = url.pathname
 
@@ -51,7 +57,7 @@ export async function startMocking(): Promise<void> {
       }
 
       // Only warn about truly unexpected requests
-      print.warning()
+      defaults.warn()
     },
     serviceWorker: {
       url: MSW_SERVICE_WORKER_URL,
