@@ -27,8 +27,8 @@ vi.mock('./CardWrapper', () => ({
   useCardExpanded: () => ({ isExpanded: false }),
 }))
 
-vi.mock('../../hooks/useDemoMode', () => ({
-  useDemoMode: () => ({ isDemoMode: false }),
+vi.mock('./CardDataContext', () => ({
+  useCardDemoState: () => ({ shouldUseDemoData: false, reason: null, showDemoBadge: false }),
 }))
 
 vi.mock('../ui/Skeleton', () => ({
