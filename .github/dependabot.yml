@@ -31,6 +31,45 @@ updates:
     interval: weekly
 - commit-message:
     prefix: chore(deps)
+  directory: /.github/ga4-scripts
+  labels:
+  - dependencies
+  - javascript
+  open-pull-requests-limit: 5
+  package-ecosystem: npm
+  reviewers:
+  - clubanderson
+  schedule:
+    day: monday
+    interval: weekly
+- commit-message:
+    prefix: chore(deps)
+  directory: /.github/guardrails-scripts
+  labels:
+  - dependencies
+  - javascript
+  open-pull-requests-limit: 5
+  package-ecosystem: npm
+  reviewers:
+  - clubanderson
+  schedule:
+    day: monday
+    interval: weekly
+- commit-message:
+    prefix: chore(deps)
+  directory: /.github/kb-scripts
+  labels:
+  - dependencies
+  - javascript
+  open-pull-requests-limit: 5
+  package-ecosystem: npm
+  reviewers:
+  - clubanderson
+  schedule:
+    day: monday
+    interval: weekly
+- commit-message:
+    prefix: chore(deps)
   directory: /
   groups:
     codeql-action:
