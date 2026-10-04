@@ -13,6 +13,10 @@ on:
 # Least-privilege: read-only by default; jobs declare write scopes individually
 permissions: read-all
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   claude-review:
     # Trust gate: only run for trusted contributors (org members, collaborators, owners).

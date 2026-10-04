@@ -23,6 +23,10 @@ env:
   # Page settle time before scanning in ms
   PAGE_SETTLE_MS: 2000
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   a11y-audit:
     runs-on: ubuntu-latest

@@ -15,6 +15,10 @@ on:
 # Minimum permissions: checkout only — no write scopes needed
 permissions: read-all  # default read; writes scoped to job below
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   helm-lint-and-template:
     runs-on: ubuntu-latest

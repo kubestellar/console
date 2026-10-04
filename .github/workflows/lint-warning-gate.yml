@@ -16,6 +16,10 @@ on:
 
 permissions: read-all  # default read; writes scoped to job below
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check-warnings:
     name: Lint warning regression check
