@@ -63,7 +63,7 @@ function StaticClusterPicker({
                 </div>
                 <div className={cn(
                   'w-1.5 h-1.5 rounded-full',
-                  healthy === false ? 'bg-red-500' : 'bg-green-500'
+                  healthy === false ? 'bg-status-error' : 'bg-status-success'
                 )} />
                 <Server className="w-3 h-3" />
                 <span className="truncate">{cluster}</span>
