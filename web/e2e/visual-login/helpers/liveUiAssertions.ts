@@ -10,6 +10,10 @@ import {
 import { markLiveRateLimitDataLoss, recordLiveUiFailures } from './liveReporting'
 
 const TEXT_COLLISION_RATIO_LIMIT = 0.30
+const LIVE_FORBIDDEN_UI_SETTLE_TIMEOUT_MS = 90_000
+const LIVE_FORBIDDEN_UI_SETTLE_INTERVAL_MS = 5_000
+const LIVE_TEXT_PREVIEW_LENGTH = 160
+const LIVE_POD_ISSUES_FETCH_TIMEOUT_MS = 15_000
 
 const forbiddenLiveUiPatterns = [
   { label: 'demo mode control', source: String.raw`\bDemo Mode\b`, flags: 'i' },
@@ -79,8 +83,15 @@ export async function assertLiveLayoutStable(page: Page) {
 }
 
 export async function assertNoForbiddenLiveUi(page: Page) {
-  await page.waitForTimeout(2_000)
-  const state = await page.evaluate(async (patterns) => {
+  const readState = async () => page.evaluate(async ({
+    patterns,
+    textPreviewLength,
+    podIssuesFetchTimeoutMs,
+  }: {
+    patterns: typeof forbiddenLiveUiPatterns
+    textPreviewLength: number
+    podIssuesFetchTimeoutMs: number
+  }) => {
     const compiled = patterns.map(pattern => ({
       label: pattern.label,
       regex: new RegExp(pattern.source, pattern.flags),
@@ -119,19 +130,19 @@ export async function assertNoForbiddenLiveUi(page: Page) {
     const forbiddenMatches = compiled.flatMap(pattern =>
       textNodes
         .filter(node => pattern.regex.test(node.text))
-        .map(node => ({ label: pattern.label, text: node.text.slice(0, 160) }))
+        .map(node => ({ label: pattern.label, text: node.text.slice(0, textPreviewLength) }))
     )
     const agentStatusText = document.querySelector('[data-testid="navbar-agent-status-btn"]')?.textContent || ''
     if (/\boffline\b/i.test(agentStatusText)) {
       forbiddenMatches.push({
         label: 'offline live navbar status',
-        text: agentStatusText.replace(/\s+/g, ' ').trim().slice(0, 160),
+        text: agentStatusText.replace(/\s+/g, ' ').trim().slice(0, textPreviewLength),
       })
     }
     const warningBadges = textNodes
       .map(node => {
         const match = node.text.match(/\b(\d+)\s+warnings?\b/i)
-        return match ? { text: node.text.slice(0, 160), count: Number(match[1]) } : null
+        return match ? { text: node.text.slice(0, textPreviewLength), count: Number(match[1]) } : null
       })
       .filter((entry): entry is { text: string; count: number } => Boolean(entry && entry.count > 0))
 
@@ -177,7 +188,7 @@ export async function assertNoForbiddenLiveUi(page: Page) {
     try {
       const podIssuesResponse = await fetch('/api/mcp/pod-issues/stream', {
         credentials: 'same-origin',
-        signal: AbortSignal.timeout(15_000),
+        signal: AbortSignal.timeout(podIssuesFetchTimeoutMs),
       })
       if (podIssuesResponse.ok) {
         const rawStream = await podIssuesResponse.text()
@@ -202,15 +213,41 @@ export async function assertNoForbiddenLiveUi(page: Page) {
       externalCiWarningAlerts,
       clusterPodIssuesReported,
     }
-  }, forbiddenLiveUiPatterns)
+  }, {
+    patterns: forbiddenLiveUiPatterns,
+    textPreviewLength: LIVE_TEXT_PREVIEW_LENGTH,
+    podIssuesFetchTimeoutMs: LIVE_POD_ISSUES_FETCH_TIMEOUT_MS,
+  })
+
+  const findUnsettledArtifacts = (state: Awaited<ReturnType<typeof readState>>) => {
+    const corroboratedWarningCount = state.externalCiWarningAlerts + state.clusterPodIssuesReported
+    const unexplainedWarningBadges = process.env.LIVE_UI_ALLOW_WARNING_BADGES === 'true'
+      ? []
+      : state.warningBadges.filter(badge => badge.count > corroboratedWarningCount)
+    return {
+      unexplainedWarningBadges,
+      failures: [
+        ...(state.demoModeStorage === 'true' ? ['demo mode storage is true'] : []),
+        ...state.forbiddenMatches.map(match => `${match.label}: ${match.text}`),
+        ...unexplainedWarningBadges.map(badge => `warning badge ${badge.count} > ${corroboratedWarningCount}: ${badge.text}`),
+      ],
+    }
+  }
+
+  await expect.poll(async () => findUnsettledArtifacts(await readState()).failures, {
+    message: 'live UI forbidden artifacts and warning badges should settle',
+    timeout: LIVE_FORBIDDEN_UI_SETTLE_TIMEOUT_MS,
+    intervals: [LIVE_FORBIDDEN_UI_SETTLE_INTERVAL_MS],
+  }).toEqual([]).catch(() => undefined)
+
+  const state = await readState()
 
   // A warning badge is an artifact only if its count exceeds what
   // backend-corroborated monitoring signals explain: warning alerts from the
   // external nightly-E2E CI feed plus pod issues the backend reports for the
   // monitored clusters. Any excess means the UI is showing warnings that no
   // real data backs — that still fails the gate.
-  const corroboratedWarningCount = state.externalCiWarningAlerts + state.clusterPodIssuesReported
-  const unexplainedWarningBadges = state.warningBadges.filter(badge => badge.count > corroboratedWarningCount)
+  const { unexplainedWarningBadges } = findUnsettledArtifacts(state)
 
   await recordLiveUiFailures(page, {
     forbiddenMatches: state.forbiddenMatches,
