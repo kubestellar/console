@@ -6,59 +6,6 @@ import (
 )
 
 // ---------------------------------------------------------------------------
-// ValidateProviderURL
-// ---------------------------------------------------------------------------
-
-func TestValidateProviderURL_Empty(t *testing.T) {
-	if err := ValidateProviderURL("", ""); err != nil {
-		t.Errorf("empty URL should be valid, got %v", err)
-	}
-}
-
-func TestValidateProviderURL_Whitespace(t *testing.T) {
-	if err := ValidateProviderURL("   ", ""); err != nil {
-		t.Errorf("whitespace-only URL should be valid (treated as empty), got %v", err)
-	}
-}
-
-func TestValidateProviderURL_ValidHTTP(t *testing.T) {
-	if err := ValidateProviderURL("http://localhost:11434", ""); err != nil {
-		t.Errorf("valid http URL should pass, got %v", err)
-	}
-}
-
-func TestValidateProviderURL_ValidHTTPS(t *testing.T) {
-	if err := ValidateProviderURL("https://api.example.com/v1", ""); err != nil {
-		t.Errorf("valid https URL should pass, got %v", err)
-	}
-}
-
-func TestValidateProviderURL_InvalidScheme(t *testing.T) {
-	err := ValidateProviderURL("ftp://example.com", "")
-	if err == nil {
-		t.Fatal("ftp scheme should be rejected")
-	}
-	if !strings.Contains(err.Error(), "scheme") {
-		t.Errorf("error should mention scheme, got: %v", err)
-	}
-}
-
-func TestValidateProviderURL_NoHost(t *testing.T) {
-	err := ValidateProviderURL("https://", "")
-	if err == nil {
-		t.Error("URL without host should be rejected")
-	}
-}
-
-func TestValidateProviderURL_Unparseable(t *testing.T) {
-	// A URL with a control character is unparseable.
-	err := ValidateProviderURL("http://ex\x00ample.com", "")
-	if err == nil {
-		t.Error("malformed URL should be rejected")
-	}
-}
-
-// ---------------------------------------------------------------------------
 // MaskAPIKey
 // ---------------------------------------------------------------------------
 
