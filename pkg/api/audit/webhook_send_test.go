@@ -38,7 +38,7 @@ func TestWebhookSend_Success(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	dest, err := NewWebhookDestination(srv.URL, nil)
+	dest, err := NewWebhookDestination(srv.URL, srv.Client())
 	require.NoError(t, err)
 
 	events := []PipelineEvent{
@@ -65,7 +65,7 @@ func TestWebhookSend_EmptyEvents(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	dest, err := NewWebhookDestination(srv.URL, nil)
+	dest, err := NewWebhookDestination(srv.URL, srv.Client())
 	require.NoError(t, err)
 
 	// Empty events slice should short-circuit without HTTP call.
@@ -83,7 +83,7 @@ func TestWebhookSend_ServerError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	dest, err := NewWebhookDestination(srv.URL, nil)
+	dest, err := NewWebhookDestination(srv.URL, srv.Client())
 	require.NoError(t, err)
 
 	events := []PipelineEvent{{ID: "evt-1", Timestamp: time.Now()}}
@@ -104,7 +104,7 @@ func TestWebhookSend_ContextCancelled(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	dest, err := NewWebhookDestination(srv.URL, nil)
+	dest, err := NewWebhookDestination(srv.URL, srv.Client())
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -128,7 +128,7 @@ func TestWebhookSend_Non2xxIsError(t *testing.T) {
 			}))
 			defer srv.Close()
 
-			dest, err := NewWebhookDestination(srv.URL, nil)
+			dest, err := NewWebhookDestination(srv.URL, srv.Client())
 			require.NoError(t, err)
 
 			err = dest.Send(context.Background(), []PipelineEvent{{ID: "e"}})
