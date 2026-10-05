@@ -41,6 +41,8 @@ const (
 // githubRepo returns the GitHub owner/repo slug, preferring the GITHUB_REPO
 // environment variable so forks and GHE instances work out-of-the-box.
 func NewUpdateChecker(cfg UpdateCheckerConfig) *UpdateChecker {
+	InitUpdaterMetrics()
+
 	installMethod := DetectAgentInstallMethod()
 	repoPath := detectRepoPath()
 	currentSHA := detectCurrentSHA(repoPath)

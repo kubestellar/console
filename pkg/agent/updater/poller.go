@@ -41,9 +41,12 @@ func (uc *UpdateChecker) run(ctx context.Context) {
 		case <-ticker.C:
 			uc.mu.Lock()
 			enabled := uc.enabled
+			channel := uc.channel
 			uc.mu.Unlock()
 			if enabled {
+				start := time.Now()
 				uc.checkAndUpdate()
+				recordUpdateCheckCycle(channel, time.Since(start))
 			}
 		}
 	}
@@ -81,6 +84,7 @@ func (uc *UpdateChecker) checkDeveloperChannel() {
 	latestSHA, err := fetchLatestMainSHAFn(repoPath)
 	if err != nil {
 		slog.Error("[AutoUpdate] failed to check main SHA", "error", err)
+		recordUpdateCheckError("fetch_main_sha")
 		return
 	}
 
@@ -124,6 +128,7 @@ func (uc *UpdateChecker) checkReleaseChannel(channel string) {
 	releases, err := fetchGitHubReleases()
 	if err != nil {
 		slog.Error("[AutoUpdate] failed to fetch releases", "error", err)
+		recordUpdateCheckError("fetch_releases")
 		return
 	}
 
