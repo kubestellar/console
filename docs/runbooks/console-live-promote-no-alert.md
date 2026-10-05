@@ -28,22 +28,16 @@ existing open issue rather than always opening a new one, which is why the
 `[ci-maintainer]`-filed #23186 and historical `[console-live][canary-blocked]` issues
 such as #21087 and #20593).
 
-**Correction (2026-09-12, issue #23336): the previous "no further action is needed"
-line above was wrong.** The automatic `helm rollback` described below only fires for
-two of the four failure classes the workflow can hit — `steps.deploy_live.outcome`/
-`steps.live_smoke.outcome == 'failure'` and `steps.session_smoke.outcome ==
-'failure'`. Neither rollback step's `if:` condition references
-`steps.live_semantic.outcome`, and there is no rollback step at all after the
-"Run live semantic tests against selected target" or "Run live browser matrix
-against selected target" steps. Confirmed by inspecting
-`.github/workflows/console-live-promote.yml` (rollback steps around lines 751 and
-816; no matching step follows lines 826/863) and by the run history: the
-`live_semantic` step has failed on every one of the last 30 scheduled runs
-(2026-09-01 through 2026-09-12, ~11 days, every ~12h) with **no rollback attempted
-in any of them** — the broken candidate has stayed live throughout. See #23336 for
-the exact fix (an additional rollback step keyed on
-`steps.live_semantic.outcome == 'failure'`); this agent cannot merge that change
-itself because it touches a workflow file.
+**Correction (2026-09-12, issue #23336 — now fixed):** Issue #23336 reported that
+the automatic `helm rollback` only fired for two of the four failure classes the
+workflow could hit (deploy/smoke/session only). The `live_semantic` and
+`live_browser_matrix` failures had no rollback steps. This was fixed by PR #23520
+(merged 2026-09-17). Verified on current `main` (`.github/workflows/console-live-promote.yml`):
+all four failure classes are now covered by rollback conditions:
+- Line 752: `steps.deploy_live.outcome == 'failure'` OR `steps.live_smoke.outcome == 'failure'`
+- Line 817: `steps.session_smoke.outcome == 'failure'`
+- Line 853: `steps.live_semantic.outcome == 'failure'`
+- Line 912: `steps.live_browser_matrix.outcome == 'failure'`
 
 For the still-open part of the original finding (`stale.yml` / "Stale Issues" has
 no equivalent alert), see `docs/runbooks/stale-workflow-no-alert.md`.
@@ -52,13 +46,11 @@ no equivalent alert), see `docs/runbooks/stale-workflow-no-alert.md`.
 
 `console-live-promote.yml` ("Console Live Promote") runs every 12 hours
 (`cron: '17 */12 * * *'`) and deploys the current `main` candidate to the **public**
-`console-live` environment before running live canary tests against it. On a failed
-*deploy or session-smoke* it automatically runs `helm rollback` to restore the
-previous release — but **not** on a failed semantic-test or browser-matrix run (see
-the Current Status correction above), so a bad candidate can and does stay live in
-that case. The dedicated alert workflow described above ensures a failed promotion
-(rolled back or not) is also tracked in an issue, not just silently retried on the
-next 12h cycle.
+`console-live` environment before running live canary tests against it. On failures
+in any of the four test/deployment stages (deploy, smoke, session-smoke, semantic,
+browser-matrix), it automatically runs `helm rollback` to restore the previous release.
+The dedicated alert workflow described above ensures a failed promotion (rolled back or
+not) is also tracked in an issue, not just silently retried on the next 12h cycle.
 
 ## Detecting a Failure Today
 
@@ -74,15 +66,13 @@ promotion failure, that (not the promotion workflow) is the gap to investigate.
 ## Escalation
 
 If a scheduled `console-live-promote.yml` run is found to have failed, check which
-step failed. For `deploy_live`/`live_smoke`/`session_smoke` failures, check whether
-the automatic `helm rollback` succeeded (search the run log for `live-rollback.log`
-contents). If rollback also failed, treat as a P1: the public `console-live`
-environment may be running a broken candidate. If rollback succeeded, it is still a
-P2 — investigate why the candidate failed its live canary tests.
+step failed. For any failure class (`deploy_live`, `live_smoke`, `session_smoke`,
+`live_semantic`, or `live_browser_matrix`), check whether the automatic `helm rollback`
+succeeded (search the run log for `live-rollback.log` contents). If rollback also
+failed, treat as a P1: the public `console-live` environment may be running a broken
+candidate. If rollback succeeded, it is still a P2 — investigate why the candidate
+failed its live canary tests.
 
-**For `live_semantic` (or browser-matrix) failures, there is currently no rollback
-step at all — treat as a P1 immediately**, since the broken candidate is guaranteed
-to still be live (see #23336 for the fix and current incident status). Separately,
-confirm the alert workflow (`console-live-promote-failure-issue.yml`) created/updated
-an issue as expected; if it did not, that indicates a regression in the alert
-mechanism itself and should be filed as a new, distinct finding.
+Separately, confirm the alert workflow (`console-live-promote-failure-issue.yml`)
+created/updated an issue as expected; if it did not, that indicates a regression in
+the alert mechanism itself and should be filed as a new, distinct finding.
