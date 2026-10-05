@@ -186,8 +186,12 @@ for (const coreRoute of coreRoutes) {
       const expectedFields = coreRoute.expectedFields(groundTruth)
       if (Object.keys(expectedFields).length > 0) {
         await assertGroundtruthFields(page, expectedFields, coreRoute.route)
-        const apiFacts = await collectLiveApiFacts(page, coreRoute.apiScope)
-        await assertLiveApiUiFields(page, apiFacts, coreRoute.route, coreRoute.apiFields(apiFacts))
+        await assertLiveApiUiFields(
+          page,
+          () => collectLiveApiFacts(page, coreRoute.apiScope),
+          coreRoute.route,
+          coreRoute.apiFields,
+        )
         await assertNoPositiveLiveCountContradictions(page, coreRoute.route, expectedFields)
       }
       await assertNoForbiddenLiveUi(page)

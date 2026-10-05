@@ -2,6 +2,11 @@ import { expect, type Page } from '@playwright/test'
 import { markLiveRateLimitDataLoss, recordLiveUiFailures, writeLiveRouteEvidence, type LiveNetworkClassification } from './liveReporting'
 import { networkClassification, type LiveApiFacts } from './liveApiFacts'
 
+const LIVE_ROUTE_STATE_SETTLE_TIMEOUT_MS = 60_000
+const LIVE_API_UI_SETTLE_TIMEOUT_MS = 90_000
+const LIVE_SETTLE_POLL_INTERVAL_MS = 5_000
+const LIVE_BODY_PREVIEW_LENGTH = 500
+
 type GroundtruthFieldState = {
   field: string
   markerCount: number
@@ -90,17 +95,28 @@ export async function readLiveRouteState(page: Page): Promise<string | null> {
 }
 
 export async function assertLiveRouteStateLoaded(page: Page, route: string) {
-  const state = await readLiveRouteState(page)
-  const bodyText = await page.locator('body').innerText({ timeout: 5_000 }).catch(() => '')
-  const unavailable = state === 'unavailable'
-    || state === 'partial'
-    || /Unable to connect to clusters|Data unavailable/i.test(bodyText)
+  const readState = async () => {
+    const state = await readLiveRouteState(page)
+    const bodyText = await page.locator('body').innerText({ timeout: LIVE_SETTLE_POLL_INTERVAL_MS }).catch(() => '')
+    const unavailable = state === 'unavailable'
+      || state === 'partial'
+      || /Unable to connect to clusters|Data unavailable/i.test(bodyText)
+    return { state, bodyText, unavailable }
+  }
+
+  await expect.poll(async () => (await readState()).unavailable, {
+    message: `live ${route} route should settle to fully loaded live data state`,
+    timeout: LIVE_ROUTE_STATE_SETTLE_TIMEOUT_MS,
+    intervals: [LIVE_SETTLE_POLL_INTERVAL_MS],
+  }).toBe(false).catch(() => undefined)
+
+  const { state, bodyText, unavailable } = await readState()
   if (unavailable) {
     await recordLiveUiFailures(page, {
       routeFailures: [{
         route,
         reason: `route rendered incomplete live data state${state ? ` (${state})` : ''}`,
-        actual: bodyText.slice(0, 500),
+        actual: bodyText.slice(0, LIVE_BODY_PREVIEW_LENGTH),
       }],
     })
   }
@@ -147,35 +163,60 @@ export async function assertGroundtruthFields(page: Page, expected: Record<strin
   expect(dashboardMismatches, `live ${route} stats must match Kubernetes ground truth`).toEqual([])
 }
 
-export async function assertLiveApiUiFields(page: Page, apiFacts: LiveApiFacts, route: string, expected: Record<string, number | null>) {
-  const expectedComparable = Object.fromEntries(
+type LiveApiFactsReader = LiveApiFacts | (() => Promise<LiveApiFacts>)
+type LiveApiExpectedReader = Record<string, number | null> | ((apiFacts: LiveApiFacts) => Record<string, number | null>)
+
+async function resolveLiveApiFacts(reader: LiveApiFactsReader): Promise<LiveApiFacts> {
+  return typeof reader === 'function' ? reader() : reader
+}
+
+function resolveLiveApiExpected(reader: LiveApiExpectedReader, apiFacts: LiveApiFacts): Record<string, number | null> {
+  return typeof reader === 'function' ? reader(apiFacts) : reader
+}
+
+function comparableLiveApiExpected(expected: Record<string, number | null>): Record<string, number> {
+  return Object.fromEntries(
     Object.entries(expected).filter(([, expectedValue]) => expectedValue !== null)
   ) as Record<string, number>
-  const readStates = async (): Promise<Record<string, GroundtruthFieldState>> => {
+}
+
+export async function assertLiveApiUiFields(page: Page, apiFacts: LiveApiFactsReader, route: string, expected: LiveApiExpectedReader) {
+  const readStates = async (expectedFields: Record<string, number | null>): Promise<Record<string, GroundtruthFieldState>> => {
     const stateEntries = await Promise.all(
-      Object.keys(expected).map(async field => [field, await readGroundtruthFieldState(page, field)] as const)
+      Object.keys(expectedFields).map(async field => [field, await readGroundtruthFieldState(page, field)] as const)
     )
     return Object.fromEntries(stateEntries)
   }
+  const sampleComparison = async () => {
+    const currentApiFacts = await resolveLiveApiFacts(apiFacts)
+    const currentExpected = resolveLiveApiExpected(expected, currentApiFacts)
+    const currentExpectedComparable = comparableLiveApiExpected(currentExpected)
+    const states = await readStates(currentExpected)
+    const mismatches = Object.entries(currentExpectedComparable)
+      .map(([field, expectedValue]) => groundtruthFieldMismatch(states[field], expectedValue, route))
+      .filter((mismatch): mismatch is NonNullable<typeof mismatch> => mismatch !== null)
+    return {
+      apiFacts: currentApiFacts,
+      expected: currentExpected,
+      states,
+      mismatches,
+    }
+  }
 
   await expect.poll(async () => {
-    const current = await readStates()
-    return Object.entries(expectedComparable)
-      .map(([field, expectedValue]) => groundtruthFieldMismatch(current[field], expectedValue, route))
-      .filter((mismatch): mismatch is NonNullable<typeof mismatch> => mismatch !== null)
+    const current = await sampleComparison()
+    return current.mismatches
       .map(mismatch => `${mismatch.field}: ${mismatch.reason}; expected ${mismatch.expected}, got ${mismatch.actualValues.join(', ')}`)
   }, {
-    message: `live ${route} UI fields should hydrate to authenticated API data`,
-    timeout: 20_000,
+    message: `live ${route} UI fields should settle to authenticated API data`,
+    timeout: LIVE_API_UI_SETTLE_TIMEOUT_MS,
+    intervals: [LIVE_SETTLE_POLL_INTERVAL_MS],
   }).toEqual([]).catch(() => undefined)
 
-  const states = await readStates()
+  const { apiFacts: finalApiFacts, expected: finalExpected, states, mismatches } = await sampleComparison()
   const actual = Object.fromEntries(Object.entries(states).map(([field, state]) => [field, state.value]))
-  const mismatches = Object.entries(expectedComparable)
-    .map(([field, expectedValue]) => groundtruthFieldMismatch(states[field], expectedValue, route))
-    .filter((mismatch): mismatch is NonNullable<typeof mismatch> => mismatch !== null)
 
-  const networkClassifications: LiveNetworkClassification[] = Object.entries(apiFacts.endpoints)
+  const networkClassifications: LiveNetworkClassification[] = Object.entries(finalApiFacts.endpoints)
     .flatMap(([url, fact]) => {
       const classification = networkClassification(fact.status ?? undefined, url)
       return classification ? [{ classification, status: fact.status ?? undefined, url }] : []
@@ -195,9 +236,9 @@ export async function assertLiveApiUiFields(page: Page, apiFacts: LiveApiFacts, 
   writeLiveRouteEvidence({
     route,
     kind: 'api-ui-fields',
-    expected,
+    expected: finalExpected,
     actual,
-    api: apiFacts,
+    api: finalApiFacts,
     mismatches,
     networkClassifications,
   })

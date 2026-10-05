@@ -103,13 +103,17 @@ test('live canary UI matches Kubernetes groundtruth without screenshot baselines
     await dismissOptionalLiveOverlays(page)
     await assertLiveDashboardShell(page, route)
     await assertNoForbiddenLiveUi(page)
-    const clusterApiFacts = await collectLiveApiFacts(page, 'clusters')
-    await assertLiveApiUiFields(page, clusterApiFacts, route, {
-      'clusters-total': clusterApiFacts.clusters.total,
-      'nodes-ready': clusterApiFacts.clusters.nodesReady,
-      'nodes-total': clusterApiFacts.clusters.nodesTotal,
-      'pods-total': clusterApiFacts.clusters.podsTotal,
-    })
+    await assertLiveApiUiFields(
+      page,
+      () => collectLiveApiFacts(page, 'clusters'),
+      route,
+      clusterApiFacts => ({
+        'clusters-total': clusterApiFacts.clusters.total,
+        'nodes-ready': clusterApiFacts.clusters.nodesReady,
+        'nodes-total': clusterApiFacts.clusters.nodesTotal,
+        'pods-total': clusterApiFacts.clusters.podsTotal,
+      }),
+    )
     // Truncated kubectl ground truth must never silently pass as a smaller
     // "expected" value (run 33725278436: `get pods -A` failed silently on one
     // context, producing expected=36 vs a truthful UI total of 127).
