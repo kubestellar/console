@@ -61,3 +61,44 @@ func TestSafeTransport_AllowsPublicDial(t *testing.T) {
 	}
 	defer resp.Body.Close()
 }
+
+func TestResolveSafe_Branches(t *testing.T) {
+	ctx := context.Background()
+
+	if _, err := resolveSafe(ctx, ""); err == nil {
+		t.Error("empty host should be rejected")
+	}
+	if _, err := resolveSafe(ctx, "10.0.0.1"); err == nil {
+		t.Error("private IP literal should be rejected")
+	}
+	ip, err := resolveSafe(ctx, "8.8.8.8")
+	if err != nil || ip.String() != "8.8.8.8" {
+		t.Errorf("public IP literal: got %v, %v; want 8.8.8.8, nil", ip, err)
+	}
+	if _, err := resolveSafe(ctx, "localhost"); err == nil {
+		t.Error("localhost should resolve to a blocked address")
+	}
+	if _, err := resolveSafe(ctx, "this-host-will-never-resolve.invalid"); err == nil {
+		t.Error("unresolvable host should fail closed")
+	}
+}
+
+func TestSafeTransport_DialContextInvalidAddress(t *testing.T) {
+	_, err := SafeTransport().DialContext(context.Background(), "tcp", "no-port-here")
+	if err == nil || !strings.Contains(err.Error(), "invalid dial address") {
+		t.Fatalf("expected invalid dial address error, got: %v", err)
+	}
+}
+
+func TestSafeTransport_DialContextAllowsPublicLiteral(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), dnsTimeout)
+	defer cancel()
+	conn, err := SafeTransport().DialContext(ctx, "tcp", "8.8.8.8:53")
+	if err != nil {
+		if strings.Contains(err.Error(), "ssrf:") {
+			t.Fatalf("public literal must pass the guard, got: %v", err)
+		}
+		t.Skipf("public network unavailable in this environment: %v", err)
+	}
+	conn.Close()
+}
