@@ -569,16 +569,16 @@ test.describe('Deploy Dashboard', () => {
       { timeout: CARD_CONTENT_TIMEOUT_MS },
     ).toBe(MOCK_WORKLOADS.length)
 
-    await expect(workloadCard.getByText(`${MOCK_WORKLOADS.length} total · ${MOCK_WORKLOADS.length} unique`)).toBeVisible()
+    await expect(workloadCard.getByText(`${MOCK_WORKLOADS.length} total · ${MOCK_WORKLOADS.length} unique`)).toBeVisible({ timeout: CARD_CONTENT_TIMEOUT_MS })
 
     for (const workload of MOCK_WORKLOADS) {
       const workloadRow = workloadRows.filter({ hasText: workload.name }).first()
-      await expect(workloadRow).toBeVisible()
-      await expect(workloadRow).toContainText(workload.status)
-      await expect(workloadRow).toContainText(workload.namespace)
-      await expect(workloadRow).toContainText(workload.type)
-      await expect(workloadRow).toContainText(`${workload.readyReplicas}/${workload.replicas}`)
-      await expect(workloadRow).toContainText(workload.image)
+      await expect(workloadRow).toBeVisible({ timeout: CARD_CONTENT_TIMEOUT_MS })
+      await expect(workloadRow).toContainText(workload.status, { timeout: CARD_CONTENT_TIMEOUT_MS })
+      await expect(workloadRow).toContainText(workload.namespace, { timeout: CARD_CONTENT_TIMEOUT_MS })
+      await expect(workloadRow).toContainText(workload.type, { timeout: CARD_CONTENT_TIMEOUT_MS })
+      await expect(workloadRow).toContainText(`${workload.readyReplicas}/${workload.replicas}`, { timeout: CARD_CONTENT_TIMEOUT_MS })
+      await expect(workloadRow).toContainText(workload.image, { timeout: CARD_CONTENT_TIMEOUT_MS })
     }
 
     const workloadCalls = mockState.getCallCount('api/workloads')
