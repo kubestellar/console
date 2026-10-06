@@ -13,7 +13,7 @@ the automation the incident-response SLA depends on is wired:
 | Piece | State |
 |-------|-------|
 | `.github/on-call-schedule.yml` | **Exists** — rotation schema with `fallback` = OWNERS approvers. The weekly `rotation` list is still empty; naming it is a maintainer decision. |
-| `main-broken` label | **Created on demand** by `main-broken.yml` on first failure (also tracked by [#23615](https://github.com/kubestellar/console/issues/23615)). |
+| `main-broken` label | **Exists** — pre-created (`gh label list --repo kubestellar/console --search main-broken`); also still created on demand by `main-broken.yml` on first failure if ever deleted. |
 | Failure → label + incident issue | **Wired** — [`.github/workflows/main-broken.yml`](../../.github/workflows/main-broken.yml), `workflow_run` on the main-branch build/test gates, `if: conclusion == 'failure' && event == 'push' && head_branch == 'main'`. |
 | Slack post to `#kubestellar-dev` | **Optional / unconfigured** — runs only if the `SLACK_CI_WEBHOOK_URL` repository secret is set. |
 
@@ -34,8 +34,8 @@ SLA clock. That playbook assumes three things exist, and until #23616 none did:
 
 1. **`.github/on-call-schedule.yml`** — the rotation source of truth and SLA owner.
    Now present; the weekly `rotation` is still empty and falls back to OWNERS approvers.
-2. **The `main-broken` label** — auto-applied to the PR that broke main. Now created
-   on demand by the workflow.
+2. **The `main-broken` label** — auto-applied to the PR that broke main. Now exists
+   (pre-created) and will also be re-created on demand by the workflow if removed.
 3. **A label-applying / issue-opening workflow step** — now `main-broken.yml`. The
    Slack post to `#kubestellar-dev` remains opt-in via the `SLACK_CI_WEBHOOK_URL`
    secret. (`docs/ALERT_NOTIFICATIONS.md` documents a separate, user-configurable
@@ -70,8 +70,6 @@ gh run list --repo kubestellar/console --workflow "Main Branch Broken" --limit 1
 2. **Slack** — to get the `#kubestellar-dev` post described in
    `docs/INCIDENT-RESPONSE.md`, a maintainer adds an incoming-webhook URL as the
    `SLACK_CI_WEBHOOK_URL` repository secret. No workflow change is needed.
-3. **Pre-create the label** (optional) — `gh label create main-broken` so the
-   label exists before the first incident ([#23615](https://github.com/kubestellar/console/issues/23615)).
 
 ## Escalation
 

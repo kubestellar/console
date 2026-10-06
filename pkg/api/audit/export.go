@@ -147,7 +147,10 @@ func NewWebhookDestination(url string, client *http.Client) (*WebhookDestination
 		if err := auditURLValidator(url); err != nil {
 			return nil, fmt.Errorf("webhook destination: %w", err)
 		}
-		client = &http.Client{Timeout: siemWebhookTimeout}
+		// Re-validate the destination at dial time on every request (not just
+		// once here) so a DNS-rebinding attack against a long-lived webhook
+		// destination can't bypass auditURLValidator after registration.
+		client = &http.Client{Timeout: siemWebhookTimeout, Transport: ssrf.SafeTransport()}
 	}
 	return &WebhookDestination{url: url, client: client}, nil
 }
