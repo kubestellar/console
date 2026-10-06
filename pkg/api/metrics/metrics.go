@@ -303,6 +303,51 @@ var (
 		[]string{"error_type"},
 	)
 
+	// stellarObserverCyclesTotal and stellarObserverCycleDuration cover the
+	// Stellar proactive observer's ticker-driven loop
+	// (pkg/stellar/observer/observer.go), which — like the watcher loop
+	// above before it was instrumented — only logs completion via slog and
+	// has no cycle, error, or outcome counters today.
+	stellarObserverCyclesTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "console_stellar_observer_cycles_total",
+			Help: "Total number of completed Stellar observer ticks (quiet-window skips excluded).",
+		},
+	)
+
+	stellarObserverCycleDuration = prometheus.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "console_stellar_observer_cycle_duration_seconds",
+			Help:    "Duration of a full Stellar observer tick (all passes), in seconds.",
+			Buckets: prometheus.DefBuckets,
+		},
+	)
+
+	stellarObserverErrorsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "console_stellar_observer_errors_total",
+			Help: "Total Stellar observer errors, by error type.",
+		},
+		// error_type is a fixed, bounded set (StellarObserverError*
+		// constants below) — never a user ID, cluster name, or other
+		// unbounded value.
+		[]string{"error_type"},
+	)
+
+	stellarObserverAutoWatchesCreatedTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "console_stellar_observer_auto_watches_created_total",
+			Help: "Total watches auto-created by the Stellar observer from recurring or critical events.",
+		},
+	)
+
+	stellarObserverNudgesCreatedTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "console_stellar_observer_nudges_created_total",
+			Help: "Total proactive nudge notifications created by the Stellar observer.",
+		},
+	)
+
 	initOnce sync.Once
 )
 
@@ -346,6 +391,11 @@ func Init() {
 		prometheus.MustRegister(stellarWatcherPollCyclesTotal)
 		prometheus.MustRegister(stellarWatcherPollDuration)
 		prometheus.MustRegister(stellarWatcherPollErrorsTotal)
+		prometheus.MustRegister(stellarObserverCyclesTotal)
+		prometheus.MustRegister(stellarObserverCycleDuration)
+		prometheus.MustRegister(stellarObserverErrorsTotal)
+		prometheus.MustRegister(stellarObserverAutoWatchesCreatedTotal)
+		prometheus.MustRegister(stellarObserverNudgesCreatedTotal)
 	})
 }
 
@@ -617,4 +667,42 @@ func RecordStellarWatcherPollCycle(duration time.Duration) {
 func RecordStellarWatcherPollError(errorType string) {
 	Init()
 	stellarWatcherPollErrorsTotal.WithLabelValues(errorType).Inc()
+}
+
+// Stellar observer error types for RecordStellarObserverError. This is the
+// complete, fixed set of values the "error_type" label may take — never a
+// user ID, cluster name, or other unbounded value.
+const (
+	StellarObserverErrorListUsers       = "list_users"
+	StellarObserverErrorNudgeGeneration = "nudge_generation"
+)
+
+// RecordStellarObserverCycle records one completed Stellar observer tick
+// (quiet-window skips excluded) and its wall-clock duration across all four
+// passes (observe, follow-through, auto-watch, nudges).
+func RecordStellarObserverCycle(duration time.Duration) {
+	Init()
+	stellarObserverCyclesTotal.Inc()
+	stellarObserverCycleDuration.Observe(duration.Seconds())
+}
+
+// RecordStellarObserverError records one Stellar observer error. errorType
+// must be one of the StellarObserverError* constants above.
+func RecordStellarObserverError(errorType string) {
+	Init()
+	stellarObserverErrorsTotal.WithLabelValues(errorType).Inc()
+}
+
+// RecordStellarObserverAutoWatchCreated records one watch auto-created by
+// the observer's recurring/critical event evaluation pass.
+func RecordStellarObserverAutoWatchCreated() {
+	Init()
+	stellarObserverAutoWatchesCreatedTotal.Inc()
+}
+
+// RecordStellarObserverNudgeCreated records one proactive nudge notification
+// created by the observer.
+func RecordStellarObserverNudgeCreated() {
+	Init()
+	stellarObserverNudgesCreatedTotal.Inc()
 }

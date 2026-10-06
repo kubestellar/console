@@ -130,6 +130,46 @@ func TestStellarWatcherMetrics(t *testing.T) {
 	}
 }
 
+// TestStellarObserverMetrics verifies that recording observer tick cycles,
+// errors, auto-watch creations, and nudge creations increments the expected
+// bounded series without introducing unbounded label values (e.g. no user
+// ID or cluster name).
+func TestStellarObserverMetrics(t *testing.T) {
+	RecordStellarObserverCycle(0)
+	RecordStellarObserverError(StellarObserverErrorListUsers)
+	RecordStellarObserverError(StellarObserverErrorNudgeGeneration)
+	RecordStellarObserverAutoWatchCreated()
+	RecordStellarObserverNudgeCreated()
+
+	app := fiber.New()
+	app.Get("/metrics", Handler())
+
+	req := httptest.NewRequest("GET", "/metrics", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("metrics scrape failed: %v", err)
+	}
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("failed to read metrics body: %v", err)
+	}
+	body := string(bodyBytes)
+
+	for _, want := range []string{
+		"console_stellar_observer_cycles_total",
+		"console_stellar_observer_cycle_duration_seconds",
+		`console_stellar_observer_errors_total{error_type="list_users"}`,
+		`console_stellar_observer_errors_total{error_type="nudge_generation"}`,
+		"console_stellar_observer_auto_watches_created_total",
+		"console_stellar_observer_nudges_created_total",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("expected metrics output to contain %q, got:\n%s", want, body)
+		}
+	}
+}
+
 // TestGPUUtilizationWorkerMetrics verifies that recording GPU utilization
 // worker scrape cycles, per-reservation outcomes, DCGM scrape errors, and
 // alert send errors increments the expected bounded series.
