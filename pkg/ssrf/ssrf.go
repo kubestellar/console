@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"net/url"
 	"time"
 )
@@ -82,4 +83,67 @@ func ValidateURL(rawURL string) error {
 		return fmt.Errorf("ssrf: URL %q has no host", rawURL)
 	}
 	return ValidateHost(host)
+}
+
+// resolveSafe resolves host to a single validated IP, rejecting it if any
+// resolved address (or the literal itself) falls into a blocked range.
+// Returning the specific IP that was checked lets callers dial that exact
+// address instead of re-resolving the hostname later.
+func resolveSafe(ctx context.Context, host string) (net.IP, error) {
+	if host == "" {
+		return nil, fmt.Errorf("ssrf: empty hostname")
+	}
+	if ip := net.ParseIP(host); ip != nil {
+		if IsBlockedIP(ip) {
+			return nil, fmt.Errorf("ssrf: host %q resolves to blocked IP %s (private/internal address)", host, ip)
+		}
+		return ip, nil
+	}
+
+	lookupCtx, cancel := context.WithTimeout(ctx, dnsTimeout)
+	defer cancel()
+
+	ips, err := net.DefaultResolver.LookupIPAddr(lookupCtx, host)
+	if err != nil {
+		return nil, fmt.Errorf("ssrf: DNS lookup failed for %q — cannot verify safety: %w", host, err)
+	}
+	if len(ips) == 0 {
+		return nil, fmt.Errorf("ssrf: DNS lookup for %q returned no addresses", host)
+	}
+	for _, addr := range ips {
+		if IsBlockedIP(addr.IP) {
+			return nil, fmt.Errorf("ssrf: host %q resolves to blocked IP %s (private/internal address)", host, addr.IP)
+		}
+	}
+	return ips[0].IP, nil
+}
+
+// SafeTransport returns an *http.Transport whose DialContext re-resolves and
+// re-validates the destination host immediately before every connection, then
+// dials the validated IP address directly (TLS verification still uses the
+// original hostname, since only the dial target changes).
+//
+// This closes the gap left by validating a URL once (e.g. at config-save
+// time via ValidateURL) and then reusing an http.Client for requests that
+// happen much later: without this, an attacker who controls the destination
+// hostname's DNS could pass validation with a public IP and later repoint the
+// record at an internal address (DNS rebinding) before the next outbound
+// request is actually dialed. Every caller that builds a long-lived
+// *http.Client for a user-supplied URL should use this transport rather than
+// relying solely on a one-time ValidateURL check.
+func SafeTransport() *http.Transport {
+	dialer := &net.Dialer{Timeout: dnsTimeout}
+	base := http.DefaultTransport.(*http.Transport).Clone()
+	base.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+		host, port, err := net.SplitHostPort(addr)
+		if err != nil {
+			return nil, fmt.Errorf("ssrf: invalid dial address %q: %w", addr, err)
+		}
+		ip, err := resolveSafe(ctx, host)
+		if err != nil {
+			return nil, err
+		}
+		return dialer.DialContext(ctx, network, net.JoinHostPort(ip.String(), port))
+	}
+	return base
 }

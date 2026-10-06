@@ -16,6 +16,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/kubestellar/console/pkg/ssrf"
 )
 
 // elasticBulkTimeout bounds every outbound _bulk POST. Bulk requests are
@@ -70,7 +72,9 @@ func NewElasticDestination(url, index string, client *http.Client) (*ElasticDest
 		if err := auditURLValidator(url); err != nil {
 			return nil, fmt.Errorf("elastic destination: %w", err)
 		}
-		client = &http.Client{Timeout: elasticBulkTimeout}
+		// Re-validate at dial time on every request; see SafeTransport doc for
+		// why a one-time ValidateURL call is not enough on its own.
+		client = &http.Client{Timeout: elasticBulkTimeout, Transport: ssrf.SafeTransport()}
 	}
 	if index == "" {
 		index = elasticDefaultIndex

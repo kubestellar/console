@@ -15,6 +15,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/kubestellar/console/pkg/ssrf"
 )
 
 // splunkTimeout bounds every outbound Splunk HEC POST. Chosen to cover the
@@ -73,7 +75,9 @@ func NewSplunkDestination(url, token string, client *http.Client) (*SplunkDestin
 		if err := auditURLValidator(url); err != nil {
 			return nil, fmt.Errorf("splunk destination: %w", err)
 		}
-		client = &http.Client{Timeout: splunkTimeout}
+		// Re-validate at dial time on every request; see SafeTransport doc for
+		// why a one-time ValidateURL call is not enough on its own.
+		client = &http.Client{Timeout: splunkTimeout, Transport: ssrf.SafeTransport()}
 	}
 	// Allow callers to pass either the host or the full HEC path. Appending
 	// splunkHECPath when missing keeps configuration simple.
