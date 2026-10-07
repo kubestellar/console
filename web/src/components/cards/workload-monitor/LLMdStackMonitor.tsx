@@ -2,12 +2,8 @@
 // close controls, and the cluster-filter dropdown is an anchored flyout (not a
 // backdrop modal). closeOnBackdropClick={false} semantics apply to the inline
 // inputs — no unsaved-changes risk from accidental backdrop clicks.
-import { useMemo, useState, useRef, useEffect } from 'react'
-import {
-  Cpu, Network, Activity, Layers, Server,
-  RefreshCw, AlertTriangle
-} from 'lucide-react'
-import { ALERT_SEVERITY_ORDER } from '../../../types/alerts'
+import { useMemo, useState } from 'react'
+import { Cpu, RefreshCw } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { Pagination } from '../../ui/Pagination'
 import { CardControls } from '../../ui/CardControls'
@@ -24,21 +20,41 @@ import { useCardLoadingState } from '../CardDataContext'
 import type { MonitorIssue, MonitoredResource } from '../../../types/workloadMonitor'
 import { useTranslation } from 'react-i18next'
 import { LLMdClusterFilter } from './LLMdClusterFilter'
-import { LLMdComponentSections, type LLMdSection } from './LLMdComponentSections'
+import { LLMdComponentSections } from './LLMdComponentSections'
 import { LLMdIssuesList } from './LLMdIssuesList'
+import { LLMdStackMonitorTabs, type LLMdStackMonitorTab } from './LLMdStackMonitorTabs'
+import { useLLMdClusterFilterDropdown } from './useLLMdClusterFilterDropdown'
+import {
+  buildAllIssues,
+  buildComponentItems,
+  buildSections,
+  computeStackHealth,
+  filterIssues,
+  filterItemsByStatus,
+  filterServers,
+  paginate,
+  sortComponentItems,
+  sortIssues,
+} from './LLMdStackMonitor.utils'
 import {
   ISSUE_SORT_OPTIONS,
   SEVERITY_FILTER_OPTIONS,
   SORT_OPTIONS,
   STATUS_BADGE,
   STATUS_FILTER_OPTIONS,
-  STATUS_ORDER,
   type ComponentItem,
   type IssueSortField,
   type SeverityFilter,
   type SortField,
   type StatusFilter,
 } from './LLMdStackMonitor.constants'
+
+/** Workload monitor auto-refresh interval for the llm-d namespace. */
+const LLMD_MONITOR_REFRESH_MS = 30_000
+/** Default page size for the Components tab. */
+const DEFAULT_COMPONENTS_PER_PAGE = 20
+/** Default page size for the Issues tab. */
+const DEFAULT_ISSUES_PER_PAGE = 5
 
 interface LLMdStackMonitorProps {
   config?: Record<string, unknown>
@@ -54,20 +70,23 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
   const discoveredClusters = useLLMdClusters(deduplicatedClusters, gpuClusterNames)
 
   const { servers, isLoading: serversLoading, isRefreshing: serversRefreshing, isDemoFallback: serversDemoFallback, isFailed: serversFailed, consecutiveFailures: serversFailures, refetch: refetchServers } = useCachedLLMdServers(discoveredClusters)
-  const [activeTab, setActiveTab] = useState<'components' | 'issues'>('components')
+  const [activeTab, setActiveTab] = useState<LLMdStackMonitorTab>('components')
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['Model Serving', 'EPP', 'Gateway', 'Autoscaler']))
   const [search, setSearch] = useState('')
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
-  const [showClusterFilter, setShowClusterFilter] = useState(false)
-  const clusterFilterRef = useRef<HTMLDivElement>(null)
-  const clusterFilterBtnRef = useRef<HTMLButtonElement>(null)
-  const [dropdownStyle, setDropdownStyle] = useState<{ top: number; left: number } | null>(null)
+  const {
+    showClusterFilter,
+    setShowClusterFilter,
+    clusterFilterRef,
+    clusterFilterBtnRef,
+    dropdownStyle,
+  } = useLLMdClusterFilterDropdown()
 
   // Unified controls state - Components tab
   const [sortBy, setSortBy] = useState<SortField>('status')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
-  const [itemsPerPage, setItemsPerPage] = useState<number | 'unlimited'>(20)
+  const [itemsPerPage, setItemsPerPage] = useState<number | 'unlimited'>(DEFAULT_COMPONENTS_PER_PAGE)
   const [currentPage, setCurrentPage] = useState(1)
 
   // Unified controls state - Issues tab
@@ -75,64 +94,11 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
   const [issueSortBy, setIssueSortBy] = useState<IssueSortField>('severity')
   const [issueSortDirection, setIssueSortDirection] = useState<'asc' | 'desc'>('asc')
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('all')
-  const [issueItemsPerPage, setIssueItemsPerPage] = useState<number | 'unlimited'>(5)
+  const [issueItemsPerPage, setIssueItemsPerPage] = useState<number | 'unlimited'>(DEFAULT_ISSUES_PER_PAGE)
   const [issueCurrentPage, setIssueCurrentPage] = useState(1)
 
-  // Compute dropdown position
-  useEffect(() => {
-    if (showClusterFilter && clusterFilterBtnRef.current) {
-      const rect = clusterFilterBtnRef.current.getBoundingClientRect()
-      setDropdownStyle({
-        top: rect.bottom + 4,
-        left: Math.max(8, rect.right - 192) })
-    } else {
-      setDropdownStyle(null)
-    }
-  }, [showClusterFilter])
-
-  // Close dropdown on click outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (clusterFilterRef.current && !clusterFilterRef.current.contains(event.target as Node)) {
-        setShowClusterFilter(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  // Close dropdown on Escape key
-  useEffect(() => {
-    if (!showClusterFilter) return
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation()
-        setShowClusterFilter(false)
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [showClusterFilter])
-
   // Filter servers by search and cluster
-  const filteredServers = (() => {
-    let result = servers
-    if (localClusterFilter.length > 0) {
-      result = result.filter(s => localClusterFilter.includes(s.cluster))
-    }
-    if (search.trim()) {
-      const query = search.toLowerCase()
-      result = result.filter(s =>
-        s.name.toLowerCase().includes(query) ||
-        s.namespace.toLowerCase().includes(query) ||
-        s.cluster.toLowerCase().includes(query) ||
-        (s.model && s.model.toLowerCase().includes(query))
-      )
-    }
-    return result
-  })()
+  const filteredServers = filterServers(servers, localClusterFilter, search)
 
   const availableClusters = deduplicatedClusters.filter(c => c.reachable !== false)
 
@@ -152,7 +118,7 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
     isLoading: monitorLoading,
     isRefreshing: monitorRefreshing,
     refetch: refetchMonitor } = useWorkloadMonitor(llmdCluster, 'llm-d', '', {
-    autoRefreshMs: 30_000 })
+    autoRefreshMs: LLMD_MONITOR_REFRESH_MS })
 
   const isLoading = serversLoading || monitorLoading
   const isRefreshing = serversRefreshing || monitorRefreshing
@@ -166,205 +132,40 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
     isFailed: serversFailed,
     consecutiveFailures: serversFailures })
 
-  // Map server status to component status
-  const mapStatus = (s: string): ComponentItem['status'] => {
-    if (s === 'running') return 'healthy'
-    if (s === 'scaling') return 'degraded'
-    if (s === 'stopped' || s === 'error') return 'unhealthy'
-    return 'unknown'
-  }
-
-  // Map autoscaler type to display label
-  const getAutoscalerLabel = (type?: string): string => {
-    switch (type?.toLowerCase()) {
-      case 'hpa': return 'HPA'
-      case 'va': return 'VA'
-      case 'vpa': return 'VPA'
-      case 'both': return 'HPA + VA'
-      default: return type || 'Autoscaler'
-    }
-  }
-
-  // Build flat list of all items for sorting/filtering/pagination
-  const allItems = filteredServers.map(s => ({
-      name: s.name,
-      status: mapStatus(s.status),
-      type: s.componentType,
-      namespace: s.namespace,
-      detail: s.componentType === 'model'
-        ? `${s.type || 'vLLM'} · ${s.model || 'unknown'} · ${s.readyReplicas ?? 0}/${s.replicas ?? 0} replicas`
-        : s.componentType === 'epp'
-        ? `${s.readyReplicas ?? 0}/${s.replicas ?? 0} replicas`
-        : s.componentType === 'autoscaler'
-        ? `${getAutoscalerLabel(s.autoscalerType)} ${s.model || ''}`
-        : undefined,
-      cluster: s.cluster }))
-
-  // Apply status filter
-  const statusFilteredItems = (() => {
-    if (statusFilter === 'all') return allItems
-    return allItems.filter(item => item.status === statusFilter)
-  })()
-
-  // Apply sorting
-  const sortedItems = (() => {
-    const sorted = [...statusFilteredItems]
-    sorted.sort((a, b) => {
-      let compare = 0
-      switch (sortBy) {
-        case 'name':
-          compare = a.name.localeCompare(b.name)
-          break
-        case 'status':
-          compare = (STATUS_ORDER[a.status] ?? 5) - (STATUS_ORDER[b.status] ?? 5)
-          break
-        case 'type':
-          compare = (a.type || '').localeCompare(b.type || '')
-          break
-        case 'cluster':
-          compare = (a.cluster || '').localeCompare(b.cluster || '')
-          break
-      }
-      return sortDirection === 'asc' ? compare : -compare
-    })
-    return sorted
-  })()
-
-  // Apply pagination
-  const totalItems = sortedItems.length
-  const limit = itemsPerPage === 'unlimited' ? totalItems : itemsPerPage
-  const totalPages = Math.max(1, Math.ceil(totalItems / limit))
-  const safeCurrentPage = Math.min(currentPage, totalPages)
-  const paginatedItems = (() => {
-    if (itemsPerPage === 'unlimited') return sortedItems
-    const start = (safeCurrentPage - 1) * limit
-    return sortedItems.slice(start, start + limit)
-  })()
-
-  const needsPagination = itemsPerPage !== 'unlimited' && totalItems > limit
+  // Build flat list of all items, then filter/sort/paginate
+  const allItems = buildComponentItems(filteredServers)
+  const statusFilteredItems = filterItemsByStatus(allItems, statusFilter)
+  const sortedItems = sortComponentItems(statusFilteredItems, sortBy, sortDirection)
+  const {
+    totalItems,
+    totalPages,
+    safeCurrentPage,
+    paginatedItems,
+    needsPagination,
+  } = paginate(sortedItems, itemsPerPage, currentPage)
 
   // Build component sections from paginated items (for hierarchical view)
-  const sections: LLMdSection[] = (() => {
-    const SECTION_CONFIG: Array<{ type: string; label: string; icon: typeof Cpu; color: string }> = [
-      { type: 'model', label: 'Model Serving', icon: Cpu, color: 'text-purple-400' },
-      { type: 'epp', label: 'EPP', icon: Layers, color: 'text-blue-400' },
-      { type: 'gateway', label: 'Gateway', icon: Network, color: 'text-cyan-400' },
-      { type: 'prometheus', label: 'Prometheus', icon: Activity, color: 'text-orange-400' },
-      { type: 'autoscaler', label: 'Autoscaler', icon: Server, color: 'text-green-400' },
-    ]
-
-    return SECTION_CONFIG.map(cfg => ({
-      label: cfg.label,
-      icon: cfg.icon,
-      color: cfg.color,
-      items: paginatedItems.filter(item => item.type === cfg.type) })).filter(s => s.items.length > 0)
-  })()
+  const sections = buildSections(paginatedItems)
 
   // Combine issues from monitor and synthesized from llm-d (respects cluster filter)
-  const allIssues = useMemo<MonitorIssue[]>(() => {
-    // Filter monitor issues by cluster if filter is active
-    let monitorIssues = [...issues]
-    if (localClusterFilter.length > 0) {
-      monitorIssues = monitorIssues.filter(issue =>
-        localClusterFilter.includes(issue.resource.cluster)
-      )
-    }
-    // Add synthetic issues from unhealthy llm-d servers
-    // Use full servers list and apply cluster filter explicitly to avoid any caching issues
-    const serversToCheck = localClusterFilter.length > 0
-      ? servers.filter(s => localClusterFilter.includes(s.cluster))
-      : servers
-    serversToCheck.forEach((s) => {
-      if (s.status === 'error' || s.status === 'stopped') {
-        monitorIssues.push({
-          id: `llmd-${s.cluster}-${s.namespace}-${s.name}-${s.status}`,
-          resource: {
-            id: `${'Deployment'}/${s.namespace}/${s.name}`,
-            kind: 'Deployment',
-            name: s.name,
-            namespace: s.namespace,
-            cluster: s.cluster,
-            status: s.status === 'error' ? 'unhealthy' : 'degraded',
-            category: 'workload',
-            lastChecked: new Date().toISOString(),
-            optional: false,
-            order: 0 },
-          severity: s.status === 'error' ? 'critical' : 'warning',
-          title: `${s.componentType} ${s.name} is ${s.status}`,
-          description: `Server ${s.name} in namespace ${s.namespace} is ${s.status}`,
-          detectedAt: new Date().toISOString() })
-      }
-    })
-    return monitorIssues
-  }, [issues, servers, localClusterFilter])
+  const allIssues = useMemo<MonitorIssue[]>(
+    () => buildAllIssues(issues, servers, localClusterFilter),
+    [issues, servers, localClusterFilter],
+  )
 
-  // Filter issues by search and severity
-  const filteredIssues = (() => {
-    let result = allIssues
-
-    // Apply severity filter
-    if (severityFilter !== 'all') {
-      result = result.filter(issue => issue.severity === severityFilter)
-    }
-
-    // Apply search filter
-    if (issueSearch.trim()) {
-      const query = issueSearch.toLowerCase()
-      result = result.filter(issue =>
-        issue.title.toLowerCase().includes(query) ||
-        issue.description?.toLowerCase().includes(query) ||
-        issue.resource?.name?.toLowerCase().includes(query) ||
-        issue.resource?.namespace?.toLowerCase().includes(query) ||
-        issue.resource?.cluster?.toLowerCase().includes(query)
-      )
-    }
-
-    return result
-  })()
-
-  // Sort issues
-  const sortedIssues = (() => {
-    const sorted = [...filteredIssues]
-    sorted.sort((a, b) => {
-      let compare = 0
-      switch (issueSortBy) {
-        case 'severity':
-          compare = ((ALERT_SEVERITY_ORDER as Record<string, number>)[a.severity] ?? 5) - ((ALERT_SEVERITY_ORDER as Record<string, number>)[b.severity] ?? 5)
-          break
-        case 'title':
-          compare = a.title.localeCompare(b.title)
-          break
-        case 'cluster':
-          compare = (a.resource?.cluster || '').localeCompare(b.resource?.cluster || '')
-          break
-      }
-      return issueSortDirection === 'asc' ? compare : -compare
-    })
-    return sorted
-  })()
-
-  // Paginate issues
-  const totalIssues = sortedIssues.length
-  const issueLimit = issueItemsPerPage === 'unlimited' ? totalIssues : issueItemsPerPage
-  const totalIssuePages = Math.max(1, Math.ceil(totalIssues / issueLimit))
-  const safeIssueCurrentPage = Math.min(issueCurrentPage, totalIssuePages)
-  const paginatedIssues = (() => {
-    if (issueItemsPerPage === 'unlimited') return sortedIssues
-    const start = (safeIssueCurrentPage - 1) * issueLimit
-    return sortedIssues.slice(start, start + issueLimit)
-  })()
-
-  const needsIssuePagination = issueItemsPerPage !== 'unlimited' && totalIssues > issueLimit
+  // Filter, sort and paginate issues
+  const filteredIssues = filterIssues(allIssues, severityFilter, issueSearch)
+  const sortedIssues = sortIssues(filteredIssues, issueSortBy, issueSortDirection)
+  const {
+    totalItems: totalIssues,
+    totalPages: totalIssuePages,
+    safeCurrentPage: safeIssueCurrentPage,
+    paginatedItems: paginatedIssues,
+    needsPagination: needsIssuePagination,
+  } = paginate(sortedIssues, issueItemsPerPage, issueCurrentPage)
 
   // Calculate overall health
-  const stackHealth = (() => {
-    if (overallStatus !== 'unknown') return overallStatus
-    const statuses = sections.flatMap(s => s.items.map(i => i.status))
-    if (statuses.some(s => s === 'unhealthy')) return 'unhealthy'
-    if (statuses.some(s => s === 'degraded')) return 'degraded'
-    if (statuses.every(s => s === 'healthy')) return 'healthy'
-    return 'unknown'
-  })()
+  const stackHealth = computeStackHealth(overallStatus, sections)
 
   const toggleSection = (label: string) => {
     setExpandedSections(prev => {
@@ -486,46 +287,12 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 mb-3 border-b border-border">
-        <button
-          onClick={() => setActiveTab('components')}
-          className={cn(
-            'px-3 py-1.5 text-xs font-medium rounded-t-md transition-colors flex items-center gap-1.5',
-            activeTab === 'components'
-              ? 'bg-card border border-b-0 border-border text-foreground -mb-px'
-              : 'text-muted-foreground hover:text-foreground'
-          )}
-        >
-          <Layers className="w-3 h-3" />
-          Components
-          <span className={cn(
-            'px-1.5 py-0.5 rounded text-2xs',
-            activeTab === 'components' ? 'bg-purple-500/20 text-purple-400' : 'bg-secondary'
-          )}>
-            {totalComponents}
-          </span>
-        </button>
-        <button
-          onClick={() => setActiveTab('issues')}
-          className={cn(
-            'px-3 py-1.5 text-xs font-medium rounded-t-md transition-colors flex items-center gap-1.5',
-            activeTab === 'issues'
-              ? 'bg-card border border-b-0 border-border text-foreground -mb-px'
-              : 'text-muted-foreground hover:text-foreground'
-          )}
-        >
-          <AlertTriangle className="w-3 h-3" />
-          Issues
-          {allIssues.length > 0 && (
-            <span className={cn(
-              'px-1.5 py-0.5 rounded text-2xs',
-              activeTab === 'issues' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-yellow-500/20 text-yellow-400'
-            )}>
-              {allIssues.length}
-            </span>
-          )}
-        </button>
-      </div>
+      <LLMdStackMonitorTabs
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        totalComponents={totalComponents}
+        issueCount={allIssues.length}
+      />
 
       {/* Components Tab Content */}
       {activeTab === 'components' && (
