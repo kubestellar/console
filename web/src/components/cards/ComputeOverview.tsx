@@ -186,6 +186,9 @@ export function ComputeOverview() {
       <CardStatGrid className="gap-3">
         <div
           className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 cursor-pointer hover:bg-blue-500/20 transition-colors"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); drillToResources() } }}
           onClick={drillToResources}
           title={hasRealData ? t('computeOverview.cpuCoresTitle', { count: stats.totalCPUs }) : t('computeOverview.noDataOffline')}
         >
@@ -201,6 +204,9 @@ export function ComputeOverview() {
 
         <div
           className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 cursor-pointer hover:bg-green-500/20 transition-colors"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); drillToResources() } }}
           onClick={drillToResources}
           title={hasRealData ? t('computeOverview.memoryTitle', { memory: formatMemoryStat(stats.totalMemoryGB) }) : t('computeOverview.noDataOffline')}
         >
@@ -219,6 +225,9 @@ export function ComputeOverview() {
       <CardStatGrid className="gap-2">
         <div
           className="p-2 rounded-lg bg-secondary/50 cursor-pointer hover:bg-secondary/70 transition-colors"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); drillToResources() } }}
           onClick={drillToResources}
           title={hasRealData ? t('computeOverview.nodesTitle', { count: stats.totalNodes }) : t('common:common.noData')}
         >
@@ -232,6 +241,9 @@ export function ComputeOverview() {
         </div>
         <div
           className="p-2 rounded-lg bg-secondary/50 cursor-pointer hover:bg-secondary/70 transition-colors"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); drillToResources() } }}
           onClick={drillToResources}
           title={hasRealData ? t('computeOverview.podsTitle', { count: stats.totalPods }) : t('common:common.noData')}
         >
