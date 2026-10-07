@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import type { Policy, Violation } from './types'
 import { ALERT_SEVERITY_ORDER } from '../../../types/alerts'
 
-export function getSeverityColor(severity: string) {
+function getSeverityColor(severity: string) {
   switch (severity) {
     case 'critical': return 'text-red-400 bg-red-500/20'
     case 'warning': return 'text-yellow-400 bg-yellow-500/20'
@@ -13,7 +13,7 @@ export function getSeverityColor(severity: string) {
   }
 }
 
-export function getModeColor(mode: string) {
+function getModeColor(mode: string) {
   switch (mode) {
     case 'enforce':
     case 'deny':
