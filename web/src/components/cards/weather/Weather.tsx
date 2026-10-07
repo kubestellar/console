@@ -5,7 +5,8 @@ import {
   ExternalLink, Loader2
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { WeatherAnimation, getWeatherCondition } from './WeatherAnimation'
+import { WeatherAnimation } from './WeatherAnimation'
+import { getWeatherCondition } from './WeatherAnimation.conditions'
 import { WeatherSearch } from './WeatherSearch'
 import { WeatherForecast } from './WeatherForecast'
 import { WeatherHourly } from './WeatherHourly'

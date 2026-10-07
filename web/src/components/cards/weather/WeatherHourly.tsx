@@ -4,7 +4,7 @@
 import type { RefObject } from 'react'
 import { Calendar } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { getWeatherCondition, getConditionColor } from './WeatherAnimation'
+import { getWeatherCondition, getConditionColor } from './WeatherAnimation.conditions'
 import type { HourlyForecast } from './types'
 
 interface WeatherHourlyProps {

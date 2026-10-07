@@ -3,7 +3,7 @@
  * high/low range bar and, when expanded, condition/precipitation detail.
  */
 import { Calendar, ChevronDown, ChevronRight } from 'lucide-react'
-import { getWeatherCondition, getConditionColor } from './WeatherAnimation'
+import { getWeatherCondition, getConditionColor } from './WeatherAnimation.conditions'
 import type { ForecastDay } from './types'
 
 interface WeatherForecastProps {
