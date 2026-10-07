@@ -4,8 +4,8 @@ import {
   AlertTriangle, Loader2
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { PING_INTERVALS, getStatusColor } from './NetworkUtils.constants'
-import type { PingResult, SavedHost, NetworkInfo, NetworkUtilsTab } from './NetworkUtils.types'
+import { PING_INTERVALS, getStatusColor } from '../NetworkUtils.constants'
+import type { PingResult, SavedHost, NetworkInfo, NetworkUtilsTab } from '../NetworkUtils.types'
 
 export function NetworkStatusBar({ networkInfo }: { networkInfo: NetworkInfo }) {
   const { t } = useTranslation()
