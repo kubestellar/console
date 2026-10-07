@@ -141,6 +141,7 @@ const ARCADE_GAME_FILES = new Set([
   'KubePong.tsx', 'KubeSnake.tsx', 'KubeGalaga.tsx',
   'KubeDoom.tsx', 'PodCrosser.tsx', 'KubeBert.tsx',
   'MissileCommand.tsx',
+  'PodCrosser.constants.ts', 'PodCrosser.draw.ts',
 ])
 
 /** Categories of detected violations */
