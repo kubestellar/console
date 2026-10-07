@@ -351,6 +351,7 @@ jobs:
       # gate: App-authored PRs run CI unattended.
       - name: Mint KubeStellar Console App token
         id: app-token
+        continue-on-error: true # fall back to GITHUB_TOKEN if the App is not installed (#24049)
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           app-id: ${{ secrets.KUBESTELLAR_CONSOLE_APP_ID }}
@@ -358,8 +359,8 @@ jobs:
 
       - name: Commit tuning config
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug || 'github-actions' }}
         run: |
           BOT_LOGIN="${APP_SLUG}[bot]"
           BOT_ID=$(gh api "/users/${BOT_LOGIN}" --jq .id)
@@ -631,6 +632,7 @@ jobs:
       # gate: App-authored PRs run CI unattended.
       - name: Mint KubeStellar Console App token
         id: app-token
+        continue-on-error: true # fall back to GITHUB_TOKEN if the App is not installed (#24049)
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           app-id: ${{ secrets.KUBESTELLAR_CONSOLE_APP_ID }}
@@ -638,8 +640,8 @@ jobs:
 
       - name: Commit tuning config
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug || 'github-actions' }}
         run: |
           BOT_LOGIN="${APP_SLUG}[bot]"
           BOT_ID=$(gh api "/users/${BOT_LOGIN}" --jq .id)
@@ -954,6 +956,7 @@ jobs:
       # gate: App-authored PRs run CI unattended.
       - name: Mint KubeStellar Console App token
         id: app-token
+        continue-on-error: true # fall back to GITHUB_TOKEN if the App is not installed (#24049)
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           app-id: ${{ secrets.KUBESTELLAR_CONSOLE_APP_ID }}
@@ -961,8 +964,8 @@ jobs:
 
       - name: Commit tuning config
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug || 'github-actions' }}
         run: |
           BOT_LOGIN="${APP_SLUG}[bot]"
           BOT_ID=$(gh api "/users/${BOT_LOGIN}" --jq .id)
