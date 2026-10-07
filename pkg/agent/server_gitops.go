@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/kubestellar/console/pkg/sanitize"
@@ -141,9 +140,11 @@ func (s *Server) handleDetectDrift(w http.ResponseWriter, r *http.Request) {
 
 	manifestPath := tempDir
 	if req.Path != "" {
-		// filepath.Join cleans the result and is recognised by CodeQL's
-		// path-injection taint model as a safe path-construction API.
-		manifestPath = filepath.Join(tempDir, strings.TrimPrefix(req.Path, "/"))
+		// filepath.Clean("/"+path) roots the user-supplied path so ".."
+		// segments cannot escape, a sanitizing idiom CodeQL's
+		// path-injection taint model recognises; filepath.Join then
+		// anchors it under the managed temp directory.
+		manifestPath = filepath.Join(tempDir, filepath.Clean("/"+req.Path))
 	}
 
 	fileFlag := "-f"
@@ -264,9 +265,11 @@ func (s *Server) handleGitopsSync(w http.ResponseWriter, r *http.Request) {
 
 	manifestPath := tempDir
 	if req.Path != "" {
-		// filepath.Join cleans the result and is recognised by CodeQL's
-		// path-injection taint model as a safe path-construction API.
-		manifestPath = filepath.Join(tempDir, strings.TrimPrefix(req.Path, "/"))
+		// filepath.Clean("/"+path) roots the user-supplied path so ".."
+		// segments cannot escape, a sanitizing idiom CodeQL's
+		// path-injection taint model recognises; filepath.Join then
+		// anchors it under the managed temp directory.
+		manifestPath = filepath.Join(tempDir, filepath.Clean("/"+req.Path))
 	}
 
 	fileFlag := "-f"

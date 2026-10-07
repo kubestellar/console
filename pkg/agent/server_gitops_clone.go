@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -23,6 +24,12 @@ const gitopsDNSLookupTimeout = 3 * time.Second
 // in kc-agent. os.MkdirTemp uses it to create a race-safe unique directory
 // under the OS temp root.
 const gitOpsTempDirPrefix = "gitops-"
+
+// gitopsSafeBranchPattern is a strict allowlist for git branch names, checked
+// immediately before the git invocation so the sanitization is local to the
+// command sink: alphanumerics plus "._/-", and never a leading "-" (flag
+// injection) — validateGitopsBranchName separately rejects "..".
+var gitopsSafeBranchPattern = regexp.MustCompile(`^[a-zA-Z0-9._/][a-zA-Z0-9._/-]*$`)
 
 var gitopsLookupIPAddr = func(ctx context.Context, host string) ([]net.IPAddr, error) {
 	return net.DefaultResolver.LookupIPAddr(ctx, host)
@@ -174,17 +181,19 @@ func gitopsCloneRepo(ctx context.Context, repoURL, branch string) (string, error
 
 	// repoURL and branch are validated by validateGitopsRepoURL/validateGitopsBranchName
 	// above before reaching this point. exec.CommandContext with a discrete arg list
-	// (never "sh -c") is immune to shell injection; CodeQL flags the taint flow from
-	// user input but there is no shell involved. // lgtm[go/command-injection]
-	args := []string{"clone", "--depth", "1"}
-	if branch != "" {
-		args = append(args, "-b", branch)
+	// (never "sh -c") is immune to shell injection; the literal "--" terminates git
+	// option parsing so repoURL and tempDir are never misinterpreted as flags, and
+	// branch is additionally re-checked against a strict allowlist pattern here, local
+	// to the sink, so no shell metacharacters or leading dashes can reach git.
+	if branch != "" && !gitopsSafeBranchPattern.MatchString(branch) {
+		return "", fmt.Errorf("invalid branch name")
 	}
-	// "--" terminates option parsing so repoURL and tempDir are never
-	// misinterpreted as flags by git, regardless of their content.
-	args = append(args, "--", repoURL, tempDir)
-
-	cmd := exec.CommandContext(ctx, "git", args...) // #nosec G204 -- validated above; no shell invoked
+	var cmd *exec.Cmd
+	if branch != "" {
+		cmd = exec.CommandContext(ctx, "git", "clone", "--depth", "1", "-b", branch, "--", repoURL, tempDir) // #nosec G204 -- validated above; no shell invoked
+	} else {
+		cmd = exec.CommandContext(ctx, "git", "clone", "--depth", "1", "--", repoURL, tempDir) // #nosec G204 -- validated above; no shell invoked
+	}
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 
