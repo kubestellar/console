@@ -25,6 +25,7 @@ incident process.
 | [`acmm-level-monitor-no-alert.md`](acmm-level-monitor-no-alert.md) | `.github/workflows/acmm-level-monitor.yml` |
 | [`llmd-guide-e2e-silent-failure.md`](llmd-guide-e2e-silent-failure.md) | `.github/workflows/nightly-llmd-guides.yml` |
 | [`ga4-regression-no-alert.md`](ga4-regression-no-alert.md) | `.github/workflows/ga4-error-regression.yml`, `.github/workflows/ga4-mobile-monitor.yml` |
+| [`deploy-checksum-no-alert.md`](deploy-checksum-no-alert.md) | `.github/workflows/deploy-checksum.yml` |
 
 ## Adding a new runbook
 
