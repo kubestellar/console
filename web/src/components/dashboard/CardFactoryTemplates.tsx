@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus, X, Save } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { Button } from '../ui/Button'
 import { saveDynamicCard } from '../../lib/dynamic-cards'
 import type { DynamicCardColumn, DynamicCardDefinition, DynamicCardDefinition_T1 } from '../../lib/dynamic-cards/types'
 import { registerDynamicCardType } from '../cards/cardRegistry'
@@ -208,7 +209,7 @@ export function CardFactoryTemplates({ onCardCreated, onSaveMessage }: CardFacto
           <label className="text-xs text-muted-foreground block mb-1">{t('dashboard.cardFactory.layoutLabel')}</label>
           <div className="flex gap-2" role="group" aria-label={t('dashboard.cardFactory.layoutLabel')}>
             {(['list', 'stats', 'stats-and-list'] as const).map(l => (
-              <button
+              <Button
                 key={l}
                 onClick={() => setT1Layout(l)}
                 onKeyDown={(e) => {
@@ -226,7 +227,7 @@ export function CardFactoryTemplates({ onCardCreated, onSaveMessage }: CardFacto
                 )}
               >
                 {l}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -235,13 +236,13 @@ export function CardFactoryTemplates({ onCardCreated, onSaveMessage }: CardFacto
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="text-xs text-muted-foreground">{t('dashboard.cardFactory.columnsLabel')}</label>
-            <button
+            <Button
               onClick={addColumn}
               className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors"
             >
               <Plus className="w-3 h-3" />
               {t('dashboard.cardFactory.addColumn')}
-            </button>
+            </Button>
           </div>
           <div className="space-y-2">
             {t1Columns.map((col, idx) => (
@@ -274,14 +275,14 @@ export function CardFactoryTemplates({ onCardCreated, onSaveMessage }: CardFacto
                   <option value="badge">{t('cardFactory.formatBadge')}</option>
                   <option value="number">{t('cardFactory.formatNumber')}</option>
                 </Select>
-                <button
+                <Button
                   type="button"
                   onClick={() => removeColumn(idx)}
                   aria-label={t('dashboard.cardFactory.removeColumn', { label: col.label || col.field || idx + 1 })}
                   className="p-1 text-muted-foreground hover:text-red-400 transition-colors"
                 >
                   <X className="w-3.5 h-3.5" aria-hidden="true" />
-                </button>
+                </Button>
               </div>
             ))}
           </div>
@@ -326,7 +327,7 @@ export function CardFactoryTemplates({ onCardCreated, onSaveMessage }: CardFacto
         </div>
 
         {/* Save button */}
-        <button
+        <Button
           onClick={handleSaveT1}
           disabled={!t1Title.trim()}
           className={cn(
@@ -338,7 +339,7 @@ export function CardFactoryTemplates({ onCardCreated, onSaveMessage }: CardFacto
         >
           <Save className="w-4 h-4" />
           {t('dashboard.cardFactory.createCard')}
-        </button>
+        </Button>
       </div>
 
       {/* Right: Live Preview */}
