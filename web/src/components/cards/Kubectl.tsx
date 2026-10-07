@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { Send, Copy, Trash2, ChevronDown, Sparkles, FileCode, History, Loader2 } from 'lucide-react'
-import { STORAGE_KEY_KUBECTL_HISTORY } from '../../lib/constants'
 import { TRANSITION_DELAY_MS } from '../../lib/constants/network'
 import { useKubectl } from '../../hooks/useKubectl'
 import { useClusters } from '../../hooks/useMCP'
@@ -15,56 +14,8 @@ import { YAML_PREVIEW_LINES, validateYAML, generateCommandFromPrompt, generateYA
 import { AIAssistantPanel } from './KubectlAIPanel'
 import { YAMLEditorPanel } from './KubectlYAMLEditorPanel'
 import { CommandHistoryPanel } from './KubectlHistoryPanel'
-
-const DEMO_YAML_CONTENT = `apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: llm-cache-warmer
-  namespace: llm-d
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: llm-cache-warmer
-  template:
-    metadata:
-      labels:
-        app: llm-cache-warmer
-    spec:
-      containers:
-      - name: warmer
-        image: ghcr.io/kubestellar/demo-cache-warmer:v1.4.2
-        ports:
-        - containerPort: 8080
-        resources:
-          requests:
-            cpu: "250m"
-            memory: "512Mi"
-          limits:
-            cpu: "1"
-            memory: "1Gi"`
-
-const DEMO_MANIFEST_TIMESTAMP = new Date('2026-05-26T09:30:00Z')
-
-const DEMO_YAML_MANIFESTS: YAMLManifest[] = [
-  {
-    id: 'demo-manifest-cache-warmer',
-    name: 'llm-cache-warmer',
-    content: DEMO_YAML_CONTENT,
-    timestamp: DEMO_MANIFEST_TIMESTAMP,
-  },
-]
-
-const DEMO_COMMAND_HISTORY: CommandHistoryItem[] = [
-  {
-    id: 'demo-history-get-pods',
-    command: 'get pods -n llm-d',
-    context: 'demo-cluster',
-    output: 'NAME READY STATUS RESTARTS AGE\nllm-cache-warmer-7dd68 1/1 Running 0 18m',
-    success: true,
-    timestamp: new Date('2026-05-26T09:22:00Z'),
-  },
-]
+import { DEMO_COMMAND_HISTORY, DEMO_YAML_MANIFESTS } from './Kubectl.demo'
+import { useKubectlCommandHistory } from './useKubectlCommandHistory'
 
 export function Kubectl() {
   const { t } = useTranslation(['common', 'cards'])
@@ -87,7 +38,7 @@ export function Kubectl() {
   const [command, setCommand] = useState('')
   const [output, setOutput] = useState<string[]>([])
   const [isExecuting, setIsExecuting] = useState(false)
-  const [commandHistory, setCommandHistory] = useState<CommandHistoryItem[]>([])
+  const { commandHistory, setCommandHistory } = useKubectlCommandHistory()
   const [historyIndex, setHistoryIndex] = useState(-1)
   const [showHistory, setShowHistory] = useState(false)
   const [showAI, setShowAI] = useState(false)
@@ -125,29 +76,6 @@ export function Kubectl() {
       outputRef.current.scrollTop = outputRef.current.scrollHeight
     }
   }, [output])
-
-  // Load command history from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY_KUBECTL_HISTORY)
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved)
-        setCommandHistory(parsed.map((item: CommandHistoryItem) => ({
-          ...item,
-          timestamp: new Date(item.timestamp)
-        })))
-      } catch {
-        // Ignore parse errors
-      }
-    }
-  }, [])
-
-  // Save command history to localStorage
-  useEffect(() => {
-    if (commandHistory.length > 0) {
-      localStorage.setItem(STORAGE_KEY_KUBECTL_HISTORY, JSON.stringify(commandHistory.slice(-100)))
-    }
-  }, [commandHistory])
 
   // Execute kubectl command
   const executeCommand = async (cmd: string, dryRun = false) => {

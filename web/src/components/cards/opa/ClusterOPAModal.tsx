@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Shield, AlertTriangle, CheckCircle, ExternalLink, Plus, Edit3, Trash2, FileCode, LayoutTemplate, Sparkles, Copy, Loader2 } from 'lucide-react'
+import { Shield, ExternalLink, Plus, FileCode, LayoutTemplate, Sparkles, Copy } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '../../ui/Button'
 import { BaseModal, useModalState } from '../../../lib/modals'
@@ -9,7 +9,8 @@ import type { Policy, Violation, StartMissionFn } from './types'
 import { POLICY_TEMPLATES } from './types'
 import { copyToClipboard } from '../../../lib/clipboard'
 import { KUBECTL_MEDIUM_TIMEOUT_MS, KUBECTL_EXTENDED_TIMEOUT_MS } from '../../../lib/constants/network'
-import { ALERT_SEVERITY_ORDER } from '../../../types/alerts'
+import { OPAPoliciesTab, OPAViolationsTab } from './ClusterOPAModal.tabs'
+import { OPATemplatePickerModal, OPADeletePolicyModal } from './ClusterOPAModal.dialogs'
 
 // Tab type for ClusterOPAModal
 type OPAModalTab = 'policies' | 'violations'
@@ -57,30 +58,6 @@ export function ClusterOPAModal({
     }
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showCreateMenu])
-
-  const severityCounts = {
-    critical: violations.filter(v => v.severity === 'critical').length,
-    warning: violations.filter(v => v.severity === 'warning').length,
-    info: violations.filter(v => v.severity === 'info').length,
-  }
-
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'critical': return 'text-red-400 bg-red-500/20'
-      case 'warning': return 'text-yellow-400 bg-yellow-500/20'
-      default: return 'text-blue-400 bg-blue-500/20'
-    }
-  }
-
-  const getModeColor = (mode: string) => {
-    switch (mode) {
-      case 'enforce':
-      case 'deny':
-        return 'text-red-400 bg-red-500/20'
-      case 'warn': return 'text-yellow-400 bg-yellow-500/20'
-      default: return 'text-blue-400 bg-blue-500/20'
-    }
-  }
 
   // Create policy with AI
   const handleCreateWithAI = () => {
@@ -320,139 +297,19 @@ Please proceed with applying this policy.`,
 
           {/* Policies Tab */}
           {activeTab === 'policies' && (
-            <div className="space-y-2">
-              {policies.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Shield className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p>{t('messages.noPoliciesConfigured')}</p>
-                  <p className="text-xs mt-1">{t('messages.createPolicyPrompt')}</p>
-                </div>
-              ) : (
-                policies.map(policy => (
-                  <div
-                    key={policy.name}
-                    onClick={() => handleEditYaml(policy)}
-                    className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-foreground group-hover:text-purple-400 transition-colors">{policy.name}</span>
-                        <span className="text-xs text-muted-foreground">({policy.kind})</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleToggleMode(policy) }}
-                          disabled={!!togglingPolicyId}
-                          className={`px-2 py-0.5 rounded text-xs font-medium transition-colors hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 ${getModeColor(policy.mode)}`}
-                          title="Click to cycle: enforce → warn → dryrun"
-                        >
-                          {togglingPolicyId === policy.name ? (
-                            <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />
-                          ) : null}
-                          {policy.mode}
-                        </button>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap items-center justify-between gap-y-2">
-                      <div className="flex items-center gap-3 text-xs">
-                        {policy.violations > 0 ? (
-                          <span className="flex items-center gap-1 text-yellow-400">
-                            <AlertTriangle className="w-3 h-3" />
-                            {policy.violations} violations
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1 text-green-400">
-                            <CheckCircle className="w-3 h-3" />
-                            No violations
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleEditWithAI(policy) }}
-                          className="p-1.5 rounded hover:bg-secondary text-purple-400 transition-colors"
-                          title="Edit with AI"
-                        >
-                          <Sparkles className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleEditYaml(policy) }}
-                          className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                          title="Edit YAML"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setDeleteConfirm(policy) }}
-                          className="p-1.5 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors"
-                          title="Delete policy"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+            <OPAPoliciesTab
+              policies={policies}
+              togglingPolicyId={togglingPolicyId}
+              onEditYaml={handleEditYaml}
+              onEditWithAI={handleEditWithAI}
+              onToggleMode={handleToggleMode}
+              onRequestDelete={setDeleteConfirm}
+            />
           )}
 
           {/* Violations Tab */}
           {activeTab === 'violations' && (
-            <>
-              {/* Summary */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4 pb-4 border-b border-border">
-                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-center">
-                  <p className="text-2xl font-bold text-red-400">{severityCounts.critical}</p>
-                  <p className="text-xs text-muted-foreground">{t('common:common.critical')}</p>
-                </div>
-                <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-center">
-                  <p className="text-2xl font-bold text-yellow-400">{severityCounts.warning}</p>
-                  <p className="text-xs text-muted-foreground">{t('common:common.warning')}</p>
-                </div>
-                <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-center">
-                  <p className="text-2xl font-bold text-blue-400">{severityCounts.info}</p>
-                  <p className="text-xs text-muted-foreground">Info</p>
-                </div>
-              </div>
-
-              {/* Violations List */}
-              <div className="space-y-2">
-                {violations.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-400" />
-                    <p className="text-green-400">No violations</p>
-                    <p className="text-xs mt-1">All resources comply with policies</p>
-                  </div>
-                ) : (
-                  [...violations]
-                    .sort((a, b) => {
-                      return (ALERT_SEVERITY_ORDER as Record<string, number>)[a.severity] - (ALERT_SEVERITY_ORDER as Record<string, number>)[b.severity]
-                    })
-                    .map((violation, idx) => (
-                    <div
-                      key={idx}
-                      className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${getSeverityColor(violation.severity)}`}>
-                            {violation.severity}
-                          </span>
-                          <span className="text-sm font-medium text-foreground">{violation.name}</span>
-                        </div>
-                        <span className="text-xs text-muted-foreground">{violation.kind}</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2">{violation.message}</p>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        <span>Namespace: <span className="text-foreground">{violation.namespace}</span></span>
-                        <span>Policy: <span className="text-orange-400">{violation.policy}</span></span>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </>
+            <OPAViolationsTab violations={violations} />
           )}
         </BaseModal.Content>
 
@@ -478,32 +335,11 @@ Please proceed with applying this policy.`,
       </BaseModal>
 
       {/* Template Selection Modal */}
-      <BaseModal isOpen={showTemplateModal} onClose={closeTemplateModal} size="md">
-        <BaseModal.Header
-          title="Policy Templates"
-          description="Choose a template to start with"
-          icon={LayoutTemplate}
-          onClose={closeTemplateModal}
-          showBack={false}
-        />
-        <BaseModal.Content className="max-h-[50vh]">
-          <div className="space-y-2">
-            {POLICY_TEMPLATES.map(template => (
-              <button
-                key={template.name}
-                onClick={() => handleUseTemplate(template)}
-                className="w-full p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors text-left"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
-                  <span className="text-sm font-medium text-foreground">{template.name}</span>
-                  <span className="text-xs text-muted-foreground">{template.kind}</span>
-                </div>
-                <p className="text-xs text-muted-foreground">{template.description}</p>
-              </button>
-            ))}
-          </div>
-        </BaseModal.Content>
-      </BaseModal>
+      <OPATemplatePickerModal
+        isOpen={showTemplateModal}
+        onClose={closeTemplateModal}
+        onSelectTemplate={handleUseTemplate}
+      />
 
       {/* YAML Editor Modal */}
       <BaseModal isOpen={showYamlEditor} onClose={() => setShowYamlEditor(false)} size="lg">
@@ -555,55 +391,12 @@ Please proceed with applying this policy.`,
       </BaseModal>
 
       {/* Delete Confirmation Modal */}
-      <BaseModal isOpen={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} size="sm">
-        <BaseModal.Header
-          title="Delete Policy"
-          description="This action cannot be undone"
-          icon={Trash2}
-          onClose={() => setDeleteConfirm(null)}
-          showBack={false}
-        />
-        <BaseModal.Content>
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Are you sure you want to delete the policy <span className="text-foreground font-medium">{deleteConfirm?.name}</span>?
-            </p>
-            {deleteConfirm && deleteConfirm.violations > 0 && (
-              <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-sm">
-                <div className="flex items-center gap-2 text-yellow-400 mb-1">
-                  <AlertTriangle className="w-4 h-4" />
-                  <span className="font-medium">{t('common:common.warning')}</span>
-                </div>
-                <p className="text-muted-foreground">
-                  This policy has {deleteConfirm.violations} active violations that will be cleared.
-                </p>
-              </div>
-            )}
-          </div>
-        </BaseModal.Content>
-        <BaseModal.Footer>
-          <Button
-            variant="ghost"
-            size="lg"
-            onClick={() => setDeleteConfirm(null)}
-          >
-            Cancel
-          </Button>
-          <div className="flex-1" />
-          <button
-            onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
-            disabled={isDeletingPolicy}
-            className="flex items-center gap-2 px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isDeletingPolicy ? (
-              <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
-            ) : (
-              <Trash2 className="w-4 h-4" />
-            )}
-            {isDeletingPolicy ? 'Deleting...' : 'Delete Policy'}
-          </button>
-        </BaseModal.Footer>
-      </BaseModal>
+      <OPADeletePolicyModal
+        policy={deleteConfirm}
+        isDeleting={isDeletingPolicy}
+        onCancel={() => setDeleteConfirm(null)}
+        onConfirm={handleDelete}
+      />
     </>
   )
 }
