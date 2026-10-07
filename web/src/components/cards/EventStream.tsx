@@ -85,6 +85,9 @@ const EventStreamItem = memo(function EventStreamItem({ event, index, onActivate
   return (
     <div
       className={`flex items-start gap-3 p-3 rounded-lg hover:bg-secondary/40 transition-colors cursor-pointer group ${index % 2 === 0 ? 'bg-secondary/10' : 'bg-secondary/25'}`}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); handleClick() } }}
       onClick={handleClick}
       title={`Click to view details for ${event.object}`}
     >
