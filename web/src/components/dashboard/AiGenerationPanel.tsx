@@ -8,6 +8,7 @@ import { useMissions } from '../../hooks/useMissions'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../cards/console-missions/shared'
 import { extractJsonFromMarkdown } from '../../lib/ai/extractJson'
 import { cn } from '../../lib/cn'
+import { Button } from '../ui/Button'
 import { CLOSE_ANIMATION_MS } from '../../lib/constants/network'
 
 type Phase = 'idle' | 'generating' | 'parsed' | 'error'
@@ -179,7 +180,7 @@ export function AiGenerationPanel<T>({
           )}
 
           {/* Generate button */}
-          <button
+          <Button
             onClick={handleGenerate}
             disabled={!userPrompt.trim()}
             className={cn(
@@ -191,7 +192,7 @@ export function AiGenerationPanel<T>({
           >
             <Sparkles className="w-4 h-4" />
             Generate with AI
-          </button>
+          </Button>
         </>
       )}
 
@@ -246,20 +247,20 @@ export function AiGenerationPanel<T>({
 
           {/* Action buttons */}
           <div className="flex gap-2">
-            <button
+            <Button
               onClick={handleSave}
               className="flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium bg-purple-900 text-purple-400 hover:bg-purple-800 transition-colors"
             >
               <Save className="w-4 h-4" />
               {saveLabel}
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleRetry}
               className="flex items-center gap-2 px-4 py-2 rounded-md text-sm bg-secondary text-muted-foreground hover:text-foreground transition-colors"
             >
               <RotateCw className="w-4 h-4" />
               Regenerate
-            </button>
+            </Button>
           </div>
         </div>
       )}

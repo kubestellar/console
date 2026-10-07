@@ -236,7 +236,7 @@ export function CardFactoryCode({ onCardCreated, onSaveMessage }: CardFactoryCod
         </div>
 
         {/* Save button */}
-        <button
+        <Button
           onClick={handleSaveT2}
           disabled={!t2Title.trim() || saving}
           className={cn(
@@ -248,7 +248,7 @@ export function CardFactoryCode({ onCardCreated, onSaveMessage }: CardFactoryCod
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           {saving ? t('dashboard.cardFactory.compilingAndSaving') : t('dashboard.cardFactory.createCard')}
-        </button>
+        </Button>
       </div>
 
       {/* Right: Live Preview */}
