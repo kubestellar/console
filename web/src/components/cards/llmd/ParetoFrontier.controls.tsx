@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { Select } from '../../ui/Select'
 
 // ---------------------------------------------------------------------------
 // FilterDropdown — labeled select dropdown
@@ -22,16 +23,18 @@ export function FilterDropdown({
   return (
     <div className="flex flex-col gap-0.5">
       <span className="text-2xs text-muted-foreground font-medium">{label}</span>
-      <select
+      <Select
+        selectSize="sm"
+        aria-label={label}
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="bg-secondary border border-border rounded px-2 py-1 text-xs text-foreground min-w-[100px]"
+        className="min-w-[100px]"
       >
         {!noAllOption && <option value="all">{t('common:common.all')}</option>}
         {options.map(o => (
           <option key={o} value={o}>{optionLabels?.[o] ?? o}</option>
         ))}
-      </select>
+      </Select>
     </div>
   )
 }
