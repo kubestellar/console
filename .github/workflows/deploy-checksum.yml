@@ -13,6 +13,8 @@ jobs:
     permissions:
       # contents: write required to commit the updated deploy.sh.sha256 checksum file
       contents: write
+      # issues: write required for the failure-alert step below
+      issues: write
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -31,3 +33,41 @@ jobs:
             git commit -s -m "🌱 Update deploy.sh.sha256"
             git push
           fi
+
+      - name: Create issue on failure
+        if: failure()
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'deploy-checksum-failure',
+              per_page: 1,
+            });
+            if (existing.data.length > 0) {
+              console.log(`Issue already open: #${existing.data[0].number}`);
+              return;
+            }
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 deploy.sh.sha256 checksum update failed`,
+              body: [
+                '## Deploy Checksum Update Failure',
+                '',
+                `**Run:** ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+                `**Time:** ${new Date().toISOString()}`,
+                '',
+                '`deploy-checksum.yml` failed to regenerate or push `deploy.sh.sha256` after a change to `deploy.sh`.',
+                '',
+                '### Effect',
+                '`deploy.sh.sha256` is now stale relative to `deploy.sh` on `main`. Every user following the documented `curl | sha256sum -c | bash` verification path in `deploy.sh`\'s header will get a checksum mismatch until this is fixed.',
+                '',
+                '### Fix',
+                'Regenerate and push manually: `sha256sum deploy.sh > deploy.sh.sha256 && git add deploy.sh.sha256 && git commit -s -m "Update deploy.sh.sha256" && git push`. See `docs/runbooks/deploy-checksum-no-alert.md`.',
+              ].join('\n'),
+              labels: ['deploy-checksum-failure', 'priority/critical'],
+            });
+
