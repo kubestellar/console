@@ -1,82 +1,45 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { RotateCcw, Trophy, Crosshair } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
-
-// Game constants
-const CANVAS_WIDTH = 320
-const CANVAS_HEIGHT = 300
-const GROUND_Y = CANVAS_HEIGHT - 20
-const CITY_COUNT = 6
-const CITY_WIDTH = 24
-const MISSILE_BATTERY_WIDTH = 18
-const INITIAL_AMMO = 10
-const TOTAL_WAVES = 5
-const ENEMY_BASE_COUNT = 4
-const ENEMY_COUNT_INCREMENT = 2
-const ENEMY_BASE_SPEED = 0.4
-const ENEMY_SPEED_INCREMENT = 0.1
-const ENEMY_SPEED_VARIANCE = 0.2
-const PLAYER_MISSILE_SPEED = 5
-const PLAYER_EXPLOSION_RADIUS = 30
-const ENEMY_IMPACT_RADIUS = 20
-const EXPLOSION_INITIAL_RADIUS = 2
-const EXPLOSION_GROW_RATE = 1.5
-const EXPLOSION_SHRINK_RATE = 1
-const GAME_LOOP_MS = 33
-const CITY_SURVIVAL_BONUS = 50
-const MISSILE_DESTROY_POINTS = 10
-const BATTERY_AMMO_DRAIN = 3
-const BATTERY_HIT_RADIUS = 5
-const TRAIL_MAX_LENGTH = 20
-const STAR_COUNT = 40
-const LAUNCH_Y = GROUND_Y - 14
-
-interface City {
-  x: number
-  alive: boolean
-}
-
-interface MissileBattery {
-  x: number
-  ammo: number
-}
-
-interface EnemyMissile {
-  id: number
-  x: number
-  y: number
-  targetX: number
-  targetY: number
-  speed: number
-  trail: Array<{ x: number; y: number }>
-}
-
-interface PlayerMissile {
-  id: number
-  x: number
-  y: number
-  targetX: number
-  targetY: number
-  speed: number
-}
-
-interface Explosion {
-  id: number
-  x: number
-  y: number
-  radius: number
-  maxRadius: number
-  growing: boolean
-}
-
-// Initial city positions (fixed layout, avoid battery positions)
-const CITY_POSITIONS = [40, 80, 120, 200, 240, 280]
-
-// Initial battery positions (symmetric)
-const BATTERY_POSITIONS = [10, CANVAS_WIDTH / 2 - MISSILE_BATTERY_WIDTH / 2, CANVAS_WIDTH - 10 - MISSILE_BATTERY_WIDTH]
+import { drawMissileCommandScene } from './MissileCommand.draw'
+import { MissileCommandHud, MissileCommandOverlays } from './MissileCommandOverlays'
+import {
+  CANVAS_WIDTH,
+  CANVAS_HEIGHT,
+  GROUND_Y,
+  CITY_COUNT,
+  CITY_WIDTH,
+  MISSILE_BATTERY_WIDTH,
+  INITIAL_AMMO,
+  TOTAL_WAVES,
+  ENEMY_BASE_COUNT,
+  ENEMY_COUNT_INCREMENT,
+  ENEMY_BASE_SPEED,
+  ENEMY_SPEED_INCREMENT,
+  ENEMY_SPEED_VARIANCE,
+  PLAYER_MISSILE_SPEED,
+  PLAYER_EXPLOSION_RADIUS,
+  ENEMY_IMPACT_RADIUS,
+  EXPLOSION_INITIAL_RADIUS,
+  EXPLOSION_GROW_RATE,
+  EXPLOSION_SHRINK_RATE,
+  GAME_LOOP_MS,
+  CITY_SURVIVAL_BONUS,
+  MISSILE_DESTROY_POINTS,
+  BATTERY_AMMO_DRAIN,
+  BATTERY_HIT_RADIUS,
+  TRAIL_MAX_LENGTH,
+  LAUNCH_Y,
+  type City,
+  type MissileBattery,
+  type EnemyMissile,
+  type PlayerMissile,
+  type Explosion,
+  CITY_POSITIONS,
+  BATTERY_POSITIONS,
+} from './MissileCommand.constants'
 
 export function MissileCommand(_props: CardComponentProps) {
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
@@ -159,116 +122,7 @@ export function MissileCommand(_props: CardComponentProps) {
     if (!ctx) return
 
     const scale = isExpanded ? 1.3 : 1
-    ctx.save()
-    ctx.scale(scale, scale)
-
-    // Background — dark sky
-    ctx.fillStyle = '#050510'
-    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
-
-    // Stars
-    ctx.fillStyle = 'rgba(255,255,255,0.5)'
-    for (let i = 0; i < STAR_COUNT; i++) {
-      ctx.fillRect((i * 53 + 7) % CANVAS_WIDTH, (i * 37 + 11) % (CANVAS_HEIGHT - 30), 1, 1)
-    }
-
-    const state = gameStateRef.current
-
-    // Enemy missile trails + heads
-    for (const m of state.enemyMissiles) {
-      ctx.strokeStyle = 'rgba(255,80,80,0.4)'
-      ctx.lineWidth = 1
-      ctx.beginPath()
-      if (m.trail.length > 0) {
-        ctx.moveTo(m.trail[0].x, m.trail[0].y)
-        for (const pt of m.trail) ctx.lineTo(pt.x, pt.y)
-      }
-      ctx.stroke()
-      ctx.fillStyle = '#ff4040'
-      ctx.beginPath()
-      ctx.arc(m.x, m.y, 3, 0, Math.PI * 2)
-      ctx.fill()
-    }
-
-    // Player missiles
-    for (const m of state.playerMissiles) {
-      ctx.fillStyle = '#40cfff'
-      ctx.beginPath()
-      ctx.arc(m.x, m.y, 2, 0, Math.PI * 2)
-      ctx.fill()
-    }
-
-    // Explosions
-    for (const ex of state.explosions) {
-      const alpha = ex.growing ? 0.8 : (1 - ex.radius / ex.maxRadius) * 0.6
-      const gradient = ctx.createRadialGradient(ex.x, ex.y, 0, ex.x, ex.y, ex.radius)
-      gradient.addColorStop(0, `rgba(255,220,80,${alpha})`)
-      gradient.addColorStop(0.5, `rgba(255,100,20,${alpha * 0.7})`)
-      gradient.addColorStop(1, `rgba(255,40,0,0)`)
-      ctx.fillStyle = gradient
-      ctx.beginPath()
-      ctx.arc(ex.x, ex.y, ex.radius, 0, Math.PI * 2)
-      ctx.fill()
-    }
-
-    // Ground
-    ctx.fillStyle = '#3a6640'
-    ctx.fillRect(0, GROUND_Y, CANVAS_WIDTH, CANVAS_HEIGHT - GROUND_Y)
-
-    // Cities — represented as little buildings
-    for (const city of state.cities) {
-      if (!city.alive) continue
-      ctx.fillStyle = '#5bc4f5'
-      ctx.fillRect(city.x - CITY_WIDTH / 2, GROUND_Y - 14, CITY_WIDTH, 14)
-      ctx.fillStyle = '#7ad9ff'
-      ctx.fillRect(city.x - CITY_WIDTH / 2 + 2, GROUND_Y - 18, CITY_WIDTH - 4, 5)
-      ctx.fillStyle = '#ffeb80'
-      for (let w = 0; w < 3; w++) {
-        ctx.fillRect(city.x - CITY_WIDTH / 2 + 4 + w * 6, GROUND_Y - 11, 4, 4)
-      }
-      ctx.fillStyle = '#7ad9ff'
-      ctx.font = '7px monospace'
-      ctx.textAlign = 'center'
-      ctx.fillText('⬡', city.x, GROUND_Y - 2)
-    }
-
-    // Missile batteries
-    for (const batt of state.batteries) {
-      if (batt.ammo <= 0) {
-        ctx.fillStyle = '#444'
-        ctx.fillRect(batt.x, GROUND_Y - 10, MISSILE_BATTERY_WIDTH, 10)
-        continue
-      }
-      ctx.fillStyle = '#a0a0a0'
-      ctx.fillRect(batt.x, GROUND_Y - 8, MISSILE_BATTERY_WIDTH, 8)
-      ctx.fillStyle = '#d0d0d0'
-      ctx.fillRect(batt.x + 6, GROUND_Y - 14, 6, 8)
-      for (let a = 0; a < Math.min(batt.ammo, INITIAL_AMMO); a++) {
-        ctx.fillStyle = a < batt.ammo ? '#40cfff' : '#333'
-        ctx.fillRect(batt.x + (a % 5) * 3, GROUND_Y - 8 + Math.floor(a / 5) * 4, 2, 3)
-      }
-    }
-
-    // Crosshair cursor
-    if (isPlaying) {
-      const cx = state.cursorPos.x
-      const cy = state.cursorPos.y
-      ctx.strokeStyle = 'rgba(255,255,255,0.7)'
-      ctx.lineWidth = 1
-      ctx.beginPath()
-      ctx.moveTo(cx - 10, cy)
-      ctx.lineTo(cx + 10, cy)
-      ctx.stroke()
-      ctx.beginPath()
-      ctx.moveTo(cx, cy - 10)
-      ctx.lineTo(cx, cy + 10)
-      ctx.stroke()
-      ctx.beginPath()
-      ctx.arc(cx, cy, 6, 0, Math.PI * 2)
-      ctx.stroke()
-    }
-
-    ctx.restore()
+    drawMissileCommandScene(ctx, gameStateRef.current, scale, isPlaying)
   }, [isExpanded, isPlaying])
 
   // Game loop
@@ -505,39 +359,13 @@ export function MissileCommand(_props: CardComponentProps) {
   return (
     <div className="h-full flex flex-col p-2 select-none">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-        <div className="flex items-center gap-1.5">
-          <Crosshair className="w-4 h-4 text-red-400" />
-          <span className="text-sm font-semibold">Missile Command</span>
-        </div>
-
-        <div className="flex items-center gap-3 text-xs">
-          <div className="text-center">
-            <div className="text-muted-foreground">Score</div>
-            <div className="font-bold text-foreground">{score}</div>
-          </div>
-          <div className="text-center">
-            <div className="text-muted-foreground">Wave</div>
-            <div className="font-bold text-orange-400">{wave}/{TOTAL_WAVES}</div>
-          </div>
-          <div className="text-center">
-            <div className="text-muted-foreground">Cities</div>
-            <div className="font-bold text-blue-400">{aliveCities}</div>
-          </div>
-          <div className="text-center">
-            <div className="text-muted-foreground">Ammo</div>
-            <div className="font-bold text-cyan-400">{totalAmmo}</div>
-          </div>
-        </div>
-
-        <button
-          onClick={startGame}
-          className="p-2 rounded hover:bg-secondary min-h-11 min-w-11 flex items-center justify-center"
-          title="New Game"
-        >
-          <RotateCcw className="w-4 h-4" />
-        </button>
-      </div>
+      <MissileCommandHud
+        score={score}
+        wave={wave}
+        aliveCities={aliveCities}
+        totalAmmo={totalAmmo}
+        onStartGame={startGame}
+      />
 
       {/* Game area */}
       <div className="flex-1 flex items-center justify-center relative">
@@ -550,45 +378,13 @@ export function MissileCommand(_props: CardComponentProps) {
           onMouseMove={handleMouseMove}
         />
 
-        {/* Start overlay */}
-        {!isPlaying && !gameOver && (
-          <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
-            <div className="text-center px-4">
-              <div className="text-xl font-bold text-red-400 mb-1">MISSILE COMMAND</div>
-              <div className="text-muted-foreground mb-1 text-sm">Defend your Kubernetes clusters!</div>
-              <div className="text-muted-foreground mb-4 text-xs">Click to fire interceptors at incoming missiles</div>
-              <button
-                onClick={startGame}
-                className="px-6 py-3 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 font-semibold"
-              >
-                Start Game
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Game over overlay */}
-        {gameOver && (
-          <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
-            <div className="text-center">
-              {won ? (
-                <>
-                  <Trophy className="w-12 h-12 text-yellow-400 mx-auto mb-3" />
-                  <div className="text-xl font-bold text-yellow-400 mb-2">Cluster Defended!</div>
-                </>
-              ) : (
-                <div className="text-xl font-bold text-red-400 mb-2">Cluster Destroyed!</div>
-              )}
-              <div className="text-muted-foreground mb-4">Score: {score}</div>
-              <button
-                onClick={startGame}
-                className="px-6 py-3 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 font-semibold"
-              >
-                Play Again
-              </button>
-            </div>
-          </div>
-        )}
+        <MissileCommandOverlays
+          isPlaying={isPlaying}
+          gameOver={gameOver}
+          won={won}
+          score={score}
+          onStartGame={startGame}
+        />
       </div>
     </div>
   )

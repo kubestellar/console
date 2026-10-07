@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
-import { Play, RotateCcw, Pause, Trophy, Target, Heart, Zap } from 'lucide-react'
+import { Pause } from 'lucide-react'
 
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
@@ -9,69 +9,36 @@ import { useGameKeyTracking } from '../../hooks/useGameKeys'
 import { safeGet, safeSet } from '../../lib/safeLocalStorage'
 import { Button } from '../ui/Button'
 import { isDemoMode } from '@/lib/demoMode'
-
-/** localStorage key for Kube Galaga high score persistence */
-const HIGH_SCORE_KEY = 'kubeGalagaHighScore'
-/** Numeric base for parseInt when reading the stored high score */
-const PARSE_INT_RADIX = 10
-
-// Game constants
-const CANVAS_WIDTH = 400
-const CANVAS_HEIGHT = 500
-const PLAYER_WIDTH = 32
-const PLAYER_HEIGHT = 24
-const BULLET_WIDTH = 4
-const BULLET_HEIGHT = 12
-const ENEMY_WIDTH = 28
-const ENEMY_HEIGHT = 20
-const ENEMY_COLS = 8
-const ENEMY_ROWS = 4
-const PLAYER_SPEED = 6
-const BULLET_SPEED = 10
-const ENEMY_BULLET_SPEED = 5
-
-// Colors
-const COLORS = {
-  background: '#0a0a1a',
-  player: '#00d4aa',
-  playerGlow: 'rgba(0, 212, 170, 0.3)',
-  bullet: '#00ffff',
-  enemy1: '#ff6b6b',
-  enemy2: '#ffd93d',
-  enemy3: '#6bcb77',
-  enemyBullet: '#ff4444',
-  star: '#ffffff' }
-
-interface Bullet {
-  x: number
-  y: number
-  isEnemy: boolean
-}
-
-interface Enemy {
-  x: number
-  y: number
-  row: number
-  alive: boolean
-  diving: boolean
-  diveX: number
-  diveY: number
-  diveAngle: number
-}
-
-interface Star {
-  x: number
-  y: number
-  speed: number
-  size: number
-}
+import { drawKubeGalagaScene } from './KubeGalaga.draw'
+import { KubeGalagaHud, KubeGalagaOverlays } from './KubeGalagaOverlays'
+import {
+  HIGH_SCORE_KEY,
+  PARSE_INT_RADIX,
+  CANVAS_WIDTH,
+  CANVAS_HEIGHT,
+  PLAYER_WIDTH,
+  PLAYER_HEIGHT,
+  BULLET_WIDTH,
+  BULLET_HEIGHT,
+  ENEMY_WIDTH,
+  ENEMY_HEIGHT,
+  ENEMY_COLS,
+  ENEMY_ROWS,
+  PLAYER_SPEED,
+  BULLET_SPEED,
+  ENEMY_BULLET_SPEED,
+  type Bullet,
+  type Enemy,
+  type KubeGalagaGameState,
+  type Star,
+} from './KubeGalaga.constants'
 
 export function KubeGalaga() {
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: isDemoMode() })
   const { isExpanded } = useCardExpanded()
   const gameContainerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [gameState, setGameState] = useState<'idle' | 'playing' | 'paused' | 'gameover' | 'levelcomplete'>('idle')
+  const [gameState, setGameState] = useState<KubeGalagaGameState>('idle')
   const [score, setScore] = useState(0)
   const [lives, setLives] = useState(3)
   const [level, setLevel] = useState(1)
@@ -370,74 +337,12 @@ export function KubeGalaga() {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    // Clear
-    ctx.fillStyle = COLORS.background
-    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
-
-    // Draw stars
-    ctx.fillStyle = COLORS.star
-    starsRef.current.forEach(star => {
-      ctx.globalAlpha = 0.3 + star.size * 0.3
-      ctx.fillRect(star.x, star.y, star.size, star.size)
-    })
-    ctx.globalAlpha = 1
-
-    // Draw player with glow
-    const player = playerRef.current
-    if (invincibleRef.current <= 0 || Math.floor(invincibleRef.current / 5) % 2 === 0) {
-      ctx.fillStyle = COLORS.playerGlow
-      ctx.beginPath()
-      ctx.arc(player.x + PLAYER_WIDTH / 2, player.y + PLAYER_HEIGHT / 2, PLAYER_WIDTH, 0, Math.PI * 2)
-      ctx.fill()
-
-      ctx.fillStyle = COLORS.player
-      // Ship body
-      ctx.beginPath()
-      ctx.moveTo(player.x + PLAYER_WIDTH / 2, player.y)
-      ctx.lineTo(player.x, player.y + PLAYER_HEIGHT)
-      ctx.lineTo(player.x + PLAYER_WIDTH / 4, player.y + PLAYER_HEIGHT - 5)
-      ctx.lineTo(player.x + PLAYER_WIDTH / 2, player.y + PLAYER_HEIGHT)
-      ctx.lineTo(player.x + (PLAYER_WIDTH * 3) / 4, player.y + PLAYER_HEIGHT - 5)
-      ctx.lineTo(player.x + PLAYER_WIDTH, player.y + PLAYER_HEIGHT)
-      ctx.closePath()
-      ctx.fill()
-    }
-
-    // Draw bullets
-    bulletsRef.current.forEach(bullet => {
-      ctx.fillStyle = bullet.isEnemy ? COLORS.enemyBullet : COLORS.bullet
-      if (bullet.isEnemy) {
-        ctx.fillRect(bullet.x, bullet.y, 4, 8)
-      } else {
-        ctx.fillRect(bullet.x, bullet.y, BULLET_WIDTH, BULLET_HEIGHT)
-      }
-    })
-
-    // Draw enemies
-    enemiesRef.current.forEach(enemy => {
-      if (!enemy.alive) return
-
-      const colors = [COLORS.enemy1, COLORS.enemy2, COLORS.enemy3, COLORS.enemy2]
-      ctx.fillStyle = colors[enemy.row % 4]
-
-      // Bug-like enemy shape
-      ctx.beginPath()
-      ctx.arc(enemy.x + ENEMY_WIDTH / 2, enemy.y + ENEMY_HEIGHT / 2, ENEMY_WIDTH / 2, 0, Math.PI * 2)
-      ctx.fill()
-
-      // Wings
-      ctx.beginPath()
-      ctx.ellipse(enemy.x + 2, enemy.y + ENEMY_HEIGHT / 2, 6, 10, -0.3, 0, Math.PI * 2)
-      ctx.ellipse(enemy.x + ENEMY_WIDTH - 2, enemy.y + ENEMY_HEIGHT / 2, 6, 10, 0.3, 0, Math.PI * 2)
-      ctx.fill()
-
-      // Eyes
-      ctx.fillStyle = '#fff'
-      ctx.beginPath()
-      ctx.arc(enemy.x + ENEMY_WIDTH / 3, enemy.y + ENEMY_HEIGHT / 3, 3, 0, Math.PI * 2)
-      ctx.arc(enemy.x + (ENEMY_WIDTH * 2) / 3, enemy.y + ENEMY_HEIGHT / 3, 3, 0, Math.PI * 2)
-      ctx.fill()
-    })
+    drawKubeGalagaScene(ctx, {
+      stars: starsRef.current,
+      player: playerRef.current,
+      invincible: invincibleRef.current,
+      bullets: bulletsRef.current,
+      enemies: enemiesRef.current })
   }, [])
 
   // Game loop
@@ -487,29 +392,7 @@ export function KubeGalaga() {
     <div ref={gameContainerRef} className="h-full flex flex-col">
       <div className={`flex flex-col items-center gap-3 ${isExpanded ? 'flex-1 min-h-0' : ''}`}>
         {/* Stats bar */}
-        <div className="flex flex-wrap items-center justify-between gap-y-2 w-full max-w-[400px] text-sm">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1">
-              <Target className="w-4 h-4 text-cyan-400" />
-              <span className="font-bold">{score}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Zap className="w-4 h-4 text-yellow-400" />
-              <span>Lv.{level}</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1">
-              {Array.from({ length: lives }).map((_, i) => (
-                <Heart key={i} className="w-4 h-4 text-red-400 fill-red-400" />
-              ))}
-            </div>
-            <div className="flex items-center gap-1">
-              <Trophy className="w-4 h-4 text-yellow-500" />
-              <span>{highScore}</span>
-            </div>
-          </div>
-        </div>
+        <KubeGalagaHud score={score} level={level} lives={lives} highScore={highScore} />
 
         {/* Game canvas */}
         <div className={`relative ${isExpanded ? 'flex-1 min-h-0' : ''}`}>
@@ -523,81 +406,15 @@ export function KubeGalaga() {
           />
 
           {/* Overlays */}
-          {gameState === 'idle' && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded">
-              <h3 className="text-2xl font-bold text-cyan-400 mb-2">Kube Galaga</h3>
-              <p className="text-sm text-muted-foreground mb-4">Arrow keys to move, Space to shoot</p>
-              <span
-                role="button"
-                tabIndex={0}
-                aria-label="Start Kube Galaga game"
-                onClick={startGame}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startGame() } }}
-                className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded text-white cursor-pointer"
-              >
-                <Play className="w-4 h-4" />
-                Start Game
-              </span>
-            </div>
-          )}
-
-          {gameState === 'paused' && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded">
-              <h3 className="text-xl font-bold text-white mb-4">Paused</h3>
-              <span
-                role="button"
-                tabIndex={0}
-                aria-label="Resume Kube Galaga game"
-                onClick={togglePause}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togglePause() } }}
-                className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded text-white cursor-pointer"
-              >
-                <Play className="w-4 h-4" />
-                Resume
-              </span>
-            </div>
-          )}
-
-          {gameState === 'levelcomplete' && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded">
-              <Zap className="w-12 h-12 text-yellow-400 mb-2" />
-              <h3 className="text-2xl font-bold text-green-400 mb-2">Level {level - 1} Complete!</h3>
-              <p className="text-lg text-white mb-4">Score: {score}</p>
-              <span
-                role="button"
-                tabIndex={0}
-                aria-label={`Start level ${level} of Kube Galaga`}
-                onClick={nextLevel}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nextLevel() } }}
-                className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded text-white cursor-pointer"
-              >
-                <Play className="w-4 h-4" />
-                Level {level}
-              </span>
-            </div>
-          )}
-
-          {gameState === 'gameover' && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded">
-              <h3 className="text-2xl font-bold text-red-400 mb-2">Game Over</h3>
-              <p className="text-lg text-white mb-1">Score: {score}</p>
-              <p className="text-sm text-muted-foreground mb-1">Reached Level {level}</p>
-              {score === highScore && score > 0 && (
-                <p className="text-sm text-yellow-400 mb-4">New High Score!</p>
-              )}
-              <span
-                role="button"
-                tabIndex={0}
-                aria-label="Play Kube Galaga again"
-                onClick={startGame}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startGame() } }}
-                className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded text-white cursor-pointer"
-              >
-                <RotateCcw className="w-4 h-4" />
-                Play Again
-              </span>
-            </div>
-          )}
+          <KubeGalagaOverlays
+            gameState={gameState}
+            score={score}
+            level={level}
+            highScore={highScore}
+            onStartGame={startGame}
+            onTogglePause={togglePause}
+            onNextLevel={nextLevel}
+          />
         </div>
 
         {/* Controls */}
