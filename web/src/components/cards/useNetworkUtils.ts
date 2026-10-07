@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useCardDemoState, useCardLoadingState } from './CardDataContext'
+import { useCardDemoState } from './CardDataContext'
 import {
   STORAGE_KEY,
   PING_INTERVAL_KEY,
@@ -40,13 +40,6 @@ export function useNetworkUtils() {
   const pingIntervalRef = useRef<number | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
   const isPingingRef = useRef(false) // Ref to track pinging state for stable callback
-
-  useCardLoadingState({ 
-    isLoading: !isInitialized, 
-    isRefreshing: isPinging,
-    hasAnyData: isInitialized, 
-    isDemoData: shouldUseDemoData
-  })
 
   // Update network info and mark as initialized
   useEffect(() => {
@@ -256,6 +249,7 @@ export function useNetworkUtils() {
     activeTab,
     setActiveTab,
     isInitialized,
+    shouldUseDemoData,
     pingResults,
     isPinging,
     continuousPing,

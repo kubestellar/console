@@ -1,15 +1,16 @@
 import { ZoomIn, ZoomOut, Maximize2, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import type { ClusterInfo } from '../../hooks/useMCP'
-import { detectCloudProvider, CloudProviderIcon, type CloudProvider } from '../ui/CloudProviderIcon'
-import { CLUSTER_MARKER_FONT_SIZE } from '../../lib/constants'
+import { Input } from '../../ui/Input'
+import type { ClusterInfo } from '../../../hooks/useMCP'
+import { detectCloudProvider, CloudProviderIcon, type CloudProvider } from '../../ui/CloudProviderIcon'
+import { CLUSTER_MARKER_FONT_SIZE } from '../../../lib/constants'
 import {
   MAX_CLUSTER_NAME_DISPLAY,
   TRUNCATED_NAME_LENGTH,
   PING_ANIMATION_STYLE,
   type RegionInfo,
   type StatusFilter,
-} from './ClusterLocations.constants'
+} from '../ClusterLocations.constants'
 
 interface ClusterLocationsFiltersProps {
   searchFilter: string
@@ -28,13 +29,15 @@ export function ClusterLocationsFilters({
   return (
     <div className="mb-2 p-2 bg-secondary/30 rounded-lg border border-border/50 space-y-2">
       <div className="flex items-center gap-2">
-        <input
-          type="text"
-          value={searchFilter}
-          onChange={(e) => setSearchFilter(e.target.value)}
-          placeholder={t('common:common.searchClusters')}
-          className="flex-1 px-2 py-1 text-xs bg-secondary rounded border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
-        />
+        <div className="flex-1">
+          <Input
+            type="text"
+            inputSize="sm"
+            value={searchFilter}
+            onChange={(e) => setSearchFilter(e.target.value)}
+            placeholder={t('common:common.searchClusters')}
+          />
+        </div>
         {searchFilter && (
           <button onClick={() => setSearchFilter('')} aria-label={t('common:common.clearSearch', 'Clear search')} className="text-muted-foreground hover:text-foreground">
             <X className="w-3 h-3" />

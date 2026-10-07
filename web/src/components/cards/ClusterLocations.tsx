@@ -11,7 +11,7 @@ import {
   ClusterMarker,
   MapControls,
   ProviderLegend,
-} from './ClusterLocations.parts'
+} from './clusterlocations/ClusterLocations.parts'
 
 interface ClusterLocationsProps {
   config?: Record<string, unknown>

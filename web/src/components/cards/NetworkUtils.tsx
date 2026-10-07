@@ -1,4 +1,5 @@
 import { Loader2 } from 'lucide-react'
+import { useCardLoadingState } from './CardDataContext'
 import { useNetworkUtils } from './useNetworkUtils'
 import {
   NetworkStatusBar,
@@ -6,13 +7,14 @@ import {
   PingTab,
   PortsTab,
   InfoTab,
-} from './NetworkUtils.tabs'
+} from './networkutils/NetworkUtils.tabs'
 
 export function NetworkUtils() {
   const {
     activeTab,
     setActiveTab,
     isInitialized,
+    shouldUseDemoData,
     pingResults,
     isPinging,
     continuousPing,
@@ -31,6 +33,13 @@ export function NetworkUtils() {
     pingHosts,
     portHosts,
   } = useNetworkUtils()
+
+  useCardLoadingState({
+    isLoading: !isInitialized,
+    isRefreshing: isPinging,
+    hasAnyData: isInitialized,
+    isDemoData: shouldUseDemoData,
+  })
 
   // Show loading state during initialization
   if (!isInitialized) {

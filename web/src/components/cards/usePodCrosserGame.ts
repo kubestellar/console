@@ -35,9 +35,13 @@ export function usePodCrosserGame(isExpanded: boolean) {
   const [time, setTime] = useState(60)
 
   const gameStateRef = useRef({ player, vehicles, logs, homeSlots })
+  const timeRef = useRef(time)
   useEffect(() => {
     gameStateRef.current = { player, vehicles, logs, homeSlots }
   }, [player, vehicles, logs, homeSlots])
+  useEffect(() => {
+    timeRef.current = time
+  }, [time])
 
   // Initialize game objects
   const initGame = () => {
@@ -218,7 +222,7 @@ export function usePodCrosserGame(isExpanded: boolean) {
               setHomeSlots(slots => slots.map((s, idx) =>
                 idx === i ? { ...s, filled: true } : s
               ))
-              setScore(s => s + 200 + time * 10)
+              setScore(s => s + 200 + timeRef.current * 10)
               setTime(60)
               setHighestRow(9)
 
