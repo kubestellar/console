@@ -5,6 +5,11 @@ import {
   type BatchProcessing,
 } from './BatchMonitorModal.utils'
 
+const BREAKDOWN_ICON_SUCCESS_STYLE = { color: 'var(--s-success)', fontSize: 14 } as const
+const BREAKDOWN_ICON_CRITICAL_STYLE = { color: 'var(--s-critical)', fontSize: 14 } as const
+const BREAKDOWN_ICON_MUTED_STYLE = { color: 'var(--s-text-muted)', fontSize: 14 } as const
+const BREAKDOWN_ICON_INFO_STYLE = { color: 'var(--s-info)', fontSize: 14 } as const
+
 interface BatchSummaryProps {
   batch: BatchProcessing
   progressPercent: number
@@ -57,7 +62,7 @@ export function BatchSummary({ batch, progressPercent }: BatchSummaryProps) {
       <div className="flex flex-wrap gap-4">
         {batch.summary.resolved > 0 && (
           <div className={BATCH_SUMMARY_BREAKDOWN_ITEM_CLASS}>
-            <span aria-hidden="true" style={{ color: 'var(--s-success)', fontSize: 14 }}>✓</span>
+            <span aria-hidden="true" style={BREAKDOWN_ICON_SUCCESS_STYLE}>✓</span>
             <span style={BATCH_SUMMARY_BREAKDOWN_TEXT_STYLE}>
               {batch.summary.resolved} {t('stellar.batch.resolved')}
             </span>
@@ -65,7 +70,7 @@ export function BatchSummary({ batch, progressPercent }: BatchSummaryProps) {
         )}
         {batch.summary.failed > 0 && (
           <div className={BATCH_SUMMARY_BREAKDOWN_ITEM_CLASS}>
-            <span aria-hidden="true" style={{ color: 'var(--s-critical)', fontSize: 14 }}>✗</span>
+            <span aria-hidden="true" style={BREAKDOWN_ICON_CRITICAL_STYLE}>✗</span>
             <span style={BATCH_SUMMARY_BREAKDOWN_TEXT_STYLE}>
               {batch.summary.failed} {t('stellar.batch.failed')}
             </span>
@@ -73,7 +78,7 @@ export function BatchSummary({ batch, progressPercent }: BatchSummaryProps) {
         )}
         {batch.summary.skipped > 0 && (
           <div className={BATCH_SUMMARY_BREAKDOWN_ITEM_CLASS}>
-            <span aria-hidden="true" style={{ color: 'var(--s-text-muted)', fontSize: 14 }}>–</span>
+            <span aria-hidden="true" style={BREAKDOWN_ICON_MUTED_STYLE}>–</span>
             <span style={BATCH_SUMMARY_BREAKDOWN_TEXT_STYLE}>
               {batch.summary.skipped} {t('stellar.batch.skipped')}
             </span>
@@ -81,7 +86,7 @@ export function BatchSummary({ batch, progressPercent }: BatchSummaryProps) {
         )}
         {batch.summary.inProgress > 0 && (
           <div className={BATCH_SUMMARY_BREAKDOWN_ITEM_CLASS}>
-            <span aria-hidden="true" style={{ color: 'var(--s-info)', fontSize: 14 }}>⊙</span>
+            <span aria-hidden="true" style={BREAKDOWN_ICON_INFO_STYLE}>⊙</span>
             <span style={BATCH_SUMMARY_BREAKDOWN_TEXT_STYLE}>
               {batch.summary.inProgress} {t('stellar.batch.inProgress')}
             </span>
