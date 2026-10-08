@@ -19,6 +19,7 @@ import {
   PREV_FS_MICRO,
   PREV_FS_STAT,
   PREV_FS_STAT_SM,
+  PREV_CENTERED_HEADER_STYLE,
   PREV_SM,
   PREV_XS,
   WIDGET_EXPORT_MODAL_SPAN_STYLE_1,
@@ -74,7 +75,7 @@ export function CardPreviewA({ cardType, card }: { cardType: string; card: Widge
         return (
           <div style={ps.card}>
             <div style={ps.title}><span style={ps.dot(ps.colors.purple)} /> GPU Overview</div>
-            <div style={{ textAlign: 'center', marginBottom: PREV_SM }}>
+            <div style={PREV_CENTERED_HEADER_STYLE}>
               <div style={{ fontSize: PREV_FS_HERO, fontWeight: 700, color: ps.colors.purple }}>72%</div>
               <div style={ps.muted}>{t('common.utilization')}</div>
             </div>
@@ -294,7 +295,7 @@ export function CardPreviewA({ cardType, card }: { cardType: string; card: Widge
         return (
           <div style={ps.card}>
             <div style={ps.title}><span style={ps.dot(ps.colors.healthy)} /> OpenCost Overview</div>
-            <div style={{ textAlign: 'center', marginBottom: PREV_SM }}>
+            <div style={PREV_CENTERED_HEADER_STYLE}>
               <div style={{ fontSize: PREV_FS_HEADLINE, fontWeight: 700, color: ps.colors.healthy }}>$1,247</div>
               <div style={ps.muted}>Monthly estimate</div>
             </div>
@@ -339,7 +340,7 @@ export function CardPreviewA({ cardType, card }: { cardType: string; card: Widge
         return (
           <div style={ps.card}>
             <div style={ps.title}><span style={ps.dot(ps.colors.healthy)} /> Nightly Release Pulse</div>
-            <div style={{ textAlign: 'center', marginBottom: PREV_SM }}>
+            <div style={PREV_CENTERED_HEADER_STYLE}>
               <div style={{ fontSize: PREV_FS_FEATURED, fontWeight: 700, color: ps.colors.healthy }}>v0.3.22</div>
               <div style={ps.muted}>Released 2h ago</div>
             </div>

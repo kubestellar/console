@@ -16,6 +16,7 @@ export const WIDGET_EXPORT_MODAL_SPAN_STYLE_4: CSSProperties = { width: '24px', 
 // Spacing constants aligned to the 4px grid – centralise magic values used throughout widget previews
 export const PREV_XS = '4px'           // 1 × 4px: tight gaps and small padding
 export const PREV_SM = '8px'           // 2 × 4px: standard margins and gaps
+export const PREV_CENTERED_HEADER_STYLE: CSSProperties = { textAlign: 'center', marginBottom: PREV_SM }
 export const PREV_MD = '12px'          // 3 × 4px: medium spacing
 export const PREV_LG = '16px'          // 4 × 4px: large gaps and section spacing
 export const PREV_ITEM_PAD = '4px 8px' // py-1 px-2: item-row padding (vertical=XS, horizontal=SM)
