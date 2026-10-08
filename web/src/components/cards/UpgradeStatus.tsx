@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { ArrowUp, Rocket, AlertTriangle, RefreshCw } from 'lucide-react'
+import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -8,7 +8,7 @@ import { ConfirmMissionPromptDialog } from '../missions/ConfirmMissionPromptDial
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useCardData } from '../../lib/cards/cardHooks'
-import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { StatusBadge } from '../ui/StatusBadge'
 import { Button } from '../ui/Button'
 import { CardEmptyState } from '../ui/CardEmptyState'
@@ -21,12 +21,12 @@ import {
   buildUpgradePrompt,
   deriveLatestMinor,
   getRecommendedUpgrade,
-  getStatusIcon,
   SORT_OPTIONS,
   UPGRADE_SORT_COMPARATORS,
   type UpgradeItem,
   type SortByOption,
 } from './upgradeHelpers'
+import { UpgradeClusterRow } from './UpgradeStatus.row'
 
 interface UpgradeStatusProps {
   config?: Record<string, unknown>
@@ -321,60 +321,12 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
 
       <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto" style={containerStyle}>
         {(displayClusters || []).map((cluster) => (
-          <div
+          <UpgradeClusterRow
             key={cluster.name}
-            className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
-          >
-            <div
-              className="cursor-pointer"
-              onClick={() => drillToCluster(cluster.name, {
-                tab: 'upgrade',
-                version: cluster.currentVersion,
-                targetVersion: cluster.targetVersion,
-              })}
-            >
-              <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 gap-2">
-                <span className="text-sm font-medium text-foreground truncate min-w-0 flex-1">{cluster.name}</span>
-                <span className="shrink-0">{getStatusIcon(cluster.status)}</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span className="font-mono">{cluster.currentVersion}</span>
-                {cluster.targetVersion && cluster.targetVersion !== cluster.currentVersion && (
-                  <>
-                    <ArrowUp className="w-3 h-3" />
-                    <span className="font-mono text-green-400">{cluster.targetVersion}</span>
-                  </>
-                )}
-              </div>
-            </div>
-            {cluster.status === 'available' && (
-              <Button
-                variant="accent"
-                size="sm"
-                fullWidth
-                icon={<Rocket className="w-3 h-3" />}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  handleStartUpgrade(cluster.name, cluster.currentVersion, cluster.targetVersion)
-                }}
-                aria-label={`Start upgrade of ${cluster.name} to ${cluster.targetVersion}`}
-              >
-                Start Upgrade to {cluster.targetVersion}
-              </Button>
-            )}
-            {(cluster.status === 'unreachable' || cluster.status === 'available') && (
-              <CardAIActions
-                resource={{ kind: 'Cluster', name: cluster.name, status: cluster.status }}
-                issues={[{
-                  name: cluster.status === 'unreachable' ? 'Cluster unreachable' : 'Upgrade available',
-                  message: cluster.status === 'unreachable'
-                    ? `Cluster ${cluster.name} is unreachable and cannot be queried for version info`
-                    : `Cluster ${cluster.name} can be upgraded from ${cluster.currentVersion} to ${cluster.targetVersion}`,
-                }]}
-                className="mt-2"
-              />
-            )}
-          </div>
+            cluster={cluster}
+            onDrill={drillToCluster}
+            onStartUpgrade={handleStartUpgrade}
+          />
         ))}
       </div>
 
