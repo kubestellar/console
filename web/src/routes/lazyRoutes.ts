@@ -42,7 +42,7 @@ export const NotFound = safeLazy(() => import('../components/NotFound'), 'defaul
 
 // Lazy-load Welcome (363 lines) and WhiteLabel (629 lines) — these are
 // non-critical public pages that benefit from code-splitting.
-// WhiteLabel.sections.tsx (~638 lines) is transitively lazy via this chunk.
+// WhiteLabel.sections.tsx and WhiteLabel.data.tsx are transitively lazy via this chunk.
 export const Welcome = safeLazy(() => import('../pages/Welcome'), 'Welcome')
 export const WhiteLabel = safeLazy(() => import('../pages/WhiteLabel'), 'WhiteLabel')
 
