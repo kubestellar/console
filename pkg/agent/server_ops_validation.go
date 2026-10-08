@@ -15,37 +15,16 @@ import (
 
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/sanitize"
+	"github.com/kubestellar/console/pkg/ssrf"
 )
 
-var privateIPNets = func() []*net.IPNet {
-	cidrs := []string{
-		"10.0.0.0/8",
-		"172.16.0.0/12",
-		"192.168.0.0/16",
-		"127.0.0.0/8",
-		"169.254.0.0/16",
-		"::1/128",
-		"fc00::/7",
-		"fe80::/10",
-	}
-	nets := make([]*net.IPNet, 0, len(cidrs))
-	for _, cidr := range cidrs {
-		_, network, _ := net.ParseCIDR(cidr)
-		nets = append(nets, network)
-	}
-	return nets
-}()
-
+// isPrivateIP delegates to the shared pkg/ssrf guard (loopback, RFC 1918,
+// link-local, CGNAT, cloud metadata, IETF protocol assignments) instead of
+// maintaining a local CIDR list, which had drifted out of sync with both
+// pkg/ssrf and the sibling copy in pkg/agent/providers/network.go
+// (console#24091).
 func isPrivateIP(ip net.IP) bool {
-	if ip.IsUnspecified() {
-		return true
-	}
-	for _, network := range privateIPNets {
-		if network.Contains(ip) {
-			return true
-		}
-	}
-	return false
+	return ssrf.IsBlockedIP(ip)
 }
 
 func allowLocalProviders() bool {
