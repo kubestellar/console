@@ -48,8 +48,8 @@ export function CatchUpBanner({ catchUp, onDismiss }: Props) {
       borderRadius: 'var(--s-r)',
     }}>
       <div className="flex items-start gap-2">
-        <span className="text-sm" style={{ flexShrink: 0 }}>{isClean ? '✦' : '◉'}</span>
-        <div style={{ flex: 1 }}>
+        <span className="text-sm shrink-0">{isClean ? '✦' : '◉'}</span>
+        <div className="flex-1">
           <div
             className="font-mono text-xs"
             style={{
