@@ -1,7 +1,7 @@
 /**
  * Lazy-loaded CodeMirror wrapper component.
  * Prevents CodeMirror (~100KB+) from bloating the main bundle.
- * Used by DrasiModals.tsx and DrasiStreamSamples.tsx.
+ * Used by DrasiModals.tsx, DrasiConfigModals.tsx and DrasiStreamSamples.tsx.
  */
 import React, { Suspense } from 'react'
 import type { CodeMirrorEditorProps } from './CodeMirrorEditor'
