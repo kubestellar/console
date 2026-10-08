@@ -9,6 +9,8 @@ import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { Button } from '../ui/Button'
 import { MS_PER_SECOND } from '../../lib/constants/time'
 
+const NO_LINE_HEIGHT_STYLE = { lineHeight: 0 } as const
+
 type Difficulty = 'easy' | 'medium' | 'hard'
 
 interface CellState {
@@ -358,7 +360,7 @@ function PodSweeperInternal(_props: CardComponentProps) {
       <div className="flex-1 flex items-center justify-center overflow-auto">
         <div
           className="inline-block border border-border rounded overflow-hidden"
-          style={{ lineHeight: 0 }}
+          style={NO_LINE_HEIGHT_STYLE}
         >
           {grid.map((row, rowIdx) => (
             <div key={rowIdx} className="flex">
