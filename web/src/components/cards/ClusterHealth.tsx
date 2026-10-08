@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { CheckCircle, WifiOff, Cpu, Loader2, ExternalLink, AlertTriangle, KeyRound, Server } from 'lucide-react'
+import { WifiOff, Cpu, KeyRound } from 'lucide-react'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useClusters, ClusterInfo, getDemoClusters } from '../../hooks/useMCP'
 import { useCachedGPUNodes } from '../../hooks/useCachedData'
@@ -8,20 +8,19 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useMobile } from '../../hooks/useMobile'
 import { Skeleton, SkeletonStats, SkeletonList } from '../ui/Skeleton'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
-import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions, CardEmptyState } from '../../lib/cards/CardComponents'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardEmptyState } from '../../lib/cards/CardComponents'
 import { ClusterDetailModal } from '../clusters/ClusterDetailModal'
-import { CloudProviderIcon, detectCloudProvider, getProviderLabel, getConsoleUrl, CloudProvider } from '../ui/CloudProviderIcon'
 import { isClusterUnreachable, isClusterTokenExpired, isClusterHealthy } from '../clusters/utils'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardDemoState, useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
-import { useFederationAwareness, getProviderLabel as getFederationProviderLabel, getStateLabel, getStateColorClasses, type FederatedCluster } from '../../hooks/useFederation'
+import { useFederationAwareness } from '../../hooks/useFederation'
 import { ROUTES } from '../../config/routes'
 import { CARD_LOADING_TIMEOUT_MS } from '../../lib/constants/network'
-import { Tooltip } from '../ui/Tooltip'
-import { sanitizeUrl } from '../../lib/utils/sanitizeUrl'
-import { CardHeaderActions, CardHeaderRow, CardStatGrid, CardStatHeader } from '../../lib/cards/CardComponents'
+import { CardHeaderActions, CardHeaderRow } from '../../lib/cards/CardComponents'
+import { ClusterHealthStatsGrid } from './ClusterHealthStatsGrid'
+import { ClusterHealthRow } from './ClusterHealthRow'
 
 type SortByOption = 'status' | 'name' | 'nodes' | 'pods'
 
@@ -282,184 +281,30 @@ export function ClusterHealth() {
 
       {/* Stats — hidden on /clusters page where StatsOverview already shows these metrics */}
       {!hideStatsGrid && (
-      <CardStatGrid className="@md:grid-cols-4 gap-2">
-        <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 min-w-0 overflow-hidden" title={t('clusterHealth.healthyTooltip', { count: healthyClusters })}>
-          <CardStatHeader className="gap-1.5 min-w-0">
-            <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
-            <span className="text-xs text-green-400 truncate">{t('common:common.healthy')}</span>
-          </CardStatHeader>
-          <span className="text-2xl font-bold text-foreground">{healthyClusters}</span>
-        </div>
-        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 min-w-0 overflow-hidden" title={t('clusterHealth.unhealthyTooltip', { count: unhealthyClusters })}>
-          <CardStatHeader className="gap-1.5 min-w-0">
-            <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
-            <span className="text-xs text-red-400 truncate">{t('common:common.unhealthy')}</span>
-          </CardStatHeader>
-          <span className="text-2xl font-bold text-foreground">{unhealthyClusters}</span>
-        </div>
-        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 min-w-0 overflow-hidden" title={t('clusterHealth.authErrorTooltip', { count: tokenExpiredClusters })}>
-          <CardStatHeader className="gap-1.5 min-w-0">
-            <KeyRound className="w-4 h-4 text-red-400 shrink-0" />
-            <span className="text-xs text-red-400 truncate">{t('clusterHealth.authErrorLabel')}</span>
-          </CardStatHeader>
-          <span className="text-2xl font-bold text-foreground">{tokenExpiredClusters}</span>
-        </div>
-        <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 min-w-0 overflow-hidden" title={t('clusterHealth.offlineTooltip', { count: networkOfflineClusters })}>
-          <CardStatHeader className="gap-1.5 min-w-0">
-            <WifiOff className="w-4 h-4 text-yellow-400 shrink-0" />
-            <span className="text-xs text-yellow-400 truncate">{t('common:common.offline')}</span>
-          </CardStatHeader>
-          <span className="text-2xl font-bold text-foreground">{networkOfflineClusters}</span>
-        </div>
-        {(federation.hubs || []).filter(h => h.detected).map(hub => {
-          const hubClusters = (federation.clusters || []).filter(
-            fc => fc.provider === hub.provider && fc.hubContext === hub.hubContext
-          )
-          const joinedCount = hubClusters.filter(fc => fc.state === 'joined' || fc.state === 'provisioned').length
-          return (
-            <div
-              key={`${hub.provider}-${hub.hubContext}`}
-              className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 min-w-0 overflow-hidden"
-              title={`${getFederationProviderLabel(hub.provider)} hub: ${hub.hubContext} — ${joinedCount}/${hubClusters.length} clusters active`}
-            >
-              <CardStatHeader className="gap-1.5 min-w-0">
-                <Server className="w-4 h-4 text-blue-400 shrink-0" />
-                <span className="text-xs text-blue-400 truncate">{getFederationProviderLabel(hub.provider)}</span>
-              </CardStatHeader>
-              <span className="text-2xl font-bold text-foreground">{hubClusters.length}</span>
-              <span className="text-xs text-muted-foreground ml-1">{t('clusterHealth.clustersLabel').toLowerCase()}</span>
-            </div>
-          )
-        })}
-      </CardStatGrid>
+      <ClusterHealthStatsGrid
+        healthyClusters={healthyClusters}
+        unhealthyClusters={unhealthyClusters}
+        tokenExpiredClusters={tokenExpiredClusters}
+        networkOfflineClusters={networkOfflineClusters}
+        federationHubs={federation.hubs}
+        federationClusters={federation.clusters}
+      />
       )}
 
       {/* Cluster list */}
       <div ref={containerRef} className="flex-1 flex flex-col gap-3 overflow-y-auto" style={containerStyle}>
-        {clusters.map((cluster, idx) => {
-          const clusterUnreachable = isClusterUnreachable(cluster)
-          const clusterTokenExpired = isClusterTokenExpired(cluster)
-          const clusterHealthy = !clusterUnreachable && isClusterHealthy(cluster)
-          // Only show loading spinner for initial load (health never checked, not unreachable)
-          const clusterLoading = !clusterUnreachable && cluster.healthy === undefined
-          // Use detected distribution from health check, or detect from name/server/namespaces
-          const provider = cluster.distribution as CloudProvider ||
-            detectCloudProvider(cluster.name, cluster.server, cluster.namespaces, cluster.user)
-          const providerLabel = getProviderLabel(provider)
-          const consoleUrl = getConsoleUrl(provider, cluster.name, cluster.server)
-          const statusTooltip = clusterLoading
-            ? t('clusterHealth.checkingHealth')
-            : cluster.healthy
-              ? t('clusterHealth.clusterHealthy', { nodes: cluster.nodeCount || 0, pods: cluster.podCount || 0 })
-              : clusterTokenExpired
-                ? t('clusterHealth.tokenExpired')
-                : clusterUnreachable
-                  ? t('clusterHealth.offlineCheckNetwork')
-                  : cluster.errorMessage || t('clusterHealth.clusterHasIssues')
-          return (
-            <Tooltip
-              key={cluster.name}
-              content={canOpenClusterDetails ? t('clusterHealth.clickViewDetails', { name: cluster.name }) : statusTooltip}
-              wrapperClassName="block w-full"
-            >
-            <div
-              data-tour={idx === 0 && canOpenClusterDetails ? 'drilldown' : undefined}
-              className={`group w-full ${isMobile ? 'flex flex-col gap-2' : 'flex flex-wrap items-start justify-between gap-x-4 gap-y-3'} p-3 rounded-lg border border-border/30 bg-secondary/30 transition-all ${canOpenClusterDetails ? 'cursor-pointer hover:bg-secondary/50 hover:border-border/50' : 'cursor-default'} min-w-0 overflow-hidden`}
-              role={canOpenClusterDetails ? 'button' : undefined}
-              tabIndex={canOpenClusterDetails ? 0 : undefined}
-              onClick={canOpenClusterDetails ? () => setSelectedCluster(cluster.name) : undefined}
-              onKeyDown={canOpenClusterDetails ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedCluster(cluster.name) } } : undefined}
-              aria-label={canOpenClusterDetails ? t('clusterHealth.clickViewDetails', { name: cluster.name }) : undefined}
-            >
-              <div className="flex items-center gap-2.5 min-w-0 flex-1 flex-wrap" title={statusTooltip}>
-                {/* Status icon: green check for healthy, red key for auth error, yellow wifi-off for offline, red triangle for degraded */}
-                {clusterLoading ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground shrink-0" />
-                ) : clusterTokenExpired ? (
-                  <KeyRound className="w-3.5 h-3.5 text-red-400 shrink-0" />
-                ) : clusterUnreachable ? (
-                  <WifiOff className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
-                ) : clusterHealthy ? (
-                  <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0" />
-                ) : (
-                  <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
-                )}
-                <span title={providerLabel} className="shrink-0">
-                  <CloudProviderIcon provider={provider} size={14} />
-                </span>
-                <span className="text-sm text-foreground truncate">{cluster.name}</span>
-                {(() => {
-                  const pills = (federation.clusters || []).filter(
-                    (fc: FederatedCluster) => fc.name === cluster.name || (cluster.server && fc.apiServerURL === cluster.server)
-                  )
-                  if (pills.length === 0) return null
-                  return pills.map((fc: FederatedCluster) => (
-                    <span
-                      key={`${fc.provider}-${fc.hubContext}`}
-                      className={`inline-flex items-center gap-0.5 text-2xs px-1.5 py-0.5 rounded border shrink-0 ${getStateColorClasses(fc.state)}`}
-                      title={`${getFederationProviderLabel(fc.provider)} [${fc.hubContext}]: ${getStateLabel(fc.state)}`}
-                    >
-                      {getFederationProviderLabel(fc.provider)}:{getStateLabel(fc.state)}
-                    </span>
-                  ))
-                })()}
-                {/* Warn when cluster is internally reachable but API server is externally unreachable (#4202) */}
-                {!clusterUnreachable && !clusterLoading && cluster.externallyReachable === false && (
-                  <span
-                    className="flex items-center gap-0.5 text-2xs px-1.5 py-0.5 rounded bg-yellow-500/15 text-yellow-400 border border-yellow-500/20 shrink-0"
-                    title="API server externally unreachable — cluster healthy internally but external access may be blocked"
-                  >
-                    <WifiOff className="w-3 h-3" />
-                    <span className="hidden @sm:inline">ext. unreachable</span>
-                  </span>
-                )}
-                {consoleUrl && (
-                  <a
-                    href={sanitizeUrl(consoleUrl)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="p-0.5 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
-                    title={`Open ${providerLabel} console`}
-                  >
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                )}
-              </div>
-              <div className={`flex items-center ${isMobile ? 'gap-3 pl-6 flex-wrap' : 'gap-4 shrink-0 flex-wrap justify-end'} text-xs text-muted-foreground min-w-0 overflow-hidden`}>
-                <span className="whitespace-nowrap" title={clusterLoading ? t('common:common.checking') : !clusterUnreachable ? t('clusterHealth.nodesInCluster', { count: cluster.nodeCount || 0 }) : t('clusterHealth.offlineCheckNetwork')}>
-                  {clusterLoading ? <Loader2 className="w-3 h-3 animate-spin inline" /> : !clusterUnreachable ? (cluster.nodeCount || 0) : '-'} {t('common:common.nodes').toLowerCase()}
-                </span>
-                {!clusterLoading && !clusterUnreachable && (cluster.cpuCores || 0) > 0 && (
-                  <span className="whitespace-nowrap" title={t('clusterHealth.totalCpuCores', { count: cluster.cpuCores })}>{cluster.cpuCores} {t('common:common.cpus')}</span>
-                )}
-                <span className="whitespace-nowrap" title={clusterLoading ? t('common:common.checking') : !clusterUnreachable ? t('clusterHealth.podsRunning', { count: cluster.podCount || 0 }) : t('clusterHealth.offlineCheckNetwork')}>
-                  {clusterLoading ? <Loader2 className="w-3 h-3 animate-spin inline" /> : !clusterUnreachable ? (cluster.podCount || 0) : '-'} {t('common:common.pods').toLowerCase()}
-                </span>
-                {!clusterLoading && !clusterUnreachable && (gpuByCluster[cluster.name] || 0) > 0 && (
-                  <span className="flex items-center gap-1 text-purple-400 whitespace-nowrap" title={t('clusterHealth.gpusAvailable', { count: gpuByCluster[cluster.name] })}>
-                    <Cpu className="w-3 h-3 shrink-0" />
-                    {gpuByCluster[cluster.name]} {t('common:common.gpus')}
-                  </span>
-                )}
-                {/* AI Diagnose & Repair for unhealthy/offline clusters */}
-                {!clusterLoading && (clusterUnreachable || !clusterHealthy) && (
-                  <CardAIActions
-                    resource={{
-                      kind: 'Cluster',
-                      name: cluster.name,
-                      status: clusterTokenExpired ? 'TokenExpired' : clusterUnreachable ? 'Unreachable' : 'Unhealthy' }}
-                    issues={[{
-                      name: clusterTokenExpired ? 'Auth Error' : clusterUnreachable ? 'Unreachable' : 'Unhealthy',
-                      message: cluster.errorMessage || (clusterTokenExpired ? 'Token expired' : 'Cluster health check failed') }]}
-                    additionalContext={{ nodeCount: cluster.nodeCount, podCount: cluster.podCount, server: cluster.server }}
-                  />
-                )}
-              </div>
-            </div>
-            </Tooltip>
-          )
-        })}
+        {clusters.map((cluster, idx) => (
+          <ClusterHealthRow
+            key={cluster.name}
+            cluster={cluster}
+            idx={idx}
+            canOpenClusterDetails={canOpenClusterDetails}
+            isMobile={isMobile}
+            federationClusters={federation.clusters}
+            gpuCount={gpuByCluster[cluster.name]}
+            onSelect={setSelectedCluster}
+          />
+        ))}
       </div>
 
       {/* Pagination */}
