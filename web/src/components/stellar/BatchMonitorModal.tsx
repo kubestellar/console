@@ -19,6 +19,8 @@ import {
 import { EventRow } from './BatchMonitorModal.parts'
 import { BatchSummary } from './BatchSummary'
 
+const TEXT_DIM_STYLE = { color: 'var(--s-text-dim)' } as const
+
 export type { ResolutionStep, BatchEvent } from './BatchMonitorModal.utils'
 
 export function BatchMonitorModal({
@@ -260,7 +262,7 @@ export function BatchMonitorModal({
           aria-label={t('stellar.batch.eventListAriaLabel')}
         >
           {batch.events.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-2 p-10" style={{ color: 'var(--s-text-dim)' }}>
+            <div className="flex flex-col items-center justify-center gap-2 p-10" style={TEXT_DIM_STYLE}>
               <span aria-hidden="true" style={{ fontSize: 24, opacity: 0.4 }}>✦</span>
               <span style={{ fontSize: 12 }}>{t('stellar.batch.noEvents')}</span>
             </div>
