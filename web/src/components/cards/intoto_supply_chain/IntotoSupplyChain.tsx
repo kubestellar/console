@@ -9,12 +9,9 @@
 import { useState, useMemo } from 'react'
 import {
   AlertTriangle,
-  CheckCircle,
   ExternalLink,
   AlertCircle,
   ShieldCheck,
-  XCircle,
-  MinusCircle,
   Link2,
   Loader2,
 } from 'lucide-react'
@@ -31,7 +28,10 @@ import { CardControls } from '../../ui/CardControls'
 import { Pagination } from '../../ui/Pagination'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import { DEFAULT_PAGE_SIZE } from '../../../lib/constants/ui'
-import type { IntotoLayout, IntotoStep } from '../../../hooks/useIntoto'
+import type { IntotoLayout } from '../../../hooks/useIntoto'
+import { IntotoLayoutRow } from './IntotoLayoutRow'
+import { IntotoSupplyChainFooter } from './IntotoSupplyChainFooter'
+import { INTOTO_INSTALL_PROMPT, INTOTO_SAMPLE_LAYOUTS_PROMPT } from './IntotoSupplyChain.prompts'
 
 type SortField = 'name' | 'failedSteps' | 'verifiedSteps'
 
@@ -43,17 +43,6 @@ const SORT_OPTIONS: { value: SortField; label: string }[] = [
 
 interface IntotoSupplyChainProps {
   config?: Record<string, unknown>
-}
-
-/** Icon and colour for each step verification status */
-const STEP_STATUS_CONFIG: Record<
-  IntotoStep['status'],
-  { icon: typeof CheckCircle; color: string; label: string }
-> = {
-  verified: { icon: CheckCircle, color: 'text-green-400', label: 'Verified' },
-  failed: { icon: XCircle, color: 'text-red-400', label: 'Failed' },
-  missing: { icon: MinusCircle, color: 'text-yellow-400', label: 'Missing' },
-  unknown: { icon: AlertCircle, color: 'text-muted-foreground', label: 'Unknown' },
 }
 
 function IntotoSupplyChainInternal({ config: _config }: IntotoSupplyChainProps) {
@@ -150,20 +139,7 @@ function IntotoSupplyChainInternal({ config: _config }: IntotoSupplyChainProps) 
       title: 'Install in-toto',
       description: 'Set up in-toto supply chain security on your clusters',
       type: 'deploy',
-      initialPrompt: `I want to install in-toto for supply chain security on my Kubernetes clusters.
-
-Please help me:
-1. Install the in-toto admission controller via Helm
-2. Create a sample layout policy covering build and deploy steps
-3. Verify the CRDs are registered: layouts.in-toto.io and links.in-toto.io
-
-Use the official in-toto Kubernetes integration:
-  helm repo add in-toto https://in-toto.github.io/helm-charts
-  helm install in-toto in-toto/in-toto --namespace in-toto --create-namespace
-
-Important: Start in audit/dry-run mode to avoid blocking existing workloads.
-
-Please proceed step by step.`,
+      initialPrompt: INTOTO_INSTALL_PROMPT,
       context: {},
     })
   }
@@ -173,21 +149,7 @@ Please proceed step by step.`,
       title: 'Deploy Sample in-toto Layouts',
       description: 'Create example supply chain layouts to see in-toto in action',
       type: 'deploy',
-      initialPrompt: `Deploy sample in-toto layouts so I can see the supply chain security dashboard in action.
-
-Please create 3 sample in-toto Layout CRs covering a typical CI/CD pipeline:
-
-1. **build-and-push** — Steps: clone-repo → run-tests → build-image → push-image
-2. **deploy-pipeline** — Steps: pull-image → scan-image → apply-manifests
-3. **release-signing** — Steps: sign-artifact → upload-provenance
-
-Important:
-- Add the annotation in-toto.io/mode: "audit" on all layouts
-- Set functionary pubkeys to placeholder values (demo mode)
-- After applying, verify with: kubectl get layouts.in-toto.io -A
-- Check links: kubectl get links.in-toto.io -A
-
-Please proceed step by step.`,
+      initialPrompt: INTOTO_SAMPLE_LAYOUTS_PROMPT,
       context: {},
     })
   }
@@ -198,12 +160,6 @@ Please proceed step by step.`,
     const installedClusters = Object.values(statuses).filter(s => s.installed)
     return installedClusters.length > 0 && installedClusters.every(s => s.totalLayouts === 0)
   }, [installed, isLoading, statuses])
-
-  const getLayoutHealthColor = (layout: IntotoLayout) => {
-    if (layout.failedSteps > 0) return 'yellow'
-    if (layout.verifiedSteps === layout.steps.length && layout.steps.length > 0) return 'green'
-    return 'blue'
-  }
 
   return (
     <div className="h-full flex flex-col min-h-card">
@@ -374,70 +330,15 @@ Please proceed step by step.`,
         </p>
 
         {(displayedLayouts || []).map((layout, i) => {
-          const isExpanded = expandedLayout === `${layout.cluster}-${layout.name}`
-          const healthColor = getLayoutHealthColor(layout)
-
+          const layoutKey = `${layout.cluster}-${layout.name}`
+          const isExpanded = expandedLayout === layoutKey
           return (
-            <div
-              key={`${layout.cluster}-${layout.name}-${i}`}
-              className="rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
-            >
-              {/* Layout header row */}
-              <button
-                className="w-full p-2.5 text-left"
-                onClick={() =>
-                  setExpandedLayout(isExpanded ? null : `${layout.cluster}-${layout.name}`)
-                }
-                aria-expanded={isExpanded}
-                aria-label={`${isExpanded ? 'Collapse' : 'Expand'} layout: ${layout.name} on ${layout.cluster}`}
-              >
-                <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
-                  <span className="text-sm font-medium text-foreground truncate">
-                    {layout.name}
-                  </span>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {layout.failedSteps > 0 && (
-                      <span className="flex items-center gap-1 text-xs text-red-400">
-                        <XCircle className="w-3 h-3" />
-                        {layout.failedSteps}
-                      </span>
-                    )}
-                    <StatusBadge color={healthColor} size="xs">
-                      {layout.verifiedSteps}/{layout.steps.length}
-                    </StatusBadge>
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs text-muted-foreground">
-                  <span>{t('intoto_supply_chain.stepsCount', { count: layout.steps.length })}</span>
-                  <span className="text-2xs">{layout.cluster}</span>
-                </div>
-              </button>
-
-              {/* Expanded steps */}
-              {isExpanded && (
-                <div className="px-2.5 pb-2.5 space-y-1 border-t border-border/30 pt-2">
-                  {(layout.steps || []).map((step, si) => {
-                    const cfg = STEP_STATUS_CONFIG[step.status]
-                    const StatusIcon = cfg.icon
-                    return (
-                      <div
-                        key={`${step.name}-${si}`}
-                        className="flex flex-wrap items-center justify-between gap-y-2 text-xs"
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <StatusIcon className={`w-3 h-3 ${cfg.color} shrink-0`} />
-                          <span className="text-foreground">{step.name}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <span className="text-2xs">{step.functionary}</span>
-                          <span className={`text-2xs ${cfg.color}`}>{cfg.label}</span>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
+            <IntotoLayoutRow
+              key={`${layoutKey}-${i}`}
+              layout={layout}
+              isExpanded={isExpanded}
+              onToggle={() => setExpandedLayout(isExpanded ? null : layoutKey)}
+            />
           )
         })}
       </div>
@@ -455,58 +356,7 @@ Please proceed step by step.`,
         </div>
       )}
 
-      {/* Features highlight */}
-      <div className="mt-3 pt-3 border-t border-border/50">
-        <p className="text-2xs text-muted-foreground font-medium mb-2">{t('intoto_supply_chain.featuresTitle')}</p>
-        <div className="grid grid-cols-2 gap-1.5 text-2xs">
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <CheckCircle className="w-3 h-3 text-green-400" />
-            {t('intoto_supply_chain.featureStepVerification')}
-          </div>
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <CheckCircle className="w-3 h-3 text-green-400" />
-            {t('intoto_supply_chain.featureProvenanceTracking')}
-          </div>
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <CheckCircle className="w-3 h-3 text-green-400" />
-            {t('intoto_supply_chain.featureFunctionarySigning')}
-          </div>
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <CheckCircle className="w-3 h-3 text-green-400" />
-            {t('intoto_supply_chain.featureSlsaCompliance')}
-          </div>
-        </div>
-      </div>
-
-      {/* Footer links */}
-      <div className="flex items-center justify-center gap-3 pt-2 mt-2 border-t border-border/50 text-2xs">
-        <a
-          href="https://in-toto.io/docs/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-muted-foreground hover:text-cyan-400 transition-colors"
-        >
-          {t('intoto_supply_chain.footerDocs')}
-        </a>
-        <span className="text-muted-foreground/30">·</span>
-        <a
-          href="https://github.com/in-toto/in-toto"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-muted-foreground hover:text-cyan-400 transition-colors"
-        >
-          {t('intoto_supply_chain.footerGitHub')}
-        </a>
-        <span className="text-muted-foreground/30">·</span>
-        <a
-          href="https://slsa.dev/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-muted-foreground hover:text-cyan-400 transition-colors"
-        >
-          {t('intoto_supply_chain.footerSlsa')}
-        </a>
-      </div>
+      <IntotoSupplyChainFooter />
     </div>
   )
 }
