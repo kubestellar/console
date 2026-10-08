@@ -10,6 +10,8 @@ interface ClusterHealthStatsGridProps {
   networkOfflineClusters: number
   federationHubs: ProviderHubStatus[]
   federationClusters: FederatedCluster[]
+  /** True when counts come from demoData fallback (set by parent ClusterHealth) */
+  isDemoData?: boolean
 }
 
 /** Health summary tiles (healthy / unhealthy / auth error / offline / federation hubs) for the ClusterHealth card. */
@@ -20,11 +22,12 @@ export function ClusterHealthStatsGrid({
   networkOfflineClusters,
   federationHubs,
   federationClusters,
+  isDemoData = false,
 }: ClusterHealthStatsGridProps) {
   const { t } = useTranslation(['cards', 'common'])
 
   return (
-    <CardStatGrid className="@md:grid-cols-4 gap-2">
+    <CardStatGrid className="@md:grid-cols-4 gap-2" data-demo={isDemoData || undefined}>
       <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 min-w-0 overflow-hidden" title={t('clusterHealth.healthyTooltip', { count: healthyClusters })}>
         <CardStatHeader className="gap-1.5 min-w-0">
           <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
