@@ -312,7 +312,7 @@ export function FlightPlanCanvas({
 
       {/* Drag-and-drop overlay — invisible drop zones per cluster */}
       {dragProject && layout.clusterRects.size > 0 && (
-        <div className="absolute inset-4 pointer-events-none" style={{ zIndex: 10 }}>
+        <div className="absolute inset-4 pointer-events-none z-10">
           <svg
             viewBox={`0 0 ${layout.viewBox.width} ${layout.viewBox.height}`}
             className="w-full h-full max-h-full"
