@@ -31,7 +31,8 @@ import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCachedCloudCustodian } from '../../../hooks/useCachedCloudCustodian'
 import { useCardLoadingState } from '../CardDataContext'
 import { cn } from '../../../lib/cn'
-import { PolicyRow, TopResourceRow, severityClass } from './CloudCustodianRows'
+import { PolicyRow, TopResourceRow } from './CloudCustodianRows'
+import { severityClass } from './severity'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)

@@ -5,7 +5,6 @@ import type {
   CustodianPolicy,
   CustodianPolicyMode,
   CustodianTopResource,
-  CustodianViolationSeverity,
 } from '../../../lib/demo/cloud-custodian'
 import { formatTimeAgo } from '../../../lib/formatters'
 
@@ -29,21 +28,6 @@ function modeBadgeClass(mode: CustodianPolicyMode): string {
       return 'bg-blue-500/20 text-blue-400'
     default:
       return 'bg-secondary/40 text-muted-foreground'
-  }
-}
-
-export function severityClass(sev: CustodianViolationSeverity): string {
-  switch (sev) {
-    case 'critical':
-      return 'text-red-400'
-    case 'high':
-      return 'text-orange-400'
-    case 'medium':
-      return 'text-yellow-400'
-    case 'low':
-      return 'text-muted-foreground'
-    default:
-      return 'text-muted-foreground'
   }
 }
 
