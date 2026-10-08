@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { RotateCcw, Trophy, Rocket, Pause, Play } from 'lucide-react'
+import { RotateCcw, Rocket, Pause, Play } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
@@ -8,64 +8,29 @@ import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { useGameKeyTracking } from '../../hooks/useGameKeys'
 import { safeGet, safeSet } from '../../lib/safeLocalStorage'
 
-// High-score storage key — safe wrapper tolerates private-mode
-// localStorage failures (issue #8936).
-const NODE_INVADERS_HIGHSCORE_KEY = 'highscore-nodeInvaders'
-
-// Game constants
-const CANVAS_WIDTH = 300
-const CANVAS_HEIGHT = 280
-const PLAYER_WIDTH = 30
-const INVADER_ROWS = 4
-const INVADER_COLS = 8
-const INVADER_WIDTH = 24
-const INVADER_HEIGHT = 16
-const SHOOT_COOLDOWN_MS = 300
-const GAME_LOOP_INTERVAL_MS = 33
-const INVADER_MOVE_STEP = 3
-const INVADER_DROP_DISTANCE = 10
-const INVADER_SHOOT_TICK_INTERVAL = 60
-const INVADER_MIN_MOVE_TICKS = 5
-const INVADER_BASE_MOVE_TICKS = 20
-const INVADER_ALIVE_TICK_DIVISOR = 2
-
-// ─── Canvas Colors (extracted from inline rgba strings) ─────────────────────
-const NODE_INVADERS_BG = '#0a0a1a'
-const NODE_INVADERS_STARS = '#ffffff'
-const NODE_INVADERS_SHIELD_TEAL = (alpha: number) => `rgba(0, 255, 0, ${alpha})`
-const NODE_INVADERS_SHIELD_PATTERN = (alpha: number) => `rgba(0, 200, 0, ${alpha})`
-const NODE_INVADERS_INVADER_RED = '#ff6b6b'
-const NODE_INVADERS_INVADER_YELLOW = '#ffd93d'
-const NODE_INVADERS_INVADER_GREEN = '#6bcb77'
-const NODE_INVADERS_INVADER_EYES = '#000'
-const NODE_INVADERS_PLAYER_SHIP = '#00bfff'
-const NODE_INVADERS_PLAYER_COCKPIT = '#87ceeb'
-const NODE_INVADERS_BULLET_PLAYER = '#00ff00'
-const NODE_INVADERS_BULLET_ENEMY = '#ff0000'
-
-interface Player {
-  x: number
-  lives: number
-}
-
-interface Bullet {
-  x: number
-  y: number
-  isPlayer: boolean
-}
-
-interface Invader {
-  x: number
-  y: number
-  alive: boolean
-  type: number
-}
-
-interface Shield {
-  x: number
-  y: number
-  health: number
-}
+import {
+  NODE_INVADERS_HIGHSCORE_KEY,
+  CANVAS_WIDTH,
+  CANVAS_HEIGHT,
+  PLAYER_WIDTH,
+  INVADER_WIDTH,
+  INVADER_HEIGHT,
+  SHOOT_COOLDOWN_MS,
+  GAME_LOOP_INTERVAL_MS,
+  INVADER_MOVE_STEP,
+  INVADER_DROP_DISTANCE,
+  INVADER_SHOOT_TICK_INTERVAL,
+  INVADER_MIN_MOVE_TICKS,
+  INVADER_BASE_MOVE_TICKS,
+  INVADER_ALIVE_TICK_DIVISOR,
+  type Player,
+  type Bullet,
+  type Invader,
+  type Shield,
+  createInvaders,
+  createShields } from './NodeInvaders.constants'
+import { drawNodeInvadersScene } from './NodeInvaders.draw'
+import { NodeInvadersOverlays } from './NodeInvaders.overlays'
 
 export function NodeInvaders(_props: CardComponentProps) {
   const { t } = useTranslation('cards')
@@ -109,31 +74,14 @@ export function NodeInvaders(_props: CardComponentProps) {
 
   // Initialize invaders
   const initInvaders = useCallback((lvl: number) => {
-    const newInvaders: Invader[] = []
-    for (let row = 0; row < INVADER_ROWS; row++) {
-      for (let col = 0; col < INVADER_COLS; col++) {
-        newInvaders.push({
-          x: 30 + col * (INVADER_WIDTH + 8),
-          y: 40 + row * (INVADER_HEIGHT + 10),
-          alive: true,
-          type: row < 1 ? 2 : row < 2 ? 1 : 0 })
-      }
-    }
-    setInvaders(newInvaders)
+    setInvaders(createInvaders())
     setInvaderDir(1)
     setInvaderSpeed(1 + (lvl - 1) * 0.3)
   }, [])
 
   // Initialize shields
   const initShields = useCallback(() => {
-    const newShields: Shield[] = []
-    for (let i = 0; i < 4; i++) {
-      newShields.push({
-        x: 35 + i * 70,
-        y: 210,
-        health: 4 })
-    }
-    setShields(newShields)
+    setShields(createShields())
   }, [])
 
   // Draw
@@ -144,75 +92,7 @@ export function NodeInvaders(_props: CardComponentProps) {
     if (!ctx) return
 
     const scale = isExpanded ? 1.4 : 1
-    ctx.save()
-    ctx.scale(scale, scale)
-
-    // Background
-    ctx.fillStyle = NODE_INVADERS_BG
-    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
-
-    // Stars
-    ctx.fillStyle = NODE_INVADERS_STARS
-    for (let i = 0; i < 30; i++) {
-      ctx.fillRect((i * 47) % CANVAS_WIDTH, (i * 31) % CANVAS_HEIGHT, 1, 1)
-    }
-
-    // Draw shields
-    for (const s of shields) {
-      if (s.health <= 0) continue
-      const alpha = s.health / 4
-      ctx.fillStyle = NODE_INVADERS_SHIELD_TEAL(alpha)
-      ctx.fillRect(s.x, s.y, 30, 20)
-      // Shield pattern
-      ctx.fillStyle = NODE_INVADERS_SHIELD_PATTERN(alpha)
-      ctx.fillRect(s.x + 10, s.y + 15, 10, 5)
-    }
-
-    // Draw invaders (nodes/pods)
-    for (const inv of invaders) {
-      if (!inv.alive) continue
-
-      // Different colors for different types
-      const colors = [NODE_INVADERS_INVADER_RED, NODE_INVADERS_INVADER_YELLOW, NODE_INVADERS_INVADER_GREEN]
-      ctx.fillStyle = colors[inv.type]
-
-      // Invader body (node shape)
-      ctx.fillRect(inv.x + 2, inv.y + 4, INVADER_WIDTH - 4, INVADER_HEIGHT - 8)
-      ctx.fillRect(inv.x, inv.y + 6, INVADER_WIDTH, INVADER_HEIGHT - 12)
-
-      // Eyes
-      ctx.fillStyle = NODE_INVADERS_INVADER_EYES
-      ctx.fillRect(inv.x + 5, inv.y + 6, 4, 4)
-      ctx.fillRect(inv.x + INVADER_WIDTH - 9, inv.y + 6, 4, 4)
-
-      // Legs
-      ctx.fillStyle = colors[inv.type]
-      ctx.fillRect(inv.x + 2, inv.y + INVADER_HEIGHT - 4, 4, 4)
-      ctx.fillRect(inv.x + INVADER_WIDTH - 6, inv.y + INVADER_HEIGHT - 4, 4, 4)
-    }
-
-    // Draw player (kubectl ship)
-    ctx.fillStyle = NODE_INVADERS_PLAYER_SHIP
-    // Ship body
-    ctx.beginPath()
-    ctx.moveTo(player.x + PLAYER_WIDTH / 2, CANVAS_HEIGHT - 40)
-    ctx.lineTo(player.x, CANVAS_HEIGHT - 20)
-    ctx.lineTo(player.x + PLAYER_WIDTH, CANVAS_HEIGHT - 20)
-    ctx.closePath()
-    ctx.fill()
-    // Ship base
-    ctx.fillRect(player.x + 5, CANVAS_HEIGHT - 20, PLAYER_WIDTH - 10, 8)
-    // Cockpit
-    ctx.fillStyle = NODE_INVADERS_PLAYER_COCKPIT
-    ctx.fillRect(player.x + PLAYER_WIDTH / 2 - 3, CANVAS_HEIGHT - 35, 6, 6)
-
-    // Draw bullets
-    for (const b of bullets) {
-      ctx.fillStyle = b.isPlayer ? NODE_INVADERS_BULLET_PLAYER : NODE_INVADERS_BULLET_ENEMY
-      ctx.fillRect(b.x - 2, b.y, 4, b.isPlayer ? 10 : 8)
-    }
-
-    ctx.restore()
+    drawNodeInvadersScene(ctx, { player, bullets, invaders, shields }, scale)
   }, [player, bullets, invaders, shields, isExpanded])
 
   const drawRef = useRef(draw)
@@ -520,60 +400,15 @@ export function NodeInvaders(_props: CardComponentProps) {
           className="border border-border rounded"
         />
 
-        {/* Start overlay - only covers game area */}
-        {!isPlaying && !gameOver && (
-          <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
-            <div className="text-center">
-              <div className="text-xl font-bold text-cyan-400 mb-2">{t('nodeInvaders.heading')}</div>
-              <div className="text-muted-foreground mb-2 text-sm">{t('nodeInvaders.tagline')}</div>
-              <div className="text-muted-foreground mb-4 text-xs">{t('nodeInvaders.controls')}</div>
-              <button
-                onClick={startGame}
-                className="px-6 py-3 bg-cyan-500/20 text-cyan-400 rounded-lg hover:bg-cyan-500/30 font-semibold"
-              >
-                {t('nodeInvaders.startGame')}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Paused overlay — issue #8943 */}
-        {isPlaying && !gameOver && isPaused && (
-          <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
-            <div className="text-center">
-              <div className="text-xl font-bold text-foreground mb-4">{t('nodeInvaders.pausedTitle')}</div>
-              <button
-                onClick={togglePause}
-                className="px-6 py-3 bg-cyan-500/20 text-cyan-400 rounded-lg hover:bg-cyan-500/30 font-semibold"
-              >
-                {t('nodeInvaders.resume')}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Game over overlay - only covers game area */}
-        {gameOver && (
-          <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
-            <div className="text-center">
-              {won ? (
-                <>
-                  <Trophy className="w-12 h-12 text-yellow-400 mx-auto mb-3" />
-                  <div className="text-xl font-bold text-yellow-400 mb-2">{t('nodeInvaders.defended')}</div>
-                </>
-              ) : (
-                <div className="text-xl font-bold text-red-400 mb-2">{t('nodeInvaders.overrun')}</div>
-              )}
-              <div className="text-muted-foreground mb-4">{t('nodeInvaders.scoreLabel', { score })}</div>
-              <button
-                onClick={startGame}
-                className="px-6 py-3 bg-cyan-500/20 text-cyan-400 rounded-lg hover:bg-cyan-500/30 font-semibold"
-              >
-                {t('nodeInvaders.playAgain')}
-              </button>
-            </div>
-          </div>
-        )}
+        <NodeInvadersOverlays
+          isPlaying={isPlaying}
+          isPaused={isPaused}
+          gameOver={gameOver}
+          won={won}
+          score={score}
+          onStart={startGame}
+          onTogglePause={togglePause}
+        />
       </div>
     </div>
   )
