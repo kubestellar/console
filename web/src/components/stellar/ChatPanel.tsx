@@ -23,6 +23,7 @@ interface Msg {
 }
 
 const CHAT_PANEL_ROOT_STYLE = { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 } as const
+const TEXT_DIM_STYLE = { color: 'var(--s-text-dim)' } as const
 
 const WELCOME: Msg = {
   id: 'welcome',
@@ -336,7 +337,7 @@ export function ChatPanel({
             {busy ? '···' : '↑'}
           </button>
         </div>
-        <div className="mt-1 pl-0.5 text-xs" style={{ color: 'var(--s-text-dim)' }}>
+        <div className="mt-1 pl-0.5 text-xs" style={TEXT_DIM_STYLE}>
           Enter to send · Shift+Enter for newline
         </div>
       </div>
