@@ -26,6 +26,7 @@ import {
   PREV_FS_STAT_SM,
   PREV_HAIRLINE_GAP,
   PREV_LG,
+  PREV_CENTERED_HEADER_STYLE,
   PREV_SM,
   PREV_XS,
   WIDGET_EXPORT_MODAL_DIV_STYLE_2,
@@ -121,7 +122,7 @@ export function CardPreviewB({ cardType, card }: { cardType: string; card: Widge
         return (
           <div style={ps.card}>
             <div style={ps.title}><span style={ps.dot(ps.colors.healthy)} /> GitHub CI Monitor</div>
-            <div style={{ textAlign: 'center', marginBottom: PREV_SM }}>
+            <div style={PREV_CENTERED_HEADER_STYLE}>
               <div style={{ fontSize: PREV_FS_HEADLINE, fontWeight: 700, color: ps.colors.healthy }}>94%</div>
               <div style={ps.muted}>Pass rate (7d)</div>
             </div>
@@ -246,7 +247,7 @@ export function CardPreviewB({ cardType, card }: { cardType: string; card: Widge
         return (
           <div style={ps.card}>
             <div style={ps.title}><span style={ps.dot(ps.colors.healthy)} /> AI Health Check</div>
-            <div style={{ textAlign: 'center', marginBottom: PREV_SM }}>
+            <div style={PREV_CENTERED_HEADER_STYLE}>
               <div style={{ fontSize: PREV_FS_FEATURED, fontWeight: 700, color: ps.colors.healthy }}>Healthy</div>
               <div style={ps.muted}>AI analysis complete</div>
             </div>
