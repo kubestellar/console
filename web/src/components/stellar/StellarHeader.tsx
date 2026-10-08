@@ -10,6 +10,7 @@ const BATCH_COUNTDOWN_REFRESH_MS = 1000
 const STELLAR_HEADER_STATUS_DOT_SIZE_PX = 7
 const STELLAR_HEADER_BADGE_RADIUS_PX = 10
 const STELLAR_HEADER_UNREAD_BADGE_MIN_WIDTH_PX = 18
+const SPACER_STYLE = { flex: 1 } as const
 
 interface Props {
   isConnected: boolean
@@ -85,7 +86,7 @@ export function StellarHeader({
         </span>
       )}
 
-      <div style={{ flex: 1 }} />
+      <div style={SPACER_STYLE} />
 
       <div className="flex items-center gap-2">
         <span className="text-[10px] text-muted-foreground" style={{
