@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import type { StellarSolve, StellarSolveProgress } from '../../types/stellar'
 
+const SOLVE_TOGGLE_BUTTON_STYLE = { background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--s-text-muted)' } as const
+
+const SOLVE_DISMISS_BUTTON_STYLE = { background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--s-text-dim)' } as const
+
 const WARNING_TEXT_STYLE = { color: 'var(--s-warning)' } as const
 
 const SOLVE_BODY_TEXT_STYLE = {
@@ -90,13 +94,13 @@ export function SolveEscalatedCard({ solve, onDismiss }: {
         <div style={SOLVE_SPACER_STYLE} />
         <button
           onClick={() => setExpanded(e => !e)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--s-text-muted)' }}
+          style={SOLVE_TOGGLE_BUTTON_STYLE}
         >{expanded ? '▼' : '▶'}</button>
         {onDismiss && (
           <button
             onClick={onDismiss}
             title="Dismiss"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--s-text-dim)' }}
+            style={SOLVE_DISMISS_BUTTON_STYLE}
           >✕</button>
         )}
       </div>
