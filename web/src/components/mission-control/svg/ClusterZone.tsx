@@ -53,6 +53,8 @@ const SVG_COLORS = {
 
 /** Brand colors for cloud providers — used as SVG fill values.
  *  These are intentional brand colors that cannot use Tailwind classes in SVG context. */
+const PROVIDER_ICON_WRAPPER_STYLE = { width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' } as const
+
 const PROVIDER_COLORS: Record<string, string> = {
   eks: PROVIDER_EKS,
   gke: PROVIDER_GKE,
@@ -258,7 +260,7 @@ export function ClusterZone({
 
       {/* Provider icon via foreignObject */}
       <foreignObject x={x + 6} y={y + 4} width={20} height={20}>
-        <div style={{ width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={PROVIDER_ICON_WRAPPER_STYLE}>
           <CloudProviderIcon
             provider={provider as Parameters<typeof CloudProviderIcon>[0]['provider']}
             size={16}

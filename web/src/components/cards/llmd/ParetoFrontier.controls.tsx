@@ -43,6 +43,10 @@ export function FilterDropdown({
 // Toggle switch — small pill-style toggle
 // ---------------------------------------------------------------------------
 
+const TOGGLE_TRACK_STYLE = { width: 26, height: 14 } as const
+const TOGGLE_KNOB_STYLE_ON = { top: 2, width: 10, height: 10, left: 14 } as const
+const TOGGLE_KNOB_STYLE_OFF = { top: 2, width: 10, height: 10, left: 2 } as const
+
 export function Toggle({ label, active, onChange }: { label: string; active: boolean; onChange: (v: boolean) => void }) {
   return (
     <button onClick={() => onChange(!active)} className="flex flex-wrap items-center justify-between gap-y-2 w-full group">
@@ -51,13 +55,13 @@ export function Toggle({ label, active, onChange }: { label: string; active: boo
         className={`relative inline-flex rounded-full transition-colors ${
           active ? 'bg-foreground/30' : 'bg-muted'
         }`}
-        style={{ width: 26, height: 14 }}
+        style={TOGGLE_TRACK_STYLE}
       >
         <span
           className={`absolute rounded-full transition-all ${
             active ? 'bg-foreground' : 'bg-muted-foreground/50'
           }`}
-          style={{ top: 2, width: 10, height: 10, left: active ? 14 : 2 }}
+          style={active ? TOGGLE_KNOB_STYLE_ON : TOGGLE_KNOB_STYLE_OFF}
         />
       </span>
     </button>
