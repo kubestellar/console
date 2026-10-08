@@ -22,6 +22,8 @@ interface Msg {
   suggestedTask?: string
 }
 
+const CHAT_PANEL_ROOT_STYLE = { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 } as const
+
 const WELCOME: Msg = {
   id: 'welcome',
   role: 'stellar',
@@ -201,7 +203,7 @@ export function ChatPanel({
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+    <div style={CHAT_PANEL_ROOT_STYLE}>
       <div className="flex items-center gap-1.5 px-3 py-2" style={{
         flexShrink: 0,
         borderBottom: '1px solid var(--s-border)',
