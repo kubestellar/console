@@ -4,6 +4,12 @@ import type { StellarNotification, StellarSolve } from '../../types/stellar'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 
 const TEXT_MUTED_STYLE = { color: 'var(--s-text-muted)' } as const
+const TEXT_DIM_STYLE = { color: 'var(--s-text-dim)' } as const
+const FLEX_SPACER_STYLE = { flex: 1 } as const
+const BOLD_STYLE = { fontWeight: 600 } as const
+const BODY_TEXT_STYLE = { color: 'var(--s-text)', lineHeight: 1.5 } as const
+const ICON_BUTTON_MUTED_STYLE = { background: 'none', border: 'none', cursor: 'pointer', color: 'var(--s-text-muted)' } as const
+const ICON_BUTTON_DIM_STYLE = { background: 'none', border: 'none', cursor: 'pointer', color: 'var(--s-text-dim)' } as const
 
 interface DigestCardProps {
   notification: StellarNotification
@@ -55,20 +61,20 @@ export function DigestCard({ notification, solves, onDismiss, onOpenEvent }: Dig
           size="xs"
           className="mr-1"
         />
-        <div style={{ flex: 1 }} />
+        <div style={FLEX_SPACER_STYLE} />
         <button
           onClick={() => setExpanded(e => !e)}
           className="text-xs"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--s-text-muted)' }}
+          style={ICON_BUTTON_MUTED_STYLE}
         >{expanded ? '▼' : '▶'}</button>
         <button
           onClick={onDismiss}
           title={t('actions.dismiss')}
           className="text-xs"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--s-text-dim)' }}
+          style={ICON_BUTTON_DIM_STYLE}
         >✕</button>
       </div>
-      <div className="mt-1.5 text-xs" style={{ color: 'var(--s-text)', lineHeight: 1.5 }}>
+      <div className="mt-1.5 text-xs" style={BODY_TEXT_STYLE}>
         {notification.body}
       </div>
 
@@ -123,9 +129,9 @@ function DigestGroup({
             <span className="font-mono text-xs" style={TEXT_MUTED_STYLE}>
               {item.cluster}/{item.namespace}
             </span>
-            <span style={{ fontWeight: 600 }}>{item.workload || '—'}</span>
-            <span style={{ flex: 1 }} />
-            <span className="text-xs" style={{ color: 'var(--s-text-dim)' }}>
+            <span style={BOLD_STYLE}>{item.workload || '—'}</span>
+            <span style={FLEX_SPACER_STYLE} />
+            <span className="text-xs" style={TEXT_DIM_STYLE}>
               {t('stellar.digest.actionCount', { count: item.actionsTaken })}
             </span>
           </button>
