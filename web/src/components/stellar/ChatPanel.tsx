@@ -23,6 +23,9 @@ interface Msg {
 }
 
 const CHAT_PANEL_ROOT_STYLE = { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 } as const
+const FLEX_SPACER_STYLE = { flex: 1 } as const
+const CLEAR_BUTTON_STYLE = { background: 'none', border: 'none', cursor: 'pointer', color: 'var(--s-text-dim)' } as const
+const INPUT_FOOTER_STYLE = { flexShrink: 0, borderTop: '1px solid var(--s-border)' } as const
 const TEXT_DIM_STYLE = { color: 'var(--s-text-dim)' } as const
 
 const WELCOME: Msg = {
@@ -220,9 +223,9 @@ export function ChatPanel({
         >
           Chat
         </span>
-        <div style={{ flex: 1 }} />
+        <div style={FLEX_SPACER_STYLE} />
         <ProviderSelector session={providerSession} onSelect={onProviderChange} />
-        <button className="text-xs" onClick={() => setMsgs([WELCOME])} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--s-text-dim)' }}>clear</button>
+        <button className="text-xs" onClick={() => setMsgs([WELCOME])} style={CLEAR_BUTTON_STYLE}>clear</button>
       </div>
 
       <div
@@ -270,7 +273,7 @@ export function ChatPanel({
         <div ref={bottomRef} />
       </div>
 
-      <div className="px-2.5 py-2" style={{ flexShrink: 0, borderTop: '1px solid var(--s-border)' }}>
+      <div className="px-2.5 py-2" style={INPUT_FOOTER_STYLE}>
         {localPendingAction && (
           <div
             className="mb-1.5 flex items-center gap-1.5 px-2 py-1 text-xs"
