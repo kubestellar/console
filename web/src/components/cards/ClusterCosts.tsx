@@ -1,23 +1,21 @@
 import { useMemo, useState, useEffect, useCallback, memo } from 'react'
-import { Server, Info, ExternalLink, ChevronDown, Sparkles, Settings2 } from 'lucide-react'
+import { Server, Info } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedGPUNodes } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardData } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
-import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { safeRemoveItem, safeSetJSON } from '../../lib/utils/localStorage'
-import { sanitizeUrl } from '../../lib/utils/sanitizeUrl'
 import { ClusterCostsRatesPanel } from './ClusterCostsRatesPanel'
 import { ClusterCostsRow } from './ClusterCostsRow'
 import { ClusterCostsFooter } from './ClusterCostsFooter'
+import { ClusterCostsPricingControls } from './ClusterCostsPricingControls'
 import {
   CLOUD_PRICING,
-  PROVIDER_ICONS,
   KNOWN_CLUSTER_PROVIDERS,
   PROVIDER_OVERRIDES_KEY,
   SORT_COMPARATORS,
@@ -54,11 +52,9 @@ export const ClusterCosts = memo(function ClusterCosts({ config }: ClusterCostsP
 
   // Cloud provider selection
   const [selectedProvider, setSelectedProvider] = useState<CloudProvider>(config?.provider || 'estimate')
-  const [showProviderMenu, setShowProviderMenu] = useState(false)
   const [showRatesInfo, setShowRatesInfo] = useState(false)
   const [isAutoDetected, setIsAutoDetected] = useState(false)
   const [pricingMode, setPricingMode] = useState<PricingMode>(config?.pricingMode || 'per-cluster')
-  const [showSettingsMenu, setShowSettingsMenu] = useState(false)
   const [clusterProviderOverrides, setClusterProviderOverrides] = useState<Record<string, CloudProvider>>(
     () => loadPersistedOverrides(config?.clusterProviders)
   )
@@ -287,148 +283,18 @@ export const ClusterCosts = memo(function ClusterCosts({ config }: ClusterCostsP
       </div>
 
       {/* Pricing Mode and Provider Selector */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2 mb-3">
-        <div className="flex items-center gap-2">
-          {/* Pricing Mode Toggle */}
-          <div className="relative">
-            <button
-              onClick={() => setShowSettingsMenu(!showSettingsMenu)}
-              className={`flex items-center gap-1.5 px-2 py-1.5 text-xs rounded-md border transition-colors ${
-                showSettingsMenu
-                  ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
-                  : 'bg-secondary/50 hover:bg-secondary border-border text-muted-foreground'
-              }`}
-              title={t('cards:clusterCosts.pricingSettings')}
-            >
-              <Settings2 className="w-3.5 h-3.5" />
-              <span className="hidden @sm:inline">{pricingMode === 'per-cluster' ? t('cards:clusterCosts.perCluster') : t('cards:clusterCosts.uniform')}</span>
-            </button>
-            {showSettingsMenu && (
-              <div className="absolute top-full left-0 mt-1 w-52 bg-card border border-border rounded-lg shadow-lg z-20 py-2"
-                onKeyDown={(e) => {
-                  if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
-                  e.preventDefault()
-                  const items = e.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled])')
-                  const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
-                  if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
-                  else items[Math.max(idx - 1, 0)]?.focus()
-                }}
-              >
-                <div className="px-3 py-1.5 text-2xs font-medium text-muted-foreground uppercase tracking-wider">
-                  {t('cards:clusterCosts.pricingMode')}
-                </div>
-                <button
-                  onClick={() => {
-                    setPricingMode('per-cluster')
-                    setShowSettingsMenu(false)
-                  }}
-                  className={`w-full px-3 py-2 text-xs text-left hover:bg-secondary transition-colors flex flex-wrap items-center justify-between gap-y-2 ${
-                    pricingMode === 'per-cluster' ? 'text-purple-400 bg-purple-500/10' : 'text-foreground'
-                  }`}
-                >
-                  <div>
-                    <div className="font-medium">{t('cards:clusterCosts.perCluster')}</div>
-                    <div className="text-2xs text-muted-foreground">{t('cards:clusterCosts.perClusterDesc')}</div>
-                  </div>
-                  {pricingMode === 'per-cluster' && <Sparkles className="w-3.5 h-3.5 text-yellow-400" />}
-                </button>
-                <button
-                  onClick={() => {
-                    setPricingMode('uniform')
-                    setShowSettingsMenu(false)
-                  }}
-                  className={`w-full px-3 py-2 text-xs text-left hover:bg-secondary transition-colors flex flex-wrap items-center justify-between gap-y-2 ${
-                    pricingMode === 'uniform' ? 'text-purple-400 bg-purple-500/10' : 'text-foreground'
-                  }`}
-                >
-                  <div>
-                    <div className="font-medium">{t('cards:clusterCosts.uniform')}</div>
-                    <div className="text-2xs text-muted-foreground">{t('cards:clusterCosts.uniformDesc')}</div>
-                  </div>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Uniform Provider Selector (only in uniform mode) */}
-          {pricingMode === 'uniform' && (
-            <div className="relative">
-              <button
-                onClick={() => setShowProviderMenu(!showProviderMenu)}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-md border transition-colors ${
-                  selectedProvider !== 'estimate'
-                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
-                    : 'bg-secondary/50 hover:bg-secondary border-border text-foreground'
-                }`}
-              >
-                <span className={`px-1.5 py-0.5 text-[9px] font-medium rounded ${PROVIDER_ICONS[selectedProvider].bg} ${PROVIDER_ICONS[selectedProvider].color}`}>
-                  {PROVIDER_ICONS[selectedProvider].short}
-                </span>
-                <span className="font-medium">{pricing.name}</span>
-                {isAutoDetected && (
-                  <span title={t('cards:clusterCosts.autoDetectedFrom')}><Sparkles className="w-3 h-3 text-yellow-400" /></span>
-                )}
-                <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform ${showProviderMenu ? 'rotate-180' : ''}`} />
-              </button>
-              {showProviderMenu && (
-                <div className="absolute top-full left-0 mt-1 w-44 bg-card border border-border rounded-lg shadow-lg z-10 py-1"
-                  onKeyDown={(e) => {
-                    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
-                    e.preventDefault()
-                    const items = e.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled])')
-                    const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
-                    if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
-                    else items[Math.max(idx - 1, 0)]?.focus()
-                  }}
-                >
-                  {(Object.keys(CLOUD_PRICING) as CloudProvider[]).map(provider => (
-                    <button
-                      key={provider}
-                      onClick={() => {
-                        setSelectedProvider(provider)
-                        setShowProviderMenu(false)
-                        setIsAutoDetected(false)
-                      }}
-                      className={`w-full px-3 py-1.5 text-xs text-left hover:bg-secondary transition-colors flex items-center gap-2 ${
-                        selectedProvider === provider ? 'text-purple-400 bg-purple-500/10' : 'text-foreground'
-                      }`}
-                    >
-                      <span className={`px-1.5 py-0.5 text-[9px] font-medium rounded ${PROVIDER_ICONS[provider].bg} ${PROVIDER_ICONS[provider].color}`}>
-                        {PROVIDER_ICONS[provider].short}
-                      </span>
-                      <span className="flex-1">{CLOUD_PRICING[provider].name}</span>
-                      {provider === detectedProvider && (
-                        <StatusBadge color="yellow" size="xs">{t('cards:clusterCosts.detected')}</StatusBadge>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Per-cluster mode indicator */}
-          {pricingMode === 'per-cluster' && (
-            <div className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground">
-              <Sparkles className="w-3 h-3 text-yellow-400" />
-              <span>{t('cards:clusterCosts.autoDetectingVendors')}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Provider link (uniform mode only) */}
-        {pricingMode === 'uniform' && selectedProvider !== 'estimate' && pricing.pricingUrl && (
-          <a
-            href={sanitizeUrl(pricing.pricingUrl)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 transition-colors"
-            title={t('cards:clusterCosts.viewProviderPricing', { provider: pricing.name })}
-          >
-            <ExternalLink className="w-3 h-3" />
-          </a>
-        )}
-      </div>
+      <ClusterCostsPricingControls
+        pricingMode={pricingMode}
+        onPricingModeChange={setPricingMode}
+        selectedProvider={selectedProvider}
+        onSelectProvider={(provider) => {
+          setSelectedProvider(provider)
+          setIsAutoDetected(false)
+        }}
+        detectedProvider={detectedProvider}
+        isAutoDetected={isAutoDetected}
+        pricing={pricing}
+      />
 
       {/* Rates Info Panel */}
       <ClusterCostsRatesPanel
