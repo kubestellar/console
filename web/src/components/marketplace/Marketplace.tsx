@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Store, Search, Download, Tag, RefreshCw, Loader2, AlertCircle, Package,
-  Check, Trash2, LayoutGrid, Puzzle, Palette, ExternalLink, Heart,
-  HandHelping, List, Grid3X3, SortAsc, SortDesc, Sparkles } from 'lucide-react'
+  Store, Search, Tag, RefreshCw, Loader2, AlertCircle, Package,
+  ExternalLink, Heart,
+  HandHelping, List, Grid3X3, SortAsc, SortDesc } from 'lucide-react'
 import { useMarketplace, MarketplaceItem, MarketplaceItemType } from '../../hooks/useMarketplace'
 import { useSidebarConfig } from '../../hooks/useSidebarConfig'
 import { useToast } from '../ui/Toast'
@@ -12,13 +12,12 @@ import { DashboardHeader } from '../shared/DashboardHeader'
 import { RotatingTip } from '../ui/RotatingTip'
 import { CNCFProgressBanner } from './CNCFProgressBanner'
 import { MarketplaceCard } from './MarketplaceCard'
-import { AuthorBadge } from './AuthorBadge'
-import { DifficultyBadge } from './DifficultyBadge'
+import { MarketplaceRow } from './MarketplaceRow'
+import { TYPE_LABELS, ISSUES_URL } from './Marketplace.constants'
 import { NAV_AFTER_ANIMATION_MS } from '../../lib/constants/network'
 import { suggestIconSync } from '../../lib/iconSuggester'
 import { useTranslation } from 'react-i18next'
 import type { CSSProperties } from 'react'
-import { validateExternalUrl } from '../../lib/validateExternalUrl'
 
 // Inline style constants
 const MARKETPLACE_DIV_STYLE_1: CSSProperties = { gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }
@@ -29,121 +28,6 @@ type SortOrder = 'asc' | 'desc'
 
 const VIEW_MODE_KEY = 'kc-marketplace-view-mode'
 const CONTRIBUTE_URL = 'https://github.com/kubestellar/console-marketplace'
-const ISSUES_URL = 'https://github.com/kubestellar/console-marketplace/issues?q=is%3Aissue%20is%3Aopen%20field.label%3Ahelp%20wanted'
-
-const TYPE_LABELS: Record<MarketplaceItemType, { label: string; icon: typeof LayoutGrid }> = {
-  dashboard: { label: 'Dashboards', icon: LayoutGrid },
-  'card-preset': { label: 'Card Presets', icon: Puzzle },
-  theme: { label: 'Themes', icon: Palette } }
-
-const MATURITY_CONFIG = {
-  graduated: { label: 'Graduated', color: 'text-green-400 bg-green-950 border-green-800' },
-  incubating: { label: 'Incubating', color: 'text-blue-400 bg-blue-950 border-blue-800' } } as const
-
-// --- List Row (compact view) ---
-function MarketplaceRow({ item, onInstall, onRemove, isInstalled }: {
-  item: MarketplaceItem
-  onInstall: (item: MarketplaceItem) => void
-  onRemove: (item: MarketplaceItem) => void
-  isInstalled: boolean
-}) {
-  const [installing, setInstalling] = useState(false)
-  const [removing, setRemoving] = useState(false)
-  const isHelpWanted = item.status === 'help-wanted'
-  const typeInfo = TYPE_LABELS[item.type]
-
-  const handleInstall = async () => {
-    setInstalling(true)
-    try { await onInstall(item) } finally { setInstalling(false) }
-  }
-  const handleRemove = async () => {
-    setRemoving(true)
-    try { await onRemove(item) } finally { setRemoving(false) }
-  }
-
-  return (
-    <div className={`flex items-center gap-4 px-4 py-2.5 bg-card border rounded-md transition-colors hover:bg-muted/30 ${
-      isHelpWanted ? 'border-dashed border-yellow-500/20' : 'border-border'
-    }`}>
-      {/* Type icon */}
-      <typeInfo.icon className="w-4 h-4 text-muted-foreground shrink-0" />
-
-      {/* Name + description */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-foreground truncate">{item.name}</span>
-          {item.cncfProject && (
-            <span className={`text-[9px] font-medium px-1 py-0.5 rounded border ${MATURITY_CONFIG[item.cncfProject.maturity].color}`}>
-              {item.cncfProject.maturity === 'graduated' ? 'Grad' : 'Incub'}
-            </span>
-          )}
-          {isHelpWanted && (
-            <span className="text-[9px] font-semibold px-1.5 py-0.5 bg-yellow-500/10 text-yellow-600 dark:text-yellow-300 border border-yellow-500/20 rounded">
-              Help Wanted
-            </span>
-          )}
-        </div>
-        <p className="text-xs text-muted-foreground truncate">{item.description}</p>
-      </div>
-
-      {/* Author */}
-      <span className="text-xs text-muted-foreground shrink-0 w-24 truncate hidden sm:block">
-        <AuthorBadge author={item.author} github={item.authorGithub} compact />
-      </span>
-
-      {/* Type label */}
-      <span className="text-2xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0 hidden md:block">
-        {typeInfo.label.replace(/s$/, '')}
-      </span>
-
-      {/* Difficulty (for help-wanted) */}
-      {isHelpWanted && item.difficulty ? (
-        <div className="shrink-0 hidden lg:block">
-          <DifficultyBadge difficulty={item.difficulty} />
-        </div>
-      ) : (
-        <span className="text-2xs text-muted-foreground shrink-0 w-10 text-right hidden lg:block">v{item.version}</span>
-      )}
-
-      {/* Action */}
-      <div className="shrink-0">
-        {isHelpWanted ? (
-          <a
-            href={validateExternalUrl(item.issueUrl) || ISSUES_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 rounded transition-colors"
-          >
-            <Sparkles className="w-3 h-3" />
-            Contribute
-          </a>
-        ) : isInstalled ? (
-          <div className="flex items-center gap-1">
-            <span className="flex items-center gap-0.5 px-2 py-1 text-2xs font-medium text-green-400 bg-green-500/10 rounded">
-              <Check className="w-3 h-3" />
-            </span>
-            <button
-              onClick={handleRemove}
-              disabled={removing}
-              className="flex items-center px-1.5 py-1 text-2xs text-red-400 hover:bg-red-500/10 rounded transition-colors disabled:opacity-50"
-            >
-              {removing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={handleInstall}
-            disabled={installing}
-            className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-primary/10 hover:bg-primary/20 text-primary rounded transition-colors disabled:opacity-50"
-          >
-            {installing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
-            Install
-          </button>
-        )}
-      </div>
-    </div>
-  )
-}
 
 const filterBtnClass = (active: boolean) =>
   `flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-md transition-colors ${
