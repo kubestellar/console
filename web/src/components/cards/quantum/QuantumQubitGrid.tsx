@@ -12,6 +12,8 @@ import {
   QUANTUM_QUBIT_GRID_DEFAULT_POLL_MS,
 } from '../../../hooks/useCachedQuantum'
 
+const IDLE_QUBIT_STYLE = { backgroundColor: 'rgb(104, 97, 104)' } as const
+
 // Polling interval for qubit grid updates (adjustable for responsiveness)
 const QUBIT_GRID_DEFAULT_POLL_MS = QUANTUM_QUBIT_GRID_DEFAULT_POLL_MS
 // SVG border color for qubit grid display
@@ -362,7 +364,7 @@ export const QuantumQubitGrid: React.FC = () => {
             <span className="text-gray-600 dark:text-gray-400">|1⟩ State</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded border-2 border-gray-500 flex-shrink-0" style={{ backgroundColor: 'rgb(104, 97, 104)' }} />
+            <div className="w-4 h-4 rounded border-2 border-gray-500 flex-shrink-0" style={IDLE_QUBIT_STYLE} />
             <span className="text-gray-600 dark:text-gray-400">Unused/Unmeasured</span>
           </div>
           <div className="flex items-center gap-2">
