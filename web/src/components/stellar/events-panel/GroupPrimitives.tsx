@@ -1,5 +1,10 @@
 import type { GroupConfig } from './types'
 
+const GROUP_SUBTITLE_STYLE = { fontSize: 10, color: 'var(--s-text-dim)', fontStyle: 'italic' } as const
+const EMPTY_STATE_CONTAINER_STYLE = { color: 'var(--s-text-dim)' } as const
+const EMPTY_STATE_ICON_STYLE = { fontSize: 22, opacity: 0.4 } as const
+const EMPTY_STATE_TEXT_STYLE = { fontSize: 12 } as const
+
 export function Group({
   config, count, subtitle, children,
 }: { config: GroupConfig; count: number; subtitle?: string; children: React.ReactNode }) {
@@ -18,7 +23,7 @@ export function Group({
           fontFamily: 'var(--s-mono)', fontSize: 10, fontWeight: 600,
           color: config.color, opacity: 0.7,
         }}>{count}</span>
-        <span style={{ fontSize: 10, color: 'var(--s-text-dim)', fontStyle: 'italic' }}>{subtitle ?? config.subtitle}</span>
+        <span style={GROUP_SUBTITLE_STYLE}>{subtitle ?? config.subtitle}</span>
       </div>
       <div className="flex flex-col gap-1">
         {children}
@@ -29,9 +34,9 @@ export function Group({
 
 export function EmptyState({ icon, text }: { icon: string; text: string }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-2" style={{ color: 'var(--s-text-dim)' }}>
-      <span style={{ fontSize: 22, opacity: 0.4 }}>{icon}</span>
-      <span style={{ fontSize: 12 }}>{text}</span>
+    <div className="flex flex-1 flex-col items-center justify-center gap-2" style={EMPTY_STATE_CONTAINER_STYLE}>
+      <span style={EMPTY_STATE_ICON_STYLE}>{icon}</span>
+      <span style={EMPTY_STATE_TEXT_STYLE}>{text}</span>
     </div>
   )
 }

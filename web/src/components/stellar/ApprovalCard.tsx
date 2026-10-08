@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import type { StellarAction } from '../../types/stellar'
 
+const APPROVAL_CARD_CONTAINER_STYLE = { background: 'var(--s-surface-2)', border: '1px solid var(--s-warning)', borderRadius: 'var(--s-r)' } as const
+const APPROVAL_CARD_TEXT_STYLE = { color: 'var(--s-text)' } as const
+const APPROVAL_CARD_META_STYLE = { fontFamily: 'var(--s-mono)', color: 'var(--s-text-muted)' } as const
+const APPROVAL_CARD_ERROR_STYLE = { color: 'var(--s-critical)' } as const
+
 export function ApprovalCard({
   action,
   onApprove,
@@ -13,9 +18,9 @@ export function ApprovalCard({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   return (
-    <div className="mb-1 px-2.5 py-2" style={{ background: 'var(--s-surface-2)', border: '1px solid var(--s-warning)', borderRadius: 'var(--s-r)' }}>
-      <div className="mb-1 text-xs font-semibold" style={{ color: 'var(--s-text)' }}>{action.description}</div>
-      <div className="mb-2 text-[10px]" style={{ fontFamily: 'var(--s-mono)', color: 'var(--s-text-muted)' }}>
+    <div className="mb-1 px-2.5 py-2" style={APPROVAL_CARD_CONTAINER_STYLE}>
+      <div className="mb-1 text-xs font-semibold" style={APPROVAL_CARD_TEXT_STYLE}>{action.description}</div>
+      <div className="mb-2 text-[10px]" style={APPROVAL_CARD_META_STYLE}>
         {action.actionType} · {action.cluster}{action.namespace ? `/${action.namespace}` : ''}
       </div>
       <div className="flex gap-1.5">
@@ -44,7 +49,7 @@ export function ApprovalCard({
           Reject
         </button>
       </div>
-      {error && <div className="mt-1.5 text-[11px]" style={{ color: 'var(--s-critical)' }}>{error}</div>}
+      {error && <div className="mt-1.5 text-[11px]" style={APPROVAL_CARD_ERROR_STYLE}>{error}</div>}
     </div>
   )
 }
