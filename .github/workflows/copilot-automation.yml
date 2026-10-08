@@ -18,6 +18,9 @@ concurrency:
 
 jobs:
   copilot-automation:
+    # Guard against the shared workflow's substring identity check ("copilot"/"[bot]"):
+    # only call it for manual dispatch or the exact Copilot coding agent login.
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.user.login == 'Copilot'
     permissions:
       contents: read
       pull-requests: write
