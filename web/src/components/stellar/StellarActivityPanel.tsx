@@ -21,6 +21,9 @@ interface Props {
   onOpenEvent?: (eventId: string, entry: StellarActivity) => void
 }
 
+const FLEX_SHRINK_0_STYLE = { flexShrink: 0 } as const
+const FLEX_SPACER_STYLE = { flex: 1 } as const
+
 const KIND_LABEL: Record<string, { label: string; icon: string; color: string }> = {
   // Autonomous-solve narrative beats (Stellar v2):
   critical_event:      { label: 'Critical event',   icon: '🚨', color: 'var(--s-critical)' },
@@ -69,7 +72,7 @@ export function StellarActivityPanel({ activity, onOpenEvent }: Props) {
     : activity.filter(a => a.kind !== 'evaluated' && a.kind !== 'diagnosed')
 
   return (
-    <div style={{ flexShrink: 0 }}>
+    <div style={FLEX_SHRINK_0_STYLE}>
       <div
         onClick={() => setCollapsed(c => !c)}
         className="flex items-center gap-1.5 px-3 py-2"
@@ -94,7 +97,7 @@ export function StellarActivityPanel({ activity, onOpenEvent }: Props) {
         >
           {activity.length}
         </span>
-        <div style={{ flex: 1 }} />
+        <div style={FLEX_SPACER_STYLE} />
         <span style={{ fontSize: 10, color: 'var(--s-text-dim)' }}>{collapsed ? '▾' : '▴'}</span>
       </div>
 
