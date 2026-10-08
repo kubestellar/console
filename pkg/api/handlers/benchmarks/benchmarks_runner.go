@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubestellar/console/pkg/api/handlers/internal/httputil"
 	"github.com/kubestellar/console/pkg/safego"
 
 	"gopkg.in/yaml.v3"
@@ -77,39 +78,34 @@ func (h *BenchmarkHandlers) driveGet(ctx context.Context, url string) (*http.Res
 
 // driveGetWithRetry performs an HTTP GET with throttling and retry on 403 errors.
 func (h *BenchmarkHandlers) driveGetWithRetry(ctx context.Context, url string) (*http.Response, error) {
-	var lastErr error
-	for attempt := 0; attempt <= driveMaxRetries; attempt++ {
-		if err := ctx.Err(); err != nil {
-			return nil, err
-		}
-		if attempt > 0 {
-			backoff := driveRetryBaseDelay * time.Duration(1<<(attempt-1))
+	cfg := httputil.RetryConfig{
+		MaxAttempts: driveMaxRetries + 1,
+		BaseDelay:   driveRetryBaseDelay,
+		OnRetry: func(attempt int, backoff time.Duration) {
 			slog.Info("[benchmarks] retrying", "backoff", backoff, "attempt", attempt, "maxRetries", driveMaxRetries)
-			select {
-			case <-time.After(backoff):
-			case <-ctx.Done():
-				return nil, ctx.Err()
+		},
+	}
+	return httputil.DoWithRetry(ctx, cfg,
+		func() (*http.Response, error) { return h.driveGet(ctx, url) },
+		func(resp *http.Response, err error) httputil.RetryDecision {
+			if err != nil {
+				return httputil.RetryDecision{Retry: true, Err: fmt.Errorf("HTTP error: %w", err)}
 			}
-		}
-		resp, err := h.driveGet(ctx, url)
-		if err != nil {
-			lastErr = fmt.Errorf("HTTP error: %w", err)
-			continue
-		}
-		if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests {
+			if resp.StatusCode != http.StatusForbidden && resp.StatusCode != http.StatusTooManyRequests {
+				return httputil.RetryDecision{}
+			}
+			var retryErr error
 			func() {
 				defer resp.Body.Close()
 				body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxBenchmarkReportBytes))
 				if readErr != nil {
 					body = []byte("(failed to read response body)")
 				}
-				lastErr = fmt.Errorf("Drive API returned %d: %s", resp.StatusCode, string(body))
+				retryErr = fmt.Errorf("Drive API returned %d: %s", resp.StatusCode, string(body))
 			}()
-			continue
-		}
-		return resp, nil
-	}
-	return nil, lastErr
+			return httputil.RetryDecision{Retry: true, Err: retryErr}
+		},
+	)
 }
 
 // fetchRunFolderStreaming delegates to fetchRunFolder and calls onReport for each
