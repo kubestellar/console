@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+
+	"github.com/kubestellar/console/pkg/api/handlers/internal/httputil"
 )
 
 type ghpJobsResponse struct {
@@ -58,50 +60,34 @@ func (h *GitHubPipelinesHandler) ghGet(ctx context.Context, path string) (*http.
 // dashboard fails immediately on rate-limit errors even though the 5000/hour
 // limit is temporary; a few retries usually succeed.
 func (h *GitHubPipelinesHandler) ghGetWithRetry(ctx context.Context, path string) (*http.Response, error) {
-	var lastResp *http.Response
-	var lastErr error
-	for attempt := 1; attempt <= GH_RETRY_MAX_ATTEMPTS; attempt++ {
-		resp, err := h.ghGet(ctx, path)
-		if err != nil {
-			return nil, err
-		}
-		if resp.StatusCode != http.StatusForbidden && resp.StatusCode != http.StatusTooManyRequests {
-			return resp, nil
-		}
-		lastErr = fmt.Errorf("github rate-limited (status %d)", resp.StatusCode)
-		if attempt == GH_RETRY_MAX_ATTEMPTS {
-			lastResp = resp
-			break
-		}
-		backoff := time.Duration(GH_RETRY_BASE_DELAY_MS*(1<<(attempt-1))) * time.Millisecond
-		maxBackoff := time.Duration(GH_RETRY_MAX_DELAY_MS) * time.Millisecond
-		if ra := resp.Header.Get("Retry-After"); ra != "" {
-			if secs, parseErr := strconv.Atoi(strings.TrimSpace(ra)); parseErr == nil && secs > 0 {
-				backoff = time.Duration(secs) * time.Second
+	cfg := httputil.RetryConfig{
+		MaxAttempts:       GH_RETRY_MAX_ATTEMPTS,
+		BaseDelay:         time.Duration(GH_RETRY_BASE_DELAY_MS) * time.Millisecond,
+		MaxDelay:          time.Duration(GH_RETRY_MAX_DELAY_MS) * time.Millisecond,
+		RespectRetryAfter: true,
+		OnRetry: func(attempt int, backoff time.Duration) {
+			slog.Info("[github-pipelines] retrying after rate-limit",
+				"path", path,
+				"attempt", attempt,
+				"maxAttempts", GH_RETRY_MAX_ATTEMPTS,
+				"backoff", backoff,
+			)
+		},
+	}
+	return httputil.DoWithRetry(ctx, cfg,
+		func() (*http.Response, error) { return h.ghGet(ctx, path) },
+		func(resp *http.Response, err error) httputil.RetryDecision {
+			if err != nil {
+				return httputil.RetryDecision{Retry: false, Err: err}
 			}
-		}
-		if backoff > maxBackoff {
-			backoff = maxBackoff
-		}
-		slog.Info("[github-pipelines] retrying after rate-limit",
-			"path", path,
-			"status", resp.StatusCode,
-			"attempt", attempt,
-			"maxAttempts", GH_RETRY_MAX_ATTEMPTS,
-			"backoff", backoff,
-		)
-		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<20))
-		resp.Body.Close()
-		select {
-		case <-time.After(backoff):
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		}
-	}
-	if lastResp != nil {
-		lastResp.Body.Close()
-	}
-	return nil, lastErr
+			if resp.StatusCode != http.StatusForbidden && resp.StatusCode != http.StatusTooManyRequests {
+				return httputil.RetryDecision{}
+			}
+			_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<20))
+			resp.Body.Close()
+			return httputil.RetryDecision{Retry: true, Err: fmt.Errorf("github rate-limited (status %d)", resp.StatusCode)}
+		},
+	)
 }
 
 func (h *GitHubPipelinesHandler) fetchRuns(ctx context.Context, repo, query string) ([]ghpWorkflowRun, error) {
