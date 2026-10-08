@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	fakek8s "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
@@ -29,9 +30,21 @@ func TestMetricsHistory(t *testing.T) {
 	mh := NewMetricsHistory(m, tmpDir)
 
 	// 3. Test CaptureNow
+	InitPredictionMetrics()
+	before := testutil.ToFloat64(metricsSnapshotsTotal)
+
 	err := mh.CaptureNow()
 	if err != nil {
 		t.Fatalf("CaptureNow failed: %v", err)
+	}
+
+	// kc_metrics_snapshots_total must increment on every completed capture
+	// cycle — this counter was previously defined but never wired into
+	// captureSnapshot(), so it always reported 0 regardless of how many
+	// snapshots the background loop actually took.
+	after := testutil.ToFloat64(metricsSnapshotsTotal)
+	if after != before+1 {
+		t.Errorf("expected kc_metrics_snapshots_total to increment by 1, got %v -> %v", before, after)
 	}
 
 	resp := mh.GetSnapshots()
