@@ -2,6 +2,10 @@ import type { StellarWatch } from '../../../types/stellar'
 import { Tag } from './WatchDetailPrimitives'
 import { formatDuration } from './helpers'
 
+const HEADER_CLOSE_BUTTON_STYLE = { background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: 'var(--s-text-dim)' } as const
+
+const HEADER_TITLE_STYLE = { fontSize: 16, fontWeight: 600, lineHeight: 1.3 } as const
+
 interface WatchDetailHeaderProps {
   watch: StellarWatch
   titleId: string
@@ -32,7 +36,7 @@ export function WatchDetailHeader({
           <div className="mb-1" style={{ fontSize: 10, fontFamily: 'var(--s-mono)', color: 'var(--s-text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
             Watch · {watch.resourceKind} · watching for {formatDuration(watchAgeMs)}
           </div>
-          <div id={titleId} style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.3 }}>
+          <div id={titleId} style={HEADER_TITLE_STYLE}>
             {watch.namespace}/{watch.resourceName}
           </div>
           <div className="mt-1" style={{ fontSize: 11, fontFamily: 'var(--s-mono)', color: 'var(--s-text-muted)' }}>
@@ -42,7 +46,7 @@ export function WatchDetailHeader({
         <button
           onClick={onClose}
           className="p-0.5"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: 'var(--s-text-dim)' }}
+          style={HEADER_CLOSE_BUTTON_STYLE}
           title="Close (Esc)"
           aria-label="Close"
         >✕</button>
