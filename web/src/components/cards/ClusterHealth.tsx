@@ -288,6 +288,7 @@ export function ClusterHealth() {
         networkOfflineClusters={networkOfflineClusters}
         federationHubs={federation.hubs}
         federationClusters={federation.clusters}
+        isDemoData={isDemoMode || shouldShowDemoFallback}
       />
       )}
 
