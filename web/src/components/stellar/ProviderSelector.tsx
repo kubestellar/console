@@ -6,6 +6,9 @@ import { useMissions } from '../../hooks/useMissions'
 import { AgentIcon } from '../agent/AgentIcon'
 import type { ProviderSession } from '../../types/stellar'
 
+const PROVIDER_DIM_TEXT_STYLE = { color: 'var(--s-text-dim)' } as const
+const PROVIDER_ROOT_STYLE = { position: 'relative' } as const
+
 const PROVIDER_LABEL_STYLE = { fontWeight: 600 } as const
 
 const PROVIDER_SUBLABEL_STYLE = {
@@ -111,7 +114,7 @@ export function ProviderSelector({ session, onSelect }: Props) {
   }, [session, cliOptions, stellarProviders])
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div style={PROVIDER_ROOT_STYLE}>
       <button
         id="stellar-provider-selector-btn"
         onClick={() => setOpen(v => !v)}
@@ -165,7 +168,7 @@ export function ProviderSelector({ session, onSelect }: Props) {
           {/* CLI Agents — same providers that power AI Missions */}
           {cliOptions.length > 0 && (
             <>
-              <div className="mt-1 px-2 pb-0.5 pt-1.5 text-[10px] font-bold uppercase tracking-[0.08em]" style={{ color: 'var(--s-text-dim)' }}>
+              <div className="mt-1 px-2 pb-0.5 pt-1.5 text-[10px] font-bold uppercase tracking-[0.08em]" style={PROVIDER_DIM_TEXT_STYLE}>
                 CLI Agents
               </div>
               {cliOptions.map(opt => {
@@ -212,7 +215,7 @@ export function ProviderSelector({ session, onSelect }: Props) {
                 LLM Providers
               </div>
               {isLoadingProviders ? (
-                <div className="flex items-center gap-2 px-2 py-2.5 text-[11px]" style={{ color: 'var(--s-text-dim)' }}>
+                <div className="flex items-center gap-2 px-2 py-2.5 text-[11px]" style={PROVIDER_DIM_TEXT_STYLE}>
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   <span>{t('loading', 'Loading…')}</span>
                 </div>
@@ -265,7 +268,7 @@ export function ProviderSelector({ session, onSelect }: Props) {
           )}
 
           {cliOptions.length === 0 && !isLoadingProviders && !providersError && stellarProviders.length === 0 && (
-            <div className="px-2 py-2.5 text-center text-[11px]" style={{ color: 'var(--s-text-dim)' }}>
+            <div className="px-2 py-2.5 text-center text-[11px]" style={PROVIDER_DIM_TEXT_STYLE}>
               No providers detected. Configure an AI agent in the toolbar above.
             </div>
           )}
