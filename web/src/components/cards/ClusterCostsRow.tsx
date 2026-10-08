@@ -45,6 +45,7 @@ export function ClusterCostsRow({
   return (
     <div
       role="button"
+      aria-label={t('cards:clusterCosts.viewClusterCostsAria', { cluster: cluster.name })}
       tabIndex={0}
       onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onDrillDown(cluster) } }}
       onClick={() => onDrillDown(cluster)}

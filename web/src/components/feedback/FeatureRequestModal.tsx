@@ -86,7 +86,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
       isOpen={isOpen}
       onClose={close.handleClose}
       size="lg"
-      closeOnBackdrop={true}
+      closeOnBackdrop={false}
       closeOnEscape={true}
       className="h-auto max-h-[min(90vh,calc(100vh-2rem))]! lg:h-[80vh]!"
     >

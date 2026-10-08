@@ -2016,6 +2016,7 @@
     "chatSubmitted": "Question submitted successfully"
   },
   "clusterCosts": {
+    "viewClusterCostsAria": "View cost details for cluster {{cluster}}",
     "title": "Cluster Costs",
     "viewPricingRates": "View pricing rates",
     "pricingSettings": "Pricing settings",
