@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { StellarSolve, StellarSolveProgress } from '../../types/stellar'
 
+const WARNING_TEXT_STYLE = { color: 'var(--s-warning)' } as const
+
 const SOLVE_BODY_TEXT_STYLE = {
   fontSize: 12,
   color: 'var(--s-text)',
@@ -106,7 +108,7 @@ export function SolveEscalatedCard({ solve, onDismiss }: {
           <div>actions taken: {solve.actionsTaken}</div>
           <div>started: {new Date(solve.startedAt).toLocaleString()}</div>
           {solve.endedAt && <div>ended: {new Date(solve.endedAt).toLocaleString()}</div>}
-          {solve.error && <div style={{ color: 'var(--s-warning)' }}>error: {solve.error}</div>}
+          {solve.error && <div style={WARNING_TEXT_STYLE}>error: {solve.error}</div>}
         </div>
       )}
     </div>

@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next'
 import type { StellarNotification, StellarSolve } from '../../types/stellar'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 
+const TEXT_MUTED_STYLE = { color: 'var(--s-text-muted)' } as const
+
 interface DigestCardProps {
   notification: StellarNotification
   solves: StellarSolve[]
@@ -118,7 +120,7 @@ function DigestGroup({
               cursor: item.eventId ? 'pointer' : 'default', color: 'var(--s-text)',
             }}
           >
-            <span className="font-mono text-xs" style={{ color: 'var(--s-text-muted)' }}>
+            <span className="font-mono text-xs" style={TEXT_MUTED_STYLE}>
               {item.cluster}/{item.namespace}
             </span>
             <span style={{ fontWeight: 600 }}>{item.workload || '—'}</span>

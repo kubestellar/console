@@ -28,6 +28,8 @@ import { CHART_PRESETS, resolveInitialChartKey } from './ParetoFrontier.presets'
 import { FilterDropdown, Toggle } from './ParetoFrontier.controls'
 import { useParetoFrontierChartOption } from './useParetoFrontierChartOption'
 
+const THIN_SCROLLBAR_STYLE = { scrollbarWidth: 'thin' } as const
+
 const LEGEND_PANEL_WIDTH_PX = 130
 
 // ---------------------------------------------------------------------------
@@ -256,7 +258,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
         {/* Right legend panel */}
         <div className="shrink-0 flex flex-col" style={{ width: LEGEND_PANEL_WIDTH_PX }}>
           {/* Hardware series list */}
-          <div className="flex-1 overflow-y-auto space-y-px" style={{ scrollbarWidth: 'thin' }}>
+          <div className="flex-1 overflow-y-auto space-y-px" style={THIN_SCROLLBAR_STYLE}>
             {legendItems.map(({ hw, color }) => {
               const hidden = hiddenHw.has(hw)
               return (
