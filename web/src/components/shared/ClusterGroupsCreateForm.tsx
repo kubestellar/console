@@ -12,6 +12,7 @@ import {
 import { GROUP_COLORS } from '../cards/ClusterGroups.constants'
 import { StaticClusterPicker, QueryBuilder, AIAssistant } from './ClusterGroupsFormFields'
 import { Input } from '../ui/Input'
+import { useToast } from '../ui/Toast'
 
 // Form sub-component for ClusterGroups card.
 // demoData-exempt: demo data and loading state are handled by the parent ClusterGroups card.
@@ -30,6 +31,7 @@ interface CreateGroupFormProps {
 export function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, onCancel }: CreateGroupFormProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { previewQuery, generateAIQuery } = useClusterGroups()
+  const { showToast } = useToast()
   const [name, setName] = useState('')
   const [selectedColor, setSelectedColor] = useState('blue')
   const [kind, setKind] = useState<ClusterGroupKind>('static')
@@ -142,6 +144,7 @@ export function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, o
         query: buildQuery(),
         lastEvaluated: previewClusters ? new Date().toISOString() : undefined })
     }
+    showToast(`Cluster group "${name.trim()}" created`, 'success')
   }
 
   return (
