@@ -10,79 +10,30 @@ import { useGameKeyTracking } from '../../hooks/useGameKeys'
 import { safeGet, safeSet } from '../../lib/safeLocalStorage'
 import { isDemoMode } from '@/lib/demoMode'
 
-// Game constants
-const CANVAS_WIDTH = 480
-const CANVAS_HEIGHT = 320
-const TILE_SIZE = 32
-const GRAVITY = 0.5
-const JUMP_FORCE = -12
-const MOVE_SPEED = 4
-const PLAYER_SIZE = 28
-/** Number of frames of invincibility after spawning (prevents instant death at start) */
-const INVINCIBILITY_FRAMES = 90
-
-// Tile types
-const EMPTY = 0
-const BRICK = 1
-const QUESTION = 2
-const GROUND = 3
-const PIPE = 4
-const COIN = 5
-const GOOMBA = 6
-const FLAG = 7
-
-// Colors
-const COLORS = {
-  sky: '#5c94fc',
-  brick: '#b85820',
-  question: '#ffa000',
-  ground: '#8b4513',
-  pipe: '#00a000',
-  coin: '#ffd700',
-  player: '#ff6b35',
-  goomba: '#8b4513',
-  flag: '#00ff00' }
-
-// Level data (15 columns x 10 rows)
-const LEVEL_DATA = [
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7],
-  [0, 0, 0, 0, 2, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0],
-  [0, 0, 0, 6, 0, 6, 0, 0, 0, 0, 0, 0, 0, 4, 4],
-  [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
-  [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
-]
-
-interface Player {
-  x: number
-  y: number
-  vx: number
-  vy: number
-  onGround: boolean
-  facingRight: boolean
-}
-
-interface Enemy {
-  x: number
-  y: number
-  vx: number
-  type: number
-  alive: boolean
-}
-
-interface Coin {
-  x: number
-  y: number
-  collected: boolean
-}
-
-// High-score storage key — safeGet/safeSet tolerate private-mode
-// browsers where localStorage access throws (issue #8938).
-const POD_BROTHERS_HIGHSCORE_KEY = 'podBrothersHighScore'
+import {
+  CANVAS_WIDTH,
+  CANVAS_HEIGHT,
+  TILE_SIZE,
+  GRAVITY,
+  JUMP_FORCE,
+  MOVE_SPEED,
+  PLAYER_SIZE,
+  INVINCIBILITY_FRAMES,
+  EMPTY,
+  BRICK,
+  QUESTION,
+  GROUND,
+  PIPE,
+  COIN,
+  GOOMBA,
+  FLAG,
+  LEVEL_DATA,
+  POD_BROTHERS_HIGHSCORE_KEY,
+  type Player,
+  type Enemy,
+  type Coin,
+} from './PodBrothers.constants'
+import { drawPodBrothersFrame } from './PodBrothers.draw'
 
 export function PodBrothers() {
   const { t } = useTranslation('cards')
@@ -360,107 +311,14 @@ export function PodBrothers() {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    // Clear and draw sky
-    ctx.fillStyle = COLORS.sky
-    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
-
-    // Draw tiles
-    for (let row = 0; row < levelRef.current.length; row++) {
-      for (let col = 0; col < levelRef.current[row].length; col++) {
-        const tile = levelRef.current[row][col]
-        const x = col * TILE_SIZE
-        const y = row * TILE_SIZE
-
-        if (tile === BRICK) {
-          ctx.fillStyle = COLORS.brick
-          ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE)
-          ctx.strokeStyle = '#000'
-          ctx.strokeRect(x, y, TILE_SIZE, TILE_SIZE)
-          // Brick pattern
-          ctx.beginPath()
-          ctx.moveTo(x + TILE_SIZE / 2, y)
-          ctx.lineTo(x + TILE_SIZE / 2, y + TILE_SIZE)
-          ctx.moveTo(x, y + TILE_SIZE / 2)
-          ctx.lineTo(x + TILE_SIZE, y + TILE_SIZE / 2)
-          ctx.stroke()
-        } else if (tile === QUESTION) {
-          ctx.fillStyle = COLORS.question
-          ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE)
-          ctx.strokeStyle = '#000'
-          ctx.strokeRect(x, y, TILE_SIZE, TILE_SIZE)
-          ctx.fillStyle = '#fff'
-          ctx.font = 'bold 20px sans-serif'
-          ctx.textAlign = 'center'
-          ctx.fillText('?', x + TILE_SIZE / 2, y + TILE_SIZE - 8)
-        } else if (tile === GROUND) {
-          ctx.fillStyle = COLORS.ground
-          ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE)
-        } else if (tile === PIPE) {
-          ctx.fillStyle = COLORS.pipe
-          ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE)
-          ctx.fillStyle = '#00c000'
-          ctx.fillRect(x + 2, y, TILE_SIZE - 4, TILE_SIZE)
-        } else if (tile === FLAG) {
-          // Flag pole
-          ctx.fillStyle = '#888'
-          ctx.fillRect(x + TILE_SIZE / 2 - 2, y, 4, TILE_SIZE * 2)
-          // Flag
-          ctx.fillStyle = COLORS.flag
-          ctx.beginPath()
-          ctx.moveTo(x + TILE_SIZE / 2 + 2, y + 4)
-          ctx.lineTo(x + TILE_SIZE, y + TILE_SIZE / 2)
-          ctx.lineTo(x + TILE_SIZE / 2 + 2, y + TILE_SIZE - 4)
-          ctx.fill()
-        }
-      }
-    }
-
-    // Draw coins
-    coinsRef.current.forEach(coin => {
-      if (coin.collected) return
-      ctx.fillStyle = COLORS.coin
-      ctx.beginPath()
-      ctx.arc(coin.x, coin.y, 10, 0, Math.PI * 2)
-      ctx.fill()
-      ctx.strokeStyle = '#c90'
-      ctx.lineWidth = 2
-      ctx.stroke()
-      ctx.lineWidth = 1
-    })
-
-    // Draw enemies
-    enemiesRef.current.forEach(enemy => {
-      if (!enemy.alive) return
-      ctx.fillStyle = COLORS.goomba
-      ctx.fillRect(enemy.x + 4, enemy.y + 4, TILE_SIZE - 8, TILE_SIZE - 4)
-      // Eyes
-      ctx.fillStyle = '#fff'
-      ctx.fillRect(enemy.x + 8, enemy.y + 10, 6, 6)
-      ctx.fillRect(enemy.x + TILE_SIZE - 14, enemy.y + 10, 6, 6)
-      ctx.fillStyle = '#000'
-      ctx.fillRect(enemy.x + 10, enemy.y + 12, 3, 3)
-      ctx.fillRect(enemy.x + TILE_SIZE - 12, enemy.y + 12, 3, 3)
-    })
-
-    // Draw player (Pod) — blink every 4 frames during invincibility for visual feedback
-    const player = playerRef.current
-    const BLINK_INTERVAL = 4
-    const isInvincible = invincibilityRef.current > 0
-    const shouldDraw = !isInvincible || Math.floor(invincibilityRef.current / BLINK_INTERVAL) % 2 === 0
-
-    if (shouldDraw) {
-      ctx.fillStyle = COLORS.player
-      ctx.fillRect(player.x, player.y, PLAYER_SIZE, PLAYER_SIZE)
-      // Pod logo (circle)
-      ctx.fillStyle = '#fff'
-      ctx.beginPath()
-      ctx.arc(player.x + PLAYER_SIZE / 2, player.y + PLAYER_SIZE / 2, 8, 0, Math.PI * 2)
-      ctx.fill()
-      // Eyes
-      const eyeOffset = player.facingRight ? 4 : -4
-      ctx.fillStyle = '#000'
-      ctx.fillRect(player.x + PLAYER_SIZE / 2 + eyeOffset - 2, player.y + 6, 4, 4)
-    }
+    drawPodBrothersFrame(
+      ctx,
+      levelRef.current,
+      coinsRef.current,
+      enemiesRef.current,
+      playerRef.current,
+      invincibilityRef.current,
+    )
   }, [])
 
   // Game loop

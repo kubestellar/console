@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { Send, Copy, Trash2, ChevronDown, Sparkles, FileCode, History, Loader2 } from 'lucide-react'
+import { Send, ChevronDown, Loader2 } from 'lucide-react'
 import { TRANSITION_DELAY_MS } from '../../lib/constants/network'
 import { useKubectl } from '../../hooks/useKubectl'
 import { useClusters } from '../../hooks/useMCP'
@@ -16,6 +16,9 @@ import { YAMLEditorPanel } from './KubectlYAMLEditorPanel'
 import { CommandHistoryPanel } from './KubectlHistoryPanel'
 import { DEMO_COMMAND_HISTORY, DEMO_YAML_MANIFESTS } from './Kubectl.demo'
 import { useKubectlCommandHistory } from './useKubectlCommandHistory'
+import { KubectlToolbar } from './KubectlToolbar'
+import { KubectlTerminalOutput } from './KubectlTerminalOutput'
+import { KubectlQuickActions } from './KubectlQuickActions'
 
 export function Kubectl() {
   const { t } = useTranslation(['common', 'cards'])
@@ -311,45 +314,15 @@ export function Kubectl() {
             </select>
           )}
         </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setShowAI(!showAI)}
-            className={cn(
-              'p-1.5 rounded-lg transition-colors',
-              showAI ? 'bg-purple-500/20 text-purple-400' : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
-            )}
-            title={t('cards:kubectl.aiAssist')}
-          >
-            <Sparkles className="w-4 h-4" />
-          </button>
-          <button
-            onClick={toggleYAMLEditor}
-            className={cn(
-              'p-1.5 rounded-lg transition-colors',
-              showYAMLEditor ? 'bg-blue-500/20 text-blue-400' : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
-            )}
-            title={t('cards:kubectl.yamlEditor')}
-          >
-            <FileCode className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setShowHistory(!showHistory)}
-            className={cn(
-              'p-1.5 rounded-lg transition-colors',
-              showHistory ? 'bg-orange-500/20 text-orange-400' : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
-            )}
-            title={t('cards:kubectl.history')}
-          >
-            <History className="w-4 h-4" />
-          </button>
-          <button
-            onClick={clearOutput}
-            className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
-            title={t('cards:kubectl.clearOutput')}
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
+        <KubectlToolbar
+          showAI={showAI}
+          showYAMLEditor={showYAMLEditor}
+          showHistory={showHistory}
+          onToggleAI={() => setShowAI(!showAI)}
+          onToggleYAMLEditor={toggleYAMLEditor}
+          onToggleHistory={() => setShowHistory(!showHistory)}
+          onClearOutput={clearOutput}
+        />
       </div>
 
       {/* AI Assistant Panel */}
@@ -393,44 +366,7 @@ export function Kubectl() {
       )}
 
       {/* Terminal Output */}
-      <div
-        ref={outputRef}
-        className="flex-1 font-mono text-xs bg-black/30 rounded-lg p-3 overflow-y-auto mb-3 min-h-0"
-      >
-        {output.length === 0 ? (
-          <div className="text-muted-foreground/50 whitespace-pre">
-            <p>{t('cards:kubectl.terminalReady')}</p>
-            <p className="mt-2">{t('cards:kubectl.examples')}</p>
-            <p className="ml-4">  {t('cards:kubectl.exampleGetPods')}</p>
-            <p className="ml-4">  {t('cards:kubectl.exampleGetDeployments')}</p>
-            <p className="ml-4">  {t('cards:kubectl.exampleDescribePod')}</p>
-            <p className="ml-4">  {t('cards:kubectl.exampleLogs')}</p>
-          </div>
-        ) : (
-          output.map((line, idx) => {
-            const isCommand = line.startsWith('$')
-            const isError = line.startsWith('Error:')
-            const isAI = line.startsWith('AI:')
-            const isEmpty = line === ''
-            // Show a subtle separator for empty lines between command blocks
-            if (isEmpty) {
-              return <div key={idx} className="h-2 border-b border-border/10 mb-2" />
-            }
-            return (
-              <pre
-                key={idx}
-                className={cn(
-                  'whitespace-pre-wrap wrap-break-word m-0 py-0 leading-snug',
-                  isCommand && 'text-green-400 font-semibold bg-green-500/5 -mx-1 px-1 rounded mt-1 py-0.5 border-l-2 border-green-500/40',
-                  isError && 'text-red-400 bg-red-500/5 -mx-1 px-1 rounded',
-                  isAI && 'text-purple-400',
-                  !isCommand && !isError && !isAI && 'text-foreground/90'
-                )}
-              >{line}</pre>
-            )
-          })
-        )}
-      </div>
+      <KubectlTerminalOutput outputRef={outputRef} output={output} />
 
       {/* Command Input */}
       <div className="flex gap-2">
@@ -512,41 +448,11 @@ export function Kubectl() {
       </div>
 
       {/* Quick Actions */}
-      <div className="mt-3 pt-3 border-t border-border/50 flex flex-wrap gap-2">
-        <span className="text-xs text-muted-foreground">{t('cards:kubectl.quickCommands')}:</span>
-        <button
-          onClick={() => setCommand('get pods --all-namespaces')}
-          className="px-2 py-1 text-2xs rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground"
-        >
-          {t('cards:kubectl.listPods')}
-        </button>
-        <button
-          onClick={() => setCommand('get deployments')}
-          className="px-2 py-1 text-2xs rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground"
-        >
-          {t('common:common.deployments')}
-        </button>
-        <button
-          onClick={() => setCommand('get services')}
-          className="px-2 py-1 text-2xs rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground"
-        >
-          {t('common:common.services')}
-        </button>
-        <button
-          onClick={() => setCommand('get nodes')}
-          className="px-2 py-1 text-2xs rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground"
-        >
-          {t('common:common.nodes')}
-        </button>
-        <button
-          onClick={copyOutput}
-          disabled={output.length === 0}
-          className="px-2 py-1 text-2xs rounded bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground disabled:opacity-50"
-        >
-          <Copy className="w-3 h-3 inline mr-1" />
-          {t('cards:kubectl.copyOutput')}
-        </button>
-      </div>
+      <KubectlQuickActions
+        hasOutput={output.length > 0}
+        onSetCommand={setCommand}
+        onCopyOutput={copyOutput}
+      />
     </div>
   )
 }

@@ -145,6 +145,7 @@ const ARCADE_GAME_FILES = new Set([
   'KubeGalaga.constants.ts', 'KubeGalaga.draw.ts',
   'MissileCommand.draw.ts',
   'NodeInvaders.constants.ts', 'NodeInvaders.draw.ts',
+  'PodBrothers.constants.ts', 'PodBrothers.draw.ts',
 ])
 
 /** Categories of detected violations */
