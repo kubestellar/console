@@ -1,0 +1,1 @@
+- Wire the previously-unused `kc_metrics_snapshots_total` counter into the agent's background metrics-history capture loop so `/metrics` reports actual snapshot activity instead of always `0`

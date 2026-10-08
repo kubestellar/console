@@ -324,6 +324,14 @@ func (mh *MetricsHistory) captureSnapshot() error {
 	// saves without holding mh.mu during the actual file I/O.
 	mh.saveToDisk()
 
+	// Record the capture in the kc_metrics_snapshots_total counter. This
+	// counter and RecordMetricsSnapshot() have existed since the metrics
+	// were defined (pkg/agent/workers/prediction_metrics.go) but were never
+	// wired into the actual capture loop, so /metrics always reported 0
+	// snapshots despite this loop running continuously on its own ticker
+	// (Start/runLoop) outside any HTTP request path.
+	RecordMetricsSnapshot()
+
 	slog.Info("[MetricsHistory] captured snapshot", "clusters", len(snapshot.Clusters), "podIssues", len(snapshot.PodIssues), "gpuNodes", len(snapshot.GPUNodes))
 
 	return nil
