@@ -1,6 +1,8 @@
 updates:
 - commit-message:
     prefix: chore(deps)
+  cooldown:
+    default-days: 7
   directory: /
   labels:
   - dependencies
@@ -14,6 +16,8 @@ updates:
     interval: weekly
 - commit-message:
     prefix: chore(deps)
+  cooldown:
+    default-days: 7
   directory: /web
   ignore:
   - dependency-name: "@playwright/test" # Pinned to 1.61.1 — later releases regress macOS WebKit (PushAPIEnabled protocol error, see #22334/#23548). Do not bump until upstream ships a fix.
@@ -31,6 +35,8 @@ updates:
     interval: weekly
 - commit-message:
     prefix: chore(deps)
+  cooldown:
+    default-days: 7
   directory: /.github/ga4-scripts
   labels:
   - dependencies
@@ -44,6 +50,8 @@ updates:
     interval: weekly
 - commit-message:
     prefix: chore(deps)
+  cooldown:
+    default-days: 7
   directory: /.github/guardrails-scripts
   labels:
   - dependencies
@@ -57,6 +65,8 @@ updates:
     interval: weekly
 - commit-message:
     prefix: chore(deps)
+  cooldown:
+    default-days: 7
   directory: /.github/kb-scripts
   labels:
   - dependencies
@@ -70,6 +80,8 @@ updates:
     interval: weekly
 - commit-message:
     prefix: chore(deps)
+  cooldown:
+    default-days: 7
   directory: /
   groups:
     codeql-action:
@@ -90,6 +102,8 @@ updates:
     interval: weekly
 - commit-message:
     prefix: chore(deps)
+  cooldown:
+    default-days: 7
   directory: /
   labels:
   - dependencies
@@ -103,6 +117,8 @@ updates:
     interval: weekly
 - commit-message:
     prefix: chore(deps)
+  cooldown:
+    default-days: 7
   directory: /cmd/kc-agent
   labels:
   - dependencies
@@ -116,6 +132,8 @@ updates:
     interval: weekly
 - commit-message:
     prefix: chore(deps)
+  cooldown:
+    default-days: 7
   directory: /.github
   labels:
   - dependencies
