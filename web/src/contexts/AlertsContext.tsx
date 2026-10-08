@@ -10,11 +10,7 @@ import { settledWithConcurrency } from '../lib/utils/concurrency'
 import { useMissions } from '../hooks/useMissions'
 import { useDemoMode } from '../hooks/useDemoMode'
 import type { Alert, AlertRule, AlertStats, AlertChannel } from '../types/alerts'
-import type { GPUHealthCheckResult } from '../hooks/mcp/types'
-import type { NightlyGuideStatus } from '../lib/llmd/nightlyE2EDemoData'
-import type { AlertsMCPData } from './AlertsDataFetcher'
 import type { AlertsContextValue, AlertNotificationBatch, MutationAccumulator } from './AlertsContext.types'
-import { INITIAL_FETCH_DELAY_MS, POLL_INTERVAL_SLOW_MS, SECONDARY_FETCH_DELAY_MS, NIGHTLY_E2E_POLL_INTERVAL_MS } from '../lib/constants/network'
 import { MS_PER_SECOND } from '../lib/constants/time'
 import { PRESET_ALERT_RULES } from '../types/alerts'
 import { safeGet } from '../lib/safeLocalStorage'
@@ -27,7 +23,7 @@ import {
   saveAlerts,
 } from './alertStorage'
 import { STORAGE_KEY_AUTH_TOKEN } from '../lib/constants/storage'
-import { FETCH_DEFAULT_TIMEOUT_MS, areOptionalPollersSuppressed } from '../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { logger } from '@/lib/logger'
 import {
   shouldDispatchBrowserNotification,
@@ -39,11 +35,12 @@ import { sendNotificationWithDeepLink } from '../hooks/useDeepLink'
 import { findRunbookForCondition } from '../lib/runbooks/builtins'
 import { executeRunbook } from '../lib/runbooks/executor'
 import { alertDedupKey, deduplicateAlerts } from './alerts/deduplication'
+import { useBatchedMCPData } from './useBatchedMCPData'
+import { useAlertsOptionalPollers } from './useAlertsOptionalPollers'
 import { createStateContext } from './createStateContext'
 import { applyMutations, createAlertRulesEngine, generateId, shallowEqualRecords } from './alertRulesEngine'
 
 const AlertsDataFetcher = safeLazy(() => import('./AlertsDataFetcher'), 'default')
-const MCP_UPDATE_BATCH_FRAME_FALLBACK_MS = 16
 const ALERT_RULES_KEY = 'kc_alert_rules'
 const ALERTS_LOADING_TIMEOUT_MS = 30 * MS_PER_SECOND
 const INITIAL_EVALUATION_DELAY_MS = MS_PER_SECOND
@@ -79,17 +76,8 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   })
   const [alerts, setAlerts] = useState<Alert[]>(() => loadFromStorage<Alert[]>(ALERTS_KEY, []))
   const [isEvaluating, setIsEvaluating] = useState(false)
-  const [mcpData, setMCPData] = useState<AlertsMCPData>({
-    gpuNodes: [],
-    podIssues: [],
-    clusters: [],
-    isLoading: true,
-    error: null,
-  })
+  const { mcpData, enqueueMCPData } = useBatchedMCPData()
   const [loadingTimedOut, setLoadingTimedOut] = useState(false)
-
-  const pendingMCPDataRef = useRef<AlertsMCPData | null>(null)
-  const mcpFlushHandleRef = useRef<number | ReturnType<typeof setTimeout> | null>(null)
 
   const { startMission, missions: allMissions } = useMissions()
   const { isDemoMode } = useDemoMode()
@@ -97,8 +85,6 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   const previousDemoMode = useRef(isDemoMode)
   const mutationAccRef = useRef<MutationAccumulator | null>(null)
   const notifiedAlertKeysRef = useRef<Map<string, number>>(loadNotifiedAlertKeys())
-  const cronJobResultsRef = useRef<Record<string, GPUHealthCheckResult[]>>({})
-  const nightlyE2ERef = useRef<NightlyGuideStatus[]>([])
   const nightlyAlertedRunsRef = useRef<Set<number>>(new Set())
   const isEvaluatingRef = useRef(false)
   const diagnosisInFlightRef = useRef<Set<string>>(new Set())
@@ -115,31 +101,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   alertsRef.current = alerts
   const startMissionRef = useRef(startMission)
   startMissionRef.current = startMission
-
-  const flushPendingMCPData = useCallback(() => {
-    mcpFlushHandleRef.current = null
-    const pendingMCPData = pendingMCPDataRef.current
-    if (!pendingMCPData) return
-
-    pendingMCPDataRef.current = null
-    setMCPData(pendingMCPData)
-  }, [])
-
-  const enqueueMCPData = useCallback((nextMCPData: AlertsMCPData) => {
-    pendingMCPDataRef.current = nextMCPData
-    if (mcpFlushHandleRef.current !== null) return
-
-    if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
-      mcpFlushHandleRef.current = window.requestAnimationFrame(() => {
-        flushPendingMCPData()
-      })
-      return
-    }
-
-    mcpFlushHandleRef.current = globalThis.setTimeout(() => {
-      flushPendingMCPData()
-    }, MCP_UPDATE_BATCH_FRAME_FALLBACK_MS)
-  }, [flushPendingMCPData])
+  const { cronJobResultsRef, nightlyE2ERef } = useAlertsOptionalPollers(clustersRef)
 
   const setNotifiedKey = useCallback((key: string, timestamp: number) => {
     notifiedAlertKeysRef.current.set(key, timestamp)
@@ -153,89 +115,6 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
 
   const persistNotifiedAlertKeys = useCallback(() => {
     saveNotifiedAlertKeys(notifiedAlertKeysRef.current)
-  }, [])
-
-  useEffect(() => {
-    if (areOptionalPollersSuppressed()) return
-
-    let unmounted = false
-    const fetchCronJobResults = async () => {
-      const token = safeGet(STORAGE_KEY_AUTH_TOKEN)
-      if (!token || unmounted) return
-      const currentClusters = clustersRef.current
-      if (!currentClusters.length) return
-
-      const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
-      const settled = await settledWithConcurrency(
-        currentClusters.map(cluster => async () => {
-          try {
-            const resp = await fetch(
-              `${API_BASE}/api/mcp/gpu-nodes/health/cronjob/results?cluster=${encodeURIComponent(cluster.name)}`,
-              { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) }
-            )
-            if (resp.ok) {
-              const data = await resp.json().catch(() => null)
-              if (data?.results && data.results.length > 0) {
-                return { cluster: cluster.name, data: data.results as GPUHealthCheckResult[] }
-              }
-            }
-          } catch {
-            // Silent — CronJob may not be installed on this cluster
-          }
-          return null
-        })
-      )
-
-      const results: Record<string, GPUHealthCheckResult[]> = {}
-      for (const result of settled) {
-        if (result.status === 'fulfilled' && result.value) {
-          results[result.value.cluster] = result.value.data
-        }
-      }
-
-      if (!unmounted) {
-        cronJobResultsRef.current = results
-      }
-    }
-
-    const timer = setTimeout(fetchCronJobResults, INITIAL_FETCH_DELAY_MS)
-    const interval = setInterval(fetchCronJobResults, POLL_INTERVAL_SLOW_MS)
-    return () => {
-      unmounted = true
-      clearInterval(interval)
-      clearTimeout(timer)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (areOptionalPollersSuppressed()) return
-
-    let unmounted = false
-    const fetchNightlyE2E = async () => {
-      if (unmounted) return
-      try {
-        const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
-        const resp = await fetch(`${API_BASE}/api/public/nightly-e2e/runs`, {
-          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-        })
-        if (resp.ok && !unmounted) {
-          const data = await resp.json().catch(() => null)
-          if (Array.isArray(data)) {
-            nightlyE2ERef.current = data
-          }
-        }
-      } catch {
-        // Silent — nightly E2E data is optional
-      }
-    }
-
-    const timer = setTimeout(fetchNightlyE2E, SECONDARY_FETCH_DELAY_MS)
-    const interval = setInterval(fetchNightlyE2E, NIGHTLY_E2E_POLL_INTERVAL_MS)
-    return () => {
-      unmounted = true
-      clearInterval(interval)
-      clearTimeout(timer)
-    }
   }, [])
 
   useEffect(() => {
@@ -271,16 +150,6 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(timer)
   }, [mcpData.isLoading])
 
-  useEffect(() => () => {
-    if (mcpFlushHandleRef.current === null) return
-
-    if (typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
-      window.cancelAnimationFrame(mcpFlushHandleRef.current as number)
-      return
-    }
-
-    globalThis.clearTimeout(mcpFlushHandleRef.current)
-  }, [])
 
   useEffect(() => {
     saveToStorage(ALERT_RULES_KEY, rules)
