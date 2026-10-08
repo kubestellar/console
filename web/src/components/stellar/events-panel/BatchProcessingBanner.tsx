@@ -1,6 +1,9 @@
 import { useTranslation } from 'react-i18next'
 import { FLEX_SPACER_STYLE, type CurrentBatch } from './types'
 
+const GLYPH_STYLE = { fontSize: 14 } as const
+const TEXT_STYLE = { color: 'var(--s-text)' } as const
+
 export interface BatchProcessingBannerProps {
   currentBatch: CurrentBatch
   onOpen: () => void
@@ -39,7 +42,7 @@ export function BatchProcessingBanner({ currentBatch, onOpen }: BatchProcessingB
         animation: 'stellar-pulse 1.6s linear infinite',
       }} />
       <div className="flex items-center gap-2">
-        <span style={{ fontSize: 14 }}>⊙</span>
+        <span style={GLYPH_STYLE}>⊙</span>
         <span
           className="font-mono text-xs"
           style={{
@@ -59,7 +62,7 @@ export function BatchProcessingBanner({ currentBatch, onOpen }: BatchProcessingB
         </span>
         <span style={{ fontSize: 11, color: 'var(--s-text-dim)' }}>→</span>
       </div>
-      <div className="mt-1 text-xs leading-normal" style={{ color: 'var(--s-text)' }}>
+      <div className="mt-1 text-xs leading-normal" style={TEXT_STYLE}>
         {t('stellar.batch.viewBatchMonitor')} — {currentBatch.solvingCount} event{currentBatch.solvingCount === 1 ? '' : 's'} actively solving
       </div>
     </button>
