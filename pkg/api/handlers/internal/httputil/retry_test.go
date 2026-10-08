@@ -107,6 +107,87 @@ func TestDoWithRetry_RespectsRetryAfterHeader(t *testing.T) {
 	require.Less(t, elapsed, 5*time.Second, "Retry-After=1 should override the 1h base delay")
 }
 
+func TestDoWithRetry_ReturnsImmediatelyOnPreCancelledContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	calls := 0
+	resp, err := DoWithRetry(ctx, RetryConfig{MaxAttempts: 3, BaseDelay: time.Millisecond},
+		func() (*http.Response, error) {
+			calls++
+			return &http.Response{StatusCode: http.StatusOK}, nil
+		},
+		alwaysRetryableClassifier(),
+	)
+	require.ErrorIs(t, err, context.Canceled)
+	require.Nil(t, resp)
+	require.Equal(t, 0, calls)
+}
+
+func TestDoWithRetry_MaxDelayCapsBackoff(t *testing.T) {
+	calls := 0
+	var backoffs []time.Duration
+	_, err := DoWithRetry(context.Background(),
+		RetryConfig{
+			MaxAttempts: 3,
+			BaseDelay:   50 * time.Millisecond,
+			MaxDelay:    time.Millisecond,
+			OnRetry: func(attempt int, backoff time.Duration) {
+				backoffs = append(backoffs, backoff)
+			},
+		},
+		func() (*http.Response, error) {
+			calls++
+			return &http.Response{StatusCode: http.StatusTooManyRequests}, nil
+		},
+		alwaysRetryableClassifier(),
+	)
+	require.Error(t, err)
+	require.Equal(t, 3, calls)
+	require.Len(t, backoffs, 2)
+	for _, b := range backoffs {
+		require.Equal(t, time.Millisecond, b, "backoff should be capped at MaxDelay")
+	}
+}
+
+func TestDoWithRetry_OnRetryReportsAttemptNumbers(t *testing.T) {
+	var attempts []int
+	_, err := DoWithRetry(context.Background(),
+		RetryConfig{
+			MaxAttempts: 3,
+			BaseDelay:   time.Millisecond,
+			OnRetry: func(attempt int, backoff time.Duration) {
+				attempts = append(attempts, attempt)
+			},
+		},
+		func() (*http.Response, error) {
+			return &http.Response{StatusCode: http.StatusTooManyRequests}, nil
+		},
+		alwaysRetryableClassifier(),
+	)
+	require.Error(t, err)
+	require.Equal(t, []int{1, 2}, attempts)
+}
+
+func TestDoWithRetry_IgnoresInvalidRetryAfterHeader(t *testing.T) {
+	calls := 0
+	start := time.Now()
+	_, err := DoWithRetry(context.Background(), RetryConfig{MaxAttempts: 2, BaseDelay: time.Millisecond, RespectRetryAfter: true},
+		func() (*http.Response, error) {
+			calls++
+			if calls == 1 {
+				header := make(http.Header)
+				header.Set("Retry-After", "not-a-number")
+				return &http.Response{StatusCode: http.StatusTooManyRequests, Header: header}, nil
+			}
+			return &http.Response{StatusCode: http.StatusOK}, nil
+		},
+		alwaysRetryableClassifier(),
+	)
+	require.NoError(t, err)
+	require.Equal(t, 2, calls)
+	require.Less(t, time.Since(start), time.Second, "invalid Retry-After should fall back to the computed backoff")
+}
+
 func TestDoWithRetry_NetworkErrorNotRetriedByDefault(t *testing.T) {
 	calls := 0
 	_, err := DoWithRetry(context.Background(), RetryConfig{MaxAttempts: 3, BaseDelay: time.Millisecond},
