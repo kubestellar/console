@@ -37,6 +37,8 @@ interface DependencyPathProps {
   overlayDim?: boolean
 }
 
+const LABEL_GROUP_STYLE = { cursor: 'pointer', transition: 'opacity 0.1s' } as const
+
 /** Compute the bezier midpoint for a dependency edge — used for label placement */
 export function computeEdgeMidpoint(fromX: number, fromY: number, toX: number, toY: number) {
   const dx = toX - fromX
@@ -149,7 +151,7 @@ export function DependencyLabel({ midX, midY, label, crossCluster, fromName, toN
 
   return (
     <g
-      style={{ cursor: 'pointer', transition: 'opacity 0.1s' }}
+      style={LABEL_GROUP_STYLE}
       opacity={dimmed ? 0.15 : overlayDim ? 0.35 : 1}
       onMouseEnter={() => fromName && toName && onHover?.({ from: fromName, to: toName })}
       onMouseLeave={() => onHover?.(null)}
