@@ -13,6 +13,8 @@ import {
   KAGENT_EDGE_AGENT_TOOL, KAGENT_EDGE_AGENT_MODEL, KAGENT_NODE_TOOL, KAGENT_NODE_MODEL,
 } from '../../../lib/theme/chartColors'
 
+const SVG_FONT_STYLE = { fontFamily: 'var(--font-family)' } as const
+
 const MAX_NODE_LABEL_DISPLAY = 16
 const TRUNCATED_NODE_LABEL = 14
 
@@ -223,7 +225,7 @@ function KagentTopologyInternal({ config }: { config?: Record<string, unknown> }
 
       {/* SVG graph */}
       <div className="flex-1 overflow-auto px-2 pb-2">
-        <svg width="100%" height={svgHeight} viewBox={`0 0 500 ${svgHeight}`} className="w-full" style={{ fontFamily: 'var(--font-family)' }}>
+        <svg width="100%" height={svgHeight} viewBox={`0 0 500 ${svgHeight}`} className="w-full" style={SVG_FONT_STYLE}>
           {/* Edges */}
           {edges.map((edge, i) => {
             const from = nodes.find(n => n.id === edge.from)
