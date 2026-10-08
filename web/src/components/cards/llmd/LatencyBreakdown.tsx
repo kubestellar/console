@@ -28,6 +28,8 @@ import { useChartTokens } from '../../../hooks/useChartTokens'
 import { useTheme } from '../../../contexts/ThemeContext'
 
 const GRID_LEFT_PX = 55
+const FULL_SIZE_STYLE = { height: '100%', width: '100%' } as const
+
 const GRID_RIGHT_PX = 20
 const GRID_TOP_PX = 10
 const GRID_BOTTOM_PX = 45
@@ -275,7 +277,7 @@ function LatencyBreakdownInternal() {
         {chartData.length > 0 ? (
           <LazyEChart
             option={chartOption}
-            style={{ height: '100%', width: '100%' }}
+            style={FULL_SIZE_STYLE}
             notMerge={true}
             opts={{ renderer: 'svg' }}
           />

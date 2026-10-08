@@ -24,6 +24,8 @@ import { StatusBadge } from '../../ui/StatusBadge'
 import { CHART_MIN_HEIGHT_PX, CHART_TEXT_WHITE, CHART_AXIS_FONT_SIZE, CHART_BODY_FONT_SIZE } from '../../../lib/constants/ui'
 
 const GRID_LEFT_PX = 55
+const FULL_SIZE_STYLE = { height: '100%', width: '100%' } as const
+
 const GRID_RIGHT_PX = 20
 const GRID_TOP_PX = 10
 const GRID_BOTTOM_PX = 45
@@ -217,7 +219,7 @@ export function ThroughputComparison() {
         {chartData.length > 0 ? (
           <LazyEChart
             option={chartOption}
-            style={{ height: '100%', width: '100%' }}
+            style={FULL_SIZE_STYLE}
             notMerge={true}
             opts={{ renderer: 'svg' }}
           />

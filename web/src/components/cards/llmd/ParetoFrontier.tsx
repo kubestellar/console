@@ -29,6 +29,7 @@ import { FilterDropdown, Toggle } from './ParetoFrontier.controls'
 import { useParetoFrontierChartOption } from './useParetoFrontierChartOption'
 
 const THIN_SCROLLBAR_STYLE = { scrollbarWidth: 'thin' } as const
+const FULL_SIZE_STYLE = { height: '100%', width: '100%' } as const
 
 const LEGEND_PANEL_WIDTH_PX = 130
 
@@ -249,7 +250,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
           <LazyEChart
             ref={chartRef}
             option={option}
-            style={{ height: '100%', width: '100%' }}
+            style={FULL_SIZE_STYLE}
             opts={{ renderer: 'canvas' }}
             lazyUpdate
           />
