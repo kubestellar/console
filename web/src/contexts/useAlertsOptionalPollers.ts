@@ -61,7 +61,7 @@ export function useAlertsOptionalPollers(clustersRef: { readonly current: Readon
       clearInterval(interval)
       clearTimeout(timer)
     }
-  }, [])
+  }, [clustersRef])
 
   useEffect(() => {
     if (areOptionalPollersSuppressed()) return
