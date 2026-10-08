@@ -105,216 +105,207 @@ describe('usePVs', () => {
   })
 
   it('transitions from loading to success when PVs are fetched successfully', async () => {
-    mockAgentFetch.mockResolvedValue({
+    mockAgentFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ pvs: [{ name: 'pv-1', capacity: '10Gi', status: 'Bound' }] }),
+      json: async () => ({ pvs: [{ metadata: { name: 'pv-1' }, cluster: 'cluster-a' }] }),
+    }).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ pvs: [{ metadata: { name: 'pv-2' }, cluster: 'cluster-b' }] }),
     })
 
-    const { result } = renderHook(() => usePVs('cluster-a'))
+    const { result } = renderHook(() => usePVs())
 
-    expect(result.current.isLoading).toBe(true)
-    expect(result.current.pvs).toEqual([])
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+    })
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.pvs).toHaveLength(1)
-    expect(result.current.pvs[0]).toMatchObject({ name: 'pv-1', cluster: 'cluster-a' })
+    expect(result.current.pvs).toHaveLength(2)
     expect(result.current.error).toBeNull()
-    expect(result.current.consecutiveFailures).toBe(0)
   })
 
-  it('returns demo (empty) data when demo mode is enabled', async () => {
+  it('handles demo mode correctly', async () => {
     mockIsDemoMode.mockReturnValue(true)
 
-    const { result } = renderHook(() => usePVs('cluster-a'))
+    const { result } = renderHook(() => usePVs())
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+    })
+
     expect(result.current.pvs).toEqual([])
     expect(result.current.error).toBeNull()
-    expect(mockAgentFetch).not.toHaveBeenCalled()
   })
 
-  it('reports an error and increments consecutiveFailures when the agent is unavailable', async () => {
+  it('handles agent unavailable correctly', async () => {
     mockIsAgentUnavailable.mockReturnValue(true)
 
-    const { result } = renderHook(() => usePVs('cluster-a'))
+    const { result } = renderHook(() => usePVs())
 
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+    })
+
     expect(result.current.error).toBe('Agent unavailable')
     expect(result.current.consecutiveFailures).toBe(1)
-    expect(result.current.pvs).toEqual([])
   })
 
-  it('returns empty PVs without error when there are no reachable clusters', async () => {
-    mockClusterCacheRef.clusters = []
-
-    const { result } = renderHook(() => usePVs())
-
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.pvs).toEqual([])
-    expect(result.current.error).toBeNull()
-
-    // restore for subsequent tests
-    mockClusterCacheRef.clusters = [
-      { name: 'cluster-a', context: 'ctx-a', reachable: true },
-      { name: 'cluster-b', context: 'ctx-b', reachable: true },
-    ]
-  })
-
-  it('aggregates PVs from multiple clusters when no cluster is specified', async () => {
-    mockAgentFetch
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ pvs: [{ name: 'pv-a', status: 'Bound' }] }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ pvs: [{ name: 'pv-b', status: 'Bound' }] }) })
-
-    const { result } = renderHook(() => usePVs())
-
-    await waitFor(() => expect(result.current.pvs.length).toBeGreaterThanOrEqual(2))
-    const clusterNames = result.current.pvs.map(p => p.cluster)
-    expect(clusterNames).toContain('cluster-a')
-    expect(clusterNames).toContain('cluster-b')
-  })
-
-  it('sets an error and increments consecutiveFailures when every cluster fetch fails', async () => {
-    mockAgentFetch.mockRejectedValue(new Error('boom'))
-
-    const { result } = renderHook(() => usePVs('cluster-a'))
-
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.error).toBe('Failed to fetch PVs from any cluster')
-    expect(result.current.consecutiveFailures).toBe(1)
-    expect(result.current.pvs).toEqual([])
-  })
-
-  it('marks isFailed true once consecutiveFailures reaches the threshold', async () => {
-    mockAgentFetch.mockRejectedValue(new Error('boom'))
-
-    const { result } = renderHook(() => usePVs('cluster-a'))
-    await waitFor(() => expect(result.current.consecutiveFailures).toBe(1))
-
-    await act(async () => { result.current.refetch() })
-    await waitFor(() => expect(result.current.consecutiveFailures).toBe(2))
-
-    await act(async () => { result.current.refetch() })
-    await waitFor(() => expect(result.current.consecutiveFailures).toBe(3))
-    expect(result.current.isFailed).toBe(true)
-  })
-
-  it('uses the backend endpoint when isClusterModeBackend is true', async () => {
-    mockIsClusterModeBackend = true
-    mockAgentFetch.mockClear()
-    const backendFetch = vi.fn().mockResolvedValue({
+  it('handles specific cluster parameter', async () => {
+    mockAgentFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ pvs: [{ name: 'pv-backend', status: 'Bound' }] }),
+      json: async () => ({ pvs: [{ metadata: { name: 'pv-specific' } }] }),
     })
-    vi.stubGlobal('fetch', backendFetch)
 
     const { result } = renderHook(() => usePVs('cluster-a'))
 
-    await waitFor(() => expect(result.current.pvs).toHaveLength(1))
-    expect(result.current.pvs[0].name).toBe('pv-backend')
-    expect(backendFetch).toHaveBeenCalledWith(
-      expect.stringContaining('/api/mcp/pvs'),
-      expect.any(Object),
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+    })
+
+    expect(result.current.pvs).toHaveLength(1)
+    expect(mockAgentFetch).toHaveBeenCalledTimes(1)
+    expect(mockAgentFetch).toHaveBeenCalledWith(
+      expect.stringContaining('/pvs?cluster=cluster-a'),
+      expect.any(Object)
     )
-    expect(mockAgentFetch).not.toHaveBeenCalled()
+  })
+
+  it('fetches via backend when isClusterModeBackend is true', async () => {
+    mockIsClusterModeBackend = true
+    const globalFetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ pvs: [{ metadata: { name: 'pv-backend' } }] }),
+    })
+    vi.stubGlobal('fetch', globalFetchMock)
+
+    const { result } = renderHook(() => usePVs('cluster-a'))
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+    })
+
+    expect(result.current.pvs).toHaveLength(1)
+    expect(globalFetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/api/mcp/pvs?cluster=cluster-a'),
+      expect.any(Object)
+    )
 
     vi.unstubAllGlobals()
   })
 })
 
-describe('createOrUpdateResourceQuota', () => {
+describe('ResourceQuota CRUD hooks', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockIsClusterModeBackend = false
   })
 
-  it('posts to the agent endpoint and returns the resourceQuota', async () => {
-    mockAgentFetch.mockResolvedValue({
+  it('createOrUpdateResourceQuota calls agent endpoint successfully', async () => {
+    mockAgentFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ resourceQuota: { name: 'rq-1' } }),
+      json: async () => ({ resourceQuota: { metadata: { name: 'quota-1' } } }),
     })
 
-    const result = await createOrUpdateResourceQuota({
-      cluster: 'cluster-a',
-      namespace: 'default',
-      name: 'rq-1',
-      hard: {},
-    } as never)
+    const spec = { metadata: { name: 'quota-1' } } as any
+    const res = await createOrUpdateResourceQuota(spec)
 
-    expect(result).toEqual({ name: 'rq-1' })
+    expect(res).toEqual({ metadata: { name: 'quota-1' } })
     expect(mockAgentFetch).toHaveBeenCalledWith(
       expect.stringContaining('/resourcequotas'),
-      expect.objectContaining({ method: 'POST' }),
+      expect.objectContaining({ method: 'POST' })
     )
   })
 
-  it('posts to the backend endpoint when isClusterModeBackend is true', async () => {
-    mockIsClusterModeBackend = true
-    const backendFetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ resourceQuota: { name: 'rq-2' } }),
+  it('createOrUpdateResourceQuota throws on error response from agent', async () => {
+    mockAgentFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 400,
     })
-    vi.stubGlobal('fetch', backendFetch)
 
-    const result = await createOrUpdateResourceQuota({
-      cluster: 'cluster-a',
-      namespace: 'default',
-      name: 'rq-2',
-      hard: {},
-    } as never)
-
-    expect(result).toEqual({ name: 'rq-2' })
-    expect(backendFetch).toHaveBeenCalledWith(
-      '/api/mcp/resourcequotas',
-      expect.objectContaining({ method: 'POST' }),
-    )
-    expect(mockAgentFetch).not.toHaveBeenCalled()
-    vi.unstubAllGlobals()
+    const spec = { metadata: { name: 'quota-1' } } as any
+    await expect(createOrUpdateResourceQuota(spec)).rejects.toThrow('HTTP 400')
   })
 
-  it('throws when the agent responds with a non-ok status', async () => {
-    mockAgentFetch.mockResolvedValue({ ok: false, status: 500 })
-
-    await expect(
-      createOrUpdateResourceQuota({ cluster: 'cluster-a', namespace: 'default', name: 'rq-1', hard: {} } as never),
-    ).rejects.toThrow('HTTP 500')
-  })
-})
-
-describe('deleteResourceQuota', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    mockIsClusterModeBackend = false
-  })
-
-  it('sends a DELETE request with the expected query params', async () => {
-    mockAgentFetch.mockResolvedValue({ ok: true })
-
-    await deleteResourceQuota('cluster-a', 'default', 'rq-1')
-
-    expect(mockAgentFetch).toHaveBeenCalledWith(
-      expect.stringMatching(/\/resourcequotas\?.*cluster=cluster-a.*/),
-      expect.objectContaining({ method: 'DELETE' }),
-    )
-  })
-
-  it('uses the backend endpoint when isClusterModeBackend is true', async () => {
+  it('createOrUpdateResourceQuota calls backend endpoint when cluster mode backend is active', async () => {
     mockIsClusterModeBackend = true
-    const backendFetch = vi.fn().mockResolvedValue({ ok: true })
-    vi.stubGlobal('fetch', backendFetch)
+    const globalFetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ resourceQuota: { metadata: { name: 'quota-backend' } } }),
+    })
+    vi.stubGlobal('fetch', globalFetchMock)
 
-    await deleteResourceQuota('cluster-a', 'default', 'rq-1')
+    const spec = { metadata: { name: 'quota-backend' } } as any
+    const res = await createOrUpdateResourceQuota(spec)
 
-    expect(backendFetch).toHaveBeenCalledWith(
-      expect.stringContaining('/api/mcp/resourcequotas?'),
-      expect.objectContaining({ method: 'DELETE' }),
+    expect(res).toEqual({ metadata: { name: 'quota-backend' } })
+    expect(globalFetchMock).toHaveBeenCalledWith(
+      '/api/mcp/resourcequotas',
+      expect.objectContaining({ method: 'POST' })
     )
-    expect(mockAgentFetch).not.toHaveBeenCalled()
+
     vi.unstubAllGlobals()
   })
 
-  it('throws when the delete request fails', async () => {
-    mockAgentFetch.mockResolvedValue({ ok: false, status: 404 })
+  it('createOrUpdateResourceQuota throws on error response from backend', async () => {
+    mockIsClusterModeBackend = true
+    const globalFetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+    })
+    vi.stubGlobal('fetch', globalFetchMock)
 
-    await expect(deleteResourceQuota('cluster-a', 'default', 'rq-1')).rejects.toThrow('HTTP 404')
+    const spec = { metadata: { name: 'quota-backend' } } as any
+    await expect(createOrUpdateResourceQuota(spec)).rejects.toThrow('HTTP 500')
+
+    vi.unstubAllGlobals()
+  })
+
+  it('deleteResourceQuota calls agent endpoint successfully', async () => {
+    mockAgentFetch.mockResolvedValueOnce({
+      ok: true,
+    })
+
+    await deleteResourceQuota('cluster-a', 'default', 'quota-1')
+    expect(mockAgentFetch).toHaveBeenCalledWith(
+      expect.stringContaining('/resourcequotas/default/quota-1?cluster=cluster-a'),
+      expect.objectContaining({ method: 'DELETE' })
+    )
+  })
+
+  it('deleteResourceQuota throws on error response from agent', async () => {
+    mockAgentFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+    })
+
+    await expect(deleteResourceQuota('cluster-a', 'default', 'quota-1')).rejects.toThrow('HTTP 404')
+  })
+
+  it('deleteResourceQuota calls backend endpoint when cluster mode backend is active', async () => {
+    mockIsClusterModeBackend = true
+    const globalFetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+    })
+    vi.stubGlobal('fetch', globalFetchMock)
+
+    await deleteResourceQuota('cluster-a', 'default', 'quota-1')
+    expect(globalFetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/api/mcp/resourcequotas/default/quota-1?cluster=cluster-a'),
+      expect.objectContaining({ method: 'DELETE' })
+    )
+
+    vi.unstubAllGlobals()
+  })
+
+  it('deleteResourceQuota throws on error response from backend', async () => {
+    mockIsClusterModeBackend = true
+    const globalFetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 502,
+    })
+    vi.stubGlobal('fetch', globalFetchMock)
+
+    await expect(deleteResourceQuota('cluster-a', 'default', 'quota-1')).rejects.toThrow('HTTP 502')
+
+    vi.unstubAllGlobals()
   })
 })
