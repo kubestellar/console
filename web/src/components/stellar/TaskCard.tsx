@@ -1,5 +1,7 @@
 import type { StellarTask } from '../../types/stellar'
 
+const BRAND_TEXT_STYLE = { color: 'var(--s-brand)' } as const
+
 interface TaskCardProps {
   task: StellarTask
   onStatusChange: (id: string, status: string) => void
@@ -30,7 +32,7 @@ export function TaskCard({ task, onStatusChange }: TaskCardProps) {
         {task.title}
       </span>
       {task.source === 'stellar' && (
-        <span className="ml-auto text-[10px]" style={{ color: 'var(--s-brand)' }}>stellar</span>
+        <span className="ml-auto text-[10px]" style={BRAND_TEXT_STYLE}>stellar</span>
       )}
     </div>
   )

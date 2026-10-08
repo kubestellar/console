@@ -2,6 +2,8 @@ import type { StellarNotification, StellarSolve, StellarWatch } from '../../type
 import type { PendingAction } from './EventCard'
 import { deriveWatchTrend, getWatchAttemptSummary, renderSparkline, trendColor, trendIcon } from './lib/derive'
 
+const WARNING_TEXT_STYLE = { color: 'var(--s-warning)' } as const
+
 interface Props {
   watch: StellarWatch
   allNotifications?: StellarNotification[]
@@ -205,7 +207,7 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
 
       {/* Stale indicator */}
       {watch.lastChecked && isStale(watch.lastChecked) && (
-        <div className="mt-0.5 pl-3 text-[10px]" style={{ color: 'var(--s-warning)' }}>
+        <div className="mt-0.5 pl-3 text-[10px]" style={WARNING_TEXT_STYLE}>
           ⚠ last checked {getRelativeTime(watch.lastChecked)} ago
         </div>
       )}

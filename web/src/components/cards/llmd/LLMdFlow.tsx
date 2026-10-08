@@ -43,6 +43,8 @@ import {
   type ViewMode,
 } from './LLMdFlow.utils'
 
+const OVERFLOW_VISIBLE_STYLE = { overflow: 'visible' } as const
+
 export function LLMdFlow() {
   const { t } = useTranslation(['cards', 'common'])
   const stackContext = useOptionalStack()
@@ -257,7 +259,7 @@ export function LLMdFlow() {
         viewBox={isExpanded ? '-10 -10 240 120' : '-5 -10 120 140'}
         className={`w-full overflow-visible ${isExpanded ? 'flex-1 min-h-0 mt-2' : 'h-[calc(100%-2rem)] mt-8'}`}
         preserveAspectRatio="xMidYMid meet"
-        style={{ overflow: 'visible' }}
+        style={OVERFLOW_VISIBLE_STYLE}
       >
         {connections.map((conn, i) => (
           <FlowConnection

@@ -10,6 +10,8 @@ import {
   severityColor,
 } from './helpers'
 
+const ITALIC_STYLE = { fontStyle: 'italic' } as const
+
 interface WatchDetailContentProps {
   watch: StellarWatch
   relatedEvents: StellarNotification[]
@@ -52,7 +54,7 @@ export function WatchDetailContent({
       {/* Why watching */}
       {watch.reason && (
         <Section title="Why we're watching">
-          <span style={{ fontStyle: 'italic' }}>{watch.reason}</span>
+          <span style={ITALIC_STYLE}>{watch.reason}</span>
         </Section>
       )}
 

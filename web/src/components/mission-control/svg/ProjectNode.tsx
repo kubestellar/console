@@ -22,6 +22,8 @@ import {
 } from '../../../lib/theme/chartColors'
 import { CNCF_CATEGORY_GRADIENTS } from '../../../lib/cncf-constants'
 
+const POINTER_CURSOR_STYLE = { cursor: 'pointer' } as const
+
 /**
  * Static project icons served from /icons/cncf/ — avoids all CORS/CSP/proxy
  * issues by bundling avatars as static assets in web/public/.
@@ -211,7 +213,7 @@ export function ProjectNode({
         r={radius + 4}
         fill="transparent"
         stroke="none"
-        style={{ cursor: 'pointer' }}
+        style={POINTER_CURSOR_STYLE}
       />
 
       {/* Outer ring — solid green=installed, dashed slate=needs deploy, brighter when glowing */}

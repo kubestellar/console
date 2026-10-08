@@ -16,6 +16,8 @@ import {
 } from './DrasiConstants'
 import type { FlowLineState } from './DrasiTypes'
 
+const FLOW_LINE_TRANSITION_STYLE = { transition: 'stroke-opacity 200ms ease' } as const
+
 // ---------------------------------------------------------------------------
 // Color mapping
 // ---------------------------------------------------------------------------
@@ -112,7 +114,7 @@ export function FlowLine({
         strokeWidth={LINE_STROKE_WIDTH_PX}
         strokeDasharray={dashed ? '4 4' : undefined}
         vectorEffect="non-scaling-stroke"
-        style={{ transition: 'stroke-opacity 200ms ease' }}
+        style={FLOW_LINE_TRANSITION_STYLE}
       />
       {isAnimated && pattern.map((offset, i) => {
         const begin = delay + offset * lineDur

@@ -9,6 +9,8 @@ import { motion } from 'framer-motion'
 import { getLoadColors, getHorseshoeColor } from '../shared/colorUtils'
 import type { FlowLink, FlowNode } from './useEPPRoutingData'
 
+const BLUR_FILTER_STYLE = { filter: 'blur(0.5px)' } as const
+
 const NODE_RADIUS = 6
 const STROKE_WIDTH = 1.2
 const TRACK_WIDTH = 0.8
@@ -108,7 +110,7 @@ export function PremiumNode({ node, uniqueId, isSelected, onClick }: PremiumNode
         stroke={loadColors.glow}
         strokeWidth="0.2"
         opacity={0.3}
-        style={{ filter: 'blur(0.5px)' }}
+        style={BLUR_FILTER_STYLE}
       />
 
       <path
