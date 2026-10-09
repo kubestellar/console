@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
-import { RotateCcw, ChevronLeft, ChevronRight, Crown, Settings } from 'lucide-react'
+import { RotateCcw, ChevronLeft, ChevronRight, Settings } from 'lucide-react'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 
@@ -13,6 +13,7 @@ import {
   getPieceMoves, isInCheck, makeMove,
   getGameResult, findBestMove,
 } from './KubeChess.engine'
+import { ChessPromotionDialog, ChessGameOverOverlay, ChessSettingsPanel } from './KubeChess.overlays'
 
 function KubeChessInternal() {
   const { isExpanded } = useCardExpanded()
@@ -316,51 +317,16 @@ function KubeChessInternal() {
 
           {/* Promotion dialog */}
           {promotionPending && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-xl">
-                <p className="text-sm font-medium mb-3 text-center">Promote to:</p>
-                <div className="flex gap-2">
-                  {(['Q', 'R', 'B', 'N'] as PieceType[]).map(type => (
-                    <button
-                      key={type}
-                      onClick={() => handlePromotion(type)}
-                      className="w-12 h-12 flex items-center justify-center bg-yellow-100 dark:bg-yellow-200 rounded hover:bg-yellow-200 dark:hover:bg-yellow-300 transition-colors"
-                    >
-                      <span className="text-3xl">
-                        {PIECE_SYMBOLS[playerColor][type]}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <ChessPromotionDialog color={playerColor} onSelect={handlePromotion} />
           )}
 
           {/* Game over overlay */}
           {gameResult !== 'ongoing' && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-xl text-center">
-                <Crown className={`w-12 h-12 mx-auto mb-2 ${
-                  // Draws (stalemate/repetition) get the neutral yellow;
-                  // checkmate is colored by who won (#7894).
-                  gameResult === 'stalemate' || gameResult === 'repetition' ? 'text-yellow-500' :
-                  (gameState.turn !== playerColor ? 'text-green-500' : 'text-red-500')
-                }`} />
-                <p className="text-lg font-bold mb-3">
-                  {gameResult === 'checkmate'
-                    ? (gameState.turn !== playerColor ? 'You Win!' : 'You Lose!')
-                    : gameResult === 'repetition'
-                      ? 'Draw by threefold repetition!'
-                      : 'Stalemate!'}
-                </p>
-                <button
-                  onClick={resetGame}
-                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
-                >
-                  New Game
-                </button>
-              </div>
-            </div>
+            <ChessGameOverOverlay
+              gameResult={gameResult}
+              playerWon={gameState.turn !== playerColor}
+              onNewGame={resetGame}
+            />
           )}
         </div>
 
@@ -395,29 +361,7 @@ function KubeChessInternal() {
 
         {/* Settings panel */}
         {showSettings && (
-          <div className="w-full max-w-xs p-3 bg-secondary/30 rounded-lg">
-            <div className="mb-3">
-              <label className="text-xs text-muted-foreground block mb-1">Difficulty</label>
-              <div className="flex gap-1">
-                {[1, 2, 3].map(d => (
-                  <button
-                    key={d}
-                    onClick={() => setDifficulty(d as 1 | 2 | 3)}
-                    className={`flex-1 py-1 text-xs rounded ${
-                      difficulty === d
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-secondary hover:bg-secondary/80'
-                    }`}
-                  >
-                    {d === 1 ? 'Easy' : d === 2 ? 'Medium' : 'Hard'}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Stats: W{stats.wins} / L{stats.losses} / D{stats.draws}
-            </div>
-          </div>
+          <ChessSettingsPanel difficulty={difficulty} onDifficultyChange={setDifficulty} stats={stats} />
         )}
       </div>
     </div>

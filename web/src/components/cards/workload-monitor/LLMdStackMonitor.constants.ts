@@ -63,3 +63,10 @@ export const STATUS_BADGE: Record<string, string> = {
   degraded: 'bg-yellow-500/20 text-yellow-400',
   unhealthy: 'bg-red-500/20 text-red-400',
   unknown: 'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground' }
+
+/** Workload monitor auto-refresh interval for the llm-d namespace. */
+export const LLMD_MONITOR_REFRESH_MS = 30_000
+/** Default page size for the Components tab. */
+export const DEFAULT_COMPONENTS_PER_PAGE = 20
+/** Default page size for the Issues tab. */
+export const DEFAULT_ISSUES_PER_PAGE = 5

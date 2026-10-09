@@ -11,6 +11,7 @@ import { ClusterStatusDot } from '../ui/ClusterStatusBadge'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { Skeleton, SkeletonStats, SkeletonList } from '../ui/Skeleton'
 import { useTranslation } from 'react-i18next'
+import { ServiceTypeTile } from './NetworkOverview.ServiceTypeTile'
 
 export function NetworkOverview() {
   const { t } = useTranslation(['cards', 'common'])
@@ -107,6 +108,12 @@ export function NetworkOverview() {
       degradedClusters,
       offlineClusters }
   }, [filteredServices, filteredClusters])
+
+  const drillToServiceType = (serviceType: string) => {
+    drillToAllServices(serviceType, {
+      services: filteredServices.filter(s => s.type === serviceType),
+    })
+  }
 
   if (showSkeleton) {
     return (
@@ -243,110 +250,42 @@ export function NetworkOverview() {
 
       {/* Service Types */}
       <div className="grid grid-cols-2 gap-2 mb-4">
-        <div
-          className={`p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 ${stats.loadBalancers > 0 ? 'cursor-pointer hover:bg-blue-500/20 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400' : 'cursor-default'} transition-colors`}
-          {...(stats.loadBalancers > 0 ? { role: 'button' as const, tabIndex: 0 } : {})}
-          onClick={() => {
-            if (stats.loadBalancers > 0) {
-              drillToAllServices('LoadBalancer', {
-                services: filteredServices.filter(s => s.type === 'LoadBalancer'),
-              })
-            }
-          }}
-          onKeyDown={(e) => {
-            if ((e.key === 'Enter' || e.key === ' ') && stats.loadBalancers > 0) {
-              e.preventDefault()
-              drillToAllServices('LoadBalancer', {
-                services: filteredServices.filter(s => s.type === 'LoadBalancer'),
-              })
-            }
-          }}
-          title={stats.loadBalancers > 0 ? `${stats.loadBalancers} LoadBalancer service${stats.loadBalancers !== 1 ? 's' : ''} - Click to view all` : 'No LoadBalancer services'}
-        >
-          <div className="flex items-center gap-1.5 mb-1">
-            <Globe className="w-3 h-3 text-blue-400" />
-            <span className="text-xs text-blue-400">LoadBalancer</span>
-          </div>
-          <span className="text-lg font-bold text-foreground">{stats.loadBalancers}</span>
-        </div>
-        <div
-          className={`p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 ${stats.nodePort > 0 ? 'cursor-pointer hover:bg-purple-500/20 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400' : 'cursor-default'} transition-colors`}
-          {...(stats.nodePort > 0 ? { role: 'button' as const, tabIndex: 0 } : {})}
-          onClick={() => {
-            if (stats.nodePort > 0) {
-              drillToAllServices('NodePort', {
-                services: filteredServices.filter(s => s.type === 'NodePort'),
-              })
-            }
-          }}
-          onKeyDown={(e) => {
-            if ((e.key === 'Enter' || e.key === ' ') && stats.nodePort > 0) {
-              e.preventDefault()
-              drillToAllServices('NodePort', {
-                services: filteredServices.filter(s => s.type === 'NodePort'),
-              })
-            }
-          }}
-          title={stats.nodePort > 0 ? `${stats.nodePort} NodePort service${stats.nodePort !== 1 ? 's' : ''} - Click to view all` : 'No NodePort services'}
-        >
-          <div className="flex items-center gap-1.5 mb-1">
-            <Server className="w-3 h-3 text-purple-400" />
-            <span className="text-xs text-purple-400">NodePort</span>
-          </div>
-          <span className="text-lg font-bold text-foreground">{stats.nodePort}</span>
-        </div>
-        <div
-          className={`p-2 rounded-lg bg-green-500/10 border border-green-500/20 ${stats.clusterIP > 0 ? 'cursor-pointer hover:bg-green-500/20 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400' : 'cursor-default'} transition-colors`}
-          {...(stats.clusterIP > 0 ? { role: 'button' as const, tabIndex: 0 } : {})}
-          onClick={() => {
-            if (stats.clusterIP > 0) {
-              drillToAllServices('ClusterIP', {
-                services: filteredServices.filter(s => s.type === 'ClusterIP'),
-              })
-            }
-          }}
-          onKeyDown={(e) => {
-            if ((e.key === 'Enter' || e.key === ' ') && stats.clusterIP > 0) {
-              e.preventDefault()
-              drillToAllServices('ClusterIP', {
-                services: filteredServices.filter(s => s.type === 'ClusterIP'),
-              })
-            }
-          }}
-          title={stats.clusterIP > 0 ? `${stats.clusterIP} ClusterIP service${stats.clusterIP !== 1 ? 's' : ''} - Click to view all` : 'No ClusterIP services'}
-        >
-          <div className="flex items-center gap-1.5 mb-1">
-            <Server className="w-3 h-3 text-green-400" />
-            <span className="text-xs text-green-400">ClusterIP</span>
-          </div>
-          <span className="text-lg font-bold text-foreground">{stats.clusterIP}</span>
-        </div>
-        <div
-          className={`p-2 rounded-lg bg-orange-500/10 border border-orange-500/20 ${stats.externalName > 0 ? 'cursor-pointer hover:bg-orange-500/20 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400' : 'cursor-default'} transition-colors`}
-          {...(stats.externalName > 0 ? { role: 'button' as const, tabIndex: 0 } : {})}
-          onClick={() => {
-            if (stats.externalName > 0) {
-              drillToAllServices('ExternalName', {
-                services: filteredServices.filter(s => s.type === 'ExternalName'),
-              })
-            }
-          }}
-          onKeyDown={(e) => {
-            if ((e.key === 'Enter' || e.key === ' ') && stats.externalName > 0) {
-              e.preventDefault()
-              drillToAllServices('ExternalName', {
-                services: filteredServices.filter(s => s.type === 'ExternalName'),
-              })
-            }
-          }}
-          title={stats.externalName > 0 ? `${stats.externalName} ExternalName service${stats.externalName !== 1 ? 's' : ''} - Click to view all` : 'No ExternalName services'}
-        >
-          <div className="flex items-center gap-1.5 mb-1">
-            <ExternalLink className="w-3 h-3 text-orange-400" />
-            <span className="text-xs text-orange-400">ExternalName</span>
-          </div>
-          <span className="text-lg font-bold text-foreground">{stats.externalName}</span>
-        </div>
+        <ServiceTypeTile
+          serviceType="LoadBalancer"
+          count={stats.loadBalancers}
+          icon={Globe}
+          tileClass="bg-blue-500/10 border border-blue-500/20"
+          hoverClass="hover:bg-blue-500/20"
+          textClass="text-blue-400"
+          onDrill={drillToServiceType}
+        />
+        <ServiceTypeTile
+          serviceType="NodePort"
+          count={stats.nodePort}
+          icon={Server}
+          tileClass="bg-purple-500/10 border border-purple-500/20"
+          hoverClass="hover:bg-purple-500/20"
+          textClass="text-purple-400"
+          onDrill={drillToServiceType}
+        />
+        <ServiceTypeTile
+          serviceType="ClusterIP"
+          count={stats.clusterIP}
+          icon={Server}
+          tileClass="bg-green-500/10 border border-green-500/20"
+          hoverClass="hover:bg-green-500/20"
+          textClass="text-green-400"
+          onDrill={drillToServiceType}
+        />
+        <ServiceTypeTile
+          serviceType="ExternalName"
+          count={stats.externalName}
+          icon={ExternalLink}
+          tileClass="bg-orange-500/10 border border-orange-500/20"
+          hoverClass="hover:bg-orange-500/20"
+          textClass="text-orange-400"
+          onDrill={drillToServiceType}
+        />
       </div>
 
       {/* Top Namespaces */}

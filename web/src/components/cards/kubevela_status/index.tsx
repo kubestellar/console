@@ -16,119 +16,31 @@
  * Source: kubestellar/console-marketplace#43
  */
 
-import {
-  AlertTriangle,
-  Box,
-  CheckCircle,
-  Cpu,
-  GitBranch,
-  Layers,
-  PauseCircle,
-  RefreshCw,
-  XCircle,
-} from 'lucide-react'
+import { AlertTriangle, Box, CheckCircle, Cpu, GitBranch, Layers } from 'lucide-react'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCachedKubevela } from '../../../hooks/useCachedKubevela'
 import { useReportCardDataState } from '../CardDataContext'
-import type {
-  KubeVelaApplication,
-  KubeVelaAppStatus,
-  WorkflowStepPhase,
-} from './demoData'
-import { MINUTES_PER_HOUR } from '../../../lib/constants/time'
-
-// ---------------------------------------------------------------------------
-// Named constants (no magic numbers)
-// ---------------------------------------------------------------------------
-
-const SKELETON_TITLE_WIDTH = 140
-const SKELETON_TITLE_HEIGHT = 28
-const SKELETON_BADGE_WIDTH = 90
-const SKELETON_BADGE_HEIGHT = 20
-const SKELETON_LIST_ITEMS = 4
-
-const PERCENT_FULL = 100
-const PROGRESS_BAR_WIDTH_PX = 56
-const PROGRESS_BAR_HEIGHT_PX = 4
-
-const MAX_APPS_DISPLAYED = 5
-const AGE_MINUTES_HOUR_THRESHOLD = 60
-const AGE_MINUTES_DAY_THRESHOLD = 1440
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function formatAge(ageMinutes: number): string {
-  if (ageMinutes < AGE_MINUTES_HOUR_THRESHOLD) return `${ageMinutes}m`
-  if (ageMinutes < AGE_MINUTES_DAY_THRESHOLD) {
-    return `${Math.floor(ageMinutes / MINUTES_PER_HOUR)}h`
-  }
-  return `${Math.floor(ageMinutes / AGE_MINUTES_DAY_THRESHOLD)}d`
-}
-
-type StatusColorClass = string
-
-const APP_STATUS_COLOR: Record<KubeVelaAppStatus, StatusColorClass> = {
-  running: 'text-status-success',
-  workflowSuspending: 'text-status-warning',
-  workflowTerminated: 'text-muted-foreground',
-  workflowFailed: 'text-status-error',
-  unhealthy: 'text-status-error',
-  deleting: 'text-muted-foreground',
-}
-
-const APP_STATUS_BG: Record<KubeVelaAppStatus, StatusColorClass> = {
-  running: 'bg-green-500/20 text-status-success',
-  workflowSuspending: 'bg-yellow-500/20 text-status-warning',
-  workflowTerminated: 'bg-muted/40 text-muted-foreground',
-  workflowFailed: 'bg-red-500/20 text-status-error',
-  unhealthy: 'bg-red-500/20 text-status-error',
-  deleting: 'bg-muted/40 text-muted-foreground',
-}
-
-const WORKFLOW_PHASE_COLOR: Record<WorkflowStepPhase, StatusColorClass> = {
-  succeeded: 'bg-green-500',
-  running: 'bg-blue-500',
-  pending: 'bg-muted',
-  failed: 'bg-red-500',
-  skipped: 'bg-muted',
-  suspending: 'bg-yellow-500',
-}
-
-function appStatusIcon(status: KubeVelaAppStatus) {
-  if (status === 'running') {
-    return <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0" />
-  }
-  if (status === 'workflowSuspending') {
-    return <PauseCircle className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
-  }
-  if (status === 'workflowFailed' || status === 'unhealthy') {
-    return <XCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
-  }
-  if (status === 'deleting') {
-    return <RefreshCw className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-  }
-  return <AlertTriangle className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-}
-
-function appStatusLabel(
-  t: TFunction<'cards'>,
-  status: KubeVelaAppStatus,
-): string {
-  const labels: Record<KubeVelaAppStatus, string> = {
-    running: t('kubeVela.statusRunning', 'Running'),
-    workflowSuspending: t('kubeVela.statusSuspended', 'Suspended'),
-    workflowTerminated: t('kubeVela.statusTerminated', 'Terminated'),
-    workflowFailed: t('kubeVela.statusFailed', 'Failed'),
-    unhealthy: t('kubeVela.statusUnhealthy', 'Unhealthy'),
-    deleting: t('kubeVela.statusDeleting', 'Deleting'),
-  }
-  return labels[status]
-}
+import type { KubeVelaApplication, KubeVelaAppStatus } from './demoData'
+import {
+  SKELETON_TITLE_WIDTH,
+  SKELETON_TITLE_HEIGHT,
+  SKELETON_BADGE_WIDTH,
+  SKELETON_BADGE_HEIGHT,
+  SKELETON_LIST_ITEMS,
+  PERCENT_FULL,
+  PROGRESS_BAR_WIDTH_PX,
+  PROGRESS_BAR_HEIGHT_PX,
+  MAX_APPS_DISPLAYED,
+  formatAge,
+  APP_STATUS_COLOR,
+  APP_STATUS_BG,
+  WORKFLOW_PHASE_COLOR,
+  appStatusIcon,
+  appStatusLabel,
+} from './helpers'
 
 // ---------------------------------------------------------------------------
 // Subsections

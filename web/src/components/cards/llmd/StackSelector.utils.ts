@@ -70,3 +70,59 @@ export function getStatusPriority(status: LLMdStack['status']): number {
     default: return 3
   }
 }
+
+/** Filters stacks by a free-text query and sorts them with a stable name/id tiebreak. */
+export function filterAndSortStacks(
+  stacks: LLMdStack[],
+  searchQuery: string,
+  sortField: SortField,
+  sortDirection: SortDirection,
+): LLMdStack[] {
+  let result = stacks
+
+  // Filter by search query
+  if (searchQuery.trim()) {
+    const query = searchQuery.toLowerCase()
+    result = result.filter(stack => {
+      const gpuInfo = estimateAccelerators(stack)
+      return (
+        stack.name.toLowerCase().includes(query) ||
+        stack.namespace.toLowerCase().includes(query) ||
+        stack.cluster.toLowerCase().includes(query) ||
+        stack.model?.toLowerCase().includes(query) ||
+        gpuInfo.type.toLowerCase().includes(query)
+      )
+    })
+  }
+
+  // Sort stacks with stable secondary sort by name
+  result = [...result].sort((a, b) => {
+    let comparison = 0
+    switch (sortField) {
+      case 'name':
+        comparison = a.name.localeCompare(b.name)
+        break
+      case 'accelerators':
+        comparison = estimateAccelerators(a).count - estimateAccelerators(b).count
+        break
+      case 'status':
+        comparison = getStatusPriority(a.status) - getStatusPriority(b.status)
+        break
+      case 'replicas':
+        comparison = a.totalReplicas - b.totalReplicas
+        break
+    }
+    // Apply sort direction
+    comparison = sortDirection === 'asc' ? comparison : -comparison
+    // Stable secondary sort by name, then by id
+    if (comparison === 0) {
+      comparison = a.name.localeCompare(b.name)
+    }
+    if (comparison === 0) {
+      comparison = a.id.localeCompare(b.id)
+    }
+    return comparison
+  })
+
+  return result
+}

@@ -17,7 +17,7 @@ import { cn } from '../../../lib/cn'
 import { useLLMdClusters } from '../workload-detection/shared'
 import { useClusters } from '../../../hooks/useMCP'
 import { useCardLoadingState } from '../CardDataContext'
-import type { MonitorIssue, MonitoredResource } from '../../../types/workloadMonitor'
+import type { MonitorIssue } from '../../../types/workloadMonitor'
 import { useTranslation } from 'react-i18next'
 import { LLMdClusterFilter } from './LLMdClusterFilter'
 import { LLMdComponentSections } from './LLMdComponentSections'
@@ -26,6 +26,7 @@ import { LLMdStackMonitorTabs, type LLMdStackMonitorTab } from './LLMdStackMonit
 import { useLLMdClusterFilterDropdown } from './useLLMdClusterFilterDropdown'
 import {
   buildAllIssues,
+  buildItemDiagnoseInput,
   buildComponentItems,
   buildSections,
   computeStackHealth,
@@ -37,7 +38,10 @@ import {
   sortIssues,
 } from './LLMdStackMonitor.utils'
 import {
+  DEFAULT_COMPONENTS_PER_PAGE,
+  DEFAULT_ISSUES_PER_PAGE,
   ISSUE_SORT_OPTIONS,
+  LLMD_MONITOR_REFRESH_MS,
   SEVERITY_FILTER_OPTIONS,
   SORT_OPTIONS,
   STATUS_BADGE,
@@ -48,13 +52,6 @@ import {
   type SortField,
   type StatusFilter,
 } from './LLMdStackMonitor.constants'
-
-/** Workload monitor auto-refresh interval for the llm-d namespace. */
-const LLMD_MONITOR_REFRESH_MS = 30_000
-/** Default page size for the Components tab. */
-const DEFAULT_COMPONENTS_PER_PAGE = 20
-/** Default page size for the Issues tab. */
-const DEFAULT_ISSUES_PER_PAGE = 5
 
 interface LLMdStackMonitorProps {
   config?: Record<string, unknown>
@@ -191,29 +188,8 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
   // Handle diagnose for a specific item
   const handleItemDiagnose = (item: ComponentItem) => {
     checkKeyAndRun(() => {
-      // Create filtered resource for this specific item
-      const itemResource: MonitoredResource = {
-        id: `Deployment/${item.namespace}/${item.name}`,
-        kind: 'Deployment',
-        name: item.name,
-        namespace: item.namespace || 'unknown',
-        cluster: item.cluster || discoveredClusters[0] || '',
-        status: item.status,
-        category: 'workload',
-        lastChecked: new Date().toISOString(),
-        optional: false,
-        order: 0 }
-      // Create filtered issues for this item
-      const itemIssues = allIssues.filter(issue =>
-        issue.resource.name === item.name &&
-        issue.resource.namespace === item.namespace
-      )
-      const workloadContext = {
-        clusters: [item.cluster || discoveredClusters[0]],
-        componentType: item.type,
-        componentName: item.name,
-        namespace: item.namespace }
-      startDiagnose([itemResource], itemIssues, workloadContext)
+      const { resource, issues: itemIssues, context } = buildItemDiagnoseInput(item, allIssues, discoveredClusters[0])
+      startDiagnose([resource], itemIssues, context)
     })
   }
 

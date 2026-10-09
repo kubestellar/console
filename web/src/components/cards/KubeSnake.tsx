@@ -6,38 +6,17 @@ import { useReportCardDataState } from './CardDataContext'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { useGameKeys } from '../../hooks/useGameKeys'
 import { safeGetItem, safeSetItem } from '@/lib/utils/localStorage'
-
-// Game constants
-/** Default canvas resolution when the card is collapsed (px) */
-const DEFAULT_CANVAS_SIZE = 400
-/** Internal canvas width (logical pixels for game logic) */
-const CANVAS_WIDTH = DEFAULT_CANVAS_SIZE
-/** Internal canvas height (logical pixels for game logic) */
-const CANVAS_HEIGHT = DEFAULT_CANVAS_SIZE
-const GRID_SIZE = 20
-/** Logical pixel size of each grid cell */
-const CELL_SIZE = CANVAS_WIDTH / GRID_SIZE
-const INITIAL_SPEED = 150 // ms per move
-const MIN_SPEED = 60
-/** Vertical space reserved for stats bar and controls (px) */
-const SNAKE_CHROME_HEIGHT = 100
-
-// Colors (Kubernetes theme)
-const COLORS = {
-  background: '#0a1628',
-  grid: '#1e3a5f',
-  snake: '#326ce5',
-  snakeHead: '#00d4aa',
-  food: '#ff6b6b',
-  foodGlow: 'rgba(255, 107, 107, 0.3)',
-  powerUp: '#ffd700' }
-
-interface Point {
-  x: number
-  y: number
-}
-
-type Direction = 'up' | 'down' | 'left' | 'right'
+import {
+  DEFAULT_CANVAS_SIZE,
+  CANVAS_WIDTH,
+  CANVAS_HEIGHT,
+  GRID_SIZE,
+  INITIAL_SPEED,
+  MIN_SPEED,
+  SNAKE_CHROME_HEIGHT,
+} from './KubeSnake.constants'
+import type { Point, Direction } from './KubeSnake.constants'
+import { drawSnakeFrame } from './KubeSnake.draw'
 
 export function KubeSnake() {
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
@@ -167,99 +146,7 @@ export function KubeSnake() {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    // Clear
-    ctx.fillStyle = COLORS.background
-    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
-
-    // Draw grid
-    ctx.strokeStyle = COLORS.grid
-    ctx.lineWidth = 0.5
-    for (let i = 0; i <= GRID_SIZE; i++) {
-      ctx.beginPath()
-      ctx.moveTo(i * CELL_SIZE, 0)
-      ctx.lineTo(i * CELL_SIZE, CANVAS_HEIGHT)
-      ctx.stroke()
-      ctx.beginPath()
-      ctx.moveTo(0, i * CELL_SIZE)
-      ctx.lineTo(CANVAS_WIDTH, i * CELL_SIZE)
-      ctx.stroke()
-    }
-
-    // Draw food with glow effect
-    const food = foodRef.current
-    ctx.fillStyle = COLORS.foodGlow
-    ctx.beginPath()
-    ctx.arc(
-      food.x * CELL_SIZE + CELL_SIZE / 2,
-      food.y * CELL_SIZE + CELL_SIZE / 2,
-      CELL_SIZE * 0.8,
-      0,
-      Math.PI * 2
-    )
-    ctx.fill()
-    ctx.fillStyle = COLORS.food
-    ctx.beginPath()
-    ctx.arc(
-      food.x * CELL_SIZE + CELL_SIZE / 2,
-      food.y * CELL_SIZE + CELL_SIZE / 2,
-      CELL_SIZE / 2 - 2,
-      0,
-      Math.PI * 2
-    )
-    ctx.fill()
-
-    // Draw snake
-    const snake = snakeRef.current
-    snake.forEach((segment, index) => {
-      const isHead = index === 0
-      ctx.fillStyle = isHead ? COLORS.snakeHead : COLORS.snake
-
-      // Rounded rectangle for each segment
-      const x = segment.x * CELL_SIZE + 1
-      const y = segment.y * CELL_SIZE + 1
-      const size = CELL_SIZE - 2
-      const radius = isHead ? size / 3 : size / 4
-
-      ctx.beginPath()
-      ctx.roundRect(x, y, size, size, radius)
-      ctx.fill()
-
-      // Draw eyes on head
-      if (isHead) {
-        ctx.fillStyle = '#fff'
-        const eyeSize = 3
-        let eyeX1, eyeX2, eyeY1, eyeY2
-
-        switch (directionRef.current) {
-          case 'up':
-            eyeX1 = x + size / 3 - eyeSize / 2
-            eyeX2 = x + (size * 2) / 3 - eyeSize / 2
-            eyeY1 = eyeY2 = y + size / 3
-            break
-          case 'down':
-            eyeX1 = x + size / 3 - eyeSize / 2
-            eyeX2 = x + (size * 2) / 3 - eyeSize / 2
-            eyeY1 = eyeY2 = y + (size * 2) / 3
-            break
-          case 'left':
-            eyeX1 = eyeX2 = x + size / 3
-            eyeY1 = y + size / 3 - eyeSize / 2
-            eyeY2 = y + (size * 2) / 3 - eyeSize / 2
-            break
-          case 'right':
-          default:
-            eyeX1 = eyeX2 = x + (size * 2) / 3
-            eyeY1 = y + size / 3 - eyeSize / 2
-            eyeY2 = y + (size * 2) / 3 - eyeSize / 2
-            break
-        }
-
-        ctx.beginPath()
-        ctx.arc(eyeX1, eyeY1, eyeSize, 0, Math.PI * 2)
-        ctx.arc(eyeX2, eyeY2, eyeSize, 0, Math.PI * 2)
-        ctx.fill()
-      }
-    })
+    drawSnakeFrame(ctx, foodRef.current, snakeRef.current, directionRef.current)
   }, [])
 
   // Game loop

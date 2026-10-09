@@ -1,17 +1,14 @@
 import { useState, useMemo, useImperativeHandle, type Ref } from 'react'
-import {
-  GitBranch, AlertTriangle, CheckCircle, XCircle,
-  Clock, Loader2, ExternalLink, Key, Settings, Plus, X, Check, Stethoscope } from 'lucide-react'
+import { GitBranch, AlertTriangle, Key, Settings, Plus, X, Check } from 'lucide-react'
 import { Button } from '../../ui/Button'
 import { Skeleton } from '../../ui/Skeleton'
 import { Pagination } from '../../ui/Pagination'
 import { CardControls } from '../../ui/CardControls'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
-import { CardSearchInput, CardAIActions } from '../../../lib/cards/CardComponents'
+import { CardSearchInput } from '../../../lib/cards/CardComponents'
 import { useCardLoadingState } from '../CardDataContext'
 import { useCache } from '../../../lib/cache'
 import type { SortDirection } from '../../../lib/cards/cardHooks'
-import { useMissions } from '../../../hooks/useMissions'
 import { cn } from '../../../lib/cn'
 import { WorkloadMonitorAlerts } from './WorkloadMonitorAlerts'
 import type { MonitorIssue } from '../../../types/workloadMonitor'
@@ -19,12 +16,12 @@ import { useTranslation } from 'react-i18next'
 import { formatTimeAgo, loadRepos, saveRepos } from './gitHubCIUtils'
 import { usePipelineFilter } from '../pipelines/PipelineFilterContext'
 import { RepoSubtitle } from '../pipelines/RepoSubtitle'
-import { sanitizeUrl } from '../../../lib/utils/sanitizeUrl'
 import {
-  CONCLUSION_BADGE, STATUS_BADGE, CONCLUSION_ORDER, SORT_OPTIONS, TITLE_DIAGNOSE, DEMO_WORKFLOWS,
+  CONCLUSION_ORDER, SORT_OPTIONS, DEMO_WORKFLOWS,
   type GitHubCIConfig, type WorkflowRun, type SortField,
 } from './GitHubCIMonitor.constants'
 import { fetchGitHubCIWorkflows, type GitHubCIData } from './gitHubCIFetcher'
+import { GitHubCIWorkflowRow } from './GitHubCIWorkflowRow'
 
 interface GitHubCIMonitorProps {
   config?: Record<string, unknown>
@@ -36,7 +33,6 @@ export interface GitHubCIMonitorRef {
 
 export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: Ref<GitHubCIMonitorRef> }) {
   const { t } = useTranslation()
-  const { startMission } = useMissions()
   const ghConfig = config as GitHubCIConfig | undefined
   const shared = usePipelineFilter()
 
@@ -328,92 +324,9 @@ export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: 
 
       {/* Workflow runs */}
       <div ref={containerRef} className="flex-1 overflow-y-auto space-y-0.5" style={containerStyle}>
-        {items.map(w => {
-          const status = effectiveStatus(w)
-          const badgeClass = w.status === 'completed'
-            ? (CONCLUSION_BADGE[w.conclusion || ''] || 'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground')
-            : (STATUS_BADGE[w.status] || 'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground')
-          const StatusIcon = w.conclusion === 'success' ? CheckCircle :
-                             w.conclusion === 'failure' ? XCircle :
-                             w.status === 'in_progress' ? Loader2 :
-                             w.status === 'queued' ? Clock : AlertTriangle
-
-          return (
-            <div
-              key={w.id}
-              className="flex items-center gap-2 py-1 px-1.5 rounded hover:bg-card/30 transition-colors"
-            >
-              <StatusIcon className={cn(
-                'w-3.5 h-3.5 shrink-0',
-                w.conclusion === 'success' ? 'text-green-400' :
-                w.conclusion === 'failure' ? 'text-red-400' :
-                w.status === 'in_progress' ? 'text-blue-400 animate-spin' :
-                'text-muted-foreground',
-              )} />
-              <div className="flex-1 min-w-0">
-                <span className="text-xs text-foreground truncate block">{w.name}</span>
-                <span className="text-2xs text-muted-foreground truncate block flex items-center gap-1">
-                  {w.repo.split('/')[1]} · {w.branch}
-                  {w.prNumber && (
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        window.open(
-                          sanitizeUrl(w.prUrl || `https://github.com/${w.repo}/pull/${w.prNumber}`),
-                          '_blank',
-                          'noopener,noreferrer',
-                        )
-                      }}
-                      className="text-blue-400 hover:underline"
-                    >
-                      #{w.prNumber}
-                    </button>
-                  )}
-                </span>
-              </div>
-              <span className={cn('text-2xs px-1 py-0.5 rounded shrink-0', badgeClass)}>
-                {status}
-              </span>
-              <span className="text-2xs text-muted-foreground shrink-0">
-                {formatTimeAgo(w.updatedAt)}
-              </span>
-              {(w.conclusion === 'failure' || w.conclusion === 'timed_out' || w.conclusion === 'startup_failure') && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => startMission({
-                      title: `Diagnose: ${w.name}`,
-                      description: `Diagnose failing workflow ${w.name} on ${w.repo}`,
-                      type: 'troubleshoot',
-                      initialPrompt: `Diagnose why the "${w.name}" workflow failed on ${w.repo} (branch: ${w.branch}).\n\nRun URL: ${w.url}\n\nPlease:\n1. Check the workflow logs and identify the root cause.\n2. Tell me what went wrong, then ask:\n   - "Should I create a fix?"\n   - "Show me more details"\n3. If I say fix it, create a branch with the fix and open a PR.`,
-                    })}
-                    className="text-muted-foreground hover:text-blue-400 p-1 rounded hover:bg-blue-500/10 shrink-0"
-                    title={TITLE_DIAGNOSE}
-                  >
-                    <Stethoscope className="w-3 h-3" />
-                  </button>
-                  <CardAIActions
-                    resource={{ kind: 'GitHubWorkflow', name: w.name, status: w.conclusion }}
-                    issues={[{ name: `${w.conclusion} on ${w.repo}/${w.branch}`, message: `Run #${w.runNumber}, event: ${w.event}` }]}
-                    showRepair={false}
-                  />
-                </>
-              )}
-              {w.url !== '#' && (
-                <a
-                  href={sanitizeUrl(w.url)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="shrink-0 p-0.5 rounded hover:bg-secondary transition-colors"
-                  onClick={e => e.stopPropagation()}
-                >
-                  <ExternalLink className="w-3 h-3 text-muted-foreground" />
-                </a>
-              )}
-            </div>
-          )
-        })}
+        {items.map(w => (
+          <GitHubCIWorkflowRow key={w.id} workflow={w} status={effectiveStatus(w)} />
+        ))}
         {items.length === 0 && (
           <p className="text-sm text-muted-foreground text-center py-4">No matching workflows.</p>
         )}

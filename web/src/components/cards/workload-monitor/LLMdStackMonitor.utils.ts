@@ -4,7 +4,7 @@
 import { Cpu, Network, Activity, Layers, Server } from 'lucide-react'
 import { ALERT_SEVERITY_ORDER } from '../../../types/alerts'
 import type { LLMdServer } from '../../../hooks/useLLMd'
-import type { MonitorIssue, ResourceHealthStatus } from '../../../types/workloadMonitor'
+import type { MonitorIssue, MonitoredResource, ResourceHealthStatus } from '../../../types/workloadMonitor'
 import type { LLMdSection } from './LLMdComponentSections'
 import {
   STATUS_ORDER,
@@ -232,4 +232,38 @@ export function computeStackHealth(overallStatus: ResourceHealthStatus, sections
   if (statuses.some(s => s === 'degraded')) return 'degraded'
   if (statuses.every(s => s === 'healthy')) return 'healthy'
   return 'unknown'
+}
+
+/**
+ * Builds the resource, matching issues and workload context passed to the
+ * diagnose loop when the user diagnoses a single component.
+ */
+export function buildItemDiagnoseInput(
+  item: ComponentItem,
+  allIssues: MonitorIssue[],
+  fallbackCluster: string | undefined,
+): { resource: MonitoredResource; issues: MonitorIssue[]; context: Record<string, unknown> } {
+  // Create filtered resource for this specific item
+  const resource: MonitoredResource = {
+    id: `Deployment/${item.namespace}/${item.name}`,
+    kind: 'Deployment',
+    name: item.name,
+    namespace: item.namespace || 'unknown',
+    cluster: item.cluster || fallbackCluster || '',
+    status: item.status,
+    category: 'workload',
+    lastChecked: new Date().toISOString(),
+    optional: false,
+    order: 0 }
+  // Create filtered issues for this item
+  const issues = allIssues.filter(issue =>
+    issue.resource.name === item.name &&
+    issue.resource.namespace === item.namespace
+  )
+  const context = {
+    clusters: [item.cluster || fallbackCluster],
+    componentType: item.type,
+    componentName: item.name,
+    namespace: item.namespace }
+  return { resource, issues, context }
 }

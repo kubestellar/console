@@ -11,46 +11,8 @@ import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
-
-interface HelmValuesDiffProps {
-  config?: {
-    cluster?: string
-    release?: string
-    namespace?: string
-  }
-}
-
-interface ValueEntry {
-  path: string
-  value: string
-}
-
-// Flatten nested object to dot-notation paths
-function flattenValues(obj: Record<string, unknown>, prefix = ''): ValueEntry[] {
-  const entries: ValueEntry[] = []
-
-  for (const [key, value] of Object.entries(obj)) {
-    const path = prefix ? `${prefix}.${key}` : key
-
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
-      entries.push(...flattenValues(value as Record<string, unknown>, path))
-    } else {
-      entries.push({
-        path,
-        value: JSON.stringify(value)
-      })
-    }
-  }
-
-  return entries
-}
-
-type SortByOption = 'name' | 'cluster'
-
-const SORT_OPTIONS = [
-  { value: 'name' as const, label: 'Name' },
-  { value: 'cluster' as const, label: 'Cluster' },
-]
+import { flattenValues, SORT_OPTIONS } from './HelmValuesDiff.utils'
+import type { HelmValuesDiffProps, ValueEntry, SortByOption } from './HelmValuesDiff.utils'
 
 export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
   const { t } = useTranslation()

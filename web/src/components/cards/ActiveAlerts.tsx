@@ -1,21 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import {
-  AlertTriangle,
-  CheckCircle,
-  Eye,
-  EyeOff,
-  Server,
-  Bell,
-  BellOff } from 'lucide-react'
+import { CheckCircle, Eye, EyeOff, Server, Bell, BellOff } from 'lucide-react'
 import { useAlerts } from '../../hooks/useAlerts'
-import { MS_PER_MINUTE } from '../../lib/constants/time'
 import { DEFAULT_PAGE_SIZE } from '../../lib/constants/ui'
 import { StatusBadge } from '../ui/StatusBadge'
-import { useGlobalFilters, type SeverityLevel } from '../../hooks/useGlobalFilters'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useMissions } from '../../hooks/useMissions'
 import { ALERT_SEVERITY_ORDER } from '../../types/alerts'
-import type { Alert, AlertSeverity } from '../../types/alerts'
+import type { Alert } from '../../types/alerts'
 import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
 import { CardClusterFilter, CardSearchInput } from '../../lib/cards/CardComponents'
@@ -28,60 +20,15 @@ import { AlertListItem } from './AlertListItem'
 import { useDoNotDisturb, type TimedDuration } from '../../hooks/useDoNotDisturb'
 import { groupAlertsForDisplay, type GroupedAlert } from '../../lib/alerts/groupAlertsForDisplay'
 import { VirtualizedList } from '../ui/VirtualizedList'
-
-/** Format remaining DND time as "Xh Ym" or "Ym" */
-function formatRemaining(ms: number): string {
-  const totalMinutes = Math.ceil(ms / MS_PER_MINUTE)
-  const hours = Math.floor(totalMinutes / 60)
-  const minutes = totalMinutes % 60
-  if (hours > 0) return `${hours}h ${minutes}m`
-  return `${minutes}m`
-}
-
-// Stats summary row shown at the top of the alerts card
-function AlertStatsRow({ critical, warning, acknowledged }: { critical: number; warning: number; acknowledged: number }) {
-  const { t } = useTranslation('cards')
-  return (
-    <div className="grid grid-cols-2 @sm:grid-cols-3 gap-2 mb-2">
-      <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/20">
-        <div className="flex items-center gap-1.5 mb-1">
-          <AlertTriangle className="w-3 h-3 text-red-400" />
-          <span className="text-xs text-red-400">{t('activeAlerts.critical')}</span>
-        </div>
-        <span className="text-lg font-bold text-foreground">{critical}</span>
-      </div>
-      <div className="p-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
-        <div className="flex items-center gap-1.5 mb-1">
-          <AlertTriangle className="w-3 h-3 text-orange-400" />
-          <span className="text-xs text-orange-400">{t('activeAlerts.warning')}</span>
-        </div>
-        <span className="text-lg font-bold text-foreground">{warning}</span>
-      </div>
-      <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20">
-        <div className="flex items-center gap-1.5 mb-1">
-          <CheckCircle className="w-3 h-3 text-green-400" />
-          <span className="text-xs text-green-400">{t('activeAlerts.ackd')}</span>
-        </div>
-        <span className="text-lg font-bold text-foreground">{acknowledged}</span>
-      </div>
-    </div>
-  )
-}
-
-type SortField = 'severity' | 'time'
-
-const mapAlertSeverityToGlobal = (alertSeverity: AlertSeverity): SeverityLevel[] => {
-  switch (alertSeverity) {
-    case 'critical': return ['critical']
-    case 'warning': return ['warning']
-    case 'info': return ['info']
-    default: return ['info']
-  }
-}
-
-const ALERT_ROW_ESTIMATED_HEIGHT_PX = 144
-const ALERT_LIST_OVERSCAN_COUNT = 8
-const ALERT_LIST_ITEM_GAP_PX = 8
+import {
+  formatRemaining,
+  mapAlertSeverityToGlobal,
+  ALERT_ROW_ESTIMATED_HEIGHT_PX,
+  ALERT_LIST_OVERSCAN_COUNT,
+  ALERT_LIST_ITEM_GAP_PX,
+} from './ActiveAlerts.utils'
+import type { SortField } from './ActiveAlerts.utils'
+import { AlertStatsRow } from './ActiveAlerts.StatsRow'
 
 export function ActiveAlerts() {
   const { t } = useTranslation('cards')
