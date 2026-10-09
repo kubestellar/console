@@ -11,6 +11,12 @@ import {
 } from './helpers'
 
 const ITALIC_STYLE = { fontStyle: 'italic' } as const
+const DIM_SMALL_MONO_STYLE = { fontSize: 10, color: 'var(--s-text-dim)', fontFamily: 'var(--s-mono)' } as const
+const DIM_SMALL_STYLE = { fontSize: 10, color: 'var(--s-text-dim)' } as const
+const DIM_ITALIC_STYLE = { fontSize: 11, color: 'var(--s-text-dim)', fontStyle: 'italic' } as const
+const ELLIPSIS_STYLE = { flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' } as const
+const ELLIPSIS_NOWRAP_STYLE = { flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } as const
+const DIM_CENTERED_STYLE = { fontSize: 10, color: 'var(--s-text-dim)', textAlign: 'center' } as const
 
 interface WatchDetailContentProps {
   watch: StellarWatch
@@ -79,7 +85,7 @@ export function WatchDetailContent({
             {watch.lastUpdate}
           </div>
           {watch.lastChecked && (
-            <div className="mt-1" style={{ fontSize: 10, color: 'var(--s-text-dim)', fontFamily: 'var(--s-mono)' }}>
+            <div className="mt-1" style={DIM_SMALL_MONO_STYLE}>
               checked {formatRelative(watch.lastChecked)}{isStale && ' · ⚠ stale'}
             </div>
           )}
@@ -122,7 +128,7 @@ export function WatchDetailContent({
       <SectionHeader title="Stellar's actions" />
       <div className="mb-3">
         {!attemptSummary || attemptSummary.recent.length === 0 ? (
-          <div className="px-2.5 py-1" style={{ fontSize: 11, color: 'var(--s-text-dim)', fontStyle: 'italic' }}>
+          <div className="px-2.5 py-1" style={DIM_ITALIC_STYLE}>
             No attempts in last 24 hours.
           </div>
         ) : (
@@ -155,10 +161,10 @@ export function WatchDetailContent({
                     {formatRelative(s.startedAt)}
                   </span>
                   <span style={{ color: statusColor, fontWeight: 600 }}>{icon}</span>
-                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <span style={ELLIPSIS_STYLE}>
                     {s.summary || s.status}
                   </span>
-                  <span style={{ fontSize: 10, color: 'var(--s-text-dim)' }}>
+                  <span style={DIM_SMALL_STYLE}>
                     {s.actionsTaken} act
                   </span>
                 </div>
@@ -182,13 +188,13 @@ export function WatchDetailContent({
                 <span style={WATCH_TIMELINE_TIMESTAMP_STYLE}>
                   {formatRelative(ev.createdAt)}
                 </span>
-                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={ELLIPSIS_NOWRAP_STYLE}>
                   {ev.title}
                 </span>
               </div>
             ))}
             {relatedEvents.length > EVENT_TIMELINE_LIMIT && (
-              <div className="mt-1" style={{ fontSize: 10, color: 'var(--s-text-dim)', textAlign: 'center' }}>
+              <div className="mt-1" style={DIM_CENTERED_STYLE}>
                 +{relatedEvents.length - EVENT_TIMELINE_LIMIT} earlier
               </div>
             )}
