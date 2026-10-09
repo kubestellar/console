@@ -1,295 +1,32 @@
-import { useState, useEffect, useRef } from 'react'
 import {
-  Box, Container, Database, Server, Cloud, Network, HardDrive,
-  Cpu, Lock, Shield, Globe, GitBranch, Terminal,
+  Box, Terminal,
   Play, Pause, RotateCcw, Trophy, Clock, Hash
 } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
-import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
-import { useToast } from '../ui/Toast'
-import { safeGetItem, safeSetItem } from '@/lib/utils/localStorage'
 import type { CSSProperties } from 'react'
+import { CARD_ICONS, DIFFICULTY_CONFIG, type Difficulty } from './MatchGame.constants'
+import { useMatchGame } from './useMatchGame'
 
 // Inline style constants
 const MATCH_GAME_CANVAS_STYLE_1: CSSProperties = { width: '100%', height: '100%' }
 
-
-// Kubernetes/Cloud themed icons for matching
-const CARD_ICONS = [
-  { id: 'pod', Icon: Box, color: 'text-blue-400' },
-  { id: 'container', Icon: Container, color: 'text-purple-400' },
-  { id: 'database', Icon: Database, color: 'text-green-400' },
-  { id: 'server', Icon: Server, color: 'text-yellow-400' },
-  { id: 'cloud', Icon: Cloud, color: 'text-cyan-400' },
-  { id: 'network', Icon: Network, color: 'text-purple-400' },
-  { id: 'storage', Icon: HardDrive, color: 'text-orange-400' },
-  { id: 'cpu', Icon: Cpu, color: 'text-red-400' },
-  { id: 'security', Icon: Lock, color: 'text-blue-400' },
-  { id: 'shield', Icon: Shield, color: 'text-cyan-400' },
-  { id: 'globe', Icon: Globe, color: 'text-green-400' },
-  { id: 'git', Icon: GitBranch, color: 'text-purple-400' },
-]
-
-type Difficulty = 'easy' | 'medium' | 'hard'
-
-interface GameCard {
-  id: string
-  iconId: string
-  matched: boolean
+const formatTime = (seconds: number) => {
+  const mins = Math.floor(seconds / 60)
+  const secs = seconds % 60
+  return `${mins}:${secs.toString().padStart(2, '0')}`
 }
-
-interface HighScore {
-  difficulty: Difficulty
-  moves: number
-  time: number
-  date: string
-}
-
-const DIFFICULTY_CONFIG = {
-  easy: { rows: 3, cols: 4, pairs: 6 },
-  medium: { rows: 4, cols: 4, pairs: 8 },
-  hard: { rows: 4, cols: 6, pairs: 12 } }
-
-const TIMER_TICK_MS = 1_000
-const MATCH_REVEAL_DELAY_MS = 500
-const NO_MATCH_FLIP_DELAY_MS = 1_000
-const CONFETTI_DURATION_MS = 5_000
 
 export function MatchGame(_props: CardComponentProps) {
   const { t } = useTranslation()
-  const { showToast } = useToast()
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
   const { isExpanded } = useCardExpanded()
-  const [difficulty, setDifficulty] = useState<Difficulty>('easy')
-  const [cards, setCards] = useState<GameCard[]>([])
-  const [flippedCards, setFlippedCards] = useState<string[]>([])
-  const [moves, setMoves] = useState(0)
-  const [time, setTime] = useState(0)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [isPaused, setIsPaused] = useState(false)
-  const [gameWon, setGameWon] = useState(false)
-  const [highScores, setHighScores] = useState<Record<Difficulty, HighScore | null>>({
-    easy: null,
-    medium: null,
-    hard: null })
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const canvasRef = useRef<HTMLCanvasElement | null>(null)
-
-  // Load high scores from localStorage
-  useEffect(() => {
-    try {
-      const stored = safeGetItem('matchGameHighScores')
-      if (stored) {
-        setHighScores(JSON.parse(stored))
-      }
-    } catch {
-      // User-visible toast already communicates the failure; no console
-      // noise needed (#8816).
-      showToast(t('matchGame.errors.highScoresFailed', 'Could not load high scores.'), 'warning')
-    }
-  }, [showToast, t])
-
-  // Initialize game
-  const initGame = () => {
-    const config = DIFFICULTY_CONFIG[difficulty]
-    const selectedIcons = CARD_ICONS.slice(0, config.pairs)
-    const cardPairs = selectedIcons.flatMap(icon => [
-      { id: `${icon.id}-1`, iconId: icon.id, matched: false },
-      { id: `${icon.id}-2`, iconId: icon.id, matched: false },
-    ])
-    
-    // Shuffle cards using Fisher-Yates algorithm
-    const shuffled = [...cardPairs]
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-    }
-    setCards(shuffled)
-    setFlippedCards([])
-    setMoves(0)
-    setTime(0)
-    setIsPlaying(true)
-    setIsPaused(false)
-    setGameWon(false)
-    emitGameStarted('match')
-  }
-
-  // Timer
-  useEffect(() => {
-    if (isPlaying && !isPaused && !gameWon) {
-      timerRef.current = setInterval(() => {
-        setTime(t => t + 1)
-      }, TIMER_TICK_MS)
-    } else if (timerRef.current) {
-      clearInterval(timerRef.current)
-    }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current)
-    }
-  }, [isPlaying, isPaused, gameWon])
-
-  // Check for game completion
-  useEffect(() => {
-    if (isPlaying && cards.length > 0 && cards.every(card => card.matched)) {
-      setGameWon(true)
-      setIsPlaying(false)
-      
-      // Save high score
-      const currentScore = highScores[difficulty]
-      if (!currentScore || moves < currentScore.moves || (moves === currentScore.moves && time < currentScore.time)) {
-        const newHighScores = {
-          ...highScores,
-          [difficulty]: { difficulty, moves, time, date: new Date().toISOString() }
-        }
-        setHighScores(newHighScores)
-        safeSetItem('matchGameHighScores', JSON.stringify(newHighScores))
-      }
-      
-      emitGameEnded('match', 'win', moves)
-
-      // Trigger confetti
-      triggerConfetti()
-    }
-  }, [cards, isPlaying, moves, time, difficulty, highScores])
-
-  // Handle card flip
-  const handleCardClick = (cardId: string) => {
-    if (flippedCards.length >= 2 || flippedCards.includes(cardId) || isPaused || gameWon) {
-      return
-    }
-
-    const card = cards.find(c => c.id === cardId)
-    if (!card || card.matched) return
-
-    const newFlipped = [...flippedCards, cardId]
-    setFlippedCards(newFlipped)
-
-    if (newFlipped.length === 2) {
-      setMoves(m => m + 1)
-      
-      const [first, second] = newFlipped
-      const firstCard = cards.find(c => c.id === first)
-      const secondCard = cards.find(c => c.id === second)
-
-      if (firstCard && secondCard && firstCard.iconId === secondCard.iconId) {
-        // Match found!
-        setTimeout(() => {
-          setCards(prevCards =>
-            prevCards.map(c =>
-              c.id === first || c.id === second ? { ...c, matched: true } : c
-            )
-          )
-          setFlippedCards([])
-        }, MATCH_REVEAL_DELAY_MS)
-      } else {
-        // No match
-        setTimeout(() => {
-          setFlippedCards([])
-        }, NO_MATCH_FLIP_DELAY_MS)
-      }
-    }
-  }
-
-  // Confetti animation
-  const triggerConfetti = () => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    canvas.width = canvas.offsetWidth
-    canvas.height = canvas.offsetHeight
-
-    const particles: Array<{
-      x: number
-      y: number
-      vx: number
-      vy: number
-      color: string
-      size: number
-      rotation: number
-      rotationSpeed: number
-    }> = []
-
-    const colors = ['#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b', '#ef4444']
-
-    // Create particles
-    for (let i = 0; i < 100; i++) {
-      particles.push({
-        x: canvas.width / 2,
-        y: canvas.height / 2,
-        vx: (Math.random() - 0.5) * 10,
-        vy: (Math.random() - 0.5) * 10 - 5,
-        color: colors[Math.floor(Math.random() * colors.length)],
-        size: Math.random() * 8 + 4,
-        rotation: Math.random() * Math.PI * 2,
-        rotationSpeed: (Math.random() - 0.5) * 0.2 })
-    }
-
-    let animationFrame: number
-
-    const animate = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-
-      // Update and draw particles, filtering out off-screen ones
-      for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i]
-        p.x += p.vx
-        p.y += p.vy
-        p.vy += 0.3 // gravity
-        p.rotation += p.rotationSpeed
-
-        // Remove particles that are off screen
-        if (p.y > canvas.height) {
-          particles.splice(i, 1)
-          continue
-        }
-
-        ctx.save()
-        ctx.translate(p.x, p.y)
-        ctx.rotate(p.rotation)
-        ctx.fillStyle = p.color
-        ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size)
-        ctx.restore()
-      }
-
-      if (particles.length > 0) {
-        animationFrame = requestAnimationFrame(animate)
-      }
-    }
-
-    animate()
-
-    // Cleanup
-    setTimeout(() => {
-      if (animationFrame) cancelAnimationFrame(animationFrame)
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-    }, CONFETTI_DURATION_MS)
-  }
-
-  const togglePause = () => {
-    setIsPaused(p => !p)
-  }
-
-  const resetGame = () => {
-    initGame()
-  }
-
-  const changeDifficulty = (newDifficulty: Difficulty) => {
-    setDifficulty(newDifficulty)
-    setIsPlaying(false)
-    setCards([])
-  }
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, '0')}`
-  }
+  const {
+    difficulty, cards, flippedCards, moves, time, isPlaying, isPaused, gameWon, highScores,
+    canvasRef, initGame, handleCardClick, togglePause, resetGame, changeDifficulty,
+  } = useMatchGame()
 
   const { rows, cols } = DIFFICULTY_CONFIG[difficulty]
 
