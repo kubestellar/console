@@ -1,9 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  Store, Search, Tag, RefreshCw, Loader2, AlertCircle, Package,
-  ExternalLink, Heart,
-  HandHelping, List, Grid3X3, SortAsc, SortDesc } from 'lucide-react'
+import { Store, Search, Tag, Loader2, HandHelping } from 'lucide-react'
 import { useMarketplace, MarketplaceItem, MarketplaceItemType } from '../../hooks/useMarketplace'
 import { useSidebarConfig } from '../../hooks/useSidebarConfig'
 import { useToast } from '../ui/Toast'
@@ -11,23 +8,21 @@ import { Input } from '../ui/Input'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { RotatingTip } from '../ui/RotatingTip'
 import { CNCFProgressBanner } from './CNCFProgressBanner'
-import { MarketplaceCard } from './MarketplaceCard'
-import { MarketplaceRow } from './MarketplaceRow'
-import { TYPE_LABELS, ISSUES_URL } from './Marketplace.constants'
+import { TYPE_LABELS } from './Marketplace.constants'
+import {
+  MarketplaceViewControls,
+  MarketplaceItemCollection,
+  MarketplaceErrorState,
+  MarketplaceEmptyState,
+  MarketplaceContributeFooter,
+  type ViewMode,
+  type SortField,
+  type SortOrder } from './Marketplace.parts'
 import { NAV_AFTER_ANIMATION_MS } from '../../lib/constants/network'
 import { suggestIconSync } from '../../lib/iconSuggester'
 import { useTranslation } from 'react-i18next'
-import type { CSSProperties } from 'react'
-
-// Inline style constants
-const MARKETPLACE_DIV_STYLE_1: CSSProperties = { gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }
-
-type ViewMode = 'grid' | 'list'
-type SortField = 'name' | 'author' | 'type' | 'difficulty'
-type SortOrder = 'asc' | 'desc'
 
 const VIEW_MODE_KEY = 'kc-marketplace-view-mode'
-const CONTRIBUTE_URL = 'https://github.com/kubestellar/console-marketplace'
 
 const filterBtnClass = (active: boolean) =>
   `flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-md transition-colors ${
@@ -328,46 +323,14 @@ export function Marketplace() {
 
       {/* View controls */}
       {!isLoading && !error && items.length > 0 && (
-        <div className="flex items-center justify-between">
-          {/* Sort */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-2xs text-muted-foreground mr-1">Sort:</span>
-            {(['name', 'type', 'author', ...(showHelpWanted ? ['difficulty' as SortField] : [])] as SortField[]).map(field => (
-              <button
-                key={field}
-                onClick={() => toggleSort(field)}
-                className={`flex items-center gap-0.5 px-2 py-1 text-2xs rounded transition-colors ${
-                  sortField === field
-                    ? 'bg-primary/15 text-primary font-medium'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {field.charAt(0).toUpperCase() + field.slice(1)}
-                {sortField === field && (
-                  sortOrder === 'asc' ? <SortAsc className="w-2.5 h-2.5" /> : <SortDesc className="w-2.5 h-2.5" />
-                )}
-              </button>
-            ))}
-          </div>
-
-          {/* View mode */}
-          <div className="flex items-center gap-0.5 bg-muted rounded-md p-0.5">
-            <button
-              onClick={() => toggleViewMode('grid')}
-              className={`p-1.5 rounded transition-colors ${viewMode === 'grid' ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'}`}
-              title="Grid view"
-            >
-              <Grid3X3 className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => toggleViewMode('list')}
-              className={`p-1.5 rounded transition-colors ${viewMode === 'list' ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'}`}
-              title="List view"
-            >
-              <List className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
+        <MarketplaceViewControls
+          sortField={sortField}
+          sortOrder={sortOrder}
+          showHelpWanted={showHelpWanted}
+          viewMode={viewMode}
+          onToggleSort={toggleSort}
+          onViewModeChange={toggleViewMode}
+        />
       )}
 
       {/* Content */}
@@ -376,31 +339,9 @@ export function Marketplace() {
           <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         </div>
       ) : error ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <AlertCircle className="w-10 h-10 text-muted-foreground/50 mb-3" />
-          <p className="text-sm text-muted-foreground mb-1">Failed to load marketplace</p>
-          <p className="text-xs text-muted-foreground/70 mb-4">{error}</p>
-          <button
-            onClick={refresh}
-            disabled={isLoading}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary/10 hover:bg-primary/20 text-primary rounded-md transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={`w-3 h-3 ${isLoading ? 'animate-spin' : ''}`} />
-            Try again
-          </button>
-        </div>
+        <MarketplaceErrorState error={error} isLoading={isLoading} refresh={refresh} />
       ) : items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <Package className="w-10 h-10 text-muted-foreground/50 mb-3" />
-          <p className="text-sm text-muted-foreground mb-1">
-            {searchQuery || selectedTag || selectedType ? 'No matching items' : 'No community content yet'}
-          </p>
-          <p className="text-xs text-muted-foreground/70">
-            {searchQuery || selectedTag || selectedType
-              ? 'Try adjusting your search or filters'
-              : 'Community dashboards and presets will appear here'}
-          </p>
-        </div>
+        <MarketplaceEmptyState hasActiveFilters={!!(searchQuery || selectedTag || selectedType)} />
       ) : showHelpWanted && groupedItems ? (
         // Grouped view for help-wanted items
         <div className="space-y-6">
@@ -413,100 +354,28 @@ export function Marketplace() {
                 <span className="text-2xs text-muted-foreground/60">{categoryItems.length} {categoryItems.length === 1 ? 'project' : 'projects'}</span>
                 <div className="flex-1 h-px bg-border" />
               </div>
-              {viewMode === 'list' ? (
-                <div className="space-y-1.5">
-                  {categoryItems.map(item => (
-                    <MarketplaceRow
-                      key={item.id}
-                      item={item}
-                      onInstall={handleInstall}
-                      onRemove={handleRemove}
-                      isInstalled={isInstalled(item.id)}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="grid gap-4" style={MARKETPLACE_DIV_STYLE_1}>
-                  {categoryItems.map(item => (
-                    <MarketplaceCard
-                      key={item.id}
-                      item={item}
-                      onInstall={handleInstall}
-                      onRemove={handleRemove}
-                      isInstalled={isInstalled(item.id)}
-                    />
-                  ))}
-                </div>
-              )}
+              <MarketplaceItemCollection
+                items={categoryItems}
+                viewMode={viewMode}
+                onInstall={handleInstall}
+                onRemove={handleRemove}
+                isInstalled={isInstalled}
+              />
             </div>
           ))}
         </div>
-      ) : viewMode === 'list' ? (
-        <div className="space-y-1.5">
-          {sortedItems.map(item => (
-            <MarketplaceRow
-              key={item.id}
-              item={item}
-              onInstall={handleInstall}
-              onRemove={handleRemove}
-              isInstalled={isInstalled(item.id)}
-            />
-          ))}
-        </div>
       ) : (
-        <div className="grid gap-4" style={MARKETPLACE_DIV_STYLE_1}>
-          {sortedItems.map(item => (
-            <MarketplaceCard
-              key={item.id}
-              item={item}
-              onInstall={handleInstall}
-              onRemove={handleRemove}
-              isInstalled={isInstalled(item.id)}
-            />
-          ))}
-        </div>
+        <MarketplaceItemCollection
+          items={sortedItems}
+          viewMode={viewMode}
+          onInstall={handleInstall}
+          onRemove={handleRemove}
+          isInstalled={isInstalled}
+        />
       )}
 
       {/* Contribute Footer */}
-      <div className="flex items-center justify-between bg-card border border-border rounded-lg px-5 py-4">
-        <div className="flex items-center gap-3">
-          <Heart className="w-5 h-5 text-purple-400 shrink-0" />
-          <div>
-            <p className="text-sm font-medium text-foreground">
-              {cncfStats.helpWanted > 0
-                ? 'Help build CNCF ecosystem coverage'
-                : 'Share with the community'}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {cncfStats.helpWanted > 0
-                ? `${cncfStats.helpWanted} projects need card implementations. Pick one, follow the tutorial, open a PR.`
-                : 'Contribute dashboards, card presets, or themes — just open a PR with your JSON file.'}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {cncfStats.helpWanted > 0 && (
-            <a
-              href={ISSUES_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 rounded-md transition-colors"
-            >
-              <HandHelping className="w-3 h-3" />
-              Browse Issues
-            </a>
-          )}
-          <a
-            href={CONTRIBUTE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary/10 hover:bg-primary/20 text-primary rounded-md transition-colors"
-          >
-            <ExternalLink className="w-3 h-3" />
-            Contribute
-          </a>
-        </div>
-      </div>
+      <MarketplaceContributeFooter helpWanted={cncfStats.helpWanted} />
     </div>
   )
 }
