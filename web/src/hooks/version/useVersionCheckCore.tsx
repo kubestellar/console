@@ -6,7 +6,6 @@ import type {
   AutoUpdateStatus,
   UpdateProgress,
 } from '../../types/updates'
-import { UPDATE_STORAGE_KEYS } from '../../types/updates'
 import { emitSessionContext } from '../../lib/analytics'
 import { useLocalAgent } from '../useLocalAgent'
 import {
@@ -17,19 +16,12 @@ import {
   isDevVersion,
   isNewerVersion,
   loadCache,
-  loadChannel,
-  loadAutoUpdateEnabled,
-  loadSkippedVersions,
   parseRelease,
 } from '../versionUtils'
-import { usePersistedState } from './usePersistedState'
+import { useVersionCheckPreferences } from './useVersionCheckPreferences'
+import { readBuildCommitHash, readBuildVersion } from './buildInfo'
 import { useBackendInstallMethod } from './useBackendInstallMethod'
-import {
-  deserializeChannel,
-  deserializeLastChecked,
-  deserializeSkippedVersions,
-  VERSION_CHECK_CACHE_MAX_AGE_MS,
-} from './versionCheckSerializers'
+import { VERSION_CHECK_CACHE_MAX_AGE_MS } from './versionCheckSerializers'
 import {
   clearGithubRateLimitBackoff,
   fetchLatestMainSHA,
@@ -45,19 +37,13 @@ import {
   triggerUpdate,
 } from './useAutoUpdate'
 
-declare const __APP_VERSION__: string
-
-declare const __COMMIT_HASH__: string
-
 export function useVersionCheckCore() {
-  const [channel, setChannelState] = usePersistedState<UpdateChannel>(
-    UPDATE_STORAGE_KEYS.CHANNEL,
-    loadChannel,
-    {
-      deserialize: deserializeChannel,
-      serialize: (value) => value,
-    },
-  )
+  const {
+    channel, setChannelState,
+    lastChecked, setLastChecked,
+    skippedVersions, setSkippedVersions,
+    autoUpdateEnabled, setAutoUpdateEnabledState,
+  } = useVersionCheckPreferences()
   const [releases, setReleases] = useState<ParsedRelease[]>([])
 
   // Combine isChecking, error, and lastCheckResult into one reducer so that
@@ -68,32 +54,6 @@ export function useVersionCheckCore() {
     { isChecking: false, error: null, lastCheckResult: null },
   )
   const { isChecking, error, lastCheckResult } = checkProgress
-  const [lastChecked, setLastChecked] = usePersistedState<number | null>(
-    UPDATE_STORAGE_KEYS.LAST_CHECK,
-    null,
-    {
-      deserialize: deserializeLastChecked,
-      serialize: (value) => String(value),
-      removeWhen: (value) => value == null,
-    },
-  )
-  const [skippedVersions, setSkippedVersions] = usePersistedState<string[]>(
-    UPDATE_STORAGE_KEYS.SKIPPED_VERSIONS,
-    loadSkippedVersions,
-    {
-      deserialize: deserializeSkippedVersions,
-      serialize: (value) => JSON.stringify(value),
-      removeWhen: (value) => value.length === 0,
-    },
-  )
-  const [autoUpdateEnabled, setAutoUpdateEnabledState] = usePersistedState<boolean>(
-    UPDATE_STORAGE_KEYS.AUTO_UPDATE_ENABLED,
-    loadAutoUpdateEnabled,
-    {
-      deserialize: (raw) => raw === 'true',
-      serialize: (value) => String(value),
-    },
-  )
   const [installMethod, setInstallMethod] = useState<InstallMethod>(() =>
     typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
       ? 'dev'
@@ -111,21 +71,9 @@ export function useVersionCheckCore() {
   const hasCodingAgent = agentHealth?.hasClaude ?? false
   const agentSupportsAutoUpdate = agentConnected && agentHealth?.install_method != null
 
-  const currentVersion = useMemo(() => {
-    try {
-      return __APP_VERSION__ || 'unknown'
-    } catch {
-      return 'unknown'
-    }
-  }, [])
+  const currentVersion = useMemo(() => readBuildVersion(), [])
 
-  const commitHash = useMemo(() => {
-    try {
-      return __COMMIT_HASH__ || 'unknown'
-    } catch {
-      return 'unknown'
-    }
-  }, [])
+  const commitHash = useMemo(() => readBuildCommitHash(), [])
 
   const updateLastCheckedTimestamp = useCallback(() => {
     setLastChecked(Date.now())

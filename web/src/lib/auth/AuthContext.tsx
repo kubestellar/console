@@ -6,14 +6,8 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react'
 import { checkOAuthConfigured, checkOAuthConfiguredWithRetry } from '../api'
-import { dashboardSync } from '../dashboards/dashboardSync'
-import { clearPermissionsCache } from '../../hooks/usePermissions'
-import { disconnectPresence } from '../../hooks/useActiveUsers'
-import { clearSSECache } from '../sseClient'
-import { clearClusterCacheOnLogout } from '../../hooks/mcp/shared'
-import { clearAgentToken } from '../../hooks/mcp/agentFetch'
 import { DEMO_TOKEN_VALUE, FETCH_DEFAULT_TIMEOUT_MS, STORAGE_KEY_DEMO_MODE, STORAGE_KEY_HAS_SESSION, STORAGE_KEY_ONBOARDED } from '../constants'
-import { safeGet, safeRemove, safeSet } from '../safeLocalStorage'
+import { safeGet, safeRemove } from '../safeLocalStorage'
 import { clearStoredAuthToken, getStoredAuthToken, getStoredAuthTokenSync, setStoredAuthToken } from '../authToken'
 import { emitLogin, emitLogout, setAnalyticsUserId, setAnalyticsUserProperties, emitConversionStep, emitDeveloperSession } from '../analytics'
 import { setDemoMode as setGlobalDemoMode } from '../demoMode'
@@ -35,6 +29,7 @@ import { restoreCookieSession } from './sessionRestore'
 import { useSessionExpiryWatcher } from './useSessionExpiryWatcher'
 import { useAuthStorageSync } from './useAuthStorageSync'
 import { useCachedUserRevalidation } from './useCachedUserRevalidation'
+import { invalidateServerSession, clearLocalAuthStorage, clearSessionCaches } from './logoutCleanup'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(getCachedUser)
@@ -54,60 +49,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     emitLogout()
 
-    // Invalidate the server-side session before clearing client state (#4751).
-    // Fire-and-forget: even if the backend call fails, we still clear local state
-    // so the user is logged out on the client side.
-    const currentToken = await getStoredAuthToken()
-    if (currentToken && currentToken !== DEMO_TOKEN_VALUE) {
-      fetch('/auth/logout', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${currentToken}`,
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      }).catch(() => {
-        // Backend unreachable — token will expire naturally
-      })
-    }
+    await invalidateServerSession()
 
-    // Clear every place a token or cached user could live. The kc-agent token
-    // now lives in memory with expiring sessionStorage fallback, so explicitly
-    // wipe both session-scoped stores on logout to avoid leaking into the next
-    // session.
-    await clearStoredAuthToken()
-    clearAgentToken()
-    // A real authenticated session may have auto-enabled demo data when the
-    // local agent was absent. Signing out must leave the user unauthenticated
-    // instead of allowing a protected route to re-enter the demo dashboard.
-    safeSet(STORAGE_KEY_DEMO_MODE, 'false')
-    setGlobalDemoMode(false, true)
-    safeRemove(AUTH_USER_CACHE_KEY)
-    safeRemove(STORAGE_KEY_HAS_SESSION)
-    try {
-      sessionStorage.removeItem(AUTH_USER_CACHE_KEY)
-      // Rotate the presence session ID so the next login is tracked as a
-      // brand-new session instead of inheriting the logged-out user's.
-      sessionStorage.removeItem('kc-session-id')
-    } catch {
-      // sessionStorage may be unavailable in some embedded contexts — ignore.
-    }
-    cacheUser(null)
+    await clearLocalAuthStorage()
     // Flush in-memory auth context state so no stale references survive
     // the logout call (#6004).
     setTokenState(null)
     setUser(null)
-    // Clear dashboard sync cache
-    dashboardSync.clearCache()
-    // Clear permissions cache so the next login doesn't serve stale data
-    clearPermissionsCache()
-    // Clear SSE result cache to prevent stale data from previous session (#4712)
-    clearSSECache()
-    // Clear cluster caches (localStorage + in-memory) so the next user
-    // doesn't see stale cluster names, metrics, or distributions (#5405)
-    clearClusterCacheOnLogout()
-    // Disconnect presence WebSocket to stop transmitting stale auth tokens (#4936)
-    disconnectPresence()
+    clearSessionCaches()
   }, [])
 
   const setDemoMode = useCallback(async () => {

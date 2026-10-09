@@ -1,23 +1,22 @@
 /**
  * Route definitions and route-level helper components.
  *
- * Contains ProtectedRoute, auth helpers, LightweightShell, SuspenseRoute,
- * and the full FullDashboardApp provider + route tree.
+ * Contains LightweightShell, SuspenseRoute, and the full FullDashboardApp
+ * provider + route tree. ProtectedRoute, auth helpers and redirect helpers
+ * live in routeGuards.tsx.
  *
  * Extracted from App.tsx so the root component only handles live-URL
  * bridging and top-level provider composition.
  */
-import { Suspense, useEffect, useRef } from 'react'
-import { Routes, Route, Navigate, useNavigate, useLocation, Outlet } from 'react-router-dom'
+import { Suspense } from 'react'
+import { Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import type { Location } from 'react-router-dom'
-import { CardHistoryEntry } from '../hooks/useCardHistory'
 import { Layout } from '../components/layout/Layout'
-import { AuthProvider, useAuth, isJWTExpired } from '../lib/auth'
-import { DEMO_TOKEN_VALUE } from '../lib/constants'
+import { AuthProvider } from '../lib/auth'
 import { BrandingProvider } from '../hooks/useBranding'
 import { ThemeProvider } from '../hooks/useTheme'
 import { DrillDownProvider } from '../hooks/useDrillDown'
-import { DashboardProvider, useDashboardContext } from '../hooks/useDashboardContext'
+import { DashboardProvider } from '../hooks/useDashboardContext'
 import { GlobalFiltersProvider } from '../hooks/useGlobalFilters'
 import { MissionProvider } from '../hooks/useMissions'
 import { CardEventProvider } from '../lib/cardEvents'
@@ -33,8 +32,6 @@ import { PageErrorBoundary } from '../components/PageErrorBoundary'
 import { InitialInfrastructureGate } from '../components/InitialInfrastructureGate'
 import { StellarProvider } from '../hooks/useStellar'
 import { ROUTES } from '../config/routes'
-import { getStoredAuthTokenSync } from '../lib/authToken'
-import { safeSet } from '../lib/safeLocalStorage'
 import {
   OrbitAutoRunner, SettingsSyncInit, PageViewTracker, DataPrefetchInit,
   LoadingFallback,
@@ -53,7 +50,7 @@ import {
   LicenseComplianceDashboard, RiskMatrixDashboard, RiskRegisterDashboard,
   RiskAppetiteDashboard, EnterpriseLayout, EnterprisePortal, ComingSoon,
   DataCompliance, GPUReservations, KarmadaOps, Nodes, Deployments,
-  Services, Operators, HelmReleases, Logs, Pods, CardHistory,
+  Services, Operators, HelmReleases, Logs, Pods,
   UserManagementPage, TeamManagementPage, NamespaceManager, Arcade, Deploy, AIML, AIAgents,
   LLMdBenchmarks, ClusterAdmin, CICD, Insights, MultiTenancy, Drasi,
   ACMM, Marketplace, Quantum, StellarPage, AuditPage, MiniDashboard, EmbedCard, Welcome,
@@ -61,6 +58,10 @@ import {
   FeatureKagent, WhiteLabel, UnifiedCardTest, UnifiedStatsTest,
   UnifiedDashboardTest, AllCardsPerfTest, CompliancePerfTest, NotFound,
 } from '../routes/lazyRoutes'
+import {
+  CardHistoryWithRestore, AppErrorBoundaryProbe, ProtectedRoute,
+  IssueRedirect, FeatureRedirect,
+} from './routeGuards'
 
 // ---------------------------------------------------------------------------
 // Route-level helper components
@@ -75,100 +76,6 @@ export function SuspenseRoute({ children }: { children: React.ReactNode }) {
       <Suspense fallback={<LoadingFallback />}>{children}</Suspense>
     </PageErrorBoundary>
   )
-}
-
-// Wrapper for CardHistory that provides the restore functionality
-function CardHistoryWithRestore() {
-  const navigate = useNavigate()
-  const { setPendingRestoreCard } = useDashboardContext()
-
-  const handleRestoreCard = (entry: CardHistoryEntry) => {
-    // Set the card to be restored in context
-    setPendingRestoreCard({
-      cardType: entry.cardType,
-      cardTitle: entry.cardTitle,
-      config: entry.config,
-      dashboardId: entry.dashboardId,
-    })
-    // Navigate to the dashboard
-    navigate(ROUTES.HOME)
-  }
-
-  return <CardHistory onRestoreCard={handleRestoreCard} />
-}
-
-/** Key for preserving the intended destination through the OAuth login flow */
-const RETURN_TO_KEY = 'kubestellar-return-to'
-/** Query param that triggers a synthetic render crash for E2E tests. */
-const APP_ERROR_TEST_PARAM = '__e2e_app_error'
-/** Stable message asserted by the AppErrorBoundary recovery test. */
-const APP_ERROR_TEST_MESSAGE = 'Synthetic AppErrorBoundary crash'
-
-function AppErrorBoundaryProbe() {
-  const location = useLocation()
-  const searchParams = new URLSearchParams(location.search)
-
-  if (searchParams.has(APP_ERROR_TEST_PARAM)) {
-    throw new Error(APP_ERROR_TEST_MESSAGE)
-  }
-
-  return null
-}
-
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth()
-  const location = useLocation()
-
-  if (isLoading) {
-    // #6058 — Optimistically render only when the token in localStorage is
-    // either the demo sentinel or a JWT that's still within its exp window.
-    // If the token is expired, showing protected children would leak content
-    // to an unauthenticated user during the brief refreshUser() window. In
-    // that case render nothing (a spinner placeholder) until auth resolves.
-    const storedToken = getStoredAuthTokenSync()
-    if (storedToken && (storedToken === DEMO_TOKEN_VALUE || !isJWTExpired(storedToken))) {
-      return <>{children}</>
-    }
-    return null
-  }
-
-  if (!isAuthenticated) {
-    // Save the intended destination so AuthCallback can return here after login.
-    // This preserves deep-link params like ?mission= through the OAuth round-trip.
-    const destination = location.pathname + location.search
-    if (destination !== ROUTES.HOME && destination !== ROUTES.LOGIN) {
-      safeSet(RETURN_TO_KEY, destination)
-    }
-    return <Navigate to={ROUTES.LOGIN} replace />
-  }
-
-  return <>{children}</>
-}
-
-function IssueRedirect() {
-  const navigate = useNavigate()
-  const dispatched = useRef(false)
-  useEffect(() => {
-    if (!dispatched.current) {
-      dispatched.current = true
-      navigate(ROUTES.HOME, { replace: true })
-      window.dispatchEvent(new CustomEvent('open-feedback'))
-    }
-  }, [navigate])
-  return null
-}
-
-function FeatureRedirect() {
-  const navigate = useNavigate()
-  const dispatched = useRef(false)
-  useEffect(() => {
-    if (!dispatched.current) {
-      dispatched.current = true
-      navigate(ROUTES.HOME, { replace: true })
-      window.dispatchEvent(new CustomEvent('open-feedback-feature'))
-    }
-  }, [navigate])
-  return null
 }
 
 // ⚠️ PERFORMANCE CRITICAL — DO NOT MOVE MISSION ROUTES INTO FullDashboardApp ⚠️
