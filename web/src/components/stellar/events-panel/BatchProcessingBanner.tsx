@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { FLEX_SPACER_STYLE, type CurrentBatch } from './types'
 
 const GLYPH_STYLE = { fontSize: 14 } as const
+const ARROW_STYLE = { fontSize: 11, color: 'var(--s-text-dim)' } as const
 const TEXT_STYLE = { color: 'var(--s-text)' } as const
 
 export interface BatchProcessingBannerProps {
@@ -60,7 +61,7 @@ export function BatchProcessingBanner({ currentBatch, onOpen }: BatchProcessingB
         }}>
           {currentBatch.solvingCount}/{currentBatch.totalEvents} solving
         </span>
-        <span style={{ fontSize: 11, color: 'var(--s-text-dim)' }}>→</span>
+        <span style={ARROW_STYLE}>→</span>
       </div>
       <div className="mt-1 text-xs leading-normal" style={TEXT_STYLE}>
         {t('stellar.batch.viewBatchMonitor')} — {currentBatch.solvingCount} event{currentBatch.solvingCount === 1 ? '' : 's'} actively solving
