@@ -1,6 +1,7 @@
 // Creation-flow panels for the Create OPA Policy modal.
 // Extracted from CreatePolicyModal.tsx (issue #24058) — markup unchanged.
 import { FileCode, LayoutTemplate, Sparkles, Copy, MessageSquareText, ScanSearch, Loader2 } from 'lucide-react'
+import { TextArea } from '../../ui/TextArea'
 import { POLICY_TEMPLATES } from './types'
 
 // Creation flow type for CreatePolicyModal
@@ -116,10 +117,10 @@ export function CreatePolicyDescribeFlow({ userDescription, setUserDescription, 
       <p className="text-xs text-muted-foreground">
         Describe the policy you want in plain English. AI will generate the ConstraintTemplate and Constraint YAML.
       </p>
-      <textarea
+      <TextArea
         value={userDescription}
         onChange={(e) => setUserDescription(e.target.value)}
-        className="w-full h-32 p-3 bg-secondary/50 border border-border rounded-lg text-sm text-foreground resize-none focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
+        className="h-32 p-3 bg-secondary/50 focus:ring-1 focus:ring-purple-500/50 focus:ring-offset-0"
         placeholder="e.g., Block all pods that don't have a 'team' label, require all containers to have memory limits, prevent images from untrusted registries..."
         autoFocus
       />
@@ -187,10 +188,10 @@ export function CreatePolicyYamlFlow({ selectedCluster, yamlContent, setYamlCont
           Copy
         </button>
       </div>
-      <textarea
+      <TextArea
         value={yamlContent}
         onChange={(e) => setYamlContent(e.target.value)}
-        className="w-full h-[40vh] p-3 bg-secondary/50 border border-border rounded-lg font-mono text-sm text-foreground resize-none focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
+        className="h-[40vh] p-3 bg-secondary/50 font-mono focus:ring-1 focus:ring-purple-500/50 focus:ring-offset-0"
         placeholder="# Paste or write your ConstraintTemplate and Constraint YAML here..."
         spellCheck={false}
         autoFocus
