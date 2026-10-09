@@ -155,3 +155,4 @@ export const HeatCell = memo(function HeatCell({ delay, stat, t }: HeatCellProps
       </div>
     </motion.div>
   )
+})

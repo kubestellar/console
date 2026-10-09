@@ -63,8 +63,6 @@ const DEMO_VISUALIZATION_STATS: KVCacheStats[] = [
   },
 ]
 
-})
-
 export const InfoSparkline = memo(function InfoSparkline({ color, data, height = 30, width = 100 }: InfoSparklineProps) {
   const validData = (data || []).filter(value => Number.isFinite(value))
   if (validData.length < 2) {
