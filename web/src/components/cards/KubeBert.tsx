@@ -3,6 +3,9 @@ import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { useKubeBertGame } from './useKubeBertGame'
 
+const CANVAS_STYLE_EXPANDED = { width: '100%', height: 'calc(100% - 80px)', display: 'block' } as const
+const CANVAS_STYLE_COMPACT = { width: '100%', height: '320px', display: 'block' } as const
+
 // ─── Component ────────────────────────────────────────────────────────────────
 export function KubeBert() {
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
@@ -20,7 +23,7 @@ export function KubeBert() {
     movePlayer,
   } = useKubeBertGame(isExpanded)
 
-  const canvasHeight = isExpanded ? 'calc(100% - 80px)' : '320px'
+  const canvasStyle = isExpanded ? CANVAS_STYLE_EXPANDED : CANVAS_STYLE_COMPACT
 
   return (
     <div ref={containerRef} className="h-full flex flex-col">
@@ -47,7 +50,7 @@ export function KubeBert() {
       <div className="flex-1 relative">
         <canvas
           ref={canvasRef}
-          style={{ width: '100%', height: canvasHeight, display: 'block' }}
+          style={canvasStyle}
         />
 
         {/* Idle overlay */}
