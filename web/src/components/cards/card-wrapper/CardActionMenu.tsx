@@ -1,64 +1,18 @@
 import { useState, useEffect, useRef, memo } from 'react'
 import { createPortal } from 'react-dom'
-import {
-  MoreVertical, Settings, Trash2, MoveHorizontal, ChevronRight, Download, Link2,
-} from 'lucide-react'
+import { MoreVertical, Settings, Trash2, Download, Link2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { cn } from '../../../lib/cn'
 import { isCardExportable } from '../../../lib/widgets/widgetRegistry'
 import { copyToClipboard } from '../../../lib/clipboard'
 import { useDashboardContextOptional } from '../../../hooks/useDashboardContext'
 import { useModalState } from '../../../lib/modals'
+import {
+  WIDTH_OPTIONS, HEIGHT_OPTIONS, MENU_ITEM_SELECTOR, SUBMENU_WIDTH_PX, SUBMENU_EDGE_MARGIN_PX, computeMenuPosition,
+} from './CardActionMenu.constants'
+import { ResizeSubmenu } from './ResizeSubmenu'
 
 // Auto-QA #21201: pure UI component — no async data fetch; loading/error state not applicable.
 // All interactions are synchronous event handlers and portal positioning (no network calls).
-
-// Card width options (in grid columns out of 12)
-const WIDTH_OPTIONS = [
-  { value: 3, labelKey: 'cardWrapper.resizeSmall' as const, descKey: 'cardWrapper.resizeSmallDesc' as const },
-  { value: 4, labelKey: 'cardWrapper.resizeMedium' as const, descKey: 'cardWrapper.resizeMediumDesc' as const },
-  { value: 6, labelKey: 'cardWrapper.resizeLarge' as const, descKey: 'cardWrapper.resizeLargeDesc' as const },
-  { value: 8, labelKey: 'cardWrapper.resizeWide' as const, descKey: 'cardWrapper.resizeWideDesc' as const },
-  { value: 12, labelKey: 'cardWrapper.resizeFull' as const, descKey: 'cardWrapper.resizeFullDesc' as const },
-]
-
-// Card height options (in grid row spans)
-const HEIGHT_OPTIONS = [
-  { value: 2, labelKey: 'cardWrapper.heightDefault' as const, descKey: 'cardWrapper.heightDefaultDesc' as const },
-  { value: 3, labelKey: 'cardWrapper.heightTall' as const, descKey: 'cardWrapper.heightTallDesc' as const },
-  { value: 4, labelKey: 'cardWrapper.heightExtraTall' as const, descKey: 'cardWrapper.heightExtraTallDesc' as const },
-  { value: 6, labelKey: 'cardWrapper.heightMaximum' as const, descKey: 'cardWrapper.heightMaximumDesc' as const },
-]
-
-/** Approximate height of the card action menu (px) */
-const MENU_APPROX_HEIGHT = 300
-/** Width of the card action menu (w-48 = 192px) */
-const MENU_WIDTH_PX = 192
-/** Viewport edge padding (px) */
-const VIEWPORT_PADDING = 8
-/** Submenu width — matches w-36 tailwind class (9rem = 144px). */
-const SUBMENU_WIDTH_PX = 144
-/** Right-edge margin before flipping submenu to the left side. */
-const SUBMENU_EDGE_MARGIN_PX = 20
-const MENU_ITEM_SELECTOR = 'button[role="menuitem"]:not([disabled])'
-
-/** Compute a safe position for the menu relative to an anchor element. */
-function computeMenuPosition(anchorRect: DOMRect): { top: number; right: number } {
-  let top = anchorRect.bottom + 4
-  let right = window.innerWidth - anchorRect.right
-
-  if (top + MENU_APPROX_HEIGHT > window.innerHeight - VIEWPORT_PADDING) {
-    top = Math.max(VIEWPORT_PADDING, anchorRect.top - MENU_APPROX_HEIGHT - 4)
-  }
-  if (right < VIEWPORT_PADDING) {
-    right = VIEWPORT_PADDING
-  }
-  const leftEdge = window.innerWidth - right - MENU_WIDTH_PX
-  if (leftEdge < VIEWPORT_PADDING) {
-    right = window.innerWidth - MENU_WIDTH_PX - VIEWPORT_PADDING
-  }
-  return { top, right }
-}
 
 export interface CardActionMenuProps {
   cardId?: string
@@ -104,6 +58,8 @@ export const CardActionMenu = memo(function CardActionMenu({
   const heightMenuContainerRef = useRef<HTMLDivElement>(null)
   const heightMenuRef = useRef<HTMLDivElement>(null)
   const restoreFocusRef = useRef(false)
+  const widthOptions = WIDTH_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey), desc: t(o.descKey) }))
+  const heightOptions = HEIGHT_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey), desc: t(o.descKey) }))
   const menuId = `card-action-menu-${cardId || cardType}`
   const resizeMenuId = `${menuId}-resize`
   const heightMenuId = `${menuId}-height`
@@ -314,112 +270,45 @@ export const CardActionMenu = memo(function CardActionMenu({
 
           {/* Resize width submenu */}
           {onWidthChange && (
-            <div className="relative" ref={menuContainerRef}>
-              <button
-                onClick={() => { if (showResizeMenu) { closeResizeMenu() } else { openResizeMenu() } closeHeightMenu() }}
-                onKeyDown={(e) => {
-                  if (e.key === 'ArrowRight') {
-                    e.preventDefault()
-                    openResizeMenu()
-                    closeHeightMenu()
-                  }
-                }}
-                className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex flex-wrap items-center justify-between gap-y-2"
-                role="menuitem"
-                aria-haspopup="menu"
-                aria-expanded={showResizeMenu}
-                aria-controls={showResizeMenu ? resizeMenuId : undefined}
-                title={t('cardWrapper.resizeTooltip')}
-              >
-                <span className="flex items-center gap-2">
-                  <MoveHorizontal className="w-4 h-4" aria-hidden="true" />
-                  {t('cardWrapper.resize')}
-                </span>
-                <ChevronRight className={cn('w-4 h-4 transition-transform', showResizeMenu && 'rotate-90')} aria-hidden="true" />
-              </button>
-              {showResizeMenu && (
-                <div
-                  id={resizeMenuId}
-                  ref={resizeMenuRef}
-                  className={cn('absolute top-0 w-36 glass rounded-lg py-1 z-20', resizeMenuOnLeft ? 'right-full mr-1' : 'left-full ml-1')}
-                  role="menu"
-                  aria-label={t('cardWrapper.resizeTooltip')}
-                  onKeyDown={handleMenuKeyDown}
-                >
-                  {WIDTH_OPTIONS.map((option) => (
-                    <button
-                      key={option.value}
-                      onClick={() => { onWidthChange(option.value); closeResizeMenu(); closeMenu() }}
-                      className={cn(
-                        'w-full px-3 py-2 text-left text-sm flex flex-wrap items-center justify-between gap-y-2',
-                        cardWidth === option.value
-                          ? 'text-purple-400 bg-purple-500/10'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
-                      )}
-                      role="menuitem"
-                    >
-                      <span>{t(option.labelKey)}</span>
-                      <span className="text-xs opacity-60">{t(option.descKey)}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            <ResizeSubmenu
+              containerRef={menuContainerRef}
+              submenuRef={resizeMenuRef}
+              menuId={resizeMenuId}
+              isOpen={showResizeMenu}
+              onLeft={resizeMenuOnLeft}
+              onOpen={openResizeMenu}
+              onClose={closeResizeMenu}
+              onCloseSibling={closeHeightMenu}
+              onCloseRoot={closeMenu}
+              onKeyDown={handleMenuKeyDown}
+              options={widthOptions}
+              currentValue={cardWidth}
+              onChange={onWidthChange}
+              label={t('cardWrapper.resize')}
+              tooltip={t('cardWrapper.resizeTooltip')}
+            />
           )}
 
           {/* Resize height submenu (#6463) */}
           {onHeightChange && (
-            <div className="relative" ref={heightMenuContainerRef}>
-              <button
-                onClick={() => { if (showHeightMenu) { closeHeightMenu() } else { openHeightMenu() } closeResizeMenu() }}
-                onKeyDown={(e) => {
-                  if (e.key === 'ArrowRight') {
-                    e.preventDefault()
-                    openHeightMenu()
-                    closeResizeMenu()
-                  }
-                }}
-                className="w-full px-4 py-2 text-left text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 flex flex-wrap items-center justify-between gap-y-2"
-                role="menuitem"
-                aria-haspopup="menu"
-                aria-expanded={showHeightMenu}
-                aria-controls={showHeightMenu ? heightMenuId : undefined}
-                title={t('cardWrapper.resizeHeightTooltip')}
-              >
-                <span className="flex items-center gap-2">
-                  <MoveHorizontal className="w-4 h-4 rotate-90" aria-hidden="true" />
-                  {t('cardWrapper.resizeHeight')}
-                </span>
-                <ChevronRight className={cn('w-4 h-4 transition-transform', showHeightMenu && 'rotate-90')} aria-hidden="true" />
-              </button>
-              {showHeightMenu && (
-                <div
-                  id={heightMenuId}
-                  ref={heightMenuRef}
-                  className={cn('absolute top-0 w-36 glass rounded-lg py-1 z-20', heightMenuOnLeft ? 'right-full mr-1' : 'left-full ml-1')}
-                  role="menu"
-                  aria-label={t('cardWrapper.resizeHeightTooltip')}
-                  onKeyDown={handleMenuKeyDown}
-                >
-                  {HEIGHT_OPTIONS.map((option) => (
-                    <button
-                      key={option.value}
-                      onClick={() => { onHeightChange(option.value); closeHeightMenu(); closeMenu() }}
-                      className={cn(
-                        'w-full px-3 py-2 text-left text-sm flex flex-wrap items-center justify-between gap-y-2',
-                        cardHeight === option.value
-                          ? 'text-purple-400 bg-purple-500/10'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
-                      )}
-                      role="menuitem"
-                    >
-                      <span>{t(option.labelKey)}</span>
-                      <span className="text-xs opacity-60">{t(option.descKey)}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            <ResizeSubmenu
+              containerRef={heightMenuContainerRef}
+              submenuRef={heightMenuRef}
+              menuId={heightMenuId}
+              isOpen={showHeightMenu}
+              onLeft={heightMenuOnLeft}
+              onOpen={openHeightMenu}
+              onClose={closeHeightMenu}
+              onCloseSibling={closeResizeMenu}
+              onCloseRoot={closeMenu}
+              onKeyDown={handleMenuKeyDown}
+              options={heightOptions}
+              currentValue={cardHeight}
+              onChange={onHeightChange}
+              label={t('cardWrapper.resizeHeight')}
+              tooltip={t('cardWrapper.resizeHeightTooltip')}
+              iconClassName="rotate-90"
+            />
           )}
 
           {isCardExportable(cardType) && (
