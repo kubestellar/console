@@ -8,62 +8,20 @@ import { useGameKeyTracking } from '../../hooks/useGameKeys'
 import { isDemoMode } from '@/lib/demoMode'
 import { safeGet, safeSet } from '../../lib/safeLocalStorage'
 
-// Game constants
-const CANVAS_WIDTH = 400
-const CANVAS_HEIGHT = 300
-const PADDLE_WIDTH = 10
-const PADDLE_HEIGHT = 60
-const PADDLE_SPEED = 6
-const BALL_SIZE = 10
-const INITIAL_BALL_SPEED = 5
-const MAX_BALL_SPEED = 12
-const WINNING_SCORE = 7
-
-// Colors (Kubernetes theme)
-const FALLBACK_COLORS = {
-  background: '#0a1628',
-  paddle: '#326ce5',
-  ball: '#00d4aa',
-  net: '#1e3a5f',
-  text: '#fff',
-  score: '#326ce5' }
-
-type ThemeColors = typeof FALLBACK_COLORS
-
-function getCssVariableColor(style: CSSStyleDeclaration, variableName: string, fallback: string): string {
-  const value = style.getPropertyValue(variableName).trim()
-  if (!value) return fallback
-  return value.startsWith('#') || value.startsWith('rgb') || value.startsWith('hsl')
-    ? value
-    : `hsl(${value})`
-}
-
-function getThemeColors(): ThemeColors {
-  if (typeof document === 'undefined') return FALLBACK_COLORS
-
-  const style = getComputedStyle(document.documentElement)
-  return {
-    background: getCssVariableColor(style, '--background', FALLBACK_COLORS.background),
-    paddle: getCssVariableColor(style, '--primary', FALLBACK_COLORS.paddle),
-    ball: getCssVariableColor(style, '--accent', FALLBACK_COLORS.ball),
-    net: getCssVariableColor(style, '--border', FALLBACK_COLORS.net),
-    text: getCssVariableColor(style, '--foreground', FALLBACK_COLORS.text),
-    score: getCssVariableColor(style, '--primary', FALLBACK_COLORS.score),
-  }
-}
-
-interface Ball {
-  x: number
-  y: number
-  vx: number
-  vy: number
-  speed: number
-}
-
-interface Paddle {
-  y: number
-  score: number
-}
+import {
+  CANVAS_WIDTH,
+  CANVAS_HEIGHT,
+  PADDLE_WIDTH,
+  PADDLE_HEIGHT,
+  PADDLE_SPEED,
+  BALL_SIZE,
+  INITIAL_BALL_SPEED,
+  MAX_BALL_SPEED,
+  WINNING_SCORE,
+  getThemeColors,
+  type Ball,
+  type Paddle,
+} from './KubePong.constants'
 
 export function KubePong() {
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: isDemoMode() })
