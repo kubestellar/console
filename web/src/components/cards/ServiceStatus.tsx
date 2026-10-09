@@ -14,12 +14,8 @@ import {
   MS_PER_SECOND,
 } from '../../lib/constants/network'
 import { useFreshnessClock } from './servicestatus/useFreshnessClock'
-import {
-  ServiceRow,
-  ServiceStatsRow,
-  SORT_OPTIONS,
-  type SortByOption,
-} from './servicestatus/ServiceStatus.parts'
+import { ServiceRow, ServiceStatsRow } from './servicestatus/ServiceStatus.parts'
+import { SORT_OPTIONS, type SortByOption } from './servicestatus/ServiceStatus.constants'
 
 export function ServiceStatus() {
   const { t } = useTranslation()
