@@ -9,17 +9,15 @@ import { safeLazy } from '@/lib/safeLazy'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
 import { useMissions } from '../hooks/useMissions'
 import { useDemoMode } from '../hooks/useDemoMode'
-import type { Alert, AlertRule, AlertStats, AlertChannel } from '../types/alerts'
+import type { Alert, AlertStats, AlertChannel } from '../types/alerts'
 import type { AlertsContextValue, AlertNotificationBatch, MutationAccumulator } from './AlertsContext.types'
 import { MS_PER_SECOND } from '../lib/constants/time'
-import { PRESET_ALERT_RULES } from '../types/alerts'
 import { safeGet } from '../lib/safeLocalStorage'
 import {
   ALERTS_KEY,
   loadNotifiedAlertKeys,
   saveNotifiedAlertKeys,
   loadFromStorage,
-  saveToStorage,
   saveAlerts,
 } from './alertStorage'
 import { STORAGE_KEY_AUTH_TOKEN } from '../lib/constants/storage'
@@ -32,16 +30,15 @@ import {
   sendBatchedNotifications,
 } from './notifications'
 import { sendNotificationWithDeepLink } from '../hooks/useDeepLink'
-import { findRunbookForCondition } from '../lib/runbooks/builtins'
-import { executeRunbook } from '../lib/runbooks/executor'
 import { alertDedupKey, deduplicateAlerts } from './alerts/deduplication'
 import { useBatchedMCPData } from './useBatchedMCPData'
 import { useAlertsOptionalPollers } from './useAlertsOptionalPollers'
 import { createStateContext } from './createStateContext'
-import { applyMutations, createAlertRulesEngine, generateId, shallowEqualRecords } from './alertRulesEngine'
+import { applyMutations, createAlertRulesEngine, shallowEqualRecords } from './alertRulesEngine'
+import { useAlertRules } from './useAlertRules'
+import { useAlertAIDiagnosis } from './useAlertAIDiagnosis'
 
 const AlertsDataFetcher = safeLazy(() => import('./AlertsDataFetcher'), 'default')
-const ALERT_RULES_KEY = 'kc_alert_rules'
 const ALERTS_LOADING_TIMEOUT_MS = 30 * MS_PER_SECOND
 const INITIAL_EVALUATION_DELAY_MS = MS_PER_SECOND
 const EVALUATION_INTERVAL_MS = 30 * MS_PER_SECOND
@@ -59,21 +56,7 @@ const {
 export { AlertsContext, useAlertsContext }
 
 export function AlertsProvider({ children }: { children: ReactNode }) {
-  const [rules, setRules] = useState<AlertRule[]>(() => {
-    const stored = loadFromStorage<AlertRule[]>(ALERT_RULES_KEY, [])
-    if (stored.length === 0) {
-      const now = new Date().toISOString()
-      const presetRules: AlertRule[] = (PRESET_ALERT_RULES as Omit<AlertRule, 'id' | 'createdAt' | 'updatedAt'>[]).map(preset => ({
-        ...preset,
-        id: generateId(),
-        createdAt: now,
-        updatedAt: now,
-      }))
-      saveToStorage(ALERT_RULES_KEY, presetRules)
-      return presetRules
-    }
-    return stored
-  })
+  const { rules, createRule, updateRule, deleteRule, toggleRule } = useAlertRules()
   const [alerts, setAlerts] = useState<Alert[]>(() => loadFromStorage<Alert[]>(ALERTS_KEY, []))
   const [isEvaluating, setIsEvaluating] = useState(false)
   const { mcpData, enqueueMCPData } = useBatchedMCPData()
@@ -87,7 +70,6 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   const notifiedAlertKeysRef = useRef<Map<string, number>>(loadNotifiedAlertKeys())
   const nightlyAlertedRunsRef = useRef<Set<number>>(new Set())
   const isEvaluatingRef = useRef(false)
-  const diagnosisInFlightRef = useRef<Set<string>>(new Set())
 
   const gpuNodesRef = useRef(mcpData.gpuNodes)
   gpuNodesRef.current = mcpData.gpuNodes
@@ -124,22 +106,6 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    setRules(prev => {
-      const existingTypes = new Set(prev.map(rule => rule.condition.type))
-      const missing = PRESET_ALERT_RULES.filter(preset => !existingTypes.has(preset.condition.type))
-      if (missing.length === 0) return prev
-      const now = new Date().toISOString()
-      const newRules = missing.map(preset => ({
-        ...preset,
-        id: generateId(),
-        createdAt: now,
-        updatedAt: now,
-      }))
-      return [...prev, ...newRules]
-    })
-  }, [])
-
-  useEffect(() => {
     if (!mcpData.isLoading) {
       setLoadingTimedOut(false)
       return
@@ -152,10 +118,6 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
 
 
   useEffect(() => {
-    saveToStorage(ALERT_RULES_KEY, rules)
-  }, [rules])
-
-  useEffect(() => {
     saveAlerts(alerts)
   }, [alerts])
 
@@ -165,42 +127,6 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     }
     previousDemoMode.current = isDemoMode
   }, [isDemoMode])
-
-  const createRule = useCallback((rule: Omit<AlertRule, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const now = new Date().toISOString()
-    const newRule: AlertRule = {
-      ...rule,
-      id: generateId(),
-      createdAt: now,
-      updatedAt: now,
-    }
-    setRules(prev => [...prev, newRule])
-    return newRule
-  }, [])
-
-  const updateRule = useCallback((id: string, updates: Partial<AlertRule>) => {
-    setRules(prev =>
-      prev.map(rule =>
-        rule.id === id
-          ? { ...rule, ...updates, updatedAt: new Date().toISOString() }
-          : rule
-      )
-    )
-  }, [])
-
-  const deleteRule = useCallback((id: string) => {
-    setRules(prev => prev.filter(rule => rule.id !== id))
-  }, [])
-
-  const toggleRule = useCallback((id: string) => {
-    setRules(prev =>
-      prev.map(rule =>
-        rule.id === id
-          ? { ...rule, enabled: !rule.enabled, updatedAt: new Date().toISOString() }
-          : rule
-      )
-    )
-  }, [])
 
   const deduplicatedAlerts = useMemo(() => deduplicateAlerts(alerts, rules), [alerts, rules])
 
@@ -315,112 +241,13 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     sendNotificationWithDeepLink(title, body, deepLinkParams)
   }, [setNotifiedKey])
 
-  const runAIDiagnosis = useCallback(async (alertId: string) => {
-    const alert = alertsRef.current.find(candidate => candidate.id === alertId)
-    if (!alert) return null
-
-    if (diagnosisInFlightRef.current.has(alertId)) return null
-    diagnosisInFlightRef.current.add(alertId)
-
-    try {
-      const rule = rulesRef.current.find(candidate => candidate.id === alert.ruleId)
-      const conditionType = rule?.condition.type
-      const runbook = conditionType ? findRunbookForCondition(conditionType) : undefined
-
-      const basePrompt = `Please analyze this alert and provide diagnosis with suggestions:
-
-Alert: ${alert.ruleName}
-Severity: ${alert.severity}
-Message: ${alert.message}
-Cluster: ${alert.cluster || 'N/A'}
-Resource: ${alert.resource || 'N/A'}
-Details: ${JSON.stringify(alert.details, null, 2)}`
-
-      let runbookEvidence = ''
-      if (runbook) {
-        try {
-          const result = await executeRunbook(runbook, {
-            cluster: alert.cluster,
-            namespace: alert.namespace,
-            resource: alert.resource,
-            resourceKind: alert.resourceKind,
-            alertMessage: alert.message,
-          })
-          if (result.enrichedPrompt) {
-            runbookEvidence = `\n\n--- Runbook Evidence (${runbook.title}) ---\n${result.enrichedPrompt}`
-            console.debug(`Runbook "${runbook.title}" gathered ${result.stepResults.length} evidence steps`)
-          }
-        } catch {
-          // Silent failure - runbook is best-effort enhancement
-        }
-      }
-
-      const initialPrompt = `${basePrompt}${runbookEvidence}
-
-Please provide:
-1. A summary of the issue
-2. The likely root cause
-3. Suggested actions to resolve this alert`
-
-      const missionId = startMissionRef.current({
-        title: `Diagnose: ${alert.ruleName}`,
-        description: `Analyzing alert on ${alert.cluster || 'cluster'}`,
-        type: 'troubleshoot',
-        cluster: alert.cluster,
-        initialPrompt,
-        context: {
-          alertId,
-          alertType: alert.ruleName,
-          details: alert.details,
-          runbookId: runbook?.id,
-        },
-      })
-
-      setAlerts(prev =>
-        prev.map(existing =>
-          existing.id === alertId
-            ? {
-                ...existing,
-                aiDiagnosis: {
-                  summary: 'AI is analyzing this alert...',
-                  rootCause: '',
-                  suggestions: [],
-                  missionId,
-                  analyzedAt: new Date().toISOString(),
-                },
-              }
-            : existing
-        )
-      )
-
-      return missionId
-    } finally {
-      diagnosisInFlightRef.current.delete(alertId)
-    }
-  }, [])
-
-  useEffect(() => {
-    setAlerts(prev => {
-      let changed = false
-      const updated = prev.map(alert => {
-        if (!alert.aiDiagnosis?.missionId) return alert
-        const mission = allMissions.find(candidate => candidate.id === alert.aiDiagnosis!.missionId)
-        if (!mission || mission.status !== 'completed') return alert
-        const lastAssistant = [...mission.messages].reverse().find(message => message.role === 'assistant')
-        if (!lastAssistant || alert.aiDiagnosis.summary !== 'AI is analyzing this alert...') return alert
-        changed = true
-        return {
-          ...alert,
-          aiDiagnosis: {
-            ...alert.aiDiagnosis,
-            summary: lastAssistant.content.slice(0, 500),
-            analyzedAt: new Date().toISOString(),
-          },
-        }
-      })
-      return changed ? updated : prev
-    })
-  }, [allMissions])
+  const { runAIDiagnosis } = useAlertAIDiagnosis({
+    alertsRef,
+    rulesRef,
+    startMissionRef,
+    allMissions,
+    setAlerts,
+  })
 
   const { evaluateConditions } = createAlertRulesEngine({
     alertsRef,
