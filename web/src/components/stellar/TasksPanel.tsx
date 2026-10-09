@@ -2,6 +2,9 @@ import { useTranslation } from 'react-i18next'
 import type { StellarTask } from '../../types/stellar'
 import { TaskCard } from './TaskCard'
 
+const TOGGLE_STYLE = { marginLeft: 'auto', color: 'var(--s-text-dim)' } as const
+const BODY_STYLE = { color: 'var(--s-text-dim)', fontSize: 11 } as const
+
 interface TasksPanelProps {
   tasks: StellarTask[]
   expanded: boolean
@@ -41,13 +44,13 @@ export function TasksPanel({ tasks, expanded, onToggle, onStatusChange }: TasksP
         }}>
           {tasks.length} open
         </span>
-        <span style={{ marginLeft: 'auto', color: 'var(--s-text-dim)' }}>{expanded ? '▴' : '▾'}</span>
+        <span style={TOGGLE_STYLE}>{expanded ? '▴' : '▾'}</span>
       </button>
 
       {expanded && (
         <div className="pb-1.5">
           {tasks.length === 0 ? (
-            <div className="px-3 pb-2 pt-0.5" style={{ color: 'var(--s-text-dim)', fontSize: 11 }}>
+            <div className="px-3 pb-2 pt-0.5" style={BODY_STYLE}>
               No open tasks.
             </div>
           ) : (
