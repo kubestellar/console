@@ -5,9 +5,6 @@
 import { useMemo, useState } from 'react'
 import { Cpu, RefreshCw } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
-import { Pagination } from '../../ui/Pagination'
-import { CardControls } from '../../ui/CardControls'
-import { CardSearchInput } from '../../../lib/cards/CardComponents'
 import { useCachedLLMdServers, useCachedGPUNodes } from '../../../hooks/useCachedData'
 import { useWorkloadMonitor } from '../../../hooks/useWorkloadMonitor'
 import { useDiagnoseRepairLoop } from '../../../hooks/useDiagnoseRepairLoop'
@@ -20,8 +17,8 @@ import { useCardLoadingState } from '../CardDataContext'
 import type { MonitorIssue } from '../../../types/workloadMonitor'
 import { useTranslation } from 'react-i18next'
 import { LLMdClusterFilter } from './LLMdClusterFilter'
-import { LLMdComponentSections } from './LLMdComponentSections'
-import { LLMdIssuesList } from './LLMdIssuesList'
+import { LLMdComponentsTab } from './LLMdComponentsTab'
+import { LLMdIssuesTab } from './LLMdIssuesTab'
 import { LLMdStackMonitorTabs, type LLMdStackMonitorTab } from './LLMdStackMonitorTabs'
 import { useLLMdClusterFilterDropdown } from './useLLMdClusterFilterDropdown'
 import {
@@ -40,12 +37,8 @@ import {
 import {
   DEFAULT_COMPONENTS_PER_PAGE,
   DEFAULT_ISSUES_PER_PAGE,
-  ISSUE_SORT_OPTIONS,
   LLMD_MONITOR_REFRESH_MS,
-  SEVERITY_FILTER_OPTIONS,
-  SORT_OPTIONS,
   STATUS_BADGE,
-  STATUS_FILTER_OPTIONS,
   type ComponentItem,
   type IssueSortField,
   type SeverityFilter,
@@ -272,117 +265,50 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
 
       {/* Components Tab Content */}
       {activeTab === 'components' && (
-        <>
-          {/* Controls row */}
-          <div className="flex items-center gap-2 mb-2">
-            {/* Status filter */}
-            <select
-              value={statusFilter}
-              onChange={(e) => { setStatusFilter(e.target.value as StatusFilter); setCurrentPage(1) }}
-              className="px-2 py-1 text-xs rounded-md bg-secondary border border-border text-foreground"
-            >
-              {STATUS_FILTER_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-            <div className="flex-1" />
-            <CardControls
-              limit={itemsPerPage}
-              onLimitChange={(v) => { setItemsPerPage(v); setCurrentPage(1) }}
-              sortBy={sortBy}
-              sortOptions={SORT_OPTIONS}
-              onSortChange={(v) => setSortBy(v as SortField)}
-              sortDirection={sortDirection}
-              onSortDirectionChange={setSortDirection}
-            />
-          </div>
-
-          {/* Search */}
-          <CardSearchInput
-            value={search}
-            onChange={(v) => { setSearch(v); setCurrentPage(1) }}
-            placeholder={t('common.searchComponents')}
-            className="mb-3"
-          />
-
-          {/* Component sections */}
-          <LLMdComponentSections
-            sections={sections}
-            expandedSections={expandedSections}
-            onToggleSection={toggleSection}
-            onDiagnoseItem={handleItemDiagnose}
-          />
-
-          {/* Pagination */}
-          {needsPagination && (
-            <div className="mt-2 pt-2 border-t border-border/50">
-              <Pagination
-                currentPage={safeCurrentPage}
-                totalPages={totalPages}
-                totalItems={totalItems}
-                itemsPerPage={typeof itemsPerPage === 'number' ? itemsPerPage : totalItems}
-                onPageChange={setCurrentPage}
-              />
-            </div>
-          )}
-        </>
+        <LLMdComponentsTab
+          statusFilter={statusFilter}
+          onStatusFilterChange={(v) => { setStatusFilter(v); setCurrentPage(1) }}
+          itemsPerPage={itemsPerPage}
+          onItemsPerPageChange={(v) => { setItemsPerPage(v); setCurrentPage(1) }}
+          sortBy={sortBy}
+          onSortByChange={setSortBy}
+          sortDirection={sortDirection}
+          onSortDirectionChange={setSortDirection}
+          search={search}
+          onSearchChange={(v) => { setSearch(v); setCurrentPage(1) }}
+          sections={sections}
+          expandedSections={expandedSections}
+          onToggleSection={toggleSection}
+          onDiagnoseItem={handleItemDiagnose}
+          needsPagination={needsPagination}
+          currentPage={safeCurrentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          onPageChange={setCurrentPage}
+        />
       )}
 
       {/* Issues Tab Content */}
       {activeTab === 'issues' && (
-        <>
-          {/* Controls row */}
-          <div className="flex items-center gap-2 mb-2">
-            {/* Severity filter */}
-            <select
-              value={severityFilter}
-              onChange={(e) => { setSeverityFilter(e.target.value as SeverityFilter); setIssueCurrentPage(1) }}
-              className="px-2 py-1 text-xs rounded-md bg-secondary border border-border text-foreground"
-            >
-              {SEVERITY_FILTER_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-            <div className="flex-1" />
-            <CardControls
-              limit={issueItemsPerPage}
-              onLimitChange={(v) => { setIssueItemsPerPage(v); setIssueCurrentPage(1) }}
-              sortBy={issueSortBy}
-              sortOptions={ISSUE_SORT_OPTIONS}
-              onSortChange={(v) => setIssueSortBy(v as IssueSortField)}
-              sortDirection={issueSortDirection}
-              onSortDirectionChange={setIssueSortDirection}
-            />
-          </div>
-
-          {/* Search */}
-          <CardSearchInput
-            value={issueSearch}
-            onChange={(v) => { setIssueSearch(v); setIssueCurrentPage(1) }}
-            placeholder={t('common.searchIssues')}
-            className="mb-3"
-          />
-
-          {/* Issues list */}
-          <LLMdIssuesList
-            issues={paginatedIssues}
-            searchQuery={issueSearch}
-            onDiagnoseItem={handleItemDiagnose}
-          />
-
-          {/* Pagination */}
-          {needsIssuePagination && (
-            <div className="mt-2 pt-2 border-t border-border/50">
-              <Pagination
-                currentPage={safeIssueCurrentPage}
-                totalPages={totalIssuePages}
-                totalItems={totalIssues}
-                itemsPerPage={typeof issueItemsPerPage === 'number' ? issueItemsPerPage : totalIssues}
-                onPageChange={setIssueCurrentPage}
-              />
-            </div>
-          )}
-        </>
+        <LLMdIssuesTab
+          severityFilter={severityFilter}
+          onSeverityFilterChange={(v) => { setSeverityFilter(v); setIssueCurrentPage(1) }}
+          itemsPerPage={issueItemsPerPage}
+          onItemsPerPageChange={(v) => { setIssueItemsPerPage(v); setIssueCurrentPage(1) }}
+          sortBy={issueSortBy}
+          onSortByChange={setIssueSortBy}
+          sortDirection={issueSortDirection}
+          onSortDirectionChange={setIssueSortDirection}
+          search={issueSearch}
+          onSearchChange={(v) => { setIssueSearch(v); setIssueCurrentPage(1) }}
+          issues={paginatedIssues}
+          onDiagnoseItem={handleItemDiagnose}
+          needsPagination={needsIssuePagination}
+          currentPage={safeIssueCurrentPage}
+          totalPages={totalIssuePages}
+          totalItems={totalIssues}
+          onPageChange={setIssueCurrentPage}
+        />
       )}
 
       {/* API Key prompt for per-item diagnose */}
