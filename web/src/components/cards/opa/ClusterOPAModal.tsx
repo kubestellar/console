@@ -11,6 +11,7 @@ import { copyToClipboard } from '../../../lib/clipboard'
 import { KUBECTL_MEDIUM_TIMEOUT_MS, KUBECTL_EXTENDED_TIMEOUT_MS } from '../../../lib/constants/network'
 import { OPAPoliciesTab, OPAViolationsTab } from './ClusterOPAModal.tabs'
 import { OPATemplatePickerModal, OPADeletePolicyModal } from './ClusterOPAModal.dialogs'
+import { buildCreatePolicyWithAIMission, buildEditPolicyWithAIMission } from './ClusterOPAModal.missions'
 
 // Tab type for ClusterOPAModal
 type OPAModalTab = 'policies' | 'violations'
@@ -63,22 +64,7 @@ export function ClusterOPAModal({
   const handleCreateWithAI = () => {
     setShowCreateMenu(false)
     onClose()
-    startMission({
-      title: 'Create OPA Gatekeeper Policy',
-      description: 'Create a new OPA Gatekeeper policy with AI assistance',
-      type: 'deploy',
-      cluster: clusterName,
-      initialPrompt: `I want to create a new OPA Gatekeeper policy for the cluster "${clusterName}".
-
-Please help me:
-1. Ask me what kind of policy I want to enforce (e.g., require labels, restrict images, enforce resource limits)
-2. Generate the appropriate ConstraintTemplate and Constraint
-3. Help me apply it to the cluster
-4. Test that the policy is working
-
-Let's start by discussing what kind of policy I need.`,
-      context: { clusterName },
-    })
+    startMission(buildCreatePolicyWithAIMission(clusterName))
   }
 
   // Use a template
@@ -92,25 +78,7 @@ Let's start by discussing what kind of policy I need.`,
   // Edit policy with AI
   const handleEditWithAI = (policy: Policy) => {
     onClose()
-    startMission({
-      title: `Edit Policy: ${policy.name}`,
-      description: `Modify OPA Gatekeeper policy ${policy.name}`,
-      type: 'deploy',
-      cluster: clusterName,
-      initialPrompt: `I want to edit the OPA Gatekeeper policy "${policy.name}" (kind: ${policy.kind}) on cluster "${clusterName}".
-
-Current enforcement mode: ${policy.mode}
-Current violations: ${policy.violations}
-
-Please help me:
-1. Fetch the current policy YAML
-2. Ask me what changes I want to make
-3. Update the policy
-4. Verify the changes
-
-What would you like to modify about this policy?`,
-      context: { clusterName, policy },
-    })
+    startMission(buildEditPolicyWithAIMission(clusterName, policy))
   }
 
   // Edit policy YAML directly

@@ -2,7 +2,7 @@
 // inputs the user could lose). Inline search is transient filter state.
 // Treat as closeOnBackdropClick={false}.
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { CheckCircle, XCircle, RotateCcw, ArrowUp, Clock, ChevronRight } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useClusters, type HelmHistoryEntry } from '../../hooks/useMCP'
 import { useCachedHelmReleases, useCachedHelmHistory } from '../../hooks/useCachedData'
@@ -15,30 +15,9 @@ import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../li
 import { useCardData } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
 import { HelmHistoryDetailModal } from './deploy/HelmHistoryDetailModal'
-
-interface HelmHistoryProps {
-  config?: {
-    cluster?: string
-    release?: string
-    namespace?: string
-  }
-}
-
-type SortByOption = 'revision' | 'status' | 'updated'
-type SortTranslationKey = 'cards:helmHistory.revision' | 'common:common.status' | 'cards:helmHistory.updated'
-
-const SORT_OPTIONS_KEYS: ReadonlyArray<{ value: SortByOption; labelKey: SortTranslationKey }> = [
-  { value: 'revision' as const, labelKey: 'cards:helmHistory.revision' },
-  { value: 'status' as const, labelKey: 'common:common.status' },
-  { value: 'updated' as const, labelKey: 'cards:helmHistory.updated' },
-]
-
-const STATUS_ORDER: Record<string, number> = {
-  failed: 0,
-  'pending-upgrade': 1,
-  'pending-rollback': 2,
-  deployed: 3,
-  superseded: 4 }
+import { SORT_OPTIONS_KEYS, STATUS_ORDER } from './HelmHistory.utils'
+import { HelmHistoryEntryRow } from './HelmHistory.EntryRow'
+import type { HelmHistoryProps, SortByOption } from './HelmHistory.utils'
 
 export function HelmHistory({ config }: HelmHistoryProps) {
   const { t } = useTranslation(['cards', 'common'])
@@ -209,30 +188,6 @@ export function HelmHistory({ config }: HelmHistoryProps) {
         updated: (a, b) => new Date(a.updated).getTime() - new Date(b.updated).getTime() } },
     defaultLimit: 5 })
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'deployed': return CheckCircle
-      case 'failed': return XCircle
-      case 'pending-rollback': return RotateCcw
-      case 'pending-upgrade': return ArrowUp
-      default: return Clock
-    }
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'deployed': return 'green'
-      case 'failed': return 'red'
-      case 'superseded': return 'gray'
-      default: return 'blue'
-    }
-  }
-
-  const formatDate = (timestamp: string) => {
-    const date = new Date(timestamp)
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-  }
-
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card">
@@ -365,53 +320,13 @@ export function HelmHistory({ config }: HelmHistoryProps) {
 
                 {/* History entries */}
                 <div className="space-y-3">
-                  {history.map((entry) => {
-                    const StatusIcon = getStatusIcon(entry.status)
-                    const color = getStatusColor(entry.status)
-                    const isCurrent = entry.status === 'deployed'
-
-                    return (
-                      <div
-                        key={`${entry.revision}-${entry.chart}-${entry.updated}`}
-                        className="relative pl-6 group cursor-pointer"
-                        onClick={() => setModalEntry(entry)}
-                        title={`Click to view details for revision ${entry.revision}`}
-                      >
-                        {/* Timeline dot */}
-                        <div className={`absolute left-0 top-2 w-4 h-4 rounded-full flex items-center justify-center ${
-                          isCurrent ? 'bg-green-500' : 'bg-secondary border border-border'
-                        }`}>
-                          <StatusIcon className={`w-2.5 h-2.5 ${isCurrent ? 'text-foreground' : `text-${color}-400`}`} />
-                        </div>
-
-                        <div className={`p-2 rounded-lg transition-colors ${isCurrent ? 'bg-green-500/10 border border-green-500/20 group-hover:bg-green-500/20' : 'bg-secondary/30 group-hover:bg-secondary/50'}`}>
-                          <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-foreground">{t('helmHistory.rev', { revision: entry.revision })}</span>
-                              {isCurrent && (
-                                <StatusBadge color="green">
-                                  {t('helmHistory.current')}
-                                </StatusBadge>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-muted-foreground">{formatDate(entry.updated)}</span>
-                              <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </div>
-                          </div>
-                          <div className="text-xs text-muted-foreground truncate">
-                            <span>{entry.chart}</span>
-                            {entry.description && (
-                              <>
-                                <span className="mx-2">•</span>
-                                <span className="truncate">{entry.description}</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
+                  {history.map((entry) => (
+                    <HelmHistoryEntryRow
+                      key={`${entry.revision}-${entry.chart}-${entry.updated}`}
+                      entry={entry}
+                      onSelect={setModalEntry}
+                    />
+                  ))}
                 </div>
               </div>
             )}

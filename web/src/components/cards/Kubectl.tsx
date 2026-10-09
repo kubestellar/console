@@ -1,9 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { Send, ChevronDown, Loader2 } from 'lucide-react'
-import { TRANSITION_DELAY_MS } from '../../lib/constants/network'
 import { useKubectl } from '../../hooks/useKubectl'
 import { useClusters } from '../../hooks/useMCP'
-import { cn } from '../../lib/cn'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
@@ -19,6 +16,7 @@ import { useKubectlCommandHistory } from './useKubectlCommandHistory'
 import { KubectlToolbar } from './KubectlToolbar'
 import { KubectlTerminalOutput } from './KubectlTerminalOutput'
 import { KubectlQuickActions } from './KubectlQuickActions'
+import { KubectlExecuteButton, KubectlFormatControls } from './KubectlInputControls'
 
 export function Kubectl() {
   const { t } = useTranslation(['common', 'cards'])
@@ -52,18 +50,10 @@ export function Kubectl() {
   const [selectedManifest, setSelectedManifest] = useState<string | null>(null)
   const [outputFormat, setOutputFormat] = useState<OutputFormat>('table')
   const [isDryRun, setIsDryRun] = useState(false)
-  const [showFormatMenu, setShowFormatMenu] = useState(false)
   const demoCommandHistory = commandHistory.length > 0 ? commandHistory : isDemoMode ? DEMO_COMMAND_HISTORY : []
   const demoYamlManifests = yamlManifests.length > 0 ? yamlManifests : isDemoMode ? DEMO_YAML_MANIFESTS : []
   const outputRef = useRef<HTMLDivElement>(null)
   const commandInputRef = useRef<HTMLInputElement>(null)
-  const formatMenuBlurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  useEffect(() => {
-    return () => {
-      if (formatMenuBlurTimeoutRef.current !== null) clearTimeout(formatMenuBlurTimeoutRef.current)
-    }
-  }, [])
 
   const defaultContext = useMemo(() => getDefaultClusterSelection(clusters), [clusters])
 
@@ -382,69 +372,18 @@ export function Kubectl() {
             disabled={isExecuting || !selectedContext}
             className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-hidden disabled:opacity-50"
           />
-          <div className="flex items-center gap-1">
-            <div className="relative">
-              <button
-                onClick={() => setShowFormatMenu(!showFormatMenu)}
-                onBlur={() => {
-                  if (formatMenuBlurTimeoutRef.current !== null) clearTimeout(formatMenuBlurTimeoutRef.current)
-                  formatMenuBlurTimeoutRef.current = setTimeout(() => setShowFormatMenu(false), TRANSITION_DELAY_MS)
-                }}
-                className="p-1 rounded text-muted-foreground hover:text-foreground"
-                title={`Output format: ${outputFormat}`}
-              >
-                <ChevronDown className="w-3.5 h-3.5" />
-              </button>
-              {showFormatMenu && (
-                <div className="absolute bottom-full right-0 mb-1 bg-secondary border border-border/50 rounded-lg py-1 shadow-lg z-10 min-w-[100px]">
-                  {['table', 'yaml', 'json', 'wide'].map(format => (
-                    <button
-                      key={format}
-                      onClick={() => {
-                        setOutputFormat(format as typeof outputFormat)
-                        setShowFormatMenu(false)
-                      }}
-                      className={cn(
-                        'w-full px-3 py-1.5 text-xs text-left hover:bg-secondary/50',
-                        outputFormat === format ? 'text-green-400' : 'text-muted-foreground'
-                      )}
-                    >
-                      {format}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            <button
-              onClick={() => setIsDryRun(!isDryRun)}
-              className={cn(
-                'px-2 py-1 text-2xs rounded',
-                isDryRun ? 'bg-yellow-500/20 text-yellow-400' : 'text-muted-foreground hover:bg-secondary'
-              )}
-              title="Toggle dry-run mode"
-            >
-              {isDryRun ? t('cards:kubectl.dry') : t('cards:kubectl.run')}
-            </button>
-          </div>
+          <KubectlFormatControls
+            outputFormat={outputFormat}
+            onFormatChange={setOutputFormat}
+            isDryRun={isDryRun}
+            onToggleDryRun={() => setIsDryRun(!isDryRun)}
+          />
         </div>
-        <button
-          onClick={() => executeCommand(command, isDryRun)}
+        <KubectlExecuteButton
+          isExecuting={isExecuting}
           disabled={isExecuting || !command.trim() || !selectedContext}
-          className="px-4 py-2 rounded-lg bg-green-500/20 hover:bg-green-500/30 text-green-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-          title="Execute command (or press Enter)"
-        >
-          {isExecuting ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span className="text-sm">{t('cards:kubectl.running')}</span>
-            </>
-          ) : (
-            <>
-              <Send className="w-4 h-4" />
-              <span className="text-sm">{t('cards:kubectl.run')}</span>
-            </>
-          )}
-        </button>
+          onExecute={() => executeCommand(command, isDryRun)}
+        />
       </div>
 
       {/* Quick Actions */}

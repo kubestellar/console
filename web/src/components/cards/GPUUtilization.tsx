@@ -11,7 +11,6 @@ import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useTranslation } from 'react-i18next'
 import { useCardDemoState, useCardLoadingState } from './CardDataContext'
 import {
-  CHART_HEIGHT_COMPACT,
   CHART_GRID_STROKE,
   CHART_AXIS_STROKE,
   CHART_TOOLTIP_CONTENT_STYLE,
@@ -19,41 +18,22 @@ import {
   CHART_MARK_LINE_LABEL,
   CHART_MARK_LINE_STROKE,
   CHART_AXIS_FONT_SIZE_SM,
-  CHART_LEGEND_FONT_SIZE } from '../../lib/constants'
-import { PURPLE_600, GREEN_500_BRIGHT, hexToRgba } from '../../lib/theme/chartColors'
-
-const GPU_RING_SIZE_PX = 80
-const GPU_RING_CONTAINER_STYLE = { minWidth: GPU_RING_SIZE_PX, minHeight: GPU_RING_SIZE_PX } as const
-const GPU_RING_CHART_STYLE = { height: GPU_RING_SIZE_PX, width: GPU_RING_SIZE_PX } as const
-const GPU_TREND_CHART_CONTAINER_STYLE = { width: '100%', minHeight: CHART_HEIGHT_COMPACT, height: CHART_HEIGHT_COMPACT } as const
-const GPU_TREND_CHART_STYLE = { height: CHART_HEIGHT_COMPACT, width: '100%' } as const
-
-// GPU utilization pie chart colors
-const GPU_ALLOCATED_COLOR = PURPLE_600
-const GPU_AVAILABLE_COLOR = GREEN_500_BRIGHT
-
-interface GPUPoint {
-  time: string
-  allocated: number
-  available: number
-  total: number
-}
-
-/** Opacity at the top of area-fill gradients */
-const AREA_GRADIENT_TOP_ALPHA = 0.4
-/** Opacity at the bottom of area-fill gradients (fully transparent) */
-const AREA_GRADIENT_BOTTOM_ALPHA = 0
-/** Font size for mark-line labels on the chart */
-const MARK_LINE_FONT_SIZE = 9
-
-type TimeRange = '15m' | '1h' | '6h' | '24h'
-
-const TIME_RANGE_OPTIONS: { value: TimeRange; label: string }[] = [
-  { value: '15m', label: '15 min' },
-  { value: '1h', label: '1 hour' },
-  { value: '6h', label: '6 hours' },
-  { value: '24h', label: '24 hours' },
-]
+  CHART_LEGEND_FONT_SIZE,
+} from '../../lib/constants'
+import { PURPLE_600, hexToRgba } from '../../lib/theme/chartColors'
+import {
+  GPU_RING_CONTAINER_STYLE,
+  GPU_RING_CHART_STYLE,
+  GPU_TREND_CHART_CONTAINER_STYLE,
+  GPU_TREND_CHART_STYLE,
+  GPU_ALLOCATED_COLOR,
+  GPU_AVAILABLE_COLOR,
+  AREA_GRADIENT_TOP_ALPHA,
+  AREA_GRADIENT_BOTTOM_ALPHA,
+  MARK_LINE_FONT_SIZE,
+  TIME_RANGE_OPTIONS,
+} from './GPUUtilization.constants'
+import type { GPUPoint, TimeRange } from './GPUUtilization.constants'
 
 const GPUUtilization = memo(function GPUUtilization() {
   const { t } = useTranslation()
@@ -414,6 +394,5 @@ const GPUUtilization = memo(function GPUUtilization() {
     </div>
   )
 })
-
 
 export { GPUUtilization }
