@@ -7,6 +7,9 @@ import { AgentIcon } from '../agent/AgentIcon'
 import type { ProviderSession } from '../../types/stellar'
 
 const PROVIDER_DIM_TEXT_STYLE = { color: 'var(--s-text-dim)' } as const
+const PROVIDER_AUTO_ICON_STYLE = { fontSize: 14, width: 16, textAlign: 'center' } as const
+const PROVIDER_ACTIVE_DOT_STYLE = { fontSize: 8, color: 'var(--s-success)', flexShrink: 0 } as const
+const PROVIDER_RETRY_BUTTON_STYLE = { border: 'none', background: 'transparent', color: 'var(--s-text)', fontSize: 10, fontWeight: 600, textDecoration: 'underline', cursor: 'pointer', padding: 0 } as const
 const PROVIDER_ROOT_STYLE = { position: 'relative' } as const
 
 const PROVIDER_LABEL_STYLE = { fontWeight: 600 } as const
@@ -158,7 +161,7 @@ export function ProviderSelector({ session, onSelect }: Props) {
               cursor: 'pointer',
             }}
           >
-            <span style={{ fontSize: 14, width: 16, textAlign: 'center' }}>✦</span>
+            <span style={PROVIDER_AUTO_ICON_STYLE}>✦</span>
             <div>
               <div style={PROVIDER_LABEL_STYLE}>Auto</div>
               <div style={PROVIDER_SUBLABEL_STYLE}>Use best available provider</div>
@@ -195,7 +198,7 @@ export function ProviderSelector({ session, onSelect }: Props) {
                       <div style={PROVIDER_LABEL_STYLE}>{opt.label}</div>
                       <div style={PROVIDER_TRUNCATED_SUBLABEL_STYLE}>{opt.sublabel}</div>
                     </div>
-                    <span style={{ fontSize: 8, color: 'var(--s-success)', flexShrink: 0 }}>●</span>
+                    <span style={PROVIDER_ACTIVE_DOT_STYLE}>●</span>
                   </button>
                 )
               })}
@@ -228,7 +231,7 @@ export function ProviderSelector({ session, onSelect }: Props) {
                   <button
                     onClick={() => void loadProviders()}
                     className="mt-2"
-                    style={{ border: 'none', background: 'transparent', color: 'var(--s-text)', fontSize: 10, fontWeight: 600, textDecoration: 'underline', cursor: 'pointer', padding: 0 }}
+                    style={PROVIDER_RETRY_BUTTON_STYLE}
                   >
                     {t('retry', 'Retry')}
                   </button>

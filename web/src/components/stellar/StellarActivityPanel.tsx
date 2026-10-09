@@ -23,6 +23,9 @@ interface Props {
 
 const FLEX_SHRINK_0_STYLE = { flexShrink: 0 } as const
 const FLEX_SPACER_STYLE = { flex: 1 } as const
+const TIME_STYLE = { fontFamily: 'var(--s-mono)', color: 'var(--s-text-dim)', minWidth: 52, fontSize: 10 } as const
+const FLEX_FILL_STYLE = { flex: 1, minWidth: 0 } as const
+const META_STYLE = { fontSize: 10, color: 'var(--s-text-dim)', fontFamily: 'var(--s-mono)', flexShrink: 0 } as const
 const DIM_TEXT_STYLE = { fontSize: 10, color: 'var(--s-text-dim)' } as const
 
 const KIND_LABEL: Record<string, { label: string; icon: string; color: string }> = {
@@ -136,11 +139,11 @@ export function StellarActivityPanel({ activity, onOpenEvent }: Props) {
                 }
                 const body = (
                   <>
-                    <span style={{ fontFamily: 'var(--s-mono)', color: 'var(--s-text-dim)', minWidth: 52, fontSize: 10 }}>
+                    <span style={TIME_STYLE}>
                       {formatRelative(entry.ts)}
                     </span>
                     <span style={{ color: k.color, minWidth: 14, textAlign: 'center' }}>{k.icon}</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={FLEX_FILL_STYLE}>
                       <div style={{
                         fontSize: 10,
                         fontWeight: 600,
@@ -161,7 +164,7 @@ export function StellarActivityPanel({ activity, onOpenEvent }: Props) {
                       )}
                     </div>
                     {clickable && (
-                      <span style={{ fontSize: 10, color: 'var(--s-text-dim)', fontFamily: 'var(--s-mono)', flexShrink: 0 }}>
+                      <span style={META_STYLE}>
                         details →
                       </span>
                     )}
