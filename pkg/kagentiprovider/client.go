@@ -142,7 +142,10 @@ func (c *KagentiClient) Status() (bool, error) {
 }
 
 // StatusWithContext checks whether the kagenti controller/agent is reachable.
-func (c *KagentiClient) StatusWithContext(ctx context.Context) (bool, error) {
+func (c *KagentiClient) StatusWithContext(ctx context.Context) (avail bool, err error) {
+	start := time.Now()
+	defer func() { observeCall(opStatus, start, err) }()
+
 	if c.directAgentURL != "" {
 		for _, p := range append(append([]string{}, kagentiDirectCardPaths...), kagentiHealthPaths...) {
 			req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.directAgentURL+p, nil)
@@ -185,7 +188,10 @@ func (c *KagentiClient) ListAgents() ([]AgentInfo, error) {
 }
 
 // ListAgentsWithContext queries the kagenti controller for registered agents.
-func (c *KagentiClient) ListAgentsWithContext(ctx context.Context) ([]AgentInfo, error) {
+func (c *KagentiClient) ListAgentsWithContext(ctx context.Context) (agents []AgentInfo, err error) {
+	start := time.Now()
+	defer func() { observeCall(opListAgents, start, err) }()
+
 	if c.directAgentURL != "" {
 		name := c.directAgentName
 		namespace := c.directAgentNamespace
@@ -289,7 +295,10 @@ func decodeAgentList(body io.Reader) ([]AgentInfo, error) {
 }
 
 // Discover fetches the A2A agent card for the given agent.
-func (c *KagentiClient) Discover(namespace, agentName string) (*AgentCard, error) {
+func (c *KagentiClient) Discover(namespace, agentName string) (card *AgentCard, err error) {
+	start := time.Now()
+	defer func() { observeCall(opDiscover, start, err) }()
+
 	url := fmt.Sprintf("%s/api/a2a/%s/%s/.well-known/agent.json",
 		c.baseURL, neturl.PathEscape(namespace), neturl.PathEscape(agentName))
 	resp, err := c.httpClient.Get(url)
@@ -306,11 +315,12 @@ func (c *KagentiClient) Discover(namespace, agentName string) (*AgentCard, error
 		return nil, fmt.Errorf("discover agent %s/%s returned %d: %s", namespace, agentName, resp.StatusCode, string(body))
 	}
 
-	var card AgentCard
-	if err := json.NewDecoder(resp.Body).Decode(&card); err != nil {
+	card = &AgentCard{}
+	if err = json.NewDecoder(resp.Body).Decode(card); err != nil {
+		card = nil
 		return nil, fmt.Errorf("failed to decode agent card: %w", err)
 	}
-	return &card, nil
+	return card, nil
 }
 
 // HistoryMessage represents a single message in conversation history passed to Invoke.
@@ -322,7 +332,13 @@ type HistoryMessage struct {
 // Invoke sends a message to an agent via the A2A protocol and returns the raw
 // response body for streaming consumption. The history parameter provides
 // conversation context so the agent can process follow-up messages correctly.
-func (c *KagentiClient) Invoke(ctx context.Context, namespace, agentName, message string, contextID string, history []HistoryMessage) (io.ReadCloser, error) {
+func (c *KagentiClient) Invoke(ctx context.Context, namespace, agentName, message string, contextID string, history []HistoryMessage) (body io.ReadCloser, err error) {
+	// Only the request/dispatch outcome and latency are recorded here — the
+	// returned body is a stream callers consume separately, so this does not
+	// measure the full agent conversation duration.
+	start := time.Now()
+	defer func() { observeCall(opInvoke, start, err) }()
+
 	if c.directAgentURL != "" {
 		payload := map[string]any{"message": message}
 		if contextID != "" {
