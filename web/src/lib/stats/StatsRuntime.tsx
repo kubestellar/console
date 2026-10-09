@@ -32,132 +32,26 @@
  * ```
  */
 
-import { useState, useMemo, type KeyboardEvent } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { getIcon } from '../icons'
 import { ChevronDown, ChevronRight, Activity, Settings } from 'lucide-react'
 import {
-  StatsDefinition,
   StatsRuntimeProps,
-  StatBlockDefinition,
   StatBlockValue,
-  StatValueGetter,
-  COLOR_CLASSES,
-  VALUE_COLORS,
   formatValue } from './types'
 import { getResponsiveGridCols } from './gridUtils'
+import { getStatValueGetter } from './statsRegistry'
+import { StatBlock, StatBlockSkeleton } from './StatBlock'
 
-// ============================================================================
-// Stats Registry
-// ============================================================================
-
-const statsRegistry = new Map<string, StatsDefinition>()
-
-export function registerStats(definition: StatsDefinition) {
-  statsRegistry.set(definition.type, definition)
-}
-
-export function getStatsDefinition(type: string): StatsDefinition | undefined {
-  return statsRegistry.get(type)
-}
-
-export function getAllStatsDefinitions(): StatsDefinition[] {
-  return Array.from(statsRegistry.values())
-}
-
-/** Unregister a stats definition */
-export function unregisterStats(type: string): boolean {
-  const result = statsRegistry.delete(type)
-  if (result) valueGetterRegistry.delete(type)
-  return result
-}
-
-/** Get all registered stats type identifiers */
-export function getAllStatsTypes(): string[] {
-  return Array.from(statsRegistry.keys())
-}
-
-// ============================================================================
-// Value Getter Registry
-// ============================================================================
-
-const valueGetterRegistry = new Map<string, StatValueGetter>()
-
-export function registerStatValueGetter(statsType: string, getter: StatValueGetter) {
-  valueGetterRegistry.set(statsType, getter)
-}
-
-// ============================================================================
-// Icon Resolver
-// ============================================================================
-
-// ============================================================================
-// StatBlock Component
-// ============================================================================
-
-interface StatBlockProps {
-  block: StatBlockDefinition
-  value: StatBlockValue
-  hasData: boolean
-}
-
-function StatBlock({ block, value, hasData }: StatBlockProps) {
-  const IconComponent = getIcon(block.icon)
-  const colorClass = COLOR_CLASSES[block.color] || 'text-foreground'
-  const valueColorClass = VALUE_COLORS[block.id] || value.color ? COLOR_CLASSES[value.color!] : 'text-foreground'
-  const isClickable = value.isClickable !== false && !!value.onClick
-
-  const displayValue = hasData ? value.value : '-'
-
-  const handleActivate = () => {
-    if (isClickable) value.onClick?.()
-  }
-
-  return (
-    <div
-      className={`glass p-4 rounded-lg ${isClickable ? 'cursor-pointer hover:bg-secondary/50' : ''} transition-colors`}
-      onClick={handleActivate}
-      {...(isClickable ? {
-        role: 'button' as const,
-        tabIndex: 0,
-        'aria-label': block.tooltip || value.tooltip || block.label,
-        onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault()
-            handleActivate()
-          }
-        },
-      } : {})}
-      title={block.tooltip || value.tooltip}
-    >
-      <div className="flex items-center gap-2 mb-2">
-        <IconComponent className={`w-5 h-5 shrink-0 ${colorClass}`} />
-        <span className="text-sm text-muted-foreground truncate">{block.label}</span>
-      </div>
-      <div className={`text-3xl font-bold ${valueColorClass}`}>{displayValue}</div>
-      {value.sublabel && (
-        <div className="text-xs text-muted-foreground">{value.sublabel}</div>
-      )}
-    </div>
-  )
-}
-
-// ============================================================================
-// Loading Skeleton
-// ============================================================================
-
-function StatBlockSkeleton() {
-  return (
-    <div className="glass p-4 rounded-lg animate-pulse">
-      <div className="flex items-center gap-2 mb-2">
-        <div className="w-5 h-5 rounded-full bg-secondary" />
-        <div className="h-4 w-20 bg-secondary rounded" />
-      </div>
-      <div className="h-9 w-16 bg-secondary rounded mb-1" />
-      <div className="h-3 w-24 bg-secondary rounded" />
-    </div>
-  )
-}
+export {
+  registerStats,
+  getStatsDefinition,
+  getAllStatsDefinitions,
+  unregisterStats,
+  getAllStatsTypes,
+  registerStatValueGetter,
+} from './statsRegistry'
+export { parseStatsYAML, createStatBlock, createStatsDefinition } from './statsHelpers'
 
 // ============================================================================
 // StatsRuntime Component
@@ -245,7 +139,7 @@ export function StatsRuntime({
     if (customGetStatValue) return customGetStatValue
 
     // Try registry
-    const registeredGetter = valueGetterRegistry.get(type)
+    const registeredGetter = getStatValueGetter(type)
     if (registeredGetter) {
       return (blockId: string) => registeredGetter(blockId, data)
     }
@@ -361,51 +255,4 @@ export function StatsRuntime({
       )}
     </div>
   )
-}
-
-// ============================================================================
-// YAML Parser (future implementation)
-// ============================================================================
-
-export function parseStatsYAML(_yaml: string): StatsDefinition {
-  // YAML parsing intentionally not implemented - use registerStats() with JS objects
-  // If YAML config becomes a requirement, add js-yaml library and implement parser here
-  throw new Error('YAML parsing not yet implemented. Use registerStats() with JS objects.')
-}
-
-// ============================================================================
-// Preset Helpers
-// ============================================================================
-
-/**
- * Create a simple stat block definition
- */
-export function createStatBlock(
-  id: string,
-  label: string,
-  icon: string,
-  color: StatBlockDefinition['color'],
-  options?: Partial<StatBlockDefinition>
-): StatBlockDefinition {
-  return {
-    id,
-    label,
-    icon,
-    color,
-    visible: true,
-    ...options }
-}
-
-/**
- * Create a stats definition from blocks
- */
-export function createStatsDefinition(
-  type: string,
-  blocks: StatBlockDefinition[],
-  options?: Partial<StatsDefinition>
-): StatsDefinition {
-  return {
-    type,
-    blocks,
-    ...options }
 }

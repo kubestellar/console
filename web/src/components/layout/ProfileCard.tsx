@@ -13,9 +13,9 @@ import {
   useOAuthStatus,
   ProfileAvatarBlock,
   ProfileStatRows,
-  ProfileDevPanel,
-  ProfileActionMenu,
 } from './ProfileCard.parts'
+import { ProfileDevPanel } from './ProfileDevPanel'
+import { ProfileActionMenu } from './ProfileActionMenu'
 
 const FeatureRequestModal = safeLazy(() => import('../feedback/FeatureRequestModal'), 'FeatureRequestModal')
 
