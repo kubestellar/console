@@ -1,5 +1,6 @@
 import { Users, Key, Lock, ChevronRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { Select } from '../ui/Select'
 import type { RBACItem } from './NamespaceRBAC.utils'
 
 interface RBACSelectorsProps {
@@ -22,27 +23,29 @@ export function RBACSelectors({
   const { t } = useTranslation(['cards', 'common'])
   return (
     <div className="flex gap-2 mb-4">
-      <select
-        value={selectedCluster}
-        onChange={(e) => onClusterChange(e.target.value)}
-        className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
-      >
-        <option value="">{t('namespaceRBAC.selectCluster')}</option>
-        {clusters.map(c => (
-          <option key={c.name} value={c.name}>{c.name}</option>
-        ))}
-      </select>
-      <select
-        value={selectedNamespace}
-        onChange={(e) => onNamespaceChange(e.target.value)}
-        disabled={!selectedCluster}
-        className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground disabled:opacity-50"
-      >
-        <option value="">{t('namespaceRBAC.selectNamespace')}</option>
-        {namespaces.map(ns => (
-          <option key={ns} value={ns}>{ns}</option>
-        ))}
-      </select>
+      <div className="flex-1">
+        <Select
+          value={selectedCluster}
+          onChange={(e) => onClusterChange(e.target.value)}
+        >
+          <option value="">{t('namespaceRBAC.selectCluster')}</option>
+          {clusters.map(c => (
+            <option key={c.name} value={c.name}>{c.name}</option>
+          ))}
+        </Select>
+      </div>
+      <div className="flex-1">
+        <Select
+          value={selectedNamespace}
+          onChange={(e) => onNamespaceChange(e.target.value)}
+          disabled={!selectedCluster}
+        >
+          <option value="">{t('namespaceRBAC.selectNamespace')}</option>
+          {namespaces.map(ns => (
+            <option key={ns} value={ns}>{ns}</option>
+          ))}
+        </Select>
+      </div>
     </div>
   )
 }
