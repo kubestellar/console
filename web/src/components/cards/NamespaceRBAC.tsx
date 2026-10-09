@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Users, Key, Lock, ChevronRight, AlertCircle } from 'lucide-react'
+import { Users, Key, Lock, AlertCircle } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedNamespaces, useCachedK8sRoles, useCachedK8sRoleBindings, useCachedK8sServiceAccounts } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -14,6 +14,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { getDefaultClusterSelection } from '../../lib/clusterSelection'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { useTranslation } from 'react-i18next'
+import { RBACSelectors, RBACListItem } from './NamespaceRBAC.sections'
 import { SORT_OPTIONS_KEYS, TABS_WITH_RULES_COUNT } from './NamespaceRBAC.utils'
 import type { NamespaceRBACProps, RBACItem, SortByOption } from './NamespaceRBAC.utils'
 
@@ -224,33 +225,17 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
         />
       </div>
 
-      {/* Selectors */}
-      <div className="flex gap-2 mb-4">
-        <select
-          value={selectedCluster}
-          onChange={(e) => {
-            setSelectedCluster(e.target.value)
-            setSelectedNamespace('') // Reset namespace when cluster changes
-          }}
-          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
-        >
-          <option value="">{t('namespaceRBAC.selectCluster')}</option>
-          {filteredClusters.map(c => (
-            <option key={c.name} value={c.name}>{c.name}</option>
-          ))}
-        </select>
-        <select
-          value={selectedNamespace}
-          onChange={(e) => setSelectedNamespace(e.target.value)}
-          disabled={!selectedCluster}
-          className="flex-1 px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground disabled:opacity-50"
-        >
-          <option value="">{t('namespaceRBAC.selectNamespace')}</option>
-          {safeNamespaces.map(ns => (
-            <option key={ns} value={ns}>{ns}</option>
-          ))}
-        </select>
-      </div>
+      <RBACSelectors
+        clusters={filteredClusters}
+        namespaces={safeNamespaces}
+        selectedCluster={selectedCluster}
+        selectedNamespace={selectedNamespace}
+        onClusterChange={(cluster) => {
+          setSelectedCluster(cluster)
+          setSelectedNamespace('') // Reset namespace when cluster changes
+        }}
+        onNamespaceChange={setSelectedNamespace}
+      />
 
       {/* Error Display */}
       {error && (
@@ -334,34 +319,16 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
               </div>
             ) : (
               paginatedItems.map((item, idx) => (
-                <div
+                <RBACListItem
                   key={`${item.cluster}-${item.name}-${idx}`}
+                  item={item}
+                  activeTab={activeTab}
+                  isFetching={!!isFetchingRBAC}
                   onClick={() => drillToRBAC(selectedCluster, selectedNamespace, item.name, {
                     type: item.type,
                     rules: item.rules,
                     subjects: item.subjects })}
-                  className={`p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 cursor-pointer transition-colors group ${isFetchingRBAC ? 'opacity-50' : ''}`}
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-y-2">
-                    <div className="flex items-center gap-2">
-                      {activeTab === 'roles' && <Key className="w-4 h-4 text-yellow-400" />}
-                      {activeTab === 'bindings' && <Lock className="w-4 h-4 text-green-400" />}
-                      {activeTab === 'serviceaccounts' && <Users className="w-4 h-4 text-blue-400" />}
-                      <span className="text-sm text-foreground group-hover:text-purple-400">{item.name}</span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                  {item.rules && (
-                    <p className="text-xs text-muted-foreground mt-1 ml-6">
-                      {t('namespaceRBAC.nRulesCount', { count: item.rules })}
-                    </p>
-                  )}
-                  {item.subjects && (
-                    <p className="text-xs text-muted-foreground mt-1 ml-6">
-                      {t('namespaceRBAC.subjects')}: {(item.subjects || []).join(', ')}
-                    </p>
-                  )}
-                </div>
+                />
               ))
             )}
           </div>
