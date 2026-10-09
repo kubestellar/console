@@ -68,7 +68,7 @@ func DoWithRetry(ctx context.Context, cfg RetryConfig, do func() (*http.Response
 			break
 		}
 
-		backoff := cfg.BaseDelay * time.Duration(uint64(1)<<uint(attempt-1))
+		backoff := cfg.BaseDelay * time.Duration(int64(1)<<uint(attempt-1))
 		if cfg.RespectRetryAfter && resp != nil {
 			if ra := resp.Header.Get("Retry-After"); ra != "" {
 				if secs, parseErr := strconv.Atoi(strings.TrimSpace(ra)); parseErr == nil && secs > 0 {
