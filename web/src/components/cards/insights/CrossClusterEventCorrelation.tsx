@@ -15,6 +15,8 @@ import { InsightDetailModal } from './InsightDetailModal'
 import type { MultiClusterInsight } from '../../../types/insights'
 import { MS_PER_MINUTE } from '../../../lib/constants/time'
 
+const CHART_STYLE = { height: CHART_HEIGHT_STANDARD, width: '100%' } as const
+
 /** Time bucket size for the timeline chart (2 minutes) */
 const TIMELINE_BUCKET_MS = 2 * MS_PER_MINUTE
 /** Maximum number of buckets to show on the chart */
@@ -147,7 +149,7 @@ export function CrossClusterEventCorrelation() {
         <div className="h-40">
           <LazyEChart
             option={chartOption}
-            style={{ height: CHART_HEIGHT_STANDARD, width: '100%' }}
+            style={CHART_STYLE}
             notMerge={true}
             opts={{ renderer: 'svg' }}
           />

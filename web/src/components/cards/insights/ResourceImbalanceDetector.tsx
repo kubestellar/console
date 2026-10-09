@@ -18,6 +18,8 @@ const GRID_BOTTOM_PX = 20
 import { InsightDetailModal } from './InsightDetailModal'
 import type { MultiClusterInsight } from '../../../types/insights'
 
+const CHART_STYLE = { height: CHART_HEIGHT_LG, width: '100%' } as const
+
 /** Percentage threshold for coloring bars as overloaded */
 const OVERLOADED_THRESHOLD_PCT = 75
 /** Percentage threshold for coloring bars as underloaded */
@@ -163,7 +165,7 @@ export function ResourceImbalanceDetector() {
         <div className="h-48">
           <LazyEChart
             option={chartOption}
-            style={{ height: CHART_HEIGHT_LG, width: '100%' }}
+            style={CHART_STYLE}
             notMerge={true}
             opts={{ renderer: 'svg' }}
           />
