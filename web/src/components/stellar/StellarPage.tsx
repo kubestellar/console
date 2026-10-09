@@ -23,6 +23,7 @@ import '../../styles/stellar.css'
 
 const APP_TOP_NAV_OFFSET_PX = 56
 const SECTION_SCROLL_MARGIN_PX = 80
+const SECTION_SCROLL_STYLE = { scrollMarginTop: SECTION_SCROLL_MARGIN_PX } as const
 const EVENTS_CHAT_HEIGHT_CLASS = 'min-h-[50vh] max-h-[50vh]'
 const STANDARD_SECTION_MAX_HEIGHT_CLASS = 'max-h-[24rem]'
 const SUGGESTIONS_SECTION_MAX_HEIGHT_CLASS = 'max-h-[36rem]'
@@ -181,7 +182,7 @@ export function StellarPage() {
             tabIndex={-1}
             data-testid="stellar-section-events"
             className={cn(SECTION_SHELL_CLASS, EVENTS_CHAT_HEIGHT_CLASS)}
-            style={{ scrollMarginTop: SECTION_SCROLL_MARGIN_PX }}
+            style={SECTION_SCROLL_STYLE}
           >
             <EventsPanel
               notifications={notifications}
@@ -209,7 +210,7 @@ export function StellarPage() {
             tabIndex={-1}
             data-testid="stellar-section-chat"
             className={cn(SECTION_SHELL_CLASS, EVENTS_CHAT_HEIGHT_CLASS)}
-            style={{ scrollMarginTop: SECTION_SCROLL_MARGIN_PX }}
+            style={SECTION_SCROLL_STYLE}
           >
             <ChatPanel
               providerSession={providerSession}
@@ -259,7 +260,7 @@ export function StellarPage() {
           tabIndex={-1}
           data-testid="stellar-section-activity"
           className={cn(SECTION_SHELL_CLASS, STANDARD_SECTION_MAX_HEIGHT_CLASS, 'overflow-y-auto s-scroll')}
-          style={{ scrollMarginTop: SECTION_SCROLL_MARGIN_PX }}
+          style={SECTION_SCROLL_STYLE}
         >
           <StellarActivityPanel
             activity={activity}
@@ -276,7 +277,7 @@ export function StellarPage() {
           id={STELLAR_SECTION_ID.AUDIT}
           tabIndex={-1}
           data-testid="stellar-section-audit"
-          style={{ scrollMarginTop: SECTION_SCROLL_MARGIN_PX }}
+          style={SECTION_SCROLL_STYLE}
         >
           <StellarAuditLogSection />
         </section>

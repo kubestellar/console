@@ -8,6 +8,8 @@ import type { ClusterEvent } from '../../../hooks/mcp/types'
 import { getTimeAgo, DONUT_SIZE, DONUT_THICKNESS, DONUT_EMPTY_HEIGHT, BAR_CHART_HEIGHT, MAX_RECENT_WARNINGS_PREVIEW } from './helpers'
 import type { EventsStats, EventFilter, TranslateFn } from './types'
 
+const DONUT_EMPTY_STYLE = { height: DONUT_EMPTY_HEIGHT } as const
+
 export interface EventsOverviewTabProps {
   t: TranslateFn
   stats: EventsStats
@@ -49,15 +51,15 @@ export function EventsOverviewTab({ t, stats, globalFilteredWarningEvents, onFil
       <div className="grid grid-cols-3 gap-4">
         <div className="glass p-4 rounded-lg">
           <div className="text-sm font-medium text-muted-foreground mb-4">{t('events.sections.eventTypes')}</div>
-          {stats.typeChartData.length > 0 ? <DonutChart data={stats.typeChartData} size={DONUT_SIZE} thickness={DONUT_THICKNESS} showLegend={true} /> : <div className="flex items-center justify-center text-muted-foreground" style={{ height: DONUT_EMPTY_HEIGHT }}>{t('events.empty.noEvents')}</div>}
+          {stats.typeChartData.length > 0 ? <DonutChart data={stats.typeChartData} size={DONUT_SIZE} thickness={DONUT_THICKNESS} showLegend={true} /> : <div className="flex items-center justify-center text-muted-foreground" style={DONUT_EMPTY_STYLE}>{t('events.empty.noEvents')}</div>}
         </div>
         <div className="glass p-4 rounded-lg">
           <div className="text-sm font-medium text-muted-foreground mb-4">{t('events.sections.topReasons')}</div>
-          {stats.topReasons.length > 0 ? <DonutChart data={stats.topReasons} size={DONUT_SIZE} thickness={DONUT_THICKNESS} showLegend={true} /> : <div className="flex items-center justify-center text-muted-foreground" style={{ height: DONUT_EMPTY_HEIGHT }}>{t('events.empty.noEvents')}</div>}
+          {stats.topReasons.length > 0 ? <DonutChart data={stats.topReasons} size={DONUT_SIZE} thickness={DONUT_THICKNESS} showLegend={true} /> : <div className="flex items-center justify-center text-muted-foreground" style={DONUT_EMPTY_STYLE}>{t('events.empty.noEvents')}</div>}
         </div>
         <div className="glass p-4 rounded-lg">
           <div className="text-sm font-medium text-muted-foreground mb-4">{t('events.sections.byCluster')}</div>
-          {stats.clusterData.length > 0 ? <DonutChart data={stats.clusterData} size={DONUT_SIZE} thickness={DONUT_THICKNESS} showLegend={true} /> : <div className="flex items-center justify-center text-muted-foreground" style={{ height: DONUT_EMPTY_HEIGHT }}>{t('events.empty.noClusterData')}</div>}
+          {stats.clusterData.length > 0 ? <DonutChart data={stats.clusterData} size={DONUT_SIZE} thickness={DONUT_THICKNESS} showLegend={true} /> : <div className="flex items-center justify-center text-muted-foreground" style={DONUT_EMPTY_STYLE}>{t('events.empty.noClusterData')}</div>}
         </div>
       </div>
 
