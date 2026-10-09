@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { useKubectl } from '../../hooks/useKubectl'
 import { useClusters } from '../../hooks/useMCP'
 import { useCardLoadingState } from './CardDataContext'
-import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { copyToClipboard } from '../../lib/clipboard'
 import { getDefaultClusterSelection } from '../../lib/clusterSelection'
@@ -16,10 +15,10 @@ import { useKubectlCommandHistory } from './useKubectlCommandHistory'
 import { KubectlToolbar } from './KubectlToolbar'
 import { KubectlTerminalOutput } from './KubectlTerminalOutput'
 import { KubectlQuickActions } from './KubectlQuickActions'
-import { KubectlExecuteButton, KubectlFormatControls } from './KubectlInputControls'
+import { KubectlContextSelect } from './KubectlContextSelect'
+import { KubectlCommandInput } from './KubectlCommandInput'
 
 export function Kubectl() {
-  const { t } = useTranslation(['common', 'cards'])
   const { execute } = useKubectl()
   const { deduplicatedClusters: allClusters, isLoading, isRefreshing, isFailed, consecutiveFailures } = useClusters()
   // Filter to only reachable & healthy clusters
@@ -287,23 +286,11 @@ export function Kubectl() {
     <div className="h-full flex flex-col min-h-card overflow-hidden">
       {/* Header with controls */}
       <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4 gap-2 min-w-0">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          {clusters.length > 0 && (
-            <select
-              value={selectedContext}
-              onChange={(e) => setSelectedContext(e.target.value)}
-              className="text-xs bg-secondary border border-border/50 rounded px-2 py-1 text-foreground max-w-[150px] truncate"
-              title={t('selectors.selectCluster')}
-            >
-              <option value="">{t('selectors.selectCluster')}</option>
-              {clusters.map(cluster => (
-                <option key={cluster.name} value={cluster.name}>
-                  {cluster.name}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
+        <KubectlContextSelect
+          clusters={clusters}
+          selectedContext={selectedContext}
+          onContextChange={setSelectedContext}
+        />
         <KubectlToolbar
           showAI={showAI}
           showYAMLEditor={showYAMLEditor}
@@ -359,32 +346,19 @@ export function Kubectl() {
       <KubectlTerminalOutput outputRef={outputRef} output={output} />
 
       {/* Command Input */}
-      <div className="flex gap-2">
-        <div className="flex-1 flex items-center gap-2 bg-secondary/50 rounded-lg px-3 py-2 border border-border/30 focus-within:border-green-500/50">
-          <span className="text-green-400 text-sm font-semibold">$</span>
-          <input
-            ref={commandInputRef}
-            type="text"
-            value={command}
-            onChange={(e) => setCommand(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Enter kubectl command (without 'kubectl' prefix)"
-            disabled={isExecuting || !selectedContext}
-            className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-hidden disabled:opacity-50"
-          />
-          <KubectlFormatControls
-            outputFormat={outputFormat}
-            onFormatChange={setOutputFormat}
-            isDryRun={isDryRun}
-            onToggleDryRun={() => setIsDryRun(!isDryRun)}
-          />
-        </div>
-        <KubectlExecuteButton
-          isExecuting={isExecuting}
-          disabled={isExecuting || !command.trim() || !selectedContext}
-          onExecute={() => executeCommand(command, isDryRun)}
-        />
-      </div>
+      <KubectlCommandInput
+        inputRef={commandInputRef}
+        command={command}
+        onCommandChange={setCommand}
+        onKeyDown={handleKeyDown}
+        isExecuting={isExecuting}
+        selectedContext={selectedContext}
+        outputFormat={outputFormat}
+        onFormatChange={setOutputFormat}
+        isDryRun={isDryRun}
+        onToggleDryRun={() => setIsDryRun(!isDryRun)}
+        onExecute={() => executeCommand(command, isDryRun)}
+      />
 
       {/* Quick Actions */}
       <KubectlQuickActions
