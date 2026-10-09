@@ -1,0 +1,1 @@
+- Split SaveResolutionDialog, StatsConfig, and Marketplace into focused sibling modules (no behavior change)
