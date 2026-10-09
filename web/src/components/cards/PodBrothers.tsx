@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
-import { Play, RotateCcw, Pause, Trophy, Heart, Star } from 'lucide-react'
+import { Pause } from 'lucide-react'
 
 import { useTranslation } from 'react-i18next'
 import { useCardExpanded } from './CardWrapper'
@@ -24,16 +24,19 @@ import {
   QUESTION,
   GROUND,
   PIPE,
-  COIN,
-  GOOMBA,
   FLAG,
-  LEVEL_DATA,
   POD_BROTHERS_HIGHSCORE_KEY,
   type Player,
   type Enemy,
   type Coin,
 } from './PodBrothers.constants'
 import { drawPodBrothersFrame } from './PodBrothers.draw'
+import { buildPodBrothersLevel, createInitialPlayer } from './podbrothers/PodBrothers.level'
+import {
+  PodBrothersOverlay,
+  PodBrothersStatsBar,
+  type PodBrothersGameState,
+} from './podbrothers/PodBrothers.overlays'
 
 export function PodBrothers() {
   const { t } = useTranslation('cards')
@@ -41,7 +44,7 @@ export function PodBrothers() {
   const { isExpanded } = useCardExpanded()
   const gameContainerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [gameState, setGameState] = useState<'idle' | 'playing' | 'paused' | 'won' | 'lost'>('idle')
+  const [gameState, setGameState] = useState<PodBrothersGameState>('idle')
   const [score, setScore] = useState(0)
   const [lives, setLives] = useState(3)
   const [highScore, setHighScore] = useState(() => {
@@ -49,13 +52,7 @@ export function PodBrothers() {
     return saved ? parseInt(saved, 10) : 0
   })
 
-  const playerRef = useRef<Player>({
-    x: TILE_SIZE,
-    y: CANVAS_HEIGHT - TILE_SIZE * 3,
-    vx: 0,
-    vy: 0,
-    onGround: false,
-    facingRight: true })
+  const playerRef = useRef<Player>(createInitialPlayer())
 
   const enemiesRef = useRef<Enemy[]>([])
   const coinsRef = useRef<Coin[]>([])
@@ -68,38 +65,11 @@ export function PodBrothers() {
 
   // Initialize level
   const initLevel = useCallback(() => {
-    levelRef.current = LEVEL_DATA.map(row => [...row])
-    enemiesRef.current = []
-    coinsRef.current = []
-
-    // Find enemies and coins in level
-    for (let row = 0; row < levelRef.current.length; row++) {
-      for (let col = 0; col < levelRef.current[row].length; col++) {
-        if (levelRef.current[row][col] === GOOMBA) {
-          enemiesRef.current.push({
-            x: col * TILE_SIZE,
-            y: row * TILE_SIZE,
-            vx: -1,
-            type: GOOMBA,
-            alive: true })
-          levelRef.current[row][col] = EMPTY
-        } else if (levelRef.current[row][col] === COIN) {
-          coinsRef.current.push({
-            x: col * TILE_SIZE + TILE_SIZE / 2,
-            y: row * TILE_SIZE + TILE_SIZE / 2,
-            collected: false })
-          levelRef.current[row][col] = EMPTY
-        }
-      }
-    }
-
-    playerRef.current = {
-      x: TILE_SIZE,
-      y: CANVAS_HEIGHT - TILE_SIZE * 3,
-      vx: 0,
-      vy: 0,
-      onGround: false,
-      facingRight: true }
+    const level = buildPodBrothersLevel()
+    levelRef.current = level.tiles
+    enemiesRef.current = level.enemies
+    coinsRef.current = level.coins
+    playerRef.current = createInitialPlayer()
 
     // Grant spawn invincibility to prevent instant death from overlapping enemies
     invincibilityRef.current = INVINCIBILITY_FRAMES
@@ -367,22 +337,7 @@ export function PodBrothers() {
     <div ref={gameContainerRef} className="h-full flex flex-col">
       <div className={`flex flex-col items-center gap-3 ${isExpanded ? 'flex-1 min-h-0' : ''}`}>
         {/* Stats bar */}
-        <div className="flex flex-wrap items-center justify-between gap-y-2 w-full max-w-[480px] text-sm">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1">
-              <Star className="w-4 h-4 text-yellow-400" />
-              <span>{score}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Heart className="w-4 h-4 text-red-400" />
-              <span>{lives}</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
-            <Trophy className="w-4 h-4 text-yellow-500" />
-            <span>{highScore}</span>
-          </div>
-        </div>
+        <PodBrothersStatsBar score={score} lives={lives} highScore={highScore} />
 
         {/* Game canvas */}
         <div className={`relative ${isExpanded ? 'flex-1 min-h-0' : ''}`}>
@@ -396,61 +351,12 @@ export function PodBrothers() {
           />
 
           {/* Overlays */}
-          {gameState === 'idle' && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded">
-              <h3 className="text-2xl font-bold text-orange-400 mb-2">{t('podBrothers.title')}</h3>
-              <p className="text-sm text-muted-foreground mb-4">{t('podBrothers.instructions')}</p>
-              <button
-                onClick={startGame}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 rounded text-white"
-              >
-                <Play className="w-4 h-4" />
-                {t('podBrothers.startGame')}
-              </button>
-            </div>
-          )}
-
-          {gameState === 'paused' && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded">
-              <h3 className="text-xl font-bold text-white mb-4">{t('podBrothers.paused')}</h3>
-              <button
-                onClick={togglePause}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white"
-              >
-                <Play className="w-4 h-4" />
-                {t('podBrothers.resume')}
-              </button>
-            </div>
-          )}
-
-          {gameState === 'won' && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded">
-              <Trophy className="w-12 h-12 text-yellow-400 mb-2" />
-              <h3 className="text-2xl font-bold text-green-400 mb-2">{t('podBrothers.levelComplete')}</h3>
-              <p className="text-lg text-white mb-4">{t('podBrothers.scoreLabel', { score })}</p>
-              <button
-                onClick={startGame}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 rounded text-white"
-              >
-                <RotateCcw className="w-4 h-4" />
-                {t('podBrothers.playAgain')}
-              </button>
-            </div>
-          )}
-
-          {gameState === 'lost' && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded">
-              <h3 className="text-2xl font-bold text-red-400 mb-2">{t('podBrothers.gameOver')}</h3>
-              <p className="text-lg text-white mb-4">{t('podBrothers.scoreLabel', { score })}</p>
-              <button
-                onClick={startGame}
-                className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded text-white"
-              >
-                <RotateCcw className="w-4 h-4" />
-                {t('podBrothers.tryAgain')}
-              </button>
-            </div>
-          )}
+          <PodBrothersOverlay
+            gameState={gameState}
+            score={score}
+            onStart={startGame}
+            onResume={togglePause}
+          />
         </div>
 
         {/* Controls */}
