@@ -71,6 +71,7 @@ const COLOR_PR_MERGED = '#ED7D31'
 const BAR_BORDER_RADIUS: [number, number, number, number] = [3, 3, 0, 0]
 /** Chart minimum height in pixels */
 const CHART_HEIGHT_PX = 320
+const ISSUE_CHART_STYLE = { height: CHART_HEIGHT_PX, width: '100%' } as const
 /** Slider height in pixels for the dataZoom slider control */
 const DATA_ZOOM_SLIDER_HEIGHT_PX = 20
 /** Slider bottom offset in pixels */
@@ -420,7 +421,7 @@ const IssueActivityChart = memo(function IssueActivityChart(props: { config?: Is
         <LazyEChart
           ref={chartRef}
           option={chartOption}
-          style={{ height: CHART_HEIGHT_PX, width: '100%' }}
+          style={ISSUE_CHART_STYLE}
           notMerge={true}
           opts={{ renderer: 'svg' }}
           onEvents={chartEvents}

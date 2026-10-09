@@ -11,6 +11,8 @@ import { CHART_GRID_STROKE, CHART_TOOLTIP_CONTENT_STYLE, CHART_TOOLTIP_FONT_SIZE
 import { InsightDetailModal } from './InsightDetailModal'
 import type { MultiClusterInsight } from '../../../types/insights'
 
+const CHART_STYLE = { height: CHART_HEIGHT_SM, width: '100%' } as const
+
 
 /** Palette for multi-cluster bars (extends beyond 2 clusters, fixes #6873) */
 const CLUSTER_COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16']
@@ -180,7 +182,7 @@ export function ClusterDeltaDetector() {
             <div className="h-32">
               <LazyEChart
                 option={chartOption}
-                style={{ height: CHART_HEIGHT_SM, width: '100%' }}
+                style={CHART_STYLE}
                 notMerge={true}
                 opts={{ renderer: 'svg' }}
               />

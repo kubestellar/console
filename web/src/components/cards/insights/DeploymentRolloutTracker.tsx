@@ -17,6 +17,8 @@ const GRID_BOTTOM_PX = 20
 import { InsightDetailModal } from './InsightDetailModal'
 import type { MultiClusterInsight } from '../../../types/insights'
 
+const CHART_STYLE = { height: CHART_HEIGHT_SM, width: '100%' } as const
+
 /** Color for completed rollout progress */
 const COMPLETE_COLOR = '#22c55e'
 /** Color for in-progress rollout */
@@ -187,7 +189,7 @@ export function DeploymentRolloutTracker() {
             <div className="h-32">
               <LazyEChart
                 option={chartOption}
-                style={{ height: CHART_HEIGHT_SM, width: '100%' }}
+                style={CHART_STYLE}
                 notMerge={true}
                 opts={{ renderer: 'svg' }}
               />
