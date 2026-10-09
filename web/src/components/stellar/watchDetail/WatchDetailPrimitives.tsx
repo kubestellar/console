@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
+const BODY_TEXT_STYLE = { fontSize: 13, lineHeight: 1.55, color: 'var(--s-text)' } as const
+
 export function Tag({ label, color, highlighted }: { label: string; color: string; highlighted?: boolean }) {
   return (
     <span className="px-1.5 py-0.5" style={{
@@ -39,7 +41,7 @@ export function Section({ title, children }: { title: string; children: ReactNod
   return (
     <div className="mb-3">
       <SectionHeader title={title} />
-      <div style={{ fontSize: 13, lineHeight: 1.55, color: 'var(--s-text)' }}>{children}</div>
+      <div style={BODY_TEXT_STYLE}>{children}</div>
     </div>
   )
 }
