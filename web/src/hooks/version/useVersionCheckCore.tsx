@@ -8,27 +8,28 @@ import type {
 } from '../../types/updates'
 import { UPDATE_STORAGE_KEYS } from '../../types/updates'
 import { emitSessionContext } from '../../lib/analytics'
-import { authFetch } from '../../lib/api'
 import { useLocalAgent } from '../useLocalAgent'
 import {
   AUTO_UPDATE_POLL_MS,
   DEV_SHA_CACHE_KEY,
   ERROR_DISPLAY_THRESHOLD,
   getLatestForChannel,
-  HEALTH_FETCH_MAX_RETRIES,
-  HEALTH_FETCH_RETRY_DELAY_MS,
-  HEALTH_FETCH_TIMEOUT_MS,
   isDevVersion,
   isNewerVersion,
   loadCache,
   loadChannel,
   loadAutoUpdateEnabled,
   loadSkippedVersions,
-  MIN_CHECK_INTERVAL_MS,
   parseRelease,
-  safeJsonParse,
 } from '../versionUtils'
 import { usePersistedState } from './usePersistedState'
+import { useBackendInstallMethod } from './useBackendInstallMethod'
+import {
+  deserializeChannel,
+  deserializeLastChecked,
+  deserializeSkippedVersions,
+  VERSION_CHECK_CACHE_MAX_AGE_MS,
+} from './versionCheckSerializers'
 import {
   clearGithubRateLimitBackoff,
   fetchLatestMainSHA,
@@ -47,25 +48,6 @@ import {
 declare const __APP_VERSION__: string
 
 declare const __COMMIT_HASH__: string
-
-const VERSION_CHECK_CACHE_MAX_AGE_MS = MIN_CHECK_INTERVAL_MS
-
-function deserializeChannel(raw: string): UpdateChannel {
-  if (raw === 'stable' || raw === 'unstable' || raw === 'developer') {
-    return raw
-  }
-  return loadChannel()
-}
-
-function deserializeLastChecked(raw: string): number | null {
-  const parsed = parseInt(raw, 10)
-  return Number.isFinite(parsed) ? parsed : null
-}
-
-function deserializeSkippedVersions(raw: string): string[] {
-  const parsed = JSON.parse(raw) as unknown
-  return Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === 'string') : []
-}
 
 export function useVersionCheckCore() {
   const [channel, setChannelState] = usePersistedState<UpdateChannel>(
@@ -124,7 +106,6 @@ export function useVersionCheckCore() {
 
   const consecutiveFailuresRef = useRef(0)
   const channelChangedRef = useRef(false)
-  const healthRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { isConnected: agentConnected, health: agentHealth, refresh: refreshAgent } = useLocalAgent()
   const hasCodingAgent = agentHealth?.hasClaude ?? false
@@ -370,47 +351,7 @@ export function useVersionCheckCore() {
     }
   }, [installMethod, channel, setChannel])
 
-  useEffect(() => {
-    let cancelled = false
-
-    const clearHealthRetryTimer = () => {
-      if (healthRetryTimerRef.current) {
-        clearTimeout(healthRetryTimerRef.current)
-        healthRetryTimerRef.current = null
-      }
-    }
-
-    async function fetchBackendInstallMethod(attempt: number) {
-      try {
-        const response = await authFetch('/health', {
-          signal: AbortSignal.timeout(HEALTH_FETCH_TIMEOUT_MS),
-        })
-        if (response.ok) {
-          const data = await safeJsonParse<{ install_method?: string }>(response, 'Backend health')
-          if (data.install_method && !cancelled) {
-            setInstallMethod(data.install_method as InstallMethod)
-            return
-          }
-        }
-      } catch {
-        // Backend not available.
-      }
-
-      if (attempt < HEALTH_FETCH_MAX_RETRIES && !cancelled) {
-        clearHealthRetryTimer()
-        healthRetryTimerRef.current = setTimeout(() => {
-          healthRetryTimerRef.current = null
-          void fetchBackendInstallMethod(attempt + 1)
-        }, HEALTH_FETCH_RETRY_DELAY_MS)
-      }
-    }
-
-    void fetchBackendInstallMethod(0)
-    return () => {
-      cancelled = true
-      clearHealthRetryTimer()
-    }
-  }, [])
+  useBackendInstallMethod(setInstallMethod)
 
   useEffect(() => {
     if (agentConnected && agentSupportsAutoUpdate) {

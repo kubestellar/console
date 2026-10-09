@@ -11,33 +11,30 @@ import { clearPermissionsCache } from '../../hooks/usePermissions'
 import { disconnectPresence } from '../../hooks/useActiveUsers'
 import { clearSSECache } from '../sseClient'
 import { clearClusterCacheOnLogout } from '../../hooks/mcp/shared'
-import { clearAgentToken, setAgentToken } from '../../hooks/mcp/agentFetch'
+import { clearAgentToken } from '../../hooks/mcp/agentFetch'
 import { DEMO_TOKEN_VALUE, FETCH_DEFAULT_TIMEOUT_MS, STORAGE_KEY_DEMO_MODE, STORAGE_KEY_HAS_SESSION, STORAGE_KEY_ONBOARDED } from '../constants'
-import { isLocalAgentSuppressed } from '../constants/network'
-import { HTTP_UNAUTHORIZED, HTTP_FORBIDDEN } from '../constants/http'
 import { safeGet, safeRemove, safeSet } from '../safeLocalStorage'
-import { AUTH_TOKEN_SYNC_KEY, clearStoredAuthToken, getStoredAuthToken, getStoredAuthTokenSync, parseAuthTokenSyncEvent, setStoredAuthToken } from '../authToken'
-import { emitLogin, emitLogout, setAnalyticsUserId, setAnalyticsUserProperties, emitConversionStep, emitDeveloperSession, emitSessionRefreshFailure } from '../analytics'
+import { clearStoredAuthToken, getStoredAuthToken, getStoredAuthTokenSync, setStoredAuthToken } from '../authToken'
+import { emitLogin, emitLogout, setAnalyticsUserId, setAnalyticsUserProperties, emitConversionStep, emitDeveloperSession } from '../analytics'
 import { setDemoMode as setGlobalDemoMode } from '../demoMode'
-import { AuthRefreshResponseSchema, UserSchema } from '../schemas'
+import { UserSchema } from '../schemas'
 import { validateResponse } from '../schemas/validate'
-import { ROUTES } from '../../config/routes'
 import { redirectToDevLogin, type LoginOptions } from '../devLogin'
 import type { User, AuthContextType } from './types'
 import { AuthContext } from './context'
 import {
   AUTH_USER_CACHE_KEY,
   AUTH_USER_CACHE_VALIDATED_KEY,
-  EXPIRY_CHECK_INTERVAL_MS,
-  EXPIRY_WARNING_THRESHOLD_MS,
   MAX_CACHED_USER_AGE_MS,
-  BACKEND_REVALIDATE_INTERVAL_MS,
-  getJwtExpiryMs,
   isJWTExpired,
-  showExpiryWarningBanner,
   getCachedUser,
   cacheUser,
 } from './tokenHelpers'
+import { computeIsAuthenticated } from './authState'
+import { restoreCookieSession } from './sessionRestore'
+import { useSessionExpiryWatcher } from './useSessionExpiryWatcher'
+import { useAuthStorageSync } from './useAuthStorageSync'
+import { useCachedUserRevalidation } from './useCachedUserRevalidation'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(getCachedUser)
@@ -166,90 +163,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Without this gate, fresh visitors see a spurious 401 in DevTools.
         const hadPriorSession = !!safeGet(STORAGE_KEY_HAS_SESSION)
         if (hadPriorSession) {
-          // #6066 — If the user has a valid HttpOnly cookie from a previous
-          // session, /auth/refresh will mint a new JWT. Try that before showing
-          // the login page so a page reload can restore the session silently.
-          // #20823 — This also restores passwordless dev-login sessions on
-          // in-cluster installs without OAuth, so the restore attempt runs
-          // whenever the backend is up, not only when OAuth is configured.
-          try {
-            const refreshResponse = await fetch('/auth/refresh', {
-              method: 'POST',
-              credentials: 'include',
-              headers: {
-                'Content-Type': 'application/json',
-                // #6588 — CSRF gate on /auth/refresh
-                'X-Requested-With': 'XMLHttpRequest',
-              },
-              signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-            })
-            if (refreshResponse.ok) {
-              // #6590 — /auth/refresh delivers the new JWT EXCLUSIVELY via the
-              // HttpOnly kc_auth cookie. The body carries only
-              // { refreshed: true, onboarded }. Since the cookie is HttpOnly,
-              // we cannot read the token from JS — but the JWTAuth middleware
-              // accepts the cookie on subsequent requests, so we can call
-              // /api/me directly via cookie credentials to populate the user.
-              const rawRefresh = await refreshResponse.json().catch(() => null)
-              const data = validateResponse(AuthRefreshResponseSchema, rawRefresh, '/auth/refresh')
-              if (data?.refreshed) {
-                try {
-                  localStorage.setItem(STORAGE_KEY_HAS_SESSION, 'true')
-                } catch {
-                  // localStorage quota — best-effort hint
-                }
-                // Fetch kc-agent token so agentFetch/WebSocket can authenticate
-                if (!isLocalAgentSuppressed()) {
-                  try {
-                    const agentRes = await fetch('/api/agent/token', {
-                      credentials: 'same-origin',
-                      headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-                    })
-                    if (agentRes.ok) {
-                      const agentData = await agentRes.json()
-                      if (agentData.token) {
-                        setAgentToken(agentData.token)
-                      }
-                    }
-                  } catch {
-                    // Non-fatal: agent auth may fail while the browser session remains intact.
-                  }
-                }
-                const meResponse = await fetch('/api/me', {
-                  credentials: 'include',
-                  signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-                })
-                if (meResponse.ok) {
-                  const rawUser = await meResponse.json().catch(() => null)
-                  const userData = validateResponse(UserSchema, rawUser, '/api/me') as User | null
-                  if (userData) {
-                    setUser(userData)
-                    cacheUser(userData)
-                    try {
-                      localStorage.setItem(AUTH_USER_CACHE_VALIDATED_KEY, String(Date.now()))
-                    } catch {
-                      // localStorage quota — best-effort
-                    }
-                    setAnalyticsUserId(userData.id)
-                    // #20823 — sessions restored on no-OAuth installs came from
-                    // the backend's passwordless dev-login, not GitHub OAuth.
-                    setAnalyticsUserProperties({ auth_mode: oauthConfigured ? 'github-oauth' : 'dev-login' })
-                    return
-                  }
-                }
-              }
-            }
-            // #6930 — A 401/403 from /auth/refresh is a definitive signal that
-            // the server session has expired. Clear the session hint so future
-            // page loads don't keep hitting /auth/refresh in a loop.
-            if (refreshResponse.status === HTTP_UNAUTHORIZED || refreshResponse.status === HTTP_FORBIDDEN) {
-              localStorage.removeItem(STORAGE_KEY_HAS_SESSION)
-            }
-          } catch {
-            // Refresh failed (network error / timeout) — fall through to show
-            // login page. Do NOT clear kc-has-session here: the server may be
-            // temporarily unreachable and the session could still be valid.
+          if (await restoreCookieSession(oauthConfigured, setUser)) {
+            return
           }
         }
         if (oauthConfigured) {
@@ -471,146 +386,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser({ id: '', github_id: '', github_login: '', onboarded } as User)
   }, [])
 
-  // Periodically check if the JWT is nearing expiry and show a warning banner.
-  // When the user clicks "Refresh Now", silently call /auth/refresh for a new token.
-  useEffect(() => {
-    if (!token || token === DEMO_TOKEN_VALUE) return
+  useSessionExpiryWatcher(token, logout)
 
-    const checkExpiry = async () => {
-      const currentToken = await getStoredAuthToken()
-      if (!currentToken || currentToken === DEMO_TOKEN_VALUE) return
+  useAuthStorageSync(refreshUser, setTokenState, setUser)
 
-      const expiryMs = getJwtExpiryMs(currentToken)
-      if (expiryMs === null) return
-
-      const timeUntilExpiry = expiryMs - Date.now()
-      // #6069 — Proactively log the user out the moment the token expires
-      // instead of waiting for the next 401 to surface. This prevents a
-      // window where the UI still looks authenticated but every API call
-      // returns 401.
-      if (timeUntilExpiry <= 0) {
-        document.getElementById('session-expiry-warning')?.remove()
-        await logout()
-        return
-      }
-      if (timeUntilExpiry > EXPIRY_WARNING_THRESHOLD_MS) {
-        // Token not near expiry — remove stale banner if present
-        document.getElementById('session-expiry-warning')?.remove()
-        return
-      }
-      showExpiryWarningBanner(async () => {
-        // Re-read the token at click time instead of using the stale closure
-        // value — the token may have been silently refreshed since the banner
-        // was shown (#3909).
-        const freshToken = await getStoredAuthToken()
-        if (!freshToken || freshToken === DEMO_TOKEN_VALUE) return
-        try {
-          // #8108 — Do NOT send Authorization to /auth/refresh. Backend
-          // RefreshToken revokes the JTI of the presented bearer before
-          // minting the replacement; sending `freshToken` would invalidate
-          // the token the rest of this page is still using. Cookie-only
-          // flow: rely on the HttpOnly kc_auth cookie + CSRF header.
-          const response = await fetch('/auth/refresh', {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: {
-              'Content-Type': 'application/json',
-              // #6588 — CSRF gate on /auth/refresh
-              'X-Requested-With': 'XMLHttpRequest' },
-            signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
-          if (response.ok) {
-            // #6590 — /auth/refresh delivers the new JWT exclusively via the
-            // HttpOnly kc_auth cookie. There is no token in the JSON body to
-            // copy into localStorage; the browser will use the refreshed
-            // cookie automatically on subsequent requests. Mark the session
-            // hint so future page loads know to attempt cookie restoration.
-            try {
-              localStorage.setItem(STORAGE_KEY_HAS_SESSION, 'true')
-            } catch {
-              // localStorage quota — best-effort hint
-            }
-          } else {
-            // #6930 — A definitive auth failure from the banner refresh
-            // should also clear the session hint to prevent stale loops.
-            if (response.status === HTTP_UNAUTHORIZED || response.status === HTTP_FORBIDDEN) {
-              localStorage.removeItem(STORAGE_KEY_HAS_SESSION)
-            }
-          }
-        } catch (err: unknown) {
-          emitSessionRefreshFailure(err instanceof Error ? err.message : 'network error')
-        }
-      })
-    }
-
-    // Check once immediately, then every EXPIRY_CHECK_INTERVAL_MS
-    checkExpiry()
-    const intervalId = setInterval(checkExpiry, EXPIRY_CHECK_INTERVAL_MS)
-    return () => clearInterval(intervalId)
-  }, [token, logout])
-
-  // Listen for auth sync events so logouts propagate across tabs even though
-  // real session tokens now live in expiring browser storage wrappers instead
-  // of plain localStorage entries.
-  useEffect(() => {
-    const handleStorageChange = async (e: StorageEvent) => {
-      if (e.key !== AUTH_TOKEN_SYNC_KEY) return
-      const syncState = parseAuthTokenSyncEvent(e.newValue)
-      if (syncState === 'cleared') {
-        setTokenState(null)
-        setUser(null)
-        cacheUser(null)
-        try {
-          localStorage.removeItem(AUTH_USER_CACHE_VALIDATED_KEY)
-        } catch (error: unknown) {
-          console.error('[auth] failed to clear cached user validation key:', error)
-        }
-        document.getElementById('session-expiry-warning')?.remove()
-        if (!window.location.pathname.startsWith(ROUTES.LOGIN)) {
-          window.location.href = ROUTES.LOGIN
-        }
-        return
-      }
-      if (syncState === 'demo') {
-        setTokenState(DEMO_TOKEN_VALUE)
-        document.getElementById('session-expiry-warning')?.remove()
-        return
-      }
-      if (syncState === 'session') {
-        const syncedToken = await getStoredAuthToken()
-        if (syncedToken) {
-          setTokenState(syncedToken)
-          document.getElementById('session-expiry-warning')?.remove()
-          return
-        }
-        void refreshUser()
-      }
-    }
-    window.addEventListener('storage', handleStorageChange)
-    return () => window.removeEventListener('storage', handleStorageChange)
-  }, [refreshUser])
-
-  // #6067 — When the backend is unreachable, re-validate the cached user
-  // periodically. If validation continues to fail past MAX_CACHED_USER_AGE_MS,
-  // refreshUser() itself will drop the session. This background retry gives
-  // us an opportunity to recover without requiring the user to interact.
-  useEffect(() => {
-    if (!token || token === DEMO_TOKEN_VALUE) return
-    const intervalId = setInterval(() => {
-      // Only re-validate if the cache is getting close to stale
-      const validatedAtRaw = (() => {
-        try { return localStorage.getItem(AUTH_USER_CACHE_VALIDATED_KEY) } catch { return null }
-      })()
-      const validatedAt = validatedAtRaw ? Number(validatedAtRaw) : 0
-      const cacheAge = validatedAt ? Date.now() - validatedAt : Number.POSITIVE_INFINITY
-      // Only re-validate if cache is older than half the max age — otherwise
-      // we're spending cycles validating fresh data.
-      const REVALIDATE_AGE_THRESHOLD_MS = MAX_CACHED_USER_AGE_MS / 2
-      if (cacheAge >= REVALIDATE_AGE_THRESHOLD_MS) {
-        refreshUser().catch(() => { /* refreshUser handles its own errors */ })
-      }
-    }, BACKEND_REVALIDATE_INTERVAL_MS)
-    return () => clearInterval(intervalId)
-  }, [token, refreshUser])
+  useCachedUserRevalidation(token, refreshUser)
 
   // Always attempt to resolve the user on mount — even with no token.
   // When there's no token, refreshUser() auto-enables demo mode so the user
@@ -638,27 +418,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // the HttpOnly kc_auth cookie). Treat that combination as authenticated
   // so the rest of the app stops gating UI behind a Bearer token that no
   // longer needs to live in localStorage.
-  const isAuthenticated = (() => {
-    // Demo sentinel wins unconditionally.
-    if (token === DEMO_TOKEN_VALUE) return true
-    // #8108 — The cookie-only session (user + kc-has-session) is authoritative
-    // and must be checked BEFORE falling back to the JS-readable token. Since
-    // /auth/refresh no longer populates localStorage (#6590), any pre-existing
-    // token will eventually cross its `exp` while the HttpOnly kc_auth cookie
-    // is still perfectly valid — previously that short-circuited to
-    // `false` here and logged the user out mid-session.
-    if (user) {
-      try {
-        if (localStorage.getItem(STORAGE_KEY_HAS_SESSION) === 'true') return true
-      } catch {
-        // localStorage unavailable — fall through to the token check
-      }
-    }
-    if (token) {
-      return !isJWTExpired(token)
-    }
-    return false
-  })()
+  const isAuthenticated = computeIsAuthenticated(token, user)
 
   // #6149 — Memoize the context value so the AuthProvider doesn't cascade
   // a re-render across EVERY consumer (dashboard, cards, layout, etc.) on
