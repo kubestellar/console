@@ -9,6 +9,8 @@ import { Group, EmptyState } from './GroupPrimitives'
 import { getGroupSubtitle } from './helpers'
 import { GROUP_CONFIGS, type CurrentBatch } from './types'
 
+const DIM_ITALIC_STYLE = { fontSize: 10, color: 'var(--s-text-dim)', fontStyle: 'italic' } as const
+
 export interface EventsPanelListProps {
   notifications: StellarNotification[]
   solves: StellarSolve[]
@@ -120,7 +122,7 @@ export function EventsPanelList({
               fontFamily: 'var(--s-mono)', fontSize: 10, fontWeight: 600,
               color: 'var(--s-success)', opacity: 0.7,
             }}>{stellarResolved.length}</span>
-            <span style={{ fontSize: 10, color: 'var(--s-text-dim)', fontStyle: 'italic' }}>
+            <span style={DIM_ITALIC_STYLE}>
               Fixed without waiting for approval
             </span>
           </div>
