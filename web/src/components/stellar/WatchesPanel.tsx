@@ -5,6 +5,7 @@ import type { PendingAction } from './EventCard'
 import { WatchDetailModal } from './WatchDetailModal'
 
 const SPACER_STYLE = { flex: 1 } as const
+const DIM_TEXT_STYLE = { fontSize: 10, color: 'var(--s-text-dim)' } as const
 
 interface Props {
   watches: StellarWatch[]
@@ -58,7 +59,7 @@ export function WatchesPanel({ watches, onResolve, onDismiss, onSnooze, onAction
           {active.length}
         </span>
         <div style={SPACER_STYLE} />
-        <span style={{ fontSize: 10, color: 'var(--s-text-dim)' }}>
+        <span style={DIM_TEXT_STYLE}>
           {collapsed ? '▾' : '▴'}
         </span>
       </div>

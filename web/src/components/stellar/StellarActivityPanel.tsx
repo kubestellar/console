@@ -23,6 +23,7 @@ interface Props {
 
 const FLEX_SHRINK_0_STYLE = { flexShrink: 0 } as const
 const FLEX_SPACER_STYLE = { flex: 1 } as const
+const DIM_TEXT_STYLE = { fontSize: 10, color: 'var(--s-text-dim)' } as const
 
 const KIND_LABEL: Record<string, { label: string; icon: string; color: string }> = {
   // Autonomous-solve narrative beats (Stellar v2):
@@ -98,7 +99,7 @@ export function StellarActivityPanel({ activity, onOpenEvent }: Props) {
           {activity.length}
         </span>
         <div style={FLEX_SPACER_STYLE} />
-        <span style={{ fontSize: 10, color: 'var(--s-text-dim)' }}>{collapsed ? '▾' : '▴'}</span>
+        <span style={DIM_TEXT_STYLE}>{collapsed ? '▾' : '▴'}</span>
       </div>
 
       {!collapsed && (

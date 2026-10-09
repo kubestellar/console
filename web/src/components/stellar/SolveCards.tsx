@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { StellarSolve, StellarSolveProgress } from '../../types/stellar'
 
 const SOLVE_TOGGLE_BUTTON_STYLE = { background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--s-text-muted)' } as const
+const DIM_TEXT_STYLE = { fontSize: 10, color: 'var(--s-text-dim)' } as const
 
 const SOLVE_DISMISS_BUTTON_STYLE = { background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--s-text-dim)' } as const
 
@@ -51,7 +52,7 @@ export function SolveProgressCard({ progress }: { progress: StellarSolveProgress
           step: {progress.step}
         </span>
         <div style={SOLVE_SPACER_STYLE} />
-        <span style={{ fontSize: 10, color: 'var(--s-text-dim)' }}>
+        <span style={DIM_TEXT_STYLE}>
           {progress.actionsTaken} action{progress.actionsTaken === 1 ? '' : 's'}
         </span>
       </div>
