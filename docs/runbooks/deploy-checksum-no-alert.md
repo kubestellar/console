@@ -1,4 +1,4 @@
-# `deploy.sh.sha256` Checksum Update — No Failure Alert Runbook
+# `deploy.sh.sha256` Checksum Update — No Failure Alert Runbook (RESOLVED)
 
 **Repository:** `kubestellar/console`
 **Applies to:** `.github/workflows/deploy-checksum.yml`
@@ -7,10 +7,17 @@
 
 ## Current Status
 
-**Open / unresolved.** `deploy-checksum.yml` has no internal
-issue-creation-on-failure step, and it is not covered by the
-`workflow-failure-issue.yml` catch-all (see "Why the catch-all doesn't help"
-below). A failure is currently invisible outside the Actions tab.
+**Fixed.** `deploy-checksum.yml`'s `update-checksum` job now has a
+self-contained `if: failure()` step (the same pattern used by
+`console-app-smoke.yml`) that opens/dedupes a `priority/critical`,
+`deploy-checksum-failure`-labeled issue, and the job was granted
+`issues: write` alongside the `contents: write` it already had. A failed
+checksum regeneration or push is no longer invisible outside the Actions
+tab. Tracking issue
+[#24053](https://github.com/kubestellar/console/issues/24053) is closed.
+The "Why The Catch-All Doesn't Help As-Is" and "Detecting Drift Today"
+sections below are kept for historical reference and as a manual fallback
+if the failure-alert step itself is ever suspected of not firing.
 
 ## Why This Matters
 
@@ -75,12 +82,12 @@ gh run list --repo kubestellar/console --workflow=deploy-checksum.yml --limit 10
 
 ## Proposed Fix
 
-Add a self-contained `if: failure()` step to `deploy-checksum.yml`'s
+~~Add a self-contained `if: failure()` step to `deploy-checksum.yml`'s
 `update-checksum` job (same pattern as `console-app-smoke.yml`), and grant
 the job `issues: write`. This workflow lives under `.github/workflows/`,
 which this agent's token cannot push to — applying the diff requires a
-maintainer or an `ISSUES_PRS_MERGE`-tier agent. The exact replacement is
-attached to the tracking issue for this runbook.
+maintainer or an `ISSUES_PRS_MERGE`-tier agent.~~ Applied — see "Current
+Status" above.
 
 ## Escalation
 
