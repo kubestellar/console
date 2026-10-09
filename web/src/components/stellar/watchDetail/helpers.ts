@@ -1,5 +1,8 @@
 import type { CSSProperties } from 'react'
 import type { StellarNotification, StellarWatch } from '../../../types/stellar'
+// severityColor used to be redefined here identically to lib/derive.ts and
+// EventModal.utils.ts; re-export the shared implementation instead.
+export { severityColor } from '../lib/derive'
 
 export const EVENT_TIMELINE_LIMIT = 10
 export const STALE_THRESHOLD_MS = 10 * 60 * 1000
@@ -11,12 +14,6 @@ export const WATCH_TIMELINE_TIMESTAMP_STYLE = {
   color: 'var(--s-text-muted)',
   minWidth: 70,
 } as const
-
-export function severityColor(sev: string): string {
-  if (sev === 'critical') return 'var(--s-critical)'
-  if (sev === 'warning') return 'var(--s-warning)'
-  return 'var(--s-info)'
-}
 
 export function deploymentNameFromPodName(podName: string): string {
   const parts = podName.split('-')

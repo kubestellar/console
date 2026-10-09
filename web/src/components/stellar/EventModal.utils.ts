@@ -1,4 +1,7 @@
 import type { StellarNotification, StellarSolve } from '../../types/stellar'
+// severityColor used to be redefined here identically to lib/derive.ts and
+// watchDetail/helpers.ts; re-export the shared implementation instead.
+export { severityColor } from './lib/derive'
 
 export const RELATED_EVENT_LIMIT = 6
 export const TIMELINE_ENTRY_LIMIT = 8
@@ -10,12 +13,6 @@ export interface TimelineEntry {
   ts: string
   label: string
   detail: string
-}
-
-export function severityColor(severity: string): string {
-  if (severity === 'critical') return 'var(--s-critical)'
-  if (severity === 'warning') return 'var(--s-warning)'
-  return 'var(--s-info)'
 }
 
 export function statusLabel(status?: string): string {
