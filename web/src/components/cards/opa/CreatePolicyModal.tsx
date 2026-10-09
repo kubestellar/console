@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { Shield, FileCode, LayoutTemplate, Sparkles, Copy, MessageSquareText, ScanSearch, Loader2 } from 'lucide-react'
+import { Shield, Loader2 } from 'lucide-react'
 import { Button } from '../../ui/Button'
 import { BaseModal } from '../../../lib/modals'
 import { kubectlProxy } from '../../../lib/kubectlProxy'
@@ -7,11 +7,13 @@ import { useToast } from '../../ui/Toast'
 import type { GatekeeperStatus, StartMissionFn } from './types'
 import { POLICY_TEMPLATES } from './types'
 import { copyToClipboard } from '../../../lib/clipboard'
+import { summarizePodSecurity } from './CreatePolicyModal.analysis'
+import {
+  CreatePolicyChooseFlow, CreatePolicyDescribeFlow, CreatePolicyTemplateFlow, CreatePolicyYamlFlow,
+  type CreateFlow,
+} from './CreatePolicyModal.flows'
 
 const OPA_CREATE_TIMEOUT_MS = 20_000
-
-// Creation flow type for CreatePolicyModal
-type CreateFlow = 'choose' | 'describe' | 'template' | 'yaml'
 
 // CreatePolicyModal — AI-driven policy creation from the main card
 export function CreatePolicyModal({
@@ -68,49 +70,7 @@ export function CreatePolicyModal({
         )
 
         if (podsResult.output) {
-          const podsData = JSON.parse(podsResult.output)
-          const pods = podsData.items || []
-
-          // Analyze security issues
-          let privilegedCount = 0
-          let hostNetworkCount = 0
-          let runAsRootCount = 0
-          let noLimitsCount = 0
-          const issueDetails: string[] = []
-
-          for (const pod of pods) {
-            const ns = pod.metadata?.namespace || 'unknown'
-            // Skip system namespaces
-            if (ns.startsWith('kube-') || ns === 'gatekeeper-system') continue
-
-            if (pod.spec?.hostNetwork) {
-              hostNetworkCount++
-              issueDetails.push(`- Pod ${ns}/${pod.metadata?.name}: uses hostNetwork`)
-            }
-
-            for (const container of (pod.spec?.containers || [])) {
-              if (container.securityContext?.privileged) {
-                privilegedCount++
-                issueDetails.push(`- Container ${container.name} in ${ns}/${pod.metadata?.name}: runs privileged`)
-              }
-              if (container.securityContext?.runAsUser === 0 ||
-                  (!container.securityContext?.runAsNonRoot && !pod.spec?.securityContext?.runAsNonRoot)) {
-                runAsRootCount++
-              }
-              if (!container.resources?.limits?.cpu || !container.resources?.limits?.memory) {
-                noLimitsCount++
-              }
-            }
-          }
-
-          securitySummary = [
-            `Privileged containers: ${privilegedCount}`,
-            `Host network pods: ${hostNetworkCount}`,
-            `Containers potentially running as root: ${runAsRootCount}`,
-            ...(issueDetails.length > 0 ? ['', 'Details (first 10):', ...issueDetails.slice(0, 10)] : []),
-          ].join('\n')
-
-          resourceLimitsSummary = `Containers without CPU/memory limits: ${noLimitsCount}`
+          ({ securitySummary, resourceLimitsSummary } = summarizePodSecurity(podsResult.output))
         }
       } catch {
         securitySummary = 'Could not fetch pod data (cluster may be unreachable)'
@@ -283,178 +243,40 @@ Please proceed with applying this policy.`,
 
             {/* Flow: Choose creation method */}
             {flow === 'choose' && (
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground font-medium border-b border-border/50 pb-1">
-                  How would you like to create a policy?
-                </p>
-
-                {/* Analyze & Suggest */}
-                <button
-                  onClick={handleAnalyzeAndSuggest}
-                  disabled={!selectedCluster || isAnalyzing}
-                  className="w-full p-3 rounded-lg bg-secondary/30 hover:bg-purple-500/10 border border-transparent hover:border-purple-500/30 transition-all text-left group disabled:opacity-50"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5">
-                      {isAnalyzing
-                        ? <Loader2 className="w-5 h-5 text-purple-400 animate-spin" />
-                        : <ScanSearch className="w-5 h-5 text-purple-400" />
-                      }
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground group-hover:text-purple-400 transition-colors">
-                        {isAnalyzing ? 'Analyzing cluster...' : 'Analyze Cluster & Suggest Policies'}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        AI scans security issues, missing limits, privileged containers and suggests OPA policies to prevent them
-                      </p>
-                    </div>
-                  </div>
-                </button>
-
-                {/* Describe What You Need */}
-                <button
-                  onClick={() => setFlow('describe')}
-                  disabled={!selectedCluster}
-                  className="w-full p-3 rounded-lg bg-secondary/30 hover:bg-purple-500/10 border border-transparent hover:border-purple-500/30 transition-all text-left group disabled:opacity-50"
-                >
-                  <div className="flex items-start gap-3">
-                    <MessageSquareText className="w-5 h-5 text-blue-400 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-foreground group-hover:text-purple-400 transition-colors">
-                        Describe What You Need
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Tell AI what you want to enforce and it will generate the policy YAML
-                      </p>
-                    </div>
-                  </div>
-                </button>
-
-                {/* From Template */}
-                <button
-                  onClick={() => setFlow('template')}
-                  disabled={!selectedCluster}
-                  className="w-full p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 border border-transparent hover:border-border transition-all text-left group disabled:opacity-50"
-                >
-                  <div className="flex items-start gap-3">
-                    <LayoutTemplate className="w-5 h-5 text-green-400 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-foreground group-hover:text-purple-400 transition-colors">
-                        From Template
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Start from a pre-built policy template
-                      </p>
-                    </div>
-                  </div>
-                </button>
-
-                {/* Custom YAML */}
-                <button
-                  onClick={() => setFlow('yaml')}
-                  disabled={!selectedCluster}
-                  className="w-full p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 border border-transparent hover:border-border transition-all text-left group disabled:opacity-50"
-                >
-                  <div className="flex items-start gap-3">
-                    <FileCode className="w-5 h-5 text-yellow-400 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-foreground group-hover:text-purple-400 transition-colors">
-                        Custom YAML
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Write or paste ConstraintTemplate + Constraint YAML directly
-                      </p>
-                    </div>
-                  </div>
-                </button>
-              </div>
+              <CreatePolicyChooseFlow
+                selectedCluster={selectedCluster}
+                isAnalyzing={isAnalyzing}
+                onAnalyzeAndSuggest={handleAnalyzeAndSuggest}
+                setFlow={setFlow}
+              />
             )}
 
             {/* Flow: Describe what you need */}
             {flow === 'describe' && (
-              <div className="space-y-3">
-                <p className="text-xs text-muted-foreground">
-                  Describe the policy you want in plain English. AI will generate the ConstraintTemplate and Constraint YAML.
-                </p>
-                <textarea
-                  value={userDescription}
-                  onChange={(e) => setUserDescription(e.target.value)}
-                  className="w-full h-32 p-3 bg-secondary/50 border border-border rounded-lg text-sm text-foreground resize-none focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
-                  placeholder="e.g., Block all pods that don't have a 'team' label, require all containers to have memory limits, prevent images from untrusted registries..."
-                  autoFocus
-                />
-                <div className="flex justify-end">
-                  <button
-                    onClick={handleDescribeMission}
-                    disabled={!userDescription.trim()}
-                    className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    Generate with AI
-                  </button>
-                </div>
-              </div>
+              <CreatePolicyDescribeFlow
+                userDescription={userDescription}
+                setUserDescription={setUserDescription}
+                onGenerate={handleDescribeMission}
+              />
             )}
 
             {/* Flow: From Template */}
             {flow === 'template' && (
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground mb-2">
-                  Choose a template. You can edit the YAML before applying.
-                </p>
-                {POLICY_TEMPLATES.map(template => (
-                  <button
-                    key={template.name}
-                    onClick={() => handleUseTemplate(template)}
-                    className="w-full p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors text-left"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
-                      <span className="text-sm font-medium text-foreground">{template.name}</span>
-                      <span className="text-xs text-muted-foreground">{template.kind}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">{template.description}</p>
-                  </button>
-                ))}
-              </div>
+              <CreatePolicyTemplateFlow onUseTemplate={handleUseTemplate} />
             )}
 
             {/* Flow: Custom YAML / Template editor */}
             {flow === 'yaml' && (
-              <div className="space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs">
-                  <span className="text-muted-foreground">
-                    YAML will be applied to: <span className="text-foreground">{selectedCluster}</span>
-                  </span>
-                  <button
-                    onClick={() => {
-                      copyToClipboard(yamlContent)
-                      showToast('Copied to clipboard', 'success')
-                    }}
-                    className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <Copy className="w-3 h-3" />
-                    Copy
-                  </button>
-                </div>
-                <textarea
-                  value={yamlContent}
-                  onChange={(e) => setYamlContent(e.target.value)}
-                  className="w-full h-[40vh] p-3 bg-secondary/50 border border-border rounded-lg font-mono text-sm text-foreground resize-none focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
-                  placeholder="# Paste or write your ConstraintTemplate and Constraint YAML here..."
-                  spellCheck={false}
-                  autoFocus
-                />
-                <div className="flex justify-end">
-                  <button
-                    onClick={handleApplyCustomYaml}
-                    disabled={!yamlContent.trim()}
-                    className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-                  >
-                    Apply with AI
-                  </button>
-                </div>
-              </div>
+              <CreatePolicyYamlFlow
+                selectedCluster={selectedCluster}
+                yamlContent={yamlContent}
+                setYamlContent={setYamlContent}
+                onCopy={() => {
+                  copyToClipboard(yamlContent)
+                  showToast('Copied to clipboard', 'success')
+                }}
+                onApply={handleApplyCustomYaml}
+              />
             )}
           </div>
         )}
