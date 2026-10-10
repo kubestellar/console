@@ -19,8 +19,9 @@ func NewAnthropicProvider(apiKey string) *AnthropicProvider {
 	}
 }
 
-func (a *AnthropicProvider) Generate(ctx context.Context, req GenerateRequest) (*GenerateResponse, error) {
+func (a *AnthropicProvider) Generate(ctx context.Context, req GenerateRequest) (genResp *GenerateResponse, err error) {
 	start := time.Now()
+	defer func() { observeCall(opGenerate, start, err) }()
 	messages := make([]map[string]string, 0, len(req.Messages))
 	system := ""
 	for _, m := range req.Messages {

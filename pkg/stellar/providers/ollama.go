@@ -46,8 +46,10 @@ func NewOllamaWithAllowedCIDRs(baseURL string, allowedCIDRs []*net.IPNet) *Ollam
 
 func (o *OllamaProvider) Name() string { return "ollama" }
 
-func (o *OllamaProvider) Health(ctx context.Context) HealthResult {
+func (o *OllamaProvider) Health(ctx context.Context) (result HealthResult) {
 	start := time.Now()
+	defer func() { observeCall(opHealth, start, callErr(result.Error)) }()
+
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, o.BaseURL+"/api/tags", nil)
 	resp, err := o.client.Do(req)
 	latency := int(time.Since(start).Milliseconds())
@@ -58,9 +60,10 @@ func (o *OllamaProvider) Health(ctx context.Context) HealthResult {
 	return HealthResult{Available: resp.StatusCode == http.StatusOK, LatencyMs: latency}
 }
 
-func (o *OllamaProvider) Generate(ctx context.Context, req GenerateRequest) (*GenerateResponse, error) {
+func (o *OllamaProvider) Generate(ctx context.Context, req GenerateRequest) (genResp *GenerateResponse, err error) {
 	start := time.Now()
-	
+	defer func() { observeCall(opGenerate, start, err) }()
+
 	// Just use the model that the user has access to if not explicitly set
 	if req.Model == "" || req.Model == "llama3" {
 		if tagsReq, err := http.NewRequestWithContext(ctx, http.MethodGet, o.BaseURL+"/api/tags", nil); err == nil {

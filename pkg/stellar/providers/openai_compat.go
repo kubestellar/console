@@ -56,11 +56,13 @@ func NewOpenAICompat(baseURL, apiKey, name string) *OpenAICompatProvider {
 
 func (o *OpenAICompatProvider) Name() string { return o.name }
 
-func (o *OpenAICompatProvider) Health(ctx context.Context) HealthResult {
+func (o *OpenAICompatProvider) Health(ctx context.Context) (result HealthResult) {
+	start := time.Now()
+	defer func() { observeCall(opHealth, start, callErr(result.Error)) }()
+
 	if o.APIKey == "" {
 		return HealthResult{Available: false, Error: "no API key configured"}
 	}
-	start := time.Now()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, o.BaseURL+"/models", nil)
 	if err != nil {
 		return HealthResult{Available: false, LatencyMs: int(time.Since(start).Milliseconds()), Error: err.Error()}
@@ -77,8 +79,9 @@ func (o *OpenAICompatProvider) Health(ctx context.Context) HealthResult {
 
 func (o *OpenAICompatProvider) SupportsStreaming() bool { return true }
 
-func (o *OpenAICompatProvider) Generate(ctx context.Context, req GenerateRequest) (*GenerateResponse, error) {
+func (o *OpenAICompatProvider) Generate(ctx context.Context, req GenerateRequest) (genResp *GenerateResponse, err error) {
 	start := time.Now()
+	defer func() { observeCall(opGenerate, start, err) }()
 
 	// Just use the model that the user has access to if not explicitly set or if it's a default that might not exist locally
 	if req.Model == "" || req.Model == "llama3" || req.Model == "gpt-4o" {
