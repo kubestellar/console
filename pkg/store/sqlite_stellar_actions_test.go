@@ -253,3 +253,15 @@ func requireActionIDs(t *testing.T, got []StellarAction, want []string) {
 		require.Equal(t, id, got[i].ID)
 	}
 }
+
+func TestCreateStellarActionPersistsIdempotencyKey(t *testing.T) {
+	store := OpenTestDB(t)
+
+	a := createActionForTest(t, store, &StellarAction{UserID: "user-1", Description: "keyed", ActionType: "RestartDeployment", Cluster: "prod-a", Status: "completed", CreatedBy: "user-1", IdempotencyKey: "auto-exec:RestartDeployment:prod-a:ns:app"})
+	require.NotEmpty(t, a.ID)
+	require.True(t, store.ActionCompletedByIdempotencyKey(ctx, "auto-exec:RestartDeployment:prod-a:ns:app"))
+
+	// Empty keys must be stored as NULL so they never collide on the unique index.
+	createActionForTest(t, store, &StellarAction{UserID: "user-1", Description: "plain1", ActionType: "ScaleDeployment", Cluster: "prod-a", CreatedBy: "user-1"})
+	createActionForTest(t, store, &StellarAction{UserID: "user-1", Description: "plain2", ActionType: "ScaleDeployment", Cluster: "prod-a", CreatedBy: "user-1"})
+}

@@ -62,8 +62,8 @@ func (s *SQLiteStore) CreateStellarAction(ctx context.Context, action *StellarAc
 		action.Status = "pending_approval"
 	}
 	_, err := s.db.ExecContext(ctx, `INSERT INTO stellar_actions (
-		id, user_id, description, action_type, parameters, cluster, namespace, scheduled_at, cron_expr, status, approved_by, approved_at, executed_at, outcome, reject_reason, created_by, created_at
-	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))`,
+		id, user_id, description, action_type, parameters, cluster, namespace, scheduled_at, cron_expr, status, approved_by, approved_at, executed_at, outcome, reject_reason, created_by, created_at, idempotency_key
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), ?)`,
 		action.ID,
 		action.UserID,
 		action.Description,
@@ -81,6 +81,7 @@ func (s *SQLiteStore) CreateStellarAction(ctx context.Context, action *StellarAc
 		action.RejectReason,
 		action.CreatedBy,
 		nullableTime(action.CreatedAt),
+		nullableIdempotencyKey(action.IdempotencyKey),
 	)
 	return err
 }
@@ -290,3 +291,12 @@ func (s *SQLiteStore) IncrementRetry(ctx context.Context, id string) error {
 
 // ─── Sprint 5: User Sessions (catch-up / away detection) ─────────────────────
 
+
+// nullableIdempotencyKey stores empty keys as NULL so the partial unique index
+// on idempotency_key does not collide across ordinary actions.
+func nullableIdempotencyKey(key string) interface{} {
+	if key == "" {
+		return nil
+	}
+	return key
+}
