@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_updated": "2026-09-28T03:10:41Z",
+  "last_updated": "2026-10-09T03:11:34Z",
   "rolling_window_days": 30,
   "categories": {
     "performance": {
@@ -18,25 +18,25 @@
       "last_evaluated": "2026-09-24T03:07:22Z"
     },
     "a11y": {
-      "merged": 95,
+      "merged": 97,
       "closed": 29,
       "acceptance_rate": 0.77,
       "status": "normal",
-      "last_evaluated": "2026-09-24T03:07:22Z"
+      "last_evaluated": "2026-10-09T03:11:34Z"
     },
     "operator": {
-      "merged": 1040,
+      "merged": 1086,
       "closed": 276,
-      "acceptance_rate": 0.79,
+      "acceptance_rate": 0.8,
       "status": "normal",
-      "last_evaluated": "2026-09-28T03:10:41Z"
+      "last_evaluated": "2026-10-09T03:11:34Z"
     },
     "sre": {
-      "merged": 655,
+      "merged": 657,
       "closed": 101,
       "acceptance_rate": 0.87,
       "status": "boosted",
-      "last_evaluated": "2026-09-24T03:07:22Z"
+      "last_evaluated": "2026-10-09T03:11:34Z"
     },
     "features": {
       "merged": 54,
@@ -80,15 +80,6 @@
     ]
   },
   "history": [
-    {
-      "date": "2026-08-08",
-      "total_merged": 1754,
-      "total_closed": 578,
-      "categories_blocked": [],
-      "categories_boosted": [
-        "sre"
-      ]
-    },
     {
       "date": "2026-08-09",
       "total_merged": 1792,
@@ -376,20 +367,30 @@
         "sre",
         "features"
       ]
+    },
+    {
+      "date": "2026-10-09",
+      "total_merged": 2214,
+      "total_closed": 585,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "sre",
+        "features"
+      ]
     }
   ],
   "rotation_weights": {
     "performance": 0.95,
     "security": 0.96,
     "a11y": 1.16,
-    "operator": 1.19,
+    "operator": 1.2,
     "sre": 2.0,
     "features": 2.0,
     "resilience": 1.01,
     "consistency": 0.98
   },
   "max_issues_override": 5,
-  "pr_guidance": "Keep changes under 10 lines for best acceptance rate.",
+  "pr_guidance": "Keep PRs small and focused. Smaller PRs have higher acceptance rates.",
   "regression_insights": {
     "focus_overrides": [],
     "repeat_issue_patterns": [],
