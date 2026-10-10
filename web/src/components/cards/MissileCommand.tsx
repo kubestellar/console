@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { CardComponentProps } from './cardRegistry'
+import { CardComponentProps } from './cardRegistry.types'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'

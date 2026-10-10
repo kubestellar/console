@@ -1,5 +1,5 @@
 import { RotateCcw, Trophy } from 'lucide-react'
-import { CardComponentProps } from './cardRegistry'
+import { CardComponentProps } from './cardRegistry.types'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { CELL_SIZE, MAZE_WIDTH, MAZE_HEIGHT } from './kubeMan.constants'

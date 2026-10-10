@@ -31,7 +31,7 @@
 import { ComponentType } from 'react'
 import { safeLazy } from '@/lib/safeLazy'
 import type { CardVisualization } from '../../lib/cards/types'
-import type { CardComponentProps } from './cardRegistry'
+import type { CardComponentProps } from './cardRegistry.types'
 
 // ---------------------------------------------------------------------------
 // Types

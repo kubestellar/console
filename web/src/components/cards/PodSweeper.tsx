@@ -1,6 +1,6 @@
 import { useEffect, useReducer } from 'react'
 import { RotateCcw, Flag, Skull, Trophy, Timer, Bomb } from 'lucide-react'
-import { CardComponentProps } from './cardRegistry'
+import { CardComponentProps } from './cardRegistry.types'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'

@@ -3,7 +3,7 @@ import { AlertTriangle, Loader2 } from 'lucide-react'
 import { compileCardCode, createCardComponent } from '../../lib/dynamic-cards/compiler'
 import { useReportCardDataState } from './CardDataContext'
 import type { DynamicCardDefinition } from '../../lib/dynamic-cards/types'
-import type { CardComponent } from './cardRegistry'
+import type { CardComponent } from './cardRegistry.types'
 import { useTranslation } from 'react-i18next'
 
 // ============================================================================

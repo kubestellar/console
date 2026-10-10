@@ -24,7 +24,7 @@
 import type { ComponentType } from 'react'
 import type { CardDescriptor } from './cardDescriptor'
 import { registerCard } from './cardDescriptor'
-import type { CardComponentProps } from './cardRegistry'
+import type { CardComponentProps } from './cardRegistry.types'
 
 /**
  * All card descriptors using the unified registration system.
