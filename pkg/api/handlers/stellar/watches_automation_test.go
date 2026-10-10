@@ -46,14 +46,9 @@ func TestAutoExecuteAction_NonRestartDelegatesToQueueAutoTend(t *testing.T) {
 	assert.Empty(t, actions, "non-RestartDeployment auto-execute delegates to queueAutoTendAction, which is itself a no-op for non-RestartDeployment types")
 }
 
-func TestAutoExecuteAction_IdempotencyKeyDedupIsCurrentlyBroken(t *testing.T) {
-	// NOTE: documents the *actual* current behavior, not the intended one.
-	// CreateStellarAction never persists idempotency_key (see #24212), so
-	// ActionCompletedByIdempotencyKey can never match a genuinely created
-	// row and the dedup short-circuit below never fires. Once #24212 is
-	// fixed, this test's expected count must change from 2 back to 1 and
-	// the title/assertion should be restored to the originally-intended
-	// "skips when already completed" behavior.
+func TestAutoExecuteAction_SkipsWhenAlreadyCompleted(t *testing.T) {
+	// CreateStellarAction persists idempotency_key (#24212), so a completed
+	// action with the same key makes the handler skip creating a duplicate.
 	h := newAutomationTestHandler(t)
 	ctx := context.Background()
 	e := IncomingEvent{Cluster: "c1", Namespace: "ns1", Name: "pod-xyz-7d4c5b9f4-abc12", Kind: "Pod", Reason: "CrashLoopBackOff"}
@@ -74,7 +69,7 @@ func TestAutoExecuteAction_IdempotencyKeyDedupIsCurrentlyBroken(t *testing.T) {
 
 	actions, err := h.store.ListStellarActions(ctx, "system", "", 10, 0)
 	require.NoError(t, err)
-	assert.Len(t, actions, 2, "idempotency dedup is currently broken (#24212): a duplicate action is created instead of being skipped")
+	assert.Len(t, actions, 1, "duplicate action must be skipped when idempotency key already completed")
 }
 
 // ---------- queueAutoTendAction ----------
@@ -113,10 +108,9 @@ func TestQueueAutoTendAction_CreatesActionAndNotification(t *testing.T) {
 	assert.Equal(t, actions[0].ID, notifs[0].ActionID)
 }
 
-func TestQueueAutoTendAction_IdempotencyKeyDedupIsCurrentlyBroken(t *testing.T) {
-	// NOTE: documents the *actual* current behavior, not the intended one —
-	// see the matching note on TestAutoExecuteAction_IdempotencyKeyDedupIsCurrentlyBroken
-	// and #24212.
+func TestQueueAutoTendAction_SkipsWhenAlreadyCompleted(t *testing.T) {
+	// CreateStellarAction persists idempotency_key (#24212), so a completed
+	// action with the same key makes the handler skip creating a duplicate.
 	h := newAutomationTestHandler(t)
 	ctx := context.Background()
 	e := IncomingEvent{Cluster: "c1", Namespace: "ns1", Name: "api-server-7d4c5b9f4-abc12", Kind: "Pod", Reason: "OOMKilled"}
@@ -137,7 +131,7 @@ func TestQueueAutoTendAction_IdempotencyKeyDedupIsCurrentlyBroken(t *testing.T) 
 
 	actions, err := h.store.ListStellarActions(ctx, "system", "", 10, 0)
 	require.NoError(t, err)
-	assert.Len(t, actions, 2, "idempotency dedup is currently broken (#24212): a duplicate pending action is created instead of being skipped")
+	assert.Len(t, actions, 1, "duplicate pending action must be skipped when idempotency key already completed")
 }
 
 // ---------- autoCreateWatch ----------
