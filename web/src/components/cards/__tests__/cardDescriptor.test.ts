@@ -29,7 +29,7 @@ import {
   type CardDescriptor,
 } from '../cardDescriptor'
 import { safeLazy } from '@/lib/safeLazy'
-import type { CardComponentProps } from '../cardRegistry'
+import type { CardComponentProps } from '../cardRegistry.types'
 
 type RegisterTargets = Parameters<typeof registerCard>[1]
 

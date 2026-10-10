@@ -2,7 +2,7 @@ import {
   Box, Terminal,
   Play, Pause, RotateCcw, Trophy, Clock, Hash
 } from 'lucide-react'
-import { CardComponentProps } from './cardRegistry'
+import { CardComponentProps } from './cardRegistry.types'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'

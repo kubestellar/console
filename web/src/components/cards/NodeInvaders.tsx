@@ -1,6 +1,6 @@
 import { RotateCcw, Rocket, Pause, Play } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { CardComponentProps } from './cardRegistry'
+import { CardComponentProps } from './cardRegistry.types'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from './NodeInvaders.constants'

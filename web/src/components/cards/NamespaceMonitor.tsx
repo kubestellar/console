@@ -16,7 +16,7 @@ import {
 } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { CardComponentProps } from './cardRegistry'
+import { CardComponentProps } from './cardRegistry.types'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import type { ChangeType, ModalResource, NamespaceData, ResourceChange, ResourceSnapshot, ResourceType } from './NamespaceMonitor.types'

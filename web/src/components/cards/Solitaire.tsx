@@ -1,5 +1,5 @@
 import { RotateCcw, Trophy, Undo2, Play } from 'lucide-react'
-import { CardComponentProps } from './cardRegistry'
+import { CardComponentProps } from './cardRegistry.types'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { SUITS, SUIT_CONFIG, CARD_SIZES } from './solitaire.constants'

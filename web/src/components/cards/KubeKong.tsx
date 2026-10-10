@@ -1,4 +1,4 @@
-import { CardComponentProps } from './cardRegistry'
+import { CardComponentProps } from './cardRegistry.types'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState, useCardDemoState } from './CardDataContext'
 import { KubeKongHud, KubeKongOverlays } from './KubeKongOverlays'

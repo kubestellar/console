@@ -1,5 +1,5 @@
 import { Box, Server, RotateCcw, Trophy, Play, Loader2 } from 'lucide-react'
-import { CardComponentProps } from './cardRegistry'
+import { CardComponentProps } from './cardRegistry.types'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState, useCardDemoState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'

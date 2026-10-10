@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { RotateCcw, HelpCircle, BarChart3, X } from 'lucide-react'
-import { CardComponentProps } from './cardRegistry'
+import { CardComponentProps } from './cardRegistry.types'
 import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState, useCardDemoState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
