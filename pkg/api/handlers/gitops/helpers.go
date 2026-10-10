@@ -5,13 +5,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"log/slog"
 	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/api/handlers/auth"
+	"github.com/kubestellar/console/pkg/api/handlers/internal/httputil"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/store"
 )
@@ -153,16 +153,12 @@ func indexOf(s, substr string) int {
 }
 
 // handleK8sError handles errors from Kubernetes API calls
+// handleK8sError delegates to the shared httputil helper so gitops responses
+// stay consistent with the rest of pkg/api/handlers instead of reimplementing
+// the same timeout/internal-error classification locally.
 func handleK8sError(c *fiber.Ctx, err error) error {
-	if err == nil {
-		return nil
+	if err != nil {
+		slog.Error("[gitops] k8s error", "error", err)
 	}
-	slog.Error("[gitops] k8s error", "error", err)
-	
-	// Check for specific error types
-	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
-		return c.Status(fiber.StatusGatewayTimeout).JSON(fiber.Map{"error": "Request timeout"})
-	}
-	
-	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Kubernetes operation failed"})
+	return httputil.HandleLegacyK8sError(c, err)
 }

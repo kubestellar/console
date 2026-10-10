@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/api/handlers/internal/httputil"
 	"github.com/kubestellar/console/pkg/apis/v1alpha1"
 )
 
@@ -24,8 +25,12 @@ func demoResponse(c *fiber.Ctx, key string, data interface{}) error {
 	return c.JSON(fiber.Map{key: data, "source": "demo"})
 }
 
+// handleK8sError delegates to the shared httputil helper so workloads
+// responses get the same cluster-error classification and sanitized
+// messages as the rest of pkg/api/handlers, instead of returning the raw
+// err.Error() string to clients.
 func handleK8sError(c *fiber.Ctx, err error) error {
-	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	return httputil.HandleK8sError(c, err)
 }
 
 func getDemoWorkloads() []v1alpha1.Workload {
