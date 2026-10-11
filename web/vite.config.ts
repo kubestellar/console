@@ -158,6 +158,8 @@ export default defineConfig(({ mode }) => ({
             // Split render-helper and data/type modules out of the drasi catch-all to reduce the 460KB chunk
             ['cards-drasi-render', ['/src/components/cards/drasi/DrasiNodeCard.tsx', '/src/components/cards/drasi/DrasiFlowLine.tsx', '/src/components/cards/drasi/DrasiResultsTable.tsx', '/src/components/cards/drasi/DrasiStreamSamples.tsx', '/src/components/cards/drasi/DrasiReactiveGraph.geometry.ts', '/src/components/cards/drasi/DrasiReactiveGraph.state.ts']],
             ['cards-drasi-data', ['/src/components/cards/drasi/DrasiDemoData.ts', '/src/components/cards/drasi/DrasiTypes.ts', '/src/components/cards/drasi/DrasiConstants.ts', '/src/components/cards/drasi/DrasiFlowUtils.ts', '/src/components/cards/drasi/DrasiReactiveGraph.utils.ts', '/src/components/cards/drasi/DrasiReactiveGraph.constants.ts']],
+            // Split config/connection modals and pipeline canvas out of the drasi catch-all to get it under 300KB
+            ['cards-drasi-config', ['/src/components/cards/drasi/DrasiConfigModals.tsx', '/src/components/cards/drasi/DrasiConnectionsModal.tsx', '/src/components/cards/drasi/DrasiPipelineCanvas.tsx', '/src/components/cards/drasi/DrasiModalShell.tsx']],
             ['cards-drasi', ['/src/components/cards/drasi/', '/src/components/cards/DrasiPipelineHealth', '/src/components/cards/DrasiPipelines', '/src/components/cards/DrasiTopology']],
             ['cards-karmada', ['/src/components/cards/karmada_status/', '/src/components/cards/openyurt_status/']],
             ['cards-multitenancy', ['/src/components/cards/multi-tenancy/']],
