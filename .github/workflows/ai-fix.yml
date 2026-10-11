@@ -16,6 +16,7 @@ permissions: read-all  # default read; writes scoped to job below
 
 jobs:
   ai-fix:
+    if: github.event_name != 'pull_request_target' || github.event.pull_request.user.login == 'Copilot'
     permissions:
       contents: read
       issues: write
