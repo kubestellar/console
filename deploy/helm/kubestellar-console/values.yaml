@@ -94,6 +94,11 @@ podSecurityContext:
   # instead, which still triggers the kubelet chown. See the Deploy
   # with Helm steps in .github/workflows/build-deploy.yml.
   fsGroup: 1001
+  # Skip the recursive chown/SELinux relabel of the data PVC when the
+  # volume root already matches fsGroup. Without this, backup files
+  # written by the db-backup CronJob fail with "relabel failed ...
+  # lsetxattr: permission denied" and the pod never starts.
+  fsGroupChangePolicy: OnRootMismatch
 
 securityContext:
   # #6323/#6324: must be a numeric UID (not `appuser`) so the kubelet
