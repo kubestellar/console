@@ -1,13 +1,12 @@
 package store
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"os"
+
+	"github.com/kubestellar/console/pkg/cryptoutil"
 )
 
 const (
@@ -50,23 +49,10 @@ func encryptCredential(plaintext string) (*encryptedValue, error) {
 		return nil, err
 	}
 
-	block, err := aes.NewCipher(key)
+	ciphertext, nonce, err := cryptoutil.SealGCM(key, []byte(plaintext))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create cipher: %w", err)
+		return nil, err
 	}
-
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create GCM: %w", err)
-	}
-
-	nonce := make([]byte, nonceBytes)
-	if _, err := rand.Read(nonce); err != nil {
-		return nil, fmt.Errorf("failed to generate nonce: %w", err)
-	}
-
-	// Seal appends the ciphertext + GCM auth tag
-	ciphertext := gcm.Seal(nil, nonce, []byte(plaintext), nil)
 
 	return &encryptedValue{
 		Ciphertext: base64.StdEncoding.EncodeToString(ciphertext),
@@ -99,19 +85,9 @@ func decryptCredential(encrypted *encryptedValue) (string, error) {
 		return "", fmt.Errorf("invalid nonce length: got %d, want %d", len(nonce), nonceBytes)
 	}
 
-	block, err := aes.NewCipher(key)
+	plaintext, err := cryptoutil.OpenGCM(key, nonce, ciphertext)
 	if err != nil {
-		return "", fmt.Errorf("failed to create cipher: %w", err)
-	}
-
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return "", fmt.Errorf("failed to create GCM: %w", err)
-	}
-
-	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
-	if err != nil {
-		return "", fmt.Errorf("decryption failed (wrong key or tampered data): %w", err)
+		return "", err
 	}
 
 	return string(plaintext), nil

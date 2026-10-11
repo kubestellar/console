@@ -1,14 +1,16 @@
 package providers
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/rand"
 	"encoding/base64"
 	"errors"
-	"io"
 	"os"
+
+	"github.com/kubestellar/console/pkg/cryptoutil"
 )
+
+// gcmNonceSize is the standard AES-GCM nonce size used throughout this
+// codebase (see pkg/settings/crypto.go and pkg/store/crypto.go).
+const gcmNonceSize = 12
 
 var encryptionKey []byte
 
@@ -28,39 +30,22 @@ func EncryptAPIKey(plaintext string) ([]byte, error) {
 	if len(encryptionKey) == 0 {
 		return nil, errors.New("STELLAR_ENCRYPTION_KEY is required but not set")
 	}
-	block, err := aes.NewCipher(encryptionKey)
+	ciphertext, nonce, err := cryptoutil.SealGCM(encryptionKey, []byte(plaintext))
 	if err != nil {
 		return nil, err
 	}
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, err
-	}
-	nonce := make([]byte, gcm.NonceSize())
-	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
-		return nil, err
-	}
-	return gcm.Seal(nonce, nonce, []byte(plaintext), nil), nil
+	return append(nonce, ciphertext...), nil
 }
 
 func DecryptAPIKey(ciphertext []byte) (string, error) {
 	if len(encryptionKey) == 0 {
 		return "", errors.New("STELLAR_ENCRYPTION_KEY is required but not set")
 	}
-	block, err := aes.NewCipher(encryptionKey)
-	if err != nil {
-		return "", err
-	}
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return "", err
-	}
-	ns := gcm.NonceSize()
-	if len(ciphertext) < ns {
+	if len(ciphertext) < gcmNonceSize {
 		return "", errors.New("ciphertext too short")
 	}
-	nonce, ct := ciphertext[:ns], ciphertext[ns:]
-	plain, err := gcm.Open(nil, nonce, ct, nil)
+	nonce, ct := ciphertext[:gcmNonceSize], ciphertext[gcmNonceSize:]
+	plain, err := cryptoutil.OpenGCM(encryptionKey, nonce, ct)
 	if err != nil {
 		return "", err
 	}

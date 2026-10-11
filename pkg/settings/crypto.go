@@ -1,8 +1,6 @@
 package settings
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
@@ -10,6 +8,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/kubestellar/console/pkg/cryptoutil"
 )
 
 const (
@@ -101,23 +101,10 @@ func ensureKeyFile(path string) ([]byte, error) {
 
 // encrypt encrypts plaintext using AES-256-GCM with a random nonce.
 func encrypt(key []byte, plaintext []byte) (*EncryptedField, error) {
-	block, err := aes.NewCipher(key)
+	ciphertext, nonce, err := cryptoutil.SealGCM(key, plaintext)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create cipher: %w", err)
+		return nil, err
 	}
-
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create GCM: %w", err)
-	}
-
-	nonce := make([]byte, nonceBytes)
-	if _, err := rand.Read(nonce); err != nil {
-		return nil, fmt.Errorf("failed to generate nonce: %w", err)
-	}
-
-	// Seal appends the ciphertext + GCM auth tag
-	ciphertext := gcm.Seal(nil, nonce, plaintext, nil)
 
 	return &EncryptedField{
 		Ciphertext: base64.StdEncoding.EncodeToString(ciphertext),
@@ -145,22 +132,7 @@ func decrypt(key []byte, field *EncryptedField) ([]byte, error) {
 		return nil, fmt.Errorf("invalid nonce length: got %d, want %d", len(nonce), nonceBytes)
 	}
 
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create cipher: %w", err)
-	}
-
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create GCM: %w", err)
-	}
-
-	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
-	if err != nil {
-		return nil, fmt.Errorf("decryption failed (wrong key or tampered data): %w", err)
-	}
-
-	return plaintext, nil
+	return cryptoutil.OpenGCM(key, nonce, ciphertext)
 }
 
 // keyFingerprint returns the first 8 hex chars of the SHA-256 hash of the key.
