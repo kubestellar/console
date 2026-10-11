@@ -124,3 +124,4 @@ pkg/agent/protocol 0.0
 pkg/client 0.0
 pkg/stellar/prompts 0.0
 pkg/test 0.0
+pkg/cryptoutil 80.0
