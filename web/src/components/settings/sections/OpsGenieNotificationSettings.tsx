@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { ShieldAlert, Check, X } from 'lucide-react'
 import { NotificationConfig } from '../../../types/alerts'
-import type { TestResultState } from './NotificationSettingsSection'
+import type { TestResultState } from './notificationSettings.types'
 import { cn } from '../../../lib/cn'
 
 interface OpsGenieNotificationSettingsProps {

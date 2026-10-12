@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Mail, Check, X } from 'lucide-react'
 import { NotificationConfig } from '../../../types/alerts'
-import type { TestResultState } from './NotificationSettingsSection'
+import type { TestResultState } from './notificationSettings.types'
 
 /** Default SMTP port for email configuration */
 const DEFAULT_SMTP_PORT = 587

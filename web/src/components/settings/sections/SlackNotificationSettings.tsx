@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Check, X } from 'lucide-react'
 import { Slack } from '@/lib/icons'
 import { NotificationConfig } from '../../../types/alerts'
-import type { TestResultState } from './NotificationSettingsSection'
+import type { TestResultState } from './notificationSettings.types'
 
 // Strict Slack incoming webhook URL: https://hooks.slack.com/services/<token>.
 // Blocks arbitrary text/URLs from being POSTed to a non-Slack endpoint.

@@ -4,6 +4,7 @@ import { Bell } from 'lucide-react'
 import { useNotificationAPI } from '../../../hooks/useNotificationAPI'
 import { NotificationConfig } from '../../../types/alerts'
 import { redactNotificationSecrets, rememberNotificationSecrets } from '../../../lib/settingsSync'
+import type { TestResultState } from './notificationSettings.types'
 import { BrowserNotificationSettings } from './BrowserNotificationSettings'
 import { SlackNotificationSettings } from './SlackNotificationSettings'
 import { EmailNotificationSettings } from './EmailNotificationSettings'
@@ -39,13 +40,6 @@ function saveConfig(config: NotificationConfig): boolean {
   } catch {
     return false
   }
-}
-
-/** Result of a test notification attempt */
-export interface TestResultState {
-  type: string
-  success: boolean
-  message: string
 }
 
 export function NotificationSettingsSection() {
