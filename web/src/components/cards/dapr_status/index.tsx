@@ -36,6 +36,7 @@ import type {
   DaprComponentType,
   DaprControlPlanePod,
 } from './demoData'
+import { CardBodyEmpty } from '../../../lib/cards/CardLayout'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
@@ -181,18 +182,18 @@ export function DaprStatus() {
 
   if (error && showEmptyState) {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
+      <CardBodyEmpty className="gap-2">
         <AlertTriangle className="w-6 h-6 text-red-400" />
         <p className="text-sm text-red-400">
           {t('daprStatus.fetchError', 'Unable to fetch Dapr status')}
         </p>
-      </div>
+      </CardBodyEmpty>
     )
   }
 
   if (data.health === 'not-installed') {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
+      <CardBodyEmpty className="gap-2">
         <Shield className="w-6 h-6 text-muted-foreground/50" />
         <p className="text-sm font-medium">
           {t('daprStatus.notInstalled', 'Dapr not detected')}
@@ -203,7 +204,7 @@ export function DaprStatus() {
             'No Dapr control plane reachable from the connected clusters.',
           )}
         </p>
-      </div>
+      </CardBodyEmpty>
     )
   }
 

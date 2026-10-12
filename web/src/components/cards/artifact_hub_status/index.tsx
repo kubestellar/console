@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next'
 import { Skeleton } from '../../ui/Skeleton'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { useArtifactHubStatus } from './useArtifactHubStatus'
+import { CardBodyEmpty } from '../../../lib/cards/CardLayout'
 
 
 
@@ -34,13 +35,13 @@ export function ArtifactHubStatus() {
 
   if (error || showEmptyState) {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
+      <CardBodyEmpty className="gap-2">
         <AlertTriangle className="w-6 h-6 text-red-400" />
         <p className="text-sm text-red-400">
           {error ? t('artifactHub.fetchError') : t('artifactHub.noData')}
         </p>
         <p className="text-xs">{t('artifactHub.noDataHint')}</p>
-      </div>
+      </CardBodyEmpty>
     )
   }
 

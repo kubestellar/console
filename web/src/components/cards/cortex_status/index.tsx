@@ -35,6 +35,7 @@ import type {
   CortexComponentName,
   CortexComponentPod,
 } from '../../../lib/demo/cortex'
+import { CardBodyEmpty } from '../../../lib/cards/CardLayout'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
@@ -186,18 +187,18 @@ export function CortexStatus() {
 
   if (error && showEmptyState) {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
+      <CardBodyEmpty className="gap-2">
         <AlertTriangle className="w-6 h-6 text-red-400" />
         <p className="text-sm text-red-400">
           {t('cortexStatus.fetchError', 'Unable to fetch Cortex status')}
         </p>
-      </div>
+      </CardBodyEmpty>
     )
   }
 
   if (data.health === 'not-installed') {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
+      <CardBodyEmpty className="gap-2">
         <Database className="w-6 h-6 text-muted-foreground/50" />
         <p className="text-sm font-medium">
           {t('cortexStatus.notInstalled', 'Cortex not detected')}
@@ -208,7 +209,7 @@ export function CortexStatus() {
             'No Cortex services reachable from the connected clusters. Deploy Cortex to store long-term Prometheus data.',
           )}
         </p>
-      </div>
+      </CardBodyEmpty>
     )
   }
 

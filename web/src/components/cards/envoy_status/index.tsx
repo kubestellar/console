@@ -27,6 +27,7 @@ import { useReportCardDataState } from '../CardDataContext'
 import type { EnvoyListener, EnvoyUpstreamCluster } from './demoData'
 import { formatTimeAgo } from '../../../lib/formatters'
 import { formatThroughput } from '../../../lib/cards/formatters'
+import { CardBodyEmpty } from '../../../lib/cards/CardLayout'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
@@ -124,16 +125,16 @@ export function EnvoyStatus() {
 
   if (error && showEmptyState) {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
+      <CardBodyEmpty className="gap-2">
         <AlertTriangle className="w-6 h-6 text-red-400" />
         <p className="text-sm text-red-400">{t('envoyStatus.fetchError', 'Unable to fetch Envoy status')}</p>
-      </div>
+      </CardBodyEmpty>
     )
   }
 
   if (data.health === 'not-installed') {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
+      <CardBodyEmpty className="gap-2">
         <Shield className="w-6 h-6 text-muted-foreground/50" />
         <p className="text-sm font-medium">
           {t('envoyStatus.notInstalled', 'Envoy not detected')}
@@ -144,7 +145,7 @@ export function EnvoyStatus() {
             'No Envoy admin endpoint reachable from the connected clusters.',
           )}
         </p>
-      </div>
+      </CardBodyEmpty>
     )
   }
 

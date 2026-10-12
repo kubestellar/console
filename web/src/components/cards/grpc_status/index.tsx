@@ -25,6 +25,7 @@ import { useCachedGrpc } from '../../../hooks/useCachedGrpc'
 import { useReportCardDataState } from '../CardDataContext'
 import type { GrpcService } from './demoData'
 import { formatThroughput } from '../../../lib/cards/formatters'
+import { CardBodyEmpty } from '../../../lib/cards/CardLayout'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
@@ -126,18 +127,18 @@ export function GrpcStatus() {
 
   if (error && showEmptyState) {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
+      <CardBodyEmpty className="gap-2">
         <AlertTriangle className="w-6 h-6 text-red-400" />
         <p className="text-sm text-red-400">
           {t('grpcStatus.fetchError', 'Unable to fetch gRPC status')}
         </p>
-      </div>
+      </CardBodyEmpty>
     )
   }
 
   if (data.health === 'not-installed') {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
+      <CardBodyEmpty className="gap-2">
         <Network className="w-6 h-6 text-muted-foreground/50" />
         <p className="text-sm font-medium">
           {t('grpcStatus.notInstalled', 'No gRPC services detected')}
@@ -148,7 +149,7 @@ export function GrpcStatus() {
             'No gRPC reflection endpoint reachable from the connected clusters.',
           )}
         </p>
-      </div>
+      </CardBodyEmpty>
     )
   }
 

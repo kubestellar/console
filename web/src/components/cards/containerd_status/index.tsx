@@ -20,6 +20,7 @@ import { useCachedContainerd } from '../../../hooks/useCachedContainerd'
 import { useCardLoadingState } from '../CardDataContext'
 import type { ContainerdContainer, ContainerdContainerState } from '../../../lib/demo/containerd'
 import { getHealthBadgeClasses } from '../../../lib/cards/statusColors'
+import { CardBodyEmpty } from '../../../lib/cards/CardLayout'
 
 // ---------------------------------------------------------------------------
 // Constants (no magic numbers)
@@ -130,13 +131,13 @@ export function ContainerdStatus() {
 
   if (data.health === 'not-installed' && !hasAnyData) {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
+      <CardBodyEmpty className="gap-2">
         <Box className="w-6 h-6 text-muted-foreground/50" />
         <p className="text-sm font-medium">{t('containerdStatus.notDetected', 'containerd not detected')}</p>
         <p className="text-xs text-center max-w-xs">
           {t('containerdStatus.notDetectedHint', 'No nodes on connected clusters report containerd as their runtime.')}
         </p>
-      </div>
+      </CardBodyEmpty>
     )
   }
 

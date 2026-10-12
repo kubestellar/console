@@ -39,6 +39,7 @@ import {
   type BackstageScaffolderTemplate,
 } from '../../../lib/demo/backstage'
 import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../../lib/constants/time'
+import { CardBodyEmpty } from '../../../lib/cards/CardLayout'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
@@ -192,7 +193,7 @@ export function BackstageStatus() {
 
   if (showEmptyState || (data.health === 'not-installed' && !isDemoData)) {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
+      <CardBodyEmpty className="gap-2">
         <Package className="w-6 h-6 text-muted-foreground/50" />
         <p className="text-sm font-medium">
           {t('backstageStatus.notInstalled', 'Backstage not detected')}
@@ -203,7 +204,7 @@ export function BackstageStatus() {
             'No Backstage deployment reachable. Install Backstage to surface developer portal inventory and plugin health here.',
           )}
         </p>
-      </div>
+      </CardBodyEmpty>
     )
   }
 

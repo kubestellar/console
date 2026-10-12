@@ -4,6 +4,7 @@ import { MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useFluxStatus } from './useFluxStatus'
 import type { FluxResourceStatus } from './demoData'
+import { CardBodyEmpty } from '../../../lib/cards/CardLayout'
 
 
 
@@ -90,20 +91,20 @@ export function FluxStatus() {
 
   if (error && showEmptyState) {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
+      <CardBodyEmpty className="gap-2">
         <AlertTriangle className="w-6 h-6 text-red-400" />
         <p className="text-sm text-red-400">{t('fluxStatus.fetchError')}</p>
-      </div>
+      </CardBodyEmpty>
     )
   }
 
   if (data.health === 'not-installed') {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
+      <CardBodyEmpty className="gap-2">
         <GitBranch className="w-6 h-6 text-muted-foreground/50" />
         <p className="text-sm font-medium">{t('fluxStatus.notInstalled')}</p>
         <p className="text-xs text-center max-w-xs">{t('fluxStatus.notInstalledHint')}</p>
-      </div>
+      </CardBodyEmpty>
     )
   }
 
