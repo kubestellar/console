@@ -115,6 +115,8 @@ echo ""
 echo -e "${BOLD}Phase 3: Crypto security pattern verification${NC}"
 
 CRYPTO_FILE="pkg/settings/crypto.go"
+# GCM primitives live in the shared cryptoutil package; settings delegates to it
+GCM_FILE="pkg/cryptoutil/gcm.go"
 
 # AES-256 key size
 TOTAL=$((TOTAL + 1))
@@ -128,7 +130,8 @@ fi
 
 # GCM mode (authenticated encryption)
 TOTAL=$((TOTAL + 1))
-if grep -q "cipher.NewGCM\|gcm.Seal\|gcm.Open" "$CRYPTO_FILE" 2>/dev/null; then
+if grep -q "cipher.NewGCM\|gcm.Seal\|gcm.Open" "$GCM_FILE" 2>/dev/null \
+  && grep -q "cryptoutil.SealGCM\|cryptoutil.OpenGCM" "$CRYPTO_FILE" 2>/dev/null; then
   echo -e "  ${GREEN}✓${NC}  GCM authenticated encryption confirmed"
   PASSED=$((PASSED + 1))
 else
