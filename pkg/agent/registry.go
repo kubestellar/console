@@ -52,7 +52,10 @@ func (r *Registry) Register(provider ai.Provider) error {
 		return fmt.Errorf("provider %s already registered", name)
 	}
 
-	r.providers[name] = provider
+	// Wrap so every Chat/StreamChat call made through this registry is
+	// measured once, regardless of call site (#24209-style gap — see
+	// pkg/agent/metered_provider.go).
+	r.providers[name] = wrapWithMetrics(provider)
 
 	// Set first available provider as default
 	if r.defaultAgent == "" && provider.IsAvailable() {
