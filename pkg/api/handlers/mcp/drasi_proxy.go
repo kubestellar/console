@@ -43,7 +43,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/auth"
 	"github.com/kubestellar/console/pkg/ssrf"
 )
 
@@ -217,12 +217,12 @@ func (h *MCPHandlers) ProxyDrasi(c *fiber.Ctx) error {
 
 func (h *MCPHandlers) authorizeDrasiProxy(c *fiber.Ctx, target string) error {
 	if target == "server" {
-		return handlers.RequireEditorOrAdmin(c, h.store)
+		return auth.RequireEditorOrAdmin(c, h.store)
 	}
 	if c.Method() == fiber.MethodGet {
-		return handlers.RequireViewerOrAbove(c, h.store)
+		return auth.RequireViewerOrAbove(c, h.store)
 	}
-	return handlers.RequireEditorOrAdmin(c, h.store)
+	return auth.RequireEditorOrAdmin(c, h.store)
 }
 
 // proxyDrasiServer forwards to a drasi-server REST URL configured via ?url=…

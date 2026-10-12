@@ -13,6 +13,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/auth"
 
 	"github.com/kubestellar/console/pkg/api/audit"
 
@@ -45,7 +46,7 @@ func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
 // GetSecrets returns Secrets from clusters.
 // Requires editor or admin role — Secrets contain sensitive data (CWE-862, #16731).
 func (h *MCPHandlers) GetSecrets(c *fiber.Ctx) error {
-	if err := handlers.RequireEditorOrAdmin(c, h.store); err != nil {
+	if err := auth.RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 
@@ -170,7 +171,7 @@ func (h *MCPHandlers) CreateOrUpdateResourceQuota(c *fiber.Ctx) error {
 	// SECURITY (#7490, #7492): mutating endpoint requires editor or admin role.
 	// This also covers the ensure_namespace path (#7492) since the whole handler
 	// is gated before any namespace or quota creation occurs.
-	if err := handlers.RequireEditorOrAdmin(c, h.store); err != nil {
+	if err := auth.RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 
@@ -239,7 +240,7 @@ func (h *MCPHandlers) CreateOrUpdateResourceQuota(c *fiber.Ctx) error {
 // DeleteResourceQuota deletes a ResourceQuota
 func (h *MCPHandlers) DeleteResourceQuota(c *fiber.Ctx) error {
 	// SECURITY (#7491): destructive endpoint requires editor or admin role.
-	if err := handlers.RequireEditorOrAdmin(c, h.store); err != nil {
+	if err := auth.RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 
@@ -277,7 +278,7 @@ func (h *MCPHandlers) DeleteResourceQuota(c *fiber.Ctx) error {
 
 // GetPodLogs returns logs from a pod
 func (h *MCPHandlers) GetPodLogs(c *fiber.Ctx) error {
-	if err := handlers.RequireEditorOrAdmin(c, h.store); err != nil {
+	if err := auth.RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 
@@ -441,7 +442,7 @@ func validateToolName(name string, allowedTools map[string]bool) error {
 func (h *MCPHandlers) CallOpsTool(c *fiber.Ctx) error {
 	// SECURITY (#7495): tool-call endpoint can expose sensitive cluster data;
 	// require at least editor role to invoke tools.
-	if err := handlers.RequireEditorOrAdmin(c, h.store); err != nil {
+	if err := auth.RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 
@@ -474,7 +475,7 @@ func (h *MCPHandlers) CallOpsTool(c *fiber.Ctx) error {
 func (h *MCPHandlers) CallDeployTool(c *fiber.Ctx) error {
 	// SECURITY (#7495): tool-call endpoint can expose sensitive cluster data;
 	// require at least editor role to invoke tools.
-	if err := handlers.RequireEditorOrAdmin(c, h.store); err != nil {
+	if err := auth.RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 

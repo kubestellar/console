@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/auth"
 	"github.com/kubestellar/console/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -134,7 +134,7 @@ func TestReloadOAuth_HotSwapsCredentials(t *testing.T) {
 	}
 
 	// Set up initial auth handler
-	s.auth.handler = handlers.NewAuthHandler(mockStore, handlers.AuthConfig{
+	s.auth.handler = auth.NewAuthHandler(mockStore, auth.AuthConfig{
 		GitHubClientID: "old-client-id",
 		GitHubSecret:   "old-client-secret",
 		JWTSecret:      "test-jwt-secret",

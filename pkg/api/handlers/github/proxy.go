@@ -19,7 +19,7 @@ import (
 	"golang.org/x/time/rate"
 
 	"github.com/kubestellar/console/pkg/api/audit"
-	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/auth"
 	"github.com/kubestellar/console/pkg/api/handlers/internal/httputil"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/client"
@@ -508,7 +508,7 @@ func (h *GitHubProxyHandler) SaveToken(c *fiber.Ctx) error {
 // GitHub PAT from server-side settings.
 func (h *GitHubProxyHandler) DeleteToken(c *fiber.Ctx) error {
 	// Global token management requires console admin role
-	if err := handlers.RequireAdmin(c, h.store); err != nil {
+	if err := auth.RequireAdmin(c, h.store); err != nil {
 		return err
 	}
 

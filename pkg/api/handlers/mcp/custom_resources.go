@@ -10,6 +10,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/auth"
 	"github.com/kubestellar/console/pkg/safego"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -58,7 +59,7 @@ const (
 func (h *MCPHandlers) GetCustomResources(c *fiber.Ctx) error {
 	// SECURITY (#7487): custom resource listing can expose sensitive spec/status
 	// data; require a valid console role (viewer or above).
-	if err := handlers.RequireViewerOrAbove(c, h.store); err != nil {
+	if err := auth.RequireViewerOrAbove(c, h.store); err != nil {
 		return err
 	}
 

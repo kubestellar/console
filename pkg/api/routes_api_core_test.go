@@ -9,6 +9,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/auth"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/notifications"
@@ -39,7 +40,7 @@ func TestAgentAutoUpdateProxyRequiresAdmin(t *testing.T) {
 
 			app.All("/api/agent/auto-update/:path", func(c *fiber.Ctx) error {
 				c.Locals("userID", userID)
-				if err := handlers.RequireAdmin(c, mockStore); err != nil {
+				if err := auth.RequireAdmin(c, mockStore); err != nil {
 					return err
 				}
 				return c.SendStatus(http.StatusNoContent)

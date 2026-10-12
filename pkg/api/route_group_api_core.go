@@ -11,6 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/auth"
 	"github.com/kubestellar/console/pkg/api/handlers/admin"
 	"github.com/kubestellar/console/pkg/api/handlers/compliance"
 	"github.com/kubestellar/console/pkg/api/handlers/dashboards"
@@ -95,7 +96,7 @@ func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 	}
 	agentHTTPClient := &http.Client{Timeout: kcAgentProxyTimeout}
 	api.All("/agent/auto-update/:path", func(c *fiber.Ctx) error {
-		if err := handlers.RequireAdmin(c, g.store); err != nil {
+		if err := auth.RequireAdmin(c, g.store); err != nil {
 			return err
 		}
 
@@ -137,7 +138,7 @@ func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 
 	githubProxy := github.NewGitHubProxyHandler(g.config.GitHubToken, g.store)
 	githubTokenAdminOnly := func(c *fiber.Ctx) error {
-		if err := handlers.RequireAdmin(c, g.store); err != nil {
+		if err := auth.RequireAdmin(c, g.store); err != nil {
 			return err
 		}
 		return c.Next()

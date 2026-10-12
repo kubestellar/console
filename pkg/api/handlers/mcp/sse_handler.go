@@ -8,6 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
+	"github.com/kubestellar/console/pkg/api/handlers/auth"
 	"log/slog"
 	"strconv"
 	"strings"
@@ -412,7 +413,7 @@ func (h *MCPHandlers) GetConfigMapsStream(c *fiber.Ctx) error {
 
 // GetSecretsStream streams secrets per cluster via SSE.
 func (h *MCPHandlers) GetSecretsStream(c *fiber.Ctx) error {
-	if err := handlers.RequireEditorOrAdmin(c, h.store); err != nil {
+	if err := auth.RequireEditorOrAdmin(c, h.store); err != nil {
 		return err
 	}
 
