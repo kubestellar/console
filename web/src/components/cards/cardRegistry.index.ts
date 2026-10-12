@@ -1,5 +1,6 @@
 import { isDynamicCardRegistered } from '../../lib/dynamic-cards/dynamicCardRegistry'
 import { logger } from '../../lib/logger'
+import { registerCardComponentResolver } from '../../lib/unified/dashboard/cardComponentResolver'
 import { registerAllDescriptorCards } from './cardDescriptors.registry'
 import { CARD_TITLES, CARD_DESCRIPTIONS, DEMO_EXEMPT_CARDS } from './cardMetadata'
 import { quantumCardRegistry } from './cardRegistry.quantum'
@@ -148,6 +149,8 @@ export function getCardComponent(cardType: string): CardComponent | undefined {
 
   return undefined
 }
+
+registerCardComponentResolver(getCardComponent)
 
 export function isCardTypeRegistered(cardType: string): boolean {
   return cardType in CARD_COMPONENTS || isDynamicCardRegistered(cardType)

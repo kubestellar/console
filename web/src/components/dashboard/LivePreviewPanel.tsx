@@ -7,7 +7,7 @@ import { DynamicCardErrorBoundary } from '../cards/DynamicCardErrorBoundary'
 import { cn } from '../../lib/cn'
 import { Button } from '../ui/Button'
 import type { DynamicCardDefinition, DynamicCardDefinition_T1 } from '../../lib/dynamic-cards/types'
-import type { CardComponent } from '../cards/cardRegistry'
+import type { CardComponent } from '../cards/cardRegistry.types'
 
 interface LivePreviewPanelProps {
   tier: 'tier1' | 'tier2'

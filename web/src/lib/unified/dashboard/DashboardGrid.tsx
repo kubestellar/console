@@ -26,7 +26,7 @@ import { GripVertical } from 'lucide-react'
 import type { DashboardCardPlacement, DashboardFeatures } from '../types'
 import { UnifiedCard } from '../card'
 import { getCardConfig } from '../../../config/cards'
-import { getCardComponent } from '../../../components/cards/cardRegistry'
+import { useCardComponentResolver } from './cardComponentResolver'
 import { CardWrapper } from '../../../components/cards/CardWrapper'
 import { DashboardHealthIndicator } from '../../../components/dashboard/DashboardHealthIndicator'
 import { useDashboardHealth } from '../../../hooks/useDashboardHealth'
@@ -258,8 +258,10 @@ function DashboardCardWrapper({
     onConfigureCard?.(placement.id)
   }, [onConfigureCard, placement.id])
 
-  // Fallback: component-only cards (no config file) render directly via CardWrapper
-  const DirectComponent = !cardConfig && cardTypeKey ? getCardComponent(cardTypeKey) : undefined
+  // Fallback: component-only cards (no config file) render directly via CardWrapper.
+  // The resolver is injected by cardRegistry to avoid a circular import.
+  const resolveCardComponent = useCardComponentResolver()
+  const DirectComponent = !cardConfig && cardTypeKey ? resolveCardComponent?.(cardTypeKey) : undefined
 
   if (!cardConfig && !DirectComponent) {
     return (

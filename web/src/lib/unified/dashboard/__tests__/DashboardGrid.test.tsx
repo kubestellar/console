@@ -35,8 +35,8 @@ vi.mock('../../../../config/cards', () => ({
 }))
 
 let mockGetCardComponent: (type: string) => unknown = () => null
-vi.mock('../../../../components/cards/cardRegistry', () => ({
-  getCardComponent: (type: string) => mockGetCardComponent(type),
+vi.mock('../cardComponentResolver', () => ({
+  useCardComponentResolver: () => (type: string) => mockGetCardComponent(type),
 }))
 
 vi.mock('../../../../components/cards/CardWrapper', () => ({

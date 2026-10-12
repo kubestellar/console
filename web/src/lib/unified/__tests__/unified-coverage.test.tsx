@@ -39,8 +39,8 @@ let mockGetCardComponentForGrid: (type: string) => unknown = () => null
 let mockHealthStatus = 'healthy'
 
 // We need separate mock targets for DashboardGrid's imports
-vi.mock('../../../components/cards/cardRegistry', () => ({
-  getCardComponent: (type: string) => mockGetCardComponentForGrid(type),
+vi.mock('../dashboard/cardComponentResolver', () => ({
+  useCardComponentResolver: () => (type: string) => mockGetCardComponentForGrid(type),
 }))
 
 vi.mock('../../../components/cards/CardWrapper', () => ({

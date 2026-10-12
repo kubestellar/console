@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import type { CardComponentProps } from '../../components/cards/cardRegistry'
+import type { CardComponentProps } from '../../components/cards/cardRegistry.types'
 
 /**
  * Tier of a dynamic card definition.

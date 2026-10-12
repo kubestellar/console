@@ -17,7 +17,7 @@
 import { UnifiedCard } from './UnifiedCard'
 import { useDataHookRegistryVersion } from './hooks/useDataSource'
 import { getCardConfig } from '../../../config/cards'
-import type { CardComponentProps } from '../../../components/cards/cardRegistry'
+import type { CardComponentProps } from '../../../components/cards/cardRegistry.types'
 import { UNIFIED_READY_CARDS, UNIFIED_EXCLUDED_CARDS } from './adapters/cardMigrationSets'
 
 export { UNIFIED_READY_CARDS, UNIFIED_EXCLUDED_CARDS }

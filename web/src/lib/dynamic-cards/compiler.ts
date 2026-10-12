@@ -1,6 +1,6 @@
 import type { CompileResult, DynamicComponentResult } from './types'
 import { createElement, type ComponentType } from 'react'
-import type { CardComponentProps } from '../../components/cards/cardRegistry'
+import type { CardComponentProps } from '../../components/cards/cardRegistry.types'
 import { getDynamicScope } from './scope'
 
 /**
