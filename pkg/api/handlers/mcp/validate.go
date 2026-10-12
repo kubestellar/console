@@ -2,18 +2,12 @@ package mcp
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
+
+	"github.com/kubestellar/console/pkg/api/handlers/internal/httputil"
 )
-
-// mcpNamePattern matches valid Kubernetes resource names (RFC 1123 DNS subdomain).
-// Must be lowercase alphanumeric, may contain '-' and '.', max 253 characters.
-var mcpNamePattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9.\-]*[a-z0-9])?$`)
-
-// mcpMaxNameLen is the maximum length for a Kubernetes DNS subdomain name.
-const mcpMaxNameLen = 253
 
 // mcpMaxLabelSelectorLen is the maximum length allowed for a label selector string
 // to prevent excessively large queries.
@@ -41,11 +35,11 @@ func mcpValidateName(param, value string) error {
 	if value == "" {
 		return nil
 	}
-	if len(value) > mcpMaxNameLen {
+	if len(value) > httputil.MaxK8sNameLen {
 		return fiber.NewError(fiber.StatusBadRequest,
-			fmt.Sprintf("invalid %s: exceeds maximum length of %d characters", param, mcpMaxNameLen))
+			fmt.Sprintf("invalid %s: exceeds maximum length of %d characters", param, httputil.MaxK8sNameLen))
 	}
-	if !mcpNamePattern.MatchString(value) {
+	if !httputil.K8sNamePattern.MatchString(value) {
 		return fiber.NewError(fiber.StatusBadRequest,
 			fmt.Sprintf("invalid %s: must consist of lowercase alphanumeric characters, '-', or '.'", param))
 	}
