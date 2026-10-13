@@ -79,6 +79,7 @@ var (
 // The goroutine can be stopped via ShutdownTokenRevocation (#6578).
 func InitTokenRevocation(store TokenRevoker) {
 	initOnce.Do(func() {
+		InitAuthMiddlewareMetrics()
 		ctx, cancel := context.WithCancel(context.Background())
 		revokedTokens.Lock()
 		revokedTokens.store = store
@@ -118,6 +119,7 @@ func ResetTokenRevocationForTest() {
 func (c *revokedTokenCache) Revoke(jti string, expiresAt time.Time) {
 	c.Lock()
 	c.tokens[jti] = expiresAt
+	authTokenRevocationsTotal.Inc()
 	// Evict oldest entries when the cache exceeds its maximum size (#4759).
 	// This is a simple O(n) sweep — acceptable because it only triggers when
 	// the cache is already very large, which signals abnormal token churn.
@@ -127,6 +129,7 @@ func (c *revokedTokenCache) Revoke(jti string, expiresAt time.Time) {
 		for id, exp := range c.tokens {
 			if !exp.IsZero() && now.After(exp) {
 				delete(c.tokens, id)
+				authRevokedTokensEvictedTotal.WithLabelValues("expired").Inc()
 			}
 		}
 		// Second pass: if still over limit, remove zero-time (backfilled) entries
@@ -135,6 +138,7 @@ func (c *revokedTokenCache) Revoke(jti string, expiresAt time.Time) {
 			for id, exp := range c.tokens {
 				if exp.IsZero() {
 					delete(c.tokens, id)
+					authRevokedTokensEvictedTotal.WithLabelValues("capacity").Inc()
 					if len(c.tokens) <= revokedTokenCacheMaxSize {
 						break
 					}
@@ -142,6 +146,7 @@ func (c *revokedTokenCache) Revoke(jti string, expiresAt time.Time) {
 			}
 		}
 	}
+	authRevokedTokensCacheSize.Set(float64(len(c.tokens)))
 	store := c.store
 	c.Unlock()
 
@@ -235,6 +240,7 @@ func (c *revokedTokenCache) cleanup() {
 		// Remove entries whose JWT has expired.
 		if !exp.IsZero() && now.After(exp) {
 			delete(c.tokens, jti)
+			authRevokedTokensEvictedTotal.WithLabelValues("expired").Inc()
 		}
 	}
 	// Also evict zero-time (backfilled) entries when the cache is above
@@ -245,9 +251,11 @@ func (c *revokedTokenCache) cleanup() {
 		for jti, exp := range c.tokens {
 			if exp.IsZero() {
 				delete(c.tokens, jti)
+				authRevokedTokensEvictedTotal.WithLabelValues("stale-backfill").Inc()
 			}
 		}
 	}
+	authRevokedTokensCacheSize.Set(float64(len(c.tokens)))
 	store := c.store
 	c.Unlock()
 

@@ -49,6 +49,7 @@ type FailureTracker struct {
 // NewFailureTracker creates a FailureTracker and starts its background cleanup
 // goroutine. Call Stop() to release the goroutine.
 func NewFailureTracker() *FailureTracker {
+	InitAuthMiddlewareMetrics()
 	ctx, cancel := context.WithCancel(context.Background())
 	ft := &FailureTracker{
 		failures: make(map[string]*failureRecord),
@@ -68,10 +69,12 @@ func (ft *FailureTracker) RecordFailure(key string) {
 	rec, ok := ft.failures[key]
 	if !ok {
 		ft.failures[key] = &failureRecord{Count: 1, FirstAt: now, LastAt: now}
+		authRateLimitFailuresTotal.WithLabelValues(TierName(1)).Inc()
 		return
 	}
 	rec.Count++
 	rec.LastAt = now
+	authRateLimitFailuresTotal.WithLabelValues(TierName(rec.Count)).Inc()
 
 	// Emit structured log when crossing the hard-lock threshold (#8676 Phase 3).
 	if rec.Count == FailureThresholdHardLock {
@@ -202,8 +205,10 @@ func (ft *FailureTracker) purgeStale() {
 		}
 	}
 	if purged > 0 {
+		authRateLimitPurgedTotal.Add(float64(purged))
 		slog.Debug("[RateLimit] purged stale failure records", "count", purged)
 	}
+	authRateLimitTrackedKeys.Set(float64(len(ft.failures)))
 }
 
 // CompositeKey returns a rate-limit key: "userID:IP" when a JWT-authenticated
