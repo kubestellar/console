@@ -46,7 +46,9 @@ func TestPurgeStale_UpdatesGaugeAndCounter(t *testing.T) {
 
 	ft.RecordFailure("stale-key")
 	ft.mu.Lock()
-	ft.failures["stale-key"].LastAt = time.Now().Add(-2 * failureRecordMaxAge)
+	if rec, ok := ft.failures["stale-key"]; ok {
+		rec.LastAt = time.Now().Add(-2 * failureRecordMaxAge)
+	}
 	ft.mu.Unlock()
 
 	purgedBefore := testutil.ToFloat64(authRateLimitPurgedTotal)
