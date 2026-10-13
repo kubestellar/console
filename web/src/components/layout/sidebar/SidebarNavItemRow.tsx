@@ -12,7 +12,7 @@ import { emitSidebarNavigated } from '../../../lib/analytics'
 import { prefetchDashboard } from '../../../lib/prefetchDashboard'
 import { STORAGE_KEY_GROUND_CONTROL_DASHBOARDS } from '../../../lib/constants/storage'
 import { safeGetJSON } from '../../../lib/utils/localStorage'
-import type { SidebarNavItem } from '../SidebarShell'
+import type { SidebarNavItem } from '../SidebarShell.types'
 
 // ---------------------------------------------------------------------------
 // Constants

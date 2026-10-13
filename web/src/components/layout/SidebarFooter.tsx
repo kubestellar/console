@@ -6,7 +6,7 @@ import { SidebarActiveUsersFooter } from './sidebar/SidebarActiveUsersFooter'
 import type { SnoozedSwap } from '../../hooks/useSnoozedCards'
 import type { SnoozedRecommendation } from '../../hooks/useSnoozedRecommendations'
 import type { SnoozedMission } from '../../hooks/useSnoozedMissions'
-import type { SidebarFeatures } from './SidebarShell'
+import type { SidebarFeatures } from './SidebarShell.types'
 
 interface SidebarFooterProps {
   features: SidebarFeatures

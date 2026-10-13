@@ -5,7 +5,7 @@ import { cn } from '../../lib/cn'
 import { moveFocusByKey } from '../../lib/a11y/rovingFocus'
 import { Input } from '../ui/Input'
 import { SidebarNavItemRow, type SidebarNavItemRowProps } from './sidebar/SidebarNavItemRow'
-import type { NavSection, SidebarNavItem } from './SidebarShell'
+import type { NavSection, SidebarNavItem } from './SidebarShell.types'
 
 const PRIMARY_SECTION_INDEX = 0
 /** Minimum total nav entries (across sections) before the search affordance is worth showing */
