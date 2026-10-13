@@ -88,7 +88,7 @@
     "i18next-browser-languagedetector": "^8.2.1",
     "isomorphic-dompurify": "^4.5.0",
     "jose": "^6.2.12",
-    "js-yaml": "^5.4.2",
+    "js-yaml": "^5.4.3",
     "lucide-react": "^1.50.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
