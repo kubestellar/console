@@ -114,8 +114,68 @@ jobs:
           images: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
+      # Retry up to 3 attempts: anonymous pulls from public.ecr.aws can hit
+      # 429 Too Many Requests on shared runner IPs.
       - name: Build and push by digest
-        id: build
+        id: build1
+        continue-on-error: true
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            APP_VERSION=main-${{ github.sha }}
+            COMMIT_HASH=${{ github.sha }}
+          # push-by-digest writes the image to GHCR with no tag — only the
+          # digest is referenceable until `merge` assembles the manifest.
+          # On PRs we drop the push entirely so the build still verifies
+          # but does not consume registry storage.
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
+          # Per-architecture cache scope so amd64 and arm64 don't evict
+          # each other's layers from a shared scope (which would cause
+          # cold rebuilds on every PR).
+          cache-from: type=gha,scope=build-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=build-${{ matrix.arch }}
+
+      - name: Back off before build retry
+        if: steps.build1.outcome == 'failure'
+        run: |
+          echo "::warning::Image build failed (likely registry 429 rate limit on public.ecr.aws); retrying in 45s"
+          sleep 45
+
+      - name: Build and push by digest (attempt 2/3)
+        id: build2
+        if: steps.build1.outcome == 'failure'
+        continue-on-error: true
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            APP_VERSION=main-${{ github.sha }}
+            COMMIT_HASH=${{ github.sha }}
+          # push-by-digest writes the image to GHCR with no tag — only the
+          # digest is referenceable until `merge` assembles the manifest.
+          # On PRs we drop the push entirely so the build still verifies
+          # but does not consume registry storage.
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
+          # Per-architecture cache scope so amd64 and arm64 don't evict
+          # each other's layers from a shared scope (which would cause
+          # cold rebuilds on every PR).
+          cache-from: type=gha,scope=build-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=build-${{ matrix.arch }}
+
+      - name: Back off before build retry
+        if: steps.build2.outcome == 'failure'
+        run: |
+          echo "::warning::Image build failed (likely registry 429 rate limit on public.ecr.aws); retrying in 45s"
+          sleep 45
+
+      - name: Build and push by digest (attempt 3/3)
+        id: build3
+        if: steps.build2.outcome == 'failure'
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
@@ -139,7 +199,7 @@ jobs:
         if: github.event_name != 'pull_request'
         run: |
           mkdir -p "${{ runner.temp }}/digests"
-          digest="${{ steps.build.outputs.digest }}"
+          digest="${{ (steps.build3.outputs.digest || steps.build2.outputs.digest || steps.build1.outputs.digest) }}"
           touch "${{ runner.temp }}/digests/${digest#sha256:}"
 
       - name: Upload digest
