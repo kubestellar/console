@@ -1,5 +1,10 @@
 # Stage 1: Build the kc-agent binary
-FROM public.ecr.aws/docker/library/golang:1.27.1-alpine@sha256:8a5910f31396cd4d89662f56c68b3ae31d374308270a1c3bd96672ee5ed43414 AS builder
+# Base images are overridable so CI can fall back to docker.io mirrors
+# (same digests) when public.ecr.aws returns 429 Too Many Requests.
+ARG GOLANG_BASE=public.ecr.aws/docker/library/golang:1.27.1-alpine@sha256:8a5910f31396cd4d89662f56c68b3ae31d374308270a1c3bd96672ee5ed43414
+ARG ALPINE_BASE=public.ecr.aws/docker/library/alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
+
+FROM ${GOLANG_BASE} AS builder
 
 WORKDIR /src
 
@@ -11,7 +16,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /kc-agent ./cmd/kc-agent
 
 # Stage 2: Minimal runtime image
-FROM public.ecr.aws/docker/library/alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
+FROM ${ALPINE_BASE}
 
 RUN apk add --no-cache ca-certificates \
     && addgroup -g 65532 -S nonroot \
