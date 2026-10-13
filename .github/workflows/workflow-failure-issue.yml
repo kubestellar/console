@@ -9,7 +9,8 @@ on:
       # Nightly health checks
       - "Nightly Compliance & Perf"
       - "Nightly llm-d Guide E2E"
-      # NOTE: "Nightly Test Suite" excluded — it has its own tracking issue (#11677)
+      # NOTE: "Nightly Test Suite" excluded — it has its own tracking issue
+      # (#16798, successor to closed #11677)
       - "Nightly Dashboard Health"
       - "Nightly gh-aw Version Check"
       - "Playwright Cross-Browser (Nightly)"
