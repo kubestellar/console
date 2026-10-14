@@ -204,6 +204,12 @@ export interface GitHubRewardsResponse {
 }
 
 import { CONTRIBUTOR_LEVELS_GENERATED, GITHUB_SCORING_GENERATED } from './rewards.generated'
+import type { ContributorLevel } from './rewards.contributorLevel'
+
+// Re-exported for backwards compatibility — callers continue to import
+// ContributorLevel from here; the canonical definition now lives in
+// rewards.contributorLevel.ts to avoid a cycle with rewards.generated.ts.
+export type { ContributorLevel } from './rewards.contributorLevel'
 
 export const GITHUB_REWARD_POINTS: Record<GitHubRewardType, number> = {
   issue_bug: GITHUB_SCORING_GENERATED.BugIssue,
@@ -222,18 +228,7 @@ export const GITHUB_REWARD_LABELS: Record<GitHubRewardType, string> = {
 }
 
 // ── Contributor Ladder ──────────────────────────────────────────────
-
-export interface ContributorLevel {
-  rank: number
-  name: string
-  icon: string         // Lucide icon name
-  iconPath: string     // raw Lucide path data for badges
-  minCoins: number
-  color: string        // Tailwind color prefix (e.g., 'gray', 'blue')
-  bgClass: string      // Background classes for the badge
-  textClass: string    // Text color class
-  borderClass: string  // Border color class
-}
+// (ContributorLevel is defined in rewards.contributorLevel.ts and re-exported above.)
 
 // Canonical tier data lives in pkg/rewards/tiers.go (Phase 1 of RFC #8862).
 // scripts/gen-rewards-types.mjs emits rewards.generated.ts from that Go

@@ -167,7 +167,7 @@ export function renderFile(tiers, constants) {
     '// .github/workflows/rewards-types-drift.yml re-runs the generator and',
     '// fails the build if this file does not match the Go source.',
     '',
-    "import type { ContributorLevel } from './rewards'",
+    "import type { ContributorLevel } from './rewards.contributorLevel'",
     '',
   ].join('\n')
 
