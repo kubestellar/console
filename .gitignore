@@ -117,4 +117,5 @@ reviewer_log.md
 
 # Build and cache artifacts
 .npm-cache/
+.npm-caveman-cache/
 web/coverage/
