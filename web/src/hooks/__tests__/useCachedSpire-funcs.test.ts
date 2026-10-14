@@ -53,6 +53,11 @@ vi.mock('../../lib/cache', () => ({
   createCachedHook: (_config: unknown) => () => mockUseCache(_config),
 }))
 
+vi.mock('../../lib/cache/cacheCore', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/cache/cacheCore')>()),
+  useCache: (...args: unknown[]) => mockUseCache(...args),
+}))
+
 vi.mock('../../components/cards/CardDataContext', () => ({
     createCachedHook: vi.fn(),
   useCardLoadingState: vi.fn(() => ({ showSkeleton: false, showEmptyState: false })),
