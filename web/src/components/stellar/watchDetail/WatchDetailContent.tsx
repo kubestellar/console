@@ -78,7 +78,7 @@ export function WatchDetailContent({
         <Section title="Latest observation">
           <div className="px-2.5 py-1.5" style={{
             fontSize: 12, color: 'var(--s-text-muted)',
-            background: 'rgba(56,139,253,0.05)',
+            background: 'rgba(var(--s-info-rgb), 0.05)',
             borderRadius: 'var(--s-rs)',
             lineHeight: 1.5,
           }}>

@@ -145,7 +145,7 @@ export function ProviderSelector({ session, onSelect }: Props) {
           border: '1px solid var(--s-border)',
           borderRadius: 'var(--s-rs)',
           zIndex: 40,
-          boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+          boxShadow: 'var(--shadow-modal)',
         }}>
 
           {/* Auto / default */}
