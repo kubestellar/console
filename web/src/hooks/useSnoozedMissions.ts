@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { MissionSuggestion } from './useMissionSuggestions'
+import type { MissionSuggestion } from '../types/missions'
 import { emitSnoozed, emitUnsnoozed } from '../lib/analytics'
 import { MS_PER_DAY, MS_PER_HOUR, MS_PER_MINUTE } from '../lib/constants/time'
 
