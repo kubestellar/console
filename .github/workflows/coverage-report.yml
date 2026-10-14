@@ -65,18 +65,23 @@ jobs:
         # don't fail the workflow. This job is for coverage metrics only.
         continue-on-error: true
         env:
-          NODE_OPTIONS: '--max-old-space-size=6144'
+          # Per-process heap cap; with --maxWorkers=2 total stays well under the
+          # ~7 GB runner RAM. Parallel forks at 6 GB each SIGABRT (#24314).
+          NODE_OPTIONS: '--max-old-space-size=4096'
         run: |
           # Override coverage.include via CLI to use broad src/**/*.{ts,tsx} pattern
           # instead of the narrow include in vite.config.ts
           npx vitest run --coverage \
             --coverage.include='src/**/*.ts' \
             --coverage.include='src/**/*.tsx' \
-            --reporter=default
+            --reporter=default \
+            --maxWorkers=2
 
       - name: Generate coverage summary
         if: always()
         working-directory: web
+        env:
+          COVERAGE_OUTCOME: ${{ steps.coverage.outcome }}
         run: |
           if [ -f coverage/coverage-summary.json ]; then
             PCT=$(jq -r '.total.lines.pct // 0' coverage/coverage-summary.json)
@@ -95,7 +100,11 @@ jobs:
             echo "| Branches | ${BRANCHES}% |" >> $GITHUB_STEP_SUMMARY
             echo "| Functions | ${FUNCS}% |" >> $GITHUB_STEP_SUMMARY
           else
-            echo "⚠️ No coverage summary generated" >> $GITHUB_STEP_SUMMARY
+            if [ "$COVERAGE_OUTCOME" = "failure" ] || [ "$COVERAGE_OUTCOME" = "cancelled" ]; then
+              echo "⚠️ Coverage run FAILED (step outcome: ${COVERAGE_OUTCOME}) — no summary generated. Check the test step logs for worker crashes (SIGABRT/OOM)." >> $GITHUB_STEP_SUMMARY
+            else
+              echo "⚠️ No coverage summary generated (step outcome: ${COVERAGE_OUTCOME})" >> $GITHUB_STEP_SUMMARY
+            fi
           fi
 
       - name: Upload coverage HTML report
