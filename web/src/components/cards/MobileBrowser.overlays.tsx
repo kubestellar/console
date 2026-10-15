@@ -1,3 +1,4 @@
+// demoData-exempt: presentational piece; demo data is supplied by the parent MobileBrowser card.
 import type { MouseEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus, X } from 'lucide-react'

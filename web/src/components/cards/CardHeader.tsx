@@ -1,3 +1,4 @@
+// demoData-exempt: pure header UI; Skeleton loading is rendered by the parent CardWrapper (isLoading is only forwarded to CardToolbar).
 import type { ComponentType, ReactNode } from 'react'
 import { cn } from '@/lib/cn'
 import { InfoTooltip } from './card-wrapper/InfoTooltip'

@@ -1,3 +1,4 @@
+// demoData-exempt: presentational piece; demo data is supplied by the parent ServiceStatus card.
 import { Globe, Server, ExternalLink, ChevronRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { Service } from '../../../hooks/useMCP'

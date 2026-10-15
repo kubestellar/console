@@ -1,3 +1,4 @@
+// demoData-exempt: presentational piece; demo data is supplied by the parent NetworkOverview card.
 import type { LucideIcon } from 'lucide-react'
 
 interface ServiceTypeTileProps {

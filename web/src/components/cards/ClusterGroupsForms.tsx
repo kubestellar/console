@@ -15,6 +15,7 @@ import { StaticClusterPicker, QueryBuilder } from '../shared/ClusterGroupsFormFi
 
 // Form sub-components for ClusterGroups card.
 // demoData-exempt: demo data and loading state are handled by the parent ClusterGroups card.
+// Skeleton-exempt: loading skeletons are rendered by the parent ClusterGroups card.
 
 // ============================================================================
 // Edit Group Form

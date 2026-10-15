@@ -1,3 +1,4 @@
+// demoData-exempt: presentational piece; demo data is supplied by the parent UpgradeStatus card.
 import { ArrowUp, Rocket } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { CardAIActions } from '../../lib/cards/CardComponents'
