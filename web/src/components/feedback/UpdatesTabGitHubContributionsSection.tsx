@@ -1,5 +1,6 @@
 import { AlertCircle, Bug, ExternalLink, GitMerge, GitPullRequest, Lightbulb, RefreshCw } from 'lucide-react'
 import { StatusBadge } from '../ui/StatusBadge'
+import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { Github, Linkedin } from '@/lib/icons'
 import { emitLinkedInShare } from '../../lib/analytics'
 import { GITHUB_REWARD_LABELS } from '../../types/rewards'
@@ -31,6 +32,14 @@ export function GitHubContributionsSection({
           )}
         </span>
         <div className="flex items-center gap-1.5">
+          {githubRewards?.cached_at && !Number.isNaN(new Date(githubRewards.cached_at).getTime()) && (
+            <RefreshIndicator
+              isRefreshing={isGitHubRefreshing}
+              lastUpdated={new Date(githubRewards.cached_at)}
+              size="xs"
+              showLabel
+            />
+          )}
           {githubRewards && githubPoints > 0 && (
             <button
               onClick={() => {
