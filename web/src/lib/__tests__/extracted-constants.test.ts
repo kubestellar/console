@@ -24,8 +24,10 @@ import {
 } from '../cards/cardFlash'
 import {
   DEFAULT_TOP_N,
-  PREFETCH_IDLE_TIMEOUT_MS,
 } from '../dashboardVisits'
+import {
+  PREFETCH_IDLE_TIMEOUT_MS,
+} from '../dashboardPrefetch'
 
 describe('src/components/cards/EventStream.tsx', () => {
   it('exports the extracted numeric constants', () => {

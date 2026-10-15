@@ -1,19 +1,19 @@
 /**
- * Track dashboard visit frequency and prefetch top-visited dashboard chunks.
+ * Track dashboard visit frequency per path in localStorage.
  *
- * On each navigation, records a visit count per dashboard path in localStorage.
- * On app startup, prefetches the route chunks for the user's top N most-visited
- * dashboards so they load instantly when navigated to.
+ * On each navigation, records a visit count per dashboard path. The
+ * prefetch-on-startup logic that consumes this data lives in
+ * dashboardPrefetch.ts (kept separate so that recordDashboardVisit's
+ * callers, like useLastRoute.ts, don't transitively depend on
+ * dashboardChunks.ts's dynamic imports of every dashboard — which include
+ * Arcade.tsx, a consumer of useLastRoute.ts, and closed a circular
+ * dependency).
  */
 
 import { ROUTES } from '../config/routes'
-import { DASHBOARD_CHUNKS } from './dashboardChunks'
-import { RETRY_DELAY_MS } from './constants/network'
-import { logger } from './logger'
 
 const VISIT_COUNTS_KEY = 'kubestellar-dashboard-visits'
 export const DEFAULT_TOP_N = 5
-export const PREFETCH_IDLE_TIMEOUT_MS = 3_000
 
 interface VisitCounts {
   [path: string]: number
@@ -57,41 +57,4 @@ export function getTopVisitedDashboards(n: number = DEFAULT_TOP_N): string[] {
     .sort((a, b) => b[1] - a[1])
     .slice(0, n)
     .map(([path]) => path)
-}
-
-/** Map path to DASHBOARD_CHUNKS key */
-function pathToChunkId(path: string): string {
-  if (path === '/') return 'dashboard'
-  return path.replace(/^\//, '')
-}
-
-/**
- * Prefetch route chunks for the user's top-visited dashboards.
- * Call once on app startup (e.g., in main.tsx or App.tsx).
- * Skips the current route (already loading) and uses requestIdleCallback
- * to avoid blocking initial render.
- */
-export function prefetchTopDashboards(currentPath?: string, n: number = DEFAULT_TOP_N): void {
-  const topPaths = getTopVisitedDashboards(n)
-  if (topPaths.length === 0) return
-
-  const prefetch = () => {
-    for (const path of topPaths) {
-      if (path === currentPath) continue // Already loading
-      const chunkId = pathToChunkId(path)
-      const loader = DASHBOARD_CHUNKS[chunkId]
-      if (loader) {
-        loader().catch((err) => {
-          logger.warn(`Failed to prefetch dashboard chunk for ${path}:`, err)
-        })
-      }
-    }
-  }
-
-  // Use requestIdleCallback to avoid competing with initial render
-  if (typeof requestIdleCallback === 'function') {
-    requestIdleCallback(prefetch, { timeout: PREFETCH_IDLE_TIMEOUT_MS })
-  } else {
-    setTimeout(prefetch, RETRY_DELAY_MS)
-  }
 }

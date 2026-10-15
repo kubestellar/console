@@ -22,7 +22,7 @@ import { logOpfsFallback } from './lib/cache/opfsFallback'
 import { loadDynamicCards, getAllDynamicCards, loadDynamicStats } from './lib/dynamic-cards'
 import { STORAGE_KEY_SQLITE_MIGRATED } from './lib/constants'
 import { initAnalytics } from './lib/analytics'
-import { prefetchTopDashboards } from './lib/dashboardVisits'
+import { prefetchTopDashboards } from './lib/dashboardPrefetch'
 
 function BootstrapLoadingScreen() {
   return (

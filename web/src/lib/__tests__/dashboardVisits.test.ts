@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { recordDashboardVisit, getTopVisitedDashboards, prefetchTopDashboards } from '../dashboardVisits'
+import { recordDashboardVisit, getTopVisitedDashboards } from '../dashboardVisits'
+import { prefetchTopDashboards } from '../dashboardPrefetch'
 
 describe('recordDashboardVisit', () => {
   beforeEach(() => {
