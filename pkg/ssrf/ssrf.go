@@ -85,11 +85,11 @@ func ValidateURL(rawURL string) error {
 	return ValidateHost(host)
 }
 
-// resolveSafe resolves host to a single validated IP, rejecting it if any
+// ResolveSafeIP resolves host to a single validated IP, rejecting it if any
 // resolved address (or the literal itself) falls into a blocked range.
 // Returning the specific IP that was checked lets callers dial that exact
 // address instead of re-resolving the hostname later.
-func resolveSafe(ctx context.Context, host string) (net.IP, error) {
+func ResolveSafeIP(ctx context.Context, host string) (net.IP, error) {
 	if host == "" {
 		return nil, fmt.Errorf("ssrf: empty hostname")
 	}
@@ -139,7 +139,7 @@ func SafeTransport() *http.Transport {
 		if err != nil {
 			return nil, fmt.Errorf("ssrf: invalid dial address %q: %w", addr, err)
 		}
-		ip, err := resolveSafe(ctx, host)
+		ip, err := ResolveSafeIP(ctx, host)
 		if err != nil {
 			return nil, err
 		}

@@ -8,6 +8,7 @@ package notifications
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -107,6 +108,19 @@ func NewWebhookNotifier(webhookURL string) (*WebhookNotifier, error) {
 		URL: webhookURL,
 		HTTPClient: &http.Client{
 			Timeout: webhookHTTPTimeout,
+			// SSRF/DNS-rebinding protection: a WebhookNotifier is created
+			// once (NewWebhookNotifier validates the host) and then reused
+			// for every subsequent SendAlert call, potentially for the
+			// lifetime of the process (#RegisterWebhookNotifier). Without
+			// re-validating at dial time, an attacker controlling the
+			// webhook host's DNS could pass this one-time check with a
+			// public IP and later repoint the record at an internal/
+			// metadata address — every later Send() would then connect to
+			// that internal address unchecked. dialContext re-resolves and
+			// re-validates (or re-applies the loopback/allowlist bypass)
+			// immediately before every connection, then dials the
+			// validated IP directly.
+			Transport: &http.Transport{DialContext: dialContext},
 			// #6675 Copilot followup: re-check the allowlist on every
 			// redirect hop. Without this a permitted host could 30x to
 			// an internal endpoint and the request would still be sent.
@@ -131,6 +145,42 @@ func NewWebhookNotifier(webhookURL string) (*WebhookNotifier, error) {
 			},
 		},
 	}, nil
+}
+
+// dialContext is the DialContext for WebhookNotifier's HTTPClient. It
+// re-resolves and re-validates the destination host immediately before every
+// connection (dialing the specific validated IP, not just the hostname), so
+// a long-lived notifier cannot be tricked into reaching an internal address
+// via DNS rebinding after its one-time construction-time check. Loopback
+// hosts and admin-allowlisted hosts (KC_WEBHOOK_ALLOWED_HOSTS) bypass the
+// SSRF check, mirroring the exception NewWebhookNotifier applies.
+func dialContext(ctx context.Context, network, addr string) (net.Conn, error) {
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid dial address %q: %w", addr, err)
+	}
+	dialer := &net.Dialer{Timeout: webhookHTTPTimeout}
+	if isLoopbackHost(host) {
+		return dialer.DialContext(ctx, network, addr)
+	}
+	isAllowlisted := false
+	if raw := os.Getenv(webhookAllowedHostsEnv); raw != "" {
+		for _, allowed := range strings.Split(raw, ",") {
+			allowed = strings.TrimSpace(allowed)
+			if allowed != "" && strings.EqualFold(allowed, host) {
+				isAllowlisted = true
+				break
+			}
+		}
+	}
+	if isAllowlisted {
+		return dialer.DialContext(ctx, network, addr)
+	}
+	ip, err := ssrf.ResolveSafeIP(ctx, host)
+	if err != nil {
+		return nil, err
+	}
+	return dialer.DialContext(ctx, network, net.JoinHostPort(ip.String(), port))
 }
 
 // isLoopbackHost returns true if host is a recognized loopback hostname or

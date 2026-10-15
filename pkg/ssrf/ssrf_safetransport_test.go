@@ -65,20 +65,20 @@ func TestSafeTransport_AllowsPublicDial(t *testing.T) {
 func TestResolveSafe_Branches(t *testing.T) {
 	ctx := context.Background()
 
-	if _, err := resolveSafe(ctx, ""); err == nil {
+	if _, err := ResolveSafeIP(ctx, ""); err == nil {
 		t.Error("empty host should be rejected")
 	}
-	if _, err := resolveSafe(ctx, "10.0.0.1"); err == nil {
+	if _, err := ResolveSafeIP(ctx, "10.0.0.1"); err == nil {
 		t.Error("private IP literal should be rejected")
 	}
-	ip, err := resolveSafe(ctx, "8.8.8.8")
+	ip, err := ResolveSafeIP(ctx, "8.8.8.8")
 	if err != nil || ip.String() != "8.8.8.8" {
 		t.Errorf("public IP literal: got %v, %v; want 8.8.8.8, nil", ip, err)
 	}
-	if _, err := resolveSafe(ctx, "localhost"); err == nil {
+	if _, err := ResolveSafeIP(ctx, "localhost"); err == nil {
 		t.Error("localhost should resolve to a blocked address")
 	}
-	if _, err := resolveSafe(ctx, "this-host-will-never-resolve.invalid"); err == nil {
+	if _, err := ResolveSafeIP(ctx, "this-host-will-never-resolve.invalid"); err == nil {
 		t.Error("unresolvable host should fail closed")
 	}
 }
