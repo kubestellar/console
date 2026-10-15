@@ -137,39 +137,31 @@ func TestAtomicWriteFile(t *testing.T) {
 		}
 	})
 
-	t.Run("ErrorRename_ReadOnlyTargetFile", func(t *testing.T) {
+	t.Run("SuccessRename_ReadOnlyTargetFile", func(t *testing.T) {
 		if runtime.GOOS == "windows" {
 			t.Skip("chmod on files behaves differently on Windows")
 		}
 
-		// Create an existing target file and make it read-only.
-		// On Unix, Rename will succeed even if the target is read-only
-		// (the parent directory permissions matter), but this test
-		// documents the behavior and ensures temp cleanup happens.
+		// Create an existing target file and make it read-only. On Unix,
+		// Rename overwrites the target regardless of the target file's own
+		// permissions (only the parent directory's permissions matter), so
+		// AtomicWriteFile is expected to succeed here.
 		targetPath := filepath.Join(tmpDir, "readonly-target.txt")
 		if err := os.WriteFile(targetPath, []byte("old"), 0444); err != nil {
 			t.Fatalf("write initial file: %v", err)
 		}
 		t.Cleanup(func() { os.Chmod(targetPath, 0644) })
 
-		// AtomicWriteFile should succeed - Rename overwrites the file
-		// if the parent directory is writable.
-		err := AtomicWriteFile(targetPath, []byte("new data"), 0644)
+		if err := AtomicWriteFile(targetPath, []byte("new data"), 0644); err != nil {
+			t.Fatalf("expected no error overwriting a read-only target file, got %v", err)
+		}
+
+		got, err := os.ReadFile(targetPath)
 		if err != nil {
-			// This is actually expected to succeed on Unix.
-			// If it does fail, verify the error message includes "rename".
-			if !strings.Contains(err.Error(), "rename") {
-				t.Errorf("unexpected error: %v", err)
-			}
-		} else {
-			// Verify the file was updated
-			got, readErr := os.ReadFile(targetPath)
-			if readErr != nil {
-				t.Fatalf("failed to read file after atomic write: %v", readErr)
-			}
-			if !bytes.Equal(got, []byte("new data")) {
-				t.Errorf("expected file content 'new data', got %q", string(got))
-			}
+			t.Fatalf("failed to read file after atomic write: %v", err)
+		}
+		if !bytes.Equal(got, []byte("new data")) {
+			t.Errorf("expected file content 'new data', got %q", string(got))
 		}
 	})
 
