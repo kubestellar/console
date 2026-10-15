@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Code, Layers, LayoutTemplate } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { Button } from '../ui/Button'
 import { StatusBadge } from '../ui/StatusBadge'
 import { wrapAbbreviations } from '../shared/TechnicalAcronym'
 import type { AiCardT1Result, AiCardT2Result } from './cardFactoryAiTypes'
@@ -89,16 +90,18 @@ export function TemplateDropdown<T extends { name: string }>({
 
   return (
     <div ref={containerRef} className="relative">
-      <button
+      <Button
+        variant="secondary"
+        size="sm"
         onClick={() => setOpen(!open)}
         onKeyDown={handleTriggerKeyDown}
         aria-expanded={open}
         aria-haspopup="menu"
-        className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+        icon={<LayoutTemplate className="w-3 h-3" />}
+        className="px-2.5 py-1.5 gap-1.5 text-muted-foreground hover:text-foreground"
       >
-        <LayoutTemplate className="w-3 h-3" />
         {label}
-      </button>
+      </Button>
       {open && (
         <div 
           ref={menuRef}
@@ -108,18 +111,20 @@ export function TemplateDropdown<T extends { name: string }>({
           className="absolute z-dropdown top-full mt-1 left-0 bg-card border border-border rounded-lg shadow-lg p-1.5 min-w-[200px] focus:outline-none"
         >
           {templates.map((tpl, idx) => (
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               key={tpl.name}
               role="menuitem"
               onClick={() => { onSelect(tpl); setOpen(false) }}
               tabIndex={-1}
               className={cn(
-                'w-full text-left px-3 py-1.5 rounded-lg text-xs text-foreground transition-colors',
+                'w-full justify-start text-left px-3 py-1.5 text-foreground',
                 idx === selectedIndex ? 'bg-secondary' : 'hover:bg-secondary'
               )}
             >
               {tpl.name}
-            </button>
+            </Button>
           ))}
         </div>
       )}

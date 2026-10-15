@@ -9,6 +9,7 @@ import { useLocalAgent, wasAgentEverConnected } from '../../hooks/useLocalAgent'
 import { isInClusterMode } from '../../hooks/useBackendHealth'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useMissionSuggestionsTimer } from '../../hooks/useMissionSuggestionsTimer'
+import { Button } from '../ui/Button'
 import { Skeleton } from '../ui/Skeleton'
 import { StatusBadge } from '../ui/StatusBadge'
 import { MissionActionPanel } from './MissionActionPanel'
@@ -233,14 +234,16 @@ export function MissionSuggestions() {
     return (
       <div data-tour="mission-suggestions" className="mb-4">
         <div className="flex items-center gap-2 flex-wrap">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setMinimized(false)}
-            className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors mr-1"
+            className="gap-1.5 px-0 py-0 hover:bg-transparent mr-1"
           >
             <Lightbulb className="w-4 h-4 text-primary" />
             <span className="text-xs font-medium">Recommended Actions:</span>
             <ChevronDown className="w-3 h-3" />
-          </button>
+          </Button>
           {suggestions.slice(0, 6).map((suggestion) => {
             const Icon = MISSION_ICONS[suggestion.type]
             const isExpanded = expandedId === suggestion.id
@@ -324,14 +327,16 @@ export function MissionSuggestions() {
             <Timer className="w-3 h-3" />
             {countdown}s
           </span>
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => { setMinimized(true); safeSetItem(STORAGE_KEY_MISSIONS_COLLAPSED, 'true') }}
-            className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+            className="p-1 rounded"
             title="Minimize"
             aria-label={t('dashboard.missions.minimize')}
           >
             <ChevronUp className="w-3.5 h-3.5" />
-          </button>
+          </Button>
         </div>
       </div>
 
