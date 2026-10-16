@@ -12,6 +12,8 @@ interface EventRowProps {
   event: BatchEvent
 }
 
+const FAILURE_REASON_STYLE = { fontSize: 10, color: 'var(--s-critical)' } as const
+
 export function EventRow({ event }: EventRowProps) {
   const [expanded, setExpanded] = useState(false)
   const { t } = useTranslation()
@@ -79,7 +81,7 @@ export function EventRow({ event }: EventRowProps) {
             </div>
           )}
           {event.failureReason && (
-            <div className="mt-0.5" style={{ fontSize: 10, color: 'var(--s-critical)' }}>
+            <div className="mt-0.5" style={FAILURE_REASON_STYLE}>
               {event.failureReason}
             </div>
           )}

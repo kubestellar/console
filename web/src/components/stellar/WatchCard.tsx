@@ -3,6 +3,7 @@ import type { PendingAction } from './EventCard'
 import { deriveWatchTrend, getWatchAttemptSummary, renderSparkline, trendColor, trendIcon } from './lib/derive'
 
 const WARNING_TEXT_STYLE = { color: 'var(--s-warning)' } as const
+const SPARKLINE_STYLE = { letterSpacing: '-1px', opacity: 0.8 } as const
 
 interface Props {
   watch: StellarWatch
@@ -167,7 +168,7 @@ export function WatchCard({ watch, allNotifications, solves, onResolve, onDismis
             <span className="text-[11px]">{trendIcon(trendStats.trend)}</span>
             <span>{trendStats.recent}/24h</span>
             {renderSparkline(trendStats.sparkline) && (
-              <span className="font-mono" style={{ letterSpacing: '-1px', opacity: 0.8 }}>
+              <span className="font-mono" style={SPARKLINE_STYLE}>
                 {renderSparkline(trendStats.sparkline)}
               </span>
             )}

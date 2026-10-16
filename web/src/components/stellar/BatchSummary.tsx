@@ -9,6 +9,11 @@ const BREAKDOWN_ICON_SUCCESS_STYLE = { color: 'var(--s-success)', fontSize: 14 }
 const BREAKDOWN_ICON_CRITICAL_STYLE = { color: 'var(--s-critical)', fontSize: 14 } as const
 const BREAKDOWN_ICON_MUTED_STYLE = { color: 'var(--s-text-muted)', fontSize: 14 } as const
 const BREAKDOWN_ICON_INFO_STYLE = { color: 'var(--s-info)', fontSize: 14 } as const
+const SUMMARY_TITLE_STYLE = {
+  fontFamily: 'var(--s-mono)', fontSize: 11, fontWeight: 600,
+  color: 'var(--s-text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase',
+} as const
+const SUMMARY_COUNT_STYLE = { fontFamily: 'var(--s-mono)', fontSize: 11, color: 'var(--s-text)' } as const
 
 interface BatchSummaryProps {
   batch: BatchProcessing
@@ -24,13 +29,10 @@ export function BatchSummary({ batch, progressPercent }: BatchSummaryProps) {
       background: 'var(--s-surface-1)', flexShrink: 0,
     }}>
       <div className="mb-3 flex items-center gap-4">
-        <span style={{
-          fontFamily: 'var(--s-mono)', fontSize: 11, fontWeight: 600,
-          color: 'var(--s-text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase',
-        }}>
+        <span style={SUMMARY_TITLE_STYLE}>
           {t('stellar.batch.summary')}
         </span>
-        <span style={{ fontFamily: 'var(--s-mono)', fontSize: 11, color: 'var(--s-text)' }}>
+        <span style={SUMMARY_COUNT_STYLE}>
           {batch.totalEvents} {t('stellar.batch.events', { count: batch.totalEvents })}
         </span>
       </div>

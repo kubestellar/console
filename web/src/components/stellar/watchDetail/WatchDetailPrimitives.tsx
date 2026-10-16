@@ -3,6 +3,22 @@ import { useTranslation } from 'react-i18next'
 
 const BODY_TEXT_STYLE = { fontSize: 13, lineHeight: 1.55, color: 'var(--s-text)' } as const
 
+const STAT_BOX_STYLE = {
+  background: 'var(--s-surface-2)', border: '1px solid var(--s-border)',
+  borderRadius: 'var(--s-rs)',
+} as const
+const STAT_LABEL_STYLE = { fontSize: 9, color: 'var(--s-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' } as const
+const SECTION_HEADER_STYLE = {
+  fontFamily: 'var(--s-mono)', fontSize: 10, fontWeight: 600,
+  letterSpacing: '0.1em', textTransform: 'uppercase',
+  color: 'var(--s-text-muted)',
+} as const
+const RECOMMENDATION_BOX_STYLE = {
+  border: '1px solid var(--s-border)', borderRadius: 'var(--s-r)',
+} as const
+const RECOMMENDATION_LABEL_STYLE = { fontSize: 13, fontWeight: 600 } as const
+const RECOMMENDATION_RATIONALE_STYLE = { fontSize: 12, color: 'var(--s-text-muted)', lineHeight: 1.5 } as const
+
 export function Tag({ label, color, highlighted }: { label: string; color: string; highlighted?: boolean }) {
   return (
     <span className="px-1.5 py-0.5" style={{
@@ -17,23 +33,16 @@ export function Tag({ label, color, highlighted }: { label: string; color: strin
 
 export function Stat({ label, value, accent }: { label: string; value: string; accent?: string }) {
   return (
-    <div className="px-2 py-1.5" style={{
-      background: 'var(--s-surface-2)', border: '1px solid var(--s-border)',
-      borderRadius: 'var(--s-rs)',
-    }}>
+    <div className="px-2 py-1.5" style={STAT_BOX_STYLE}>
       <div style={{ fontSize: 18, fontWeight: 600, color: accent ?? 'var(--s-text)', fontFamily: 'var(--s-mono)' }}>{value}</div>
-      <div className="mt-0.5" style={{ fontSize: 9, color: 'var(--s-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
+      <div className="mt-0.5" style={STAT_LABEL_STYLE}>{label}</div>
     </div>
   )
 }
 
 export function SectionHeader({ title }: { title: string }) {
   return (
-    <div className="mb-1.5 mt-2.5" style={{
-      fontFamily: 'var(--s-mono)', fontSize: 10, fontWeight: 600,
-      letterSpacing: '0.1em', textTransform: 'uppercase',
-      color: 'var(--s-text-muted)',
-    }}>{title}</div>
+    <div className="mb-1.5 mt-2.5" style={SECTION_HEADER_STYLE}>{title}</div>
   )
 }
 
@@ -52,11 +61,9 @@ export function Recommendation({
   const { t } = useTranslation()
 
   return (
-    <div className="mb-2 px-3 py-2.5" style={{
-      border: '1px solid var(--s-border)', borderRadius: 'var(--s-r)',
-    }}>
+    <div className="mb-2 px-3 py-2.5" style={RECOMMENDATION_BOX_STYLE}>
       <div className="mb-1 flex items-center gap-2">
-        <span style={{ fontSize: 13, fontWeight: 600 }}>{label}</span>
+        <span style={RECOMMENDATION_LABEL_STYLE}>{label}</span>
         <span style={{
           fontSize: 10, fontFamily: 'var(--s-mono)',
           color: confidence >= 80 ? 'var(--s-success)' : confidence >= 60 ? 'var(--s-warning)' : 'var(--s-text-muted)',
@@ -64,7 +71,7 @@ export function Recommendation({
           confidence: {confidence}%
         </span>
       </div>
-      <div className="mb-2" style={{ fontSize: 12, color: 'var(--s-text-muted)', lineHeight: 1.5 }}>
+      <div className="mb-2" style={RECOMMENDATION_RATIONALE_STYLE}>
         {rationale}
       </div>
       <button
