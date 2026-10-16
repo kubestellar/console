@@ -6,7 +6,16 @@ import {
 } from '../../lib/constants'
 import { isLocalAgentSuppressed } from '../../lib/constants/network'
 import { clearToken } from '../../lib/secureTokenStore'
-import { resetAuthFailed } from './sharedImpl.connection'
+
+// Forward declare resetAuthFailed to avoid a circular import with
+// ./sharedImpl.connection (which, via ./wsAuth, ends up depending on this
+// module for getAgentToken/getStoredAgentToken). Will be set by the barrel
+// file, mirroring setFullFetchClustersImpl / setGetStoredAgentTokenImpl.
+let resetAuthFailedImpl: (() => void) | null = null
+
+export function setResetAuthFailedImpl(impl: () => void) {
+  resetAuthFailedImpl = impl
+}
 
 // Re-export as a live getter. LOCAL_AGENT_HTTP_URL is a mutable `let` that
 // gets set to '' by suppressLocalAgent() (in-cluster deployments). A `const`
@@ -62,7 +71,7 @@ export function setAgentToken(token: string): void {
   removeLegacyStoredTokens()
 
   if (token) {
-    resetAuthFailed()
+    resetAuthFailedImpl?.()
   }
 }
 

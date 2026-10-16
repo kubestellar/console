@@ -130,8 +130,21 @@ export const __testables = {
 // ===== Wire up cross-module dependencies =====
 // The orchestration module needs fullFetchClusters, so we import and set it
 import { fullFetchClusters as fullFetchClustersFunc } from './sharedImpl.orchestration'
-import { setFullFetchClustersImpl } from './sharedImpl.connection'
+import { setFullFetchClustersImpl, setGetStoredAgentTokenImpl } from './sharedImpl.connection'
 setFullFetchClustersImpl(fullFetchClustersFunc)
+
+// sharedImpl.connection needs getStoredAgentToken, but ./agentFetch imports
+// resetAuthFailed from sharedImpl.connection — importing agentFetch there
+// directly created a circular dependency. Wire it up here instead.
+import { getStoredAgentToken, setResetAuthFailedImpl } from './agentFetch'
+setGetStoredAgentTokenImpl(getStoredAgentToken)
+
+// agentFetch needs resetAuthFailed from sharedImpl.connection (to resume
+// WebSocket reconnection once a fresh token is set) — also wired here rather
+// than imported directly, so agentFetch.ts has no edge back to
+// sharedImpl.connection.ts / ./wsAuth's import of agentFetch stays acyclic.
+import { resetAuthFailed } from './sharedImpl.connection'
+setResetAuthFailedImpl(resetAuthFailed)
 
 // ===== HMR Support =====
 import { clusterCache as clusterCacheRef, dataSubscribers as dataSubscribersRef, uiSubscribers as uiSubscribersRef, clusterSubscribers as clusterSubscribersRef, setInitialFetchStarted as setInitialFetchStartedFunc } from './sharedImpl.state'

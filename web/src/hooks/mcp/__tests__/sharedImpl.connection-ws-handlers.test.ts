@@ -32,10 +32,6 @@ vi.mock('../wsDetect', () => ({
   resolveAgentWsUrl: vi.fn(() => 'ws://localhost:3210/ws'),
 }))
 
-vi.mock('../agentFetch', () => ({
-  getStoredAgentToken: () => sessionStorage.getItem('agent-token') || '',
-}))
-
 vi.mock('../sharedImpl.constants', () => ({
   MAX_RECONNECT_ATTEMPTS: 5,
   RECONNECT_BASE_DELAY_MS: 100,
@@ -86,6 +82,7 @@ import {
   cleanupSharedWebSocket,
   sharedWebSocket,
   setFullFetchClustersImpl,
+  setGetStoredAgentTokenImpl,
 } from '../sharedImpl.connection'
 
 const mockIsLikelyWsError = vi.mocked(isLikelyWsError)
@@ -131,6 +128,7 @@ beforeEach(() => {
   localStorage.clear()
   sessionStorage.clear()
   sessionStorage.setItem('agent-token', 'test-token-123')
+  setGetStoredAgentTokenImpl(() => sessionStorage.getItem('agent-token') || '')
 })
 
 afterEach(() => {

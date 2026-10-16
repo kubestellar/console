@@ -34,10 +34,6 @@ vi.mock('../wsDetect', () => ({
   resolveAgentWsUrl: vi.fn(() => 'ws://localhost:3210/ws'),
 }))
 
-vi.mock('../agentFetch', () => ({
-  getStoredAgentToken: () => sessionStorage.getItem('agent-token') || '',
-}))
-
 vi.mock('../sharedImpl.constants', () => ({
   MAX_RECONNECT_ATTEMPTS: 5,
   RECONNECT_BASE_DELAY_MS: 1000,

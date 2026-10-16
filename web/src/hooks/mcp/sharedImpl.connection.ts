@@ -4,7 +4,6 @@ import { isDemoToken } from '../../lib/demoMode'
 import { isBackendUnavailable } from '../../lib/api'
 import { getWsAuthParams } from '../../lib/utils/wsAuth'
 import { isLikelyWsError, isWebDriverAutomation, resolveAgentWsUrl } from './wsDetect'
-import { getStoredAgentToken } from './agentFetch'
 import { MAX_RECONNECT_ATTEMPTS, RECONNECT_BASE_DELAY_MS, WS_BACKEND_RECHECK_INTERVAL } from './sharedImpl.constants'
 import { clusterCache } from './sharedImpl.state'
 
@@ -14,6 +13,15 @@ let fullFetchClustersImpl: (() => Promise<void>) | null = null
 
 export function setFullFetchClustersImpl(impl: () => Promise<void>) {
   fullFetchClustersImpl = impl
+}
+
+// Forward declare getStoredAgentToken to avoid a circular import with
+// ./agentFetch (which imports resetAuthFailed from this module).
+// Will be set by the barrel file.
+let getStoredAgentTokenImpl: (() => string) | null = null
+
+export function setGetStoredAgentTokenImpl(impl: () => string) {
+  getStoredAgentTokenImpl = impl
 }
 
 // Shared WebSocket connection state - prevents multiple connections
@@ -98,7 +106,7 @@ export async function connectSharedWebSocket() {
         return
       }
       // Send authentication message - backend requires this within 5 seconds
-      const token = getStoredAgentToken()
+      const token = getStoredAgentTokenImpl ? getStoredAgentTokenImpl() : ''
       if (token) {
         ws.send(JSON.stringify({ type: 'auth', token }))
       } else {
