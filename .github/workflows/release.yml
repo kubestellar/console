@@ -472,6 +472,7 @@ jobs:
         id: build_retry2
         if: steps.build.outcome == 'failure' && steps.build_retry.outcome == 'failure'
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        continue-on-error: true
         with:
           context: .
           platforms: ${{ matrix.platform }}
@@ -482,10 +483,27 @@ jobs:
           cache-to: type=gha,scope=docker-${{ steps.prep.outputs.pair }},mode=max
           outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
 
+      - name: Build and push per-platform image from Docker Hub mirror
+        id: build_mirror
+        if: steps.build.outcome == 'failure' && steps.build_retry.outcome == 'failure' && steps.build_retry2.outcome == 'failure'
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          build-args: |
+            APP_VERSION=${{ needs.determine_version.outputs.version }}
+            COMMIT_HASH=${{ github.sha }}
+            GOLANG_BASE=docker.io/library/golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d
+            ALPINE_BASE=docker.io/library/alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
+            NODE_BASE=docker.io/library/node:26-alpine@sha256:0b36e8c136b94cd4fcf02188228e76c31ad5872eef3fec8cbd2eee500cfd9e80
+          cache-from: type=gha,scope=docker-${{ steps.prep.outputs.pair }}
+          cache-to: type=gha,scope=docker-${{ steps.prep.outputs.pair }},mode=max
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
+
       - name: Export digest
         run: |
           mkdir -p /home/runner/digests
-          digest="${{ steps.build_retry2.outputs.digest || steps.build_retry.outputs.digest || steps.build.outputs.digest }}"
+          digest="${{ steps.build_mirror.outputs.digest || steps.build_retry2.outputs.digest || steps.build_retry.outputs.digest || steps.build.outputs.digest }}"
           touch "/home/runner/digests/${digest#sha256:}"
 
       - name: Upload digest
