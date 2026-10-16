@@ -2,7 +2,7 @@
  * Card render template helpers for infrastructure widgets.
  */
 
-import type { TemplateHelpers } from './codeGenerator.templates'
+import type { TemplateHelpers } from './codeGenerator.templateHelpers'
 
 export function generateInfraCardRender(cardType: string, helpers: TemplateHelpers): string | null {
   const { parseBlock, wrapOpen, wrapClose, issueButton } = helpers

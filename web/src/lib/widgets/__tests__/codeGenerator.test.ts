@@ -4,7 +4,7 @@ import {
   generateCardWidget,
   generateStatWidget,
   generateTemplateWidget,
-} from '../codeGenerator.templates'
+} from '../codeGenerator.widgets'
 import type { WidgetConfig } from '../codeGenerator.types'
 
 describe('generateCardWidget', () => {

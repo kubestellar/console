@@ -6,16 +6,9 @@ import { WIDGET_CARDS } from './widgetRegistry'
 import { generateClusterCardRender } from './codeGenerator.templates.cluster'
 import { generateInfraCardRender } from './codeGenerator.templates.infra'
 import { generateCICardRender } from './codeGenerator.templates.ci'
+import type { TemplateHelpers } from './codeGenerator.templateHelpers'
 
-export { generateCardWidget, generateStatWidget, generateTemplateWidget, generateMiniStatComponent } from './codeGenerator.widgets'
-
-export interface TemplateHelpers {
-  parseBlock: string
-  wrapOpen: string
-  wrapClose: string
-  issueButton: string
-  title: string
-}
+export type { TemplateHelpers } from './codeGenerator.templateHelpers'
 
 // Generate render function for specific card type
 export function generateCardRenderFunction(cardType: string, displayName?: string): string {

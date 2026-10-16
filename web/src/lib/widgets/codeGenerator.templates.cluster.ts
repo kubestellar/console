@@ -2,7 +2,7 @@
  * Card render template helpers for cluster widgets.
  */
 
-import type { TemplateHelpers } from './codeGenerator.templates'
+import type { TemplateHelpers } from './codeGenerator.templateHelpers'
 import { WIDGET_CARDS } from './widgetRegistry'
 
 export function generateClusterCardRender(cardType: string, helpers: TemplateHelpers): string | null {

@@ -10,13 +10,13 @@
 export type { WidgetConfig } from './codeGenerator.types'
 
 // Re-export template generators (main API)
+export { generateCardRenderFunction } from './codeGenerator.templates'
 export {
   generateCardWidget,
   generateStatWidget,
   generateTemplateWidget,
-  generateCardRenderFunction,
   generateMiniStatComponent,
-} from './codeGenerator.templates'
+} from './codeGenerator.widgets'
 
 // Re-export utilities (less commonly used, but part of the public API)
 export { resolveWidgetEndpoint, generateWidgetCommand } from './codeGenerator.utils'
@@ -29,7 +29,7 @@ import {
   generateCardWidget,
   generateStatWidget,
   generateTemplateWidget,
-} from './codeGenerator.templates'
+} from './codeGenerator.widgets'
 
 // Main generator function
 export function generateWidget(config: WidgetConfig): string {

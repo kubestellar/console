@@ -7,10 +7,8 @@
  * generateTemplateWidget indirectly).
  */
 import { describe, it, expect } from 'vitest'
-import {
-  generateCardRenderFunction,
-  generateMiniStatComponent,
-} from '../codeGenerator.templates'
+import { generateCardRenderFunction } from '../codeGenerator.templates'
+import { generateMiniStatComponent } from '../codeGenerator.widgets'
 import { WIDGET_CARDS, WIDGET_STATS } from '../widgetRegistry'
 
 // ---------------------------------------------------------------------------
