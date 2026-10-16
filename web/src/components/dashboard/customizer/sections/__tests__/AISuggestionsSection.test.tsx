@@ -40,7 +40,6 @@ describe('AISuggestionsSection', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.useFakeTimers()
   })
 
   afterEach(() => {
