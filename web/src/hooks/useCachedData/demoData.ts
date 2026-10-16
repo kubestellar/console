@@ -7,39 +7,45 @@
  * Internal — not part of the public API surface.
  */
 
+// Imported directly from the defining modules (not the '../useMCP' barrel):
+// the barrel re-exports hooks/mcp/networking.ts, which imports from this file,
+// so routing these type-only imports through it created a module cycle.
 import type {
-  PodInfo,
-  PodIssue,
   ClusterEvent,
-  DeploymentIssue,
-  Deployment,
-  Service,
-  SecurityIssue,
   NodeInfo,
-  GPUNode,
-  GPUNodeHealthStatus,
-  PVC,
-  Job,
-  HPA,
-  HelmRelease,
-  HelmHistoryEntry,
+  Service,
+  Ingress,
+  NetworkPolicy,
+  SecurityIssue,
+  GitOpsDrift,
   Operator,
   OperatorSubscription,
-  GitOpsDrift,
-  BuildpackImage,
+  HelmRelease,
+  HelmHistoryEntry,
+} from '../mcp/types'
+import type { GPUNode, GPUNodeHealthStatus } from '../mcp/types.gpu'
+import type {
+  PVC,
   ConfigMap,
   Secret,
   ServiceAccount,
+  K8sRole,
+  K8sRoleBinding,
+  K8sServiceAccountInfo,
+} from '../mcp/types.resources'
+import type {
+  PodInfo,
+  PodIssue,
+  DeploymentIssue,
+  Deployment,
+  Job,
+  HPA,
   ReplicaSet,
   StatefulSet,
   DaemonSet,
   CronJob,
-  Ingress,
-  NetworkPolicy,
-  K8sRole,
-  K8sRoleBinding,
-  K8sServiceAccountInfo,
-} from '../useMCP'
+} from '../mcp/types.workloads'
+import type { BuildpackImage } from '../mcp/buildpacks'
 import type { Workload } from '../useWorkloads'
 import type { CiliumStatus } from '../../types/cilium'
 import type { JaegerStatus } from '../../types/jaeger'
