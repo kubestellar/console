@@ -2,8 +2,7 @@ import { ChevronRight, ChevronDown, Network, HardDrive, AlertTriangle, XCircle }
 import { StatusBadge } from '../../../ui/StatusBadge'
 import { useTranslation } from 'react-i18next'
 import type { Service, PodIssue, Deployment, PVC } from '../../../../hooks/useMCP'
-import type { TreeLens } from './types'
-import type { ClusterResourceTreeProps } from './ClusterResourceTree'
+import type { TreeLens, ClusterResourceTreeProps } from './types'
 
 interface DeploymentIssuesBranchProps {
   activeLens: TreeLens
