@@ -14,9 +14,8 @@ import {
   SecretTabBar,
   SecretOverviewTab,
   SecretDataTab,
-  SecretDescribeTab,
-  SecretYamlTab,
 } from './SecretDrillDown.parts'
+import { SecretDescribeTab, SecretYamlTab } from './SecretDrillDown.describeYaml.parts'
 
 interface Props {
   data: Record<string, unknown>

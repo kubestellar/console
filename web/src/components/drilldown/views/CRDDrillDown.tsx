@@ -14,11 +14,11 @@ import {
   CRDAITab,
   CRDDrillDownHeader,
   CRDInstancesTab,
-  CRDOverviewTab,
   CRDSchemaTab,
   CRDTabBar,
   CRDVersionsTab,
 } from './CRDDrillDown.parts'
+import { CRDOverviewTab } from './CRDDrillDown.overviewTab.parts'
 
 interface Props {
   data: Record<string, unknown>

@@ -3,8 +3,9 @@ import { AIActionBar } from '../../modals'
 import { useAlertDrillDown } from './useAlertDrillDown'
 import {
   AlertDrillDownHeader, AlertTabBar, AlertOverviewTab,
-  AlertLabelsTab, AlertSourceTab, AlertAITab,
+  AlertLabelsTab,
 } from './AlertDrillDown.parts'
+import { AlertSourceTab, AlertAITab } from './AlertDrillDown.sourceAi.parts'
 
 interface Props {
   data: Record<string, unknown>
