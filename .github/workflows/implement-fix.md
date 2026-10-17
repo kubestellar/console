@@ -17,9 +17,9 @@ engine:
   model: agent
 
 permissions:
-  issues: write
-  pull-requests: write
-  contents: write
+  issues: read
+  pull-requests: read
+  contents: read
 
 safe-outputs:
   report-failure-as-issue: false
