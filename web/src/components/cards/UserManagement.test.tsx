@@ -104,7 +104,8 @@ vi.mock('./UserManagementList', () => ({
   UserManagementSkeleton: () => <div data-testid="user-mgmt-skeleton" />,
 }))
 
-vi.mock('./UserManagement.utils', () => ({
+vi.mock('./UserManagement.utils', async (importOriginal) => ({
+  ...await importOriginal<typeof import('./UserManagement.utils')>(),
   USER_MANAGEMENT_TABS: ['clusterUsers', 'serviceAccounts', 'console'],
   getConsoleUserSortOptions: (_t: unknown) => [{ value: 'name', label: 'Name' }],
   getOpenShiftUserSortOptions: (_t: unknown) => [{ value: 'name', label: 'Name' }],

@@ -1,6 +1,7 @@
 import { commonComparators } from '../../lib/cards/cardHooks'
 import type { OpenShiftUser, UserRole } from '../../types/users'
 import type {
+  ConsoleUser,
   TabType,
   TranslateFn,
   OpenShiftUserSortBy,
@@ -53,5 +54,26 @@ export function getRoleBadgeClass(role: UserRole): string {
       return 'bg-blue-500/20 text-blue-400 border-blue-500/30'
     default:
       return 'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground border-gray-500/30 dark:border-gray-400/30'
+  }
+}
+
+/** Preserve current-user pinning for every console-user sort field. */
+export function getConsoleUserComparators(currentUserId: ConsoleUser['github_id'] | undefined): Record<ConsoleUserSortBy, (a: ConsoleUser, b: ConsoleUser) => number> {
+  return {
+    name: (a, b) => {
+      if (a.github_id === currentUserId) return -1
+      if (b.github_id === currentUserId) return 1
+      return a.github_login.localeCompare(b.github_login)
+    },
+    role: (a, b) => {
+      if (a.github_id === currentUserId) return -1
+      if (b.github_id === currentUserId) return 1
+      return a.role.localeCompare(b.role)
+    },
+    email: (a, b) => {
+      if (a.github_id === currentUserId) return -1
+      if (b.github_id === currentUserId) return 1
+      return (a.email || '').localeCompare(b.email || '')
+    },
   }
 }

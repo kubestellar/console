@@ -1,10 +1,10 @@
-import { useState, useMemo, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { useState, useMemo } from 'react'
 import { useConsoleUsers, useAllK8sServiceAccounts, useAllOpenShiftUsers } from '../../hooks/useUsers'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useAuth } from '../../lib/auth'
-import { cn } from '../../lib/cn'
+import { UserManagementTabs } from './usermanagement/UserManagementTabs'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { useCardData } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
@@ -14,14 +14,13 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 import { emitUserRoleChanged, emitUserRemoved } from '../../lib/analytics'
 import { ClusterUsersTab, ConsoleUsersTab, ServiceAccountsTab, UserManagementEmptyState, UserManagementSkeleton } from './UserManagementList'
 import type { ConsoleUser, ConsoleUserSortBy, OpenShiftUser, OpenShiftUserSortBy, SASortBy, TabType, TranslateFn, UserManagementProps, UserRole } from './UserManagement.types'
-import { USER_MANAGEMENT_TABS, getConsoleUserSortOptions, getOpenShiftUserSortOptions, getRoleBadgeClass, getSASortOptions, OPENSHIFT_USER_COMPARATORS, SA_COMPARATORS } from './UserManagement.utils'
+import { getConsoleUserComparators, getConsoleUserSortOptions, getOpenShiftUserSortOptions, getRoleBadgeClass, getSASortOptions, OPENSHIFT_USER_COMPARATORS, SA_COMPARATORS } from './UserManagement.utils'
 
 export function UserManagement({ config: _config }: UserManagementProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { showToast } = useToast()
   const [activeTab, setActiveTab] = useState<TabType>('clusterUsers')
   const [selectedCluster, setSelectedCluster] = useState<string>('')
-  const tabRefs = useRef<Record<TabType, HTMLButtonElement | null>>({ clusterUsers: null, serviceAccounts: null, console: null })
   const [selectedNamespace, setSelectedNamespace] = useState<string>('')
   const [expandedUser, setExpandedUser] = useState<string | null>(null)
 
@@ -101,23 +100,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
     return result
   }, [allServiceAccounts, selectedCluster, selectedNamespace])
 
-  // Console user comparators (pins current user to top)
-  const consoleUserComparators: Record<ConsoleUserSortBy, (a: ConsoleUser, b: ConsoleUser) => number> = useMemo(() => ({
-    name: (a, b) => {
-      if (a.github_id === currentUser?.github_id) return -1
-      if (b.github_id === currentUser?.github_id) return 1
-      return a.github_login.localeCompare(b.github_login)
-    },
-    role: (a, b) => {
-      if (a.github_id === currentUser?.github_id) return -1
-      if (b.github_id === currentUser?.github_id) return 1
-      return a.role.localeCompare(b.role)
-    },
-    email: (a, b) => {
-      if (a.github_id === currentUser?.github_id) return -1
-      if (b.github_id === currentUser?.github_id) return 1
-      return (a.email || '').localeCompare(b.email || '')
-    } }), [currentUser?.github_id])
+  const consoleUserComparators = useMemo(() => getConsoleUserComparators(currentUser?.github_id), [currentUser?.github_id])
 
   // ---------- useCardData for OpenShift users tab ----------
   const {
@@ -211,28 +194,6 @@ export function UserManagement({ config: _config }: UserManagementProps) {
     : getConsoleUserSortOptions(t as unknown as TranslateFn)
 
   const isAdmin = currentUser?.role === 'admin'
-
-  const focusTab = (tab: TabType) => {
-    setActiveTab(tab)
-    tabRefs.current[tab]?.focus()
-  }
-
-  const handleTabKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, tab: TabType) => {
-    const currentIndex = USER_MANAGEMENT_TABS.indexOf(tab)
-    if (event.key === 'ArrowRight') {
-      event.preventDefault()
-      focusTab(USER_MANAGEMENT_TABS[(currentIndex + 1) % USER_MANAGEMENT_TABS.length])
-    } else if (event.key === 'ArrowLeft') {
-      event.preventDefault()
-      focusTab(USER_MANAGEMENT_TABS[(currentIndex - 1 + USER_MANAGEMENT_TABS.length) % USER_MANAGEMENT_TABS.length])
-    } else if (event.key === 'Home') {
-      event.preventDefault()
-      focusTab(USER_MANAGEMENT_TABS[0])
-    } else if (event.key === 'End') {
-      event.preventDefault()
-      focusTab(USER_MANAGEMENT_TABS[USER_MANAGEMENT_TABS.length - 1])
-    }
-  }
 
   // Count for current tab (shown in Row 1 LEFT)
   const currentTabCount = (() => {
@@ -339,62 +300,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
       />
 
       {/* Row 3: Tab filter pills */}
-      <div className="flex items-center gap-1 mb-3 shrink-0" role="tablist" aria-label={t('userManagement.consoleUsers')}>
-        <button
-          ref={node => { tabRefs.current.clusterUsers = node }}
-          id="user-management-tab-clusterUsers"
-          role="tab"
-          aria-selected={activeTab === 'clusterUsers'}
-          aria-controls="user-management-panel-clusterUsers"
-          tabIndex={activeTab === 'clusterUsers' ? 0 : -1}
-          onClick={() => setActiveTab('clusterUsers')}
-          onKeyDown={(event) => handleTabKeyDown(event, 'clusterUsers')}
-          className={cn(
-            'px-2 py-1 rounded text-xs font-medium transition-colors',
-            activeTab === 'clusterUsers'
-              ? 'bg-purple-500/20 text-purple-400'
-              : 'text-muted-foreground hover:text-foreground'
-          )}
-        >
-          {t('userManagement.clusterUsers')}
-        </button>
-        <button
-          ref={node => { tabRefs.current.serviceAccounts = node }}
-          id="user-management-tab-serviceAccounts"
-          role="tab"
-          aria-selected={activeTab === 'serviceAccounts'}
-          aria-controls="user-management-panel-serviceAccounts"
-          tabIndex={activeTab === 'serviceAccounts' ? 0 : -1}
-          onClick={() => setActiveTab('serviceAccounts')}
-          onKeyDown={(event) => handleTabKeyDown(event, 'serviceAccounts')}
-          className={cn(
-            'px-2 py-1 rounded text-xs font-medium transition-colors',
-            activeTab === 'serviceAccounts'
-              ? 'bg-purple-500/20 text-purple-400'
-              : 'text-muted-foreground hover:text-foreground'
-          )}
-        >
-          {t('userManagement.serviceAccounts')}
-        </button>
-        <button
-          ref={node => { tabRefs.current.console = node }}
-          id="user-management-tab-console"
-          role="tab"
-          aria-selected={activeTab === 'console'}
-          aria-controls="user-management-panel-console"
-          tabIndex={activeTab === 'console' ? 0 : -1}
-          onClick={() => setActiveTab('console')}
-          onKeyDown={(event) => handleTabKeyDown(event, 'console')}
-          className={cn(
-            'px-2 py-1 rounded text-xs font-medium transition-colors',
-            activeTab === 'console'
-              ? 'bg-purple-500/20 text-purple-400'
-              : 'text-muted-foreground hover:text-foreground'
-          )}
-        >
-          {t('userManagement.consoleUsers')}
-        </button>
-      </div>
+      <UserManagementTabs activeTab={activeTab} setActiveTab={setActiveTab} />
 
       {/* Content - fixed height to prevent jumping, p-px prevents border clipping */}
       <div ref={containerRef} className="flex-1 overflow-y-auto min-h-0 p-px" style={containerStyle}>
