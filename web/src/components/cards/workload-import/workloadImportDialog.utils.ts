@@ -2,7 +2,7 @@
  * Parsing/conversion utilities for the WorkloadImportDialog.
  */
 import { load as yamlLoad, loadAll as yamlLoadAll } from 'js-yaml'
-import type { Workload } from '../WorkloadDeployment'
+import type { Workload } from '../WorkloadDeployment.utils'
 import { VALID_WORKLOAD_KINDS, DEFAULT_REPLICA_COUNT } from './workloadImportDialog.constants'
 
 export interface ParsedResource {

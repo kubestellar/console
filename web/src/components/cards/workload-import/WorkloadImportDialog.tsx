@@ -19,7 +19,7 @@ import { Download, FileCode2, Package, FolderGit2, AlertCircle, CheckCircle2, X 
 import { Github } from '@/lib/icons'
 import { BaseModal } from '../../../lib/modals'
 import { Button } from '../../ui/Button'
-import type { Workload } from '../WorkloadDeployment'
+import type { Workload } from '../WorkloadDeployment.utils'
 import { useWorkloadImport } from './useWorkloadImport'
 import { WorkloadImportYamlTab } from './WorkloadImportYamlTab'
 import { WorkloadImportHelmTab } from './WorkloadImportHelmTab'
