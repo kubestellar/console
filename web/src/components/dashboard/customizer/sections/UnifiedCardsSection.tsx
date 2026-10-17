@@ -11,8 +11,8 @@ import { getAllDynamicCards, onRegistryChange } from '../../../../lib/dynamic-ca
 import { useToast } from '../../../ui/Toast'
 import { FOCUS_DELAY_MS, RETRY_DELAY_MS } from '../../../../lib/constants/network'
 import { emitCardCategoryBrowsed } from '../../../../lib/analytics'
-import { isCardVisibleForProject } from '../../../../config/cards'
-import { getDescriptorsByCategory } from '../../../cards/cardDescriptor'
+import { buildBrowseCardsToAdd, buildMergedCatalog, filterCatalog } from '../../addCardModal.utils'
+import type { CardTranslation, DashboardTranslation } from '../../addCardModal.types'
 import {
   CARD_CATALOG,
   CATEGORY_LOCALE_KEYS,
@@ -42,7 +42,8 @@ export function UnifiedCardsSection({
   dashboardName,
 }: UnifiedCardsSectionProps) {
   const { t } = useTranslation()
-  const tCard = t as (key: string, defaultValue?: string) => string
+  const tCard = t as CardTranslation
+  const tDashboard = t as DashboardTranslation
   const { showToast } = useToast()
   // Card/Stat factories are now separate nav items in Console Studio
   const [browseSearch, setBrowseSearch] = useState(initialSearch || '')
@@ -110,47 +111,8 @@ export function UnifiedCardsSection({
   }
 
   // Build merged catalog
-  const dynamicCatalogEntries = dynamicCards.map(dc => ({
-    type: `dynamic_card::${dc.id}`, title: dc.title,
-    description: dc.description || t('dashboard.addCard.customDynamicCard'),
-    visualization: dc.tier === 'tier1' ? 'table' : 'status',
-  }))
-
-  const staticCatalog = Object.fromEntries(
-    Object.entries(CARD_CATALOG)
-      .map(([k, v]) => [k, v.filter(card => isCardVisibleForProject(card.type))])
-      .filter(([, v]) => (v as unknown[]).length > 0),
-  ) as Record<string, Array<{ type: string; title: string; description: string; visualization: string }>>
-
-  const descriptorsByCategory = getDescriptorsByCategory()
-  for (const [category, descriptors] of descriptorsByCategory) {
-    const existing = staticCatalog[category] || []
-    const existingTypes = new Set(existing.map(c => c.type))
-    for (const d of descriptors) {
-      if (!existingTypes.has(d.id)) {
-        existing.push({ type: d.id, title: d.title, description: d.description, visualization: d.visualization })
-      }
-    }
-    staticCatalog[category] = existing
-  }
-
-  const mergedCatalog: Record<string, Array<{ type: string; title: string; description: string; visualization: string }>> = {
-    ...(dynamicCatalogEntries.length > 0 ? { 'Custom Cards': dynamicCatalogEntries } : {}),
-    ...staticCatalog,
-  }
-
-  const filteredCatalog = Object.entries(mergedCatalog).reduce((acc, [category, cards]) => {
-    if (!browseSearch.trim()) {
-      acc[category] = [...cards]
-    } else {
-      const search = browseSearch.toLowerCase()
-      const filtered = cards.filter(
-        card => card.title.toLowerCase().includes(search) || card.description.toLowerCase().includes(search) || card.type.toLowerCase().includes(search)
-      )
-      if (filtered.length > 0) acc[category] = filtered
-    }
-    return acc
-  }, {} as Record<string, Array<{ type: string; title: string; description: string; visualization: string }>>)
+  const mergedCatalog = buildMergedCatalog(dynamicCards, tDashboard)
+  const filteredCatalog = filterCatalog(mergedCatalog, browseSearch)
 
   // Add handlers
   const handleAddAiCards = () => {
@@ -162,31 +124,7 @@ export function UnifiedCardsSection({
   }
 
   const handleAddBrowseCards = () => {
-    const cardsToAdd: CardSuggestion[] = []
-    const addedTypes = new Set<string>()
-    for (const dc of dynamicCards) {
-      const key = `dynamic_card::${dc.id}`
-      if (selectedBrowseCards.has(key) && !addedTypes.has(key)) {
-        addedTypes.add(key)
-        cardsToAdd.push({ type: 'dynamic_card', title: dc.title, description: dc.description || t('dashboard.addCard.customDynamicCard'), visualization: (dc.tier === 'tier1' ? 'table' : 'status') as CardSuggestion['visualization'], config: { dynamicCardId: dc.id } })
-      }
-    }
-    for (const cards of Object.values(CARD_CATALOG)) {
-      for (const card of cards) {
-        if (selectedBrowseCards.has(card.type) && !addedTypes.has(card.type)) {
-          addedTypes.add(card.type)
-          cardsToAdd.push({ type: card.type, title: card.title, description: card.description, visualization: card.visualization as CardSuggestion['visualization'], config: {} })
-        }
-      }
-    }
-    for (const descriptors of descriptorsByCategory.values()) {
-      for (const d of descriptors) {
-        if (selectedBrowseCards.has(d.id) && !addedTypes.has(d.id)) {
-          addedTypes.add(d.id)
-          cardsToAdd.push({ type: d.id, title: d.title, description: d.description, visualization: d.visualization as CardSuggestion['visualization'], config: {} })
-        }
-      }
-    }
+    const cardsToAdd = buildBrowseCardsToAdd({ dynamicCards, selectedBrowseCards, t: tDashboard })
     try { onAddCards(cardsToAdd) } catch (error: unknown) {
       console.error('Error adding cards:', error)
       showToast(t('dashboard.addCard.failedToAdd'), 'error')
