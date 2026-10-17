@@ -27,9 +27,8 @@ import {
   ComplianceSummaryStats,
   ComplianceSearchFilters,
   ComplianceTable,
-  CompliancePagination,
-  ComplianceClusterBreakdown,
 } from './ComplianceDrillDown.parts'
+import { CompliancePagination, ComplianceClusterBreakdown } from './ComplianceDrillDown.pagination.parts'
 
 export function ComplianceDrillDown({ data }: Props) {
   const { t } = useTranslation()
