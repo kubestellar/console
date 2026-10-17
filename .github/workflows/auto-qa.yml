@@ -3651,6 +3651,7 @@ jobs:
           # Control
           COMMIT_SHA: ${{ github.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          FALLBACK_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           github-token: ${{ secrets.CONSOLE_AUTO }}
           script: |
@@ -4685,6 +4686,8 @@ jobs:
             // Waits for x-ratelimit-reset on 403/429, with exponential backoff fallback.
             const MAX_RETRIES = 3;
             const INITIAL_BACKOFF_MS = 5000;
+            const fallbackGithub = require('@actions/github').getOctokit(process.env.FALLBACK_GITHUB_TOKEN);
+            let issueApi = github;
             async function withRetry(fn, label = 'API call') {
               for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
                 try {
@@ -4692,6 +4695,17 @@ jobs:
                 } catch (err) {
                   const isRateLimit = (err.status === 403 || err.status === 429) &&
                     (err.message || '').toLowerCase().includes('rate limit');
+                  // The shared PAT's core quota can reset after this job's deadline.
+                  // Use this job's separately scoped issue token for the remaining calls.
+                  const coreQuotaExhausted = err.response?.headers?.['x-ratelimit-remaining'] === '0' &&
+                    err.response?.headers?.['x-ratelimit-resource'] === 'core';
+                  if (isRateLimit && coreQuotaExhausted && attempt < MAX_RETRIES) {
+                    if (issueApi === github) {
+                      core.warning(`${label}: CONSOLE_AUTO core quota exhausted; using job token for issue API calls.`);
+                      issueApi = fallbackGithub;
+                    }
+                    continue;
+                  }
                   if (!isRateLimit || attempt === MAX_RETRIES) throw err;
 
                   // Calculate wait time from reset header or use exponential backoff
@@ -4713,14 +4727,14 @@ jobs:
 
             // Fetch both open AND recently closed issues to prevent duplicates after PR merges
             const [{ data: openIssues }, { data: closedIssues }] = await Promise.all([
-              withRetry(() => github.rest.issues.listForRepo({
+              withRetry(() => issueApi.rest.issues.listForRepo({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 state: 'open',
                 labels: 'auto-qa',
                 per_page: 100,
               }), 'list open issues'),
-              withRetry(() => github.rest.issues.listForRepo({
+              withRetry(() => issueApi.rest.issues.listForRepo({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 state: 'closed',
@@ -4775,7 +4789,7 @@ jobs:
                 continue;
               }
 
-              const { data: issue } = await withRetry(() => github.rest.issues.create({
+              const { data: issue } = await withRetry(() => issueApi.rest.issues.create({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 title: check.title,
@@ -4842,7 +4856,7 @@ jobs:
             if (rejections.length > 0) {
               const diagTitle = '[Auto-QA] Copilot assignment rejected — review rate limit config';
               try {
-                const existingDiag = await withRetry(() => github.rest.issues.listForRepo({
+                const existingDiag = await withRetry(() => issueApi.rest.issues.listForRepo({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   state: 'open',
@@ -4855,7 +4869,7 @@ jobs:
                   const rejectionList = rejections.map(r =>
                     `- Issue #${r.issueNumber}: HTTP ${r.status} — ${r.message}`
                   ).join('\n');
-                  await withRetry(() => github.rest.issues.create({
+                  await withRetry(() => issueApi.rest.issues.create({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     title: diagTitle,
