@@ -276,3 +276,4 @@ export function SecretDataTab({
       )}
     </div>
   )
+}

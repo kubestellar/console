@@ -1,4 +1,4 @@
-import { Package, Info, FileText, Database } from 'lucide-react'
+import { Package, FileText, Database } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../../lib/cn'
 import { getConditionStyle, type CRDCondition, type CRDConditionStyle, type CRDInstance, type CRDVersion } from './CRDDrillDown.types'

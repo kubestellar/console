@@ -2,8 +2,6 @@ import { Loader2, Copy, Check, Eye, EyeOff, Lock } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { maskKubernetesYamlData } from '../../../lib/yamlMask'
 
-}
-
 // ─── Describe Tab ─────────────────────────────────────────────────────────────
 
 interface SecretDescribeTabProps {
