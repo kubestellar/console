@@ -15,12 +15,14 @@ import {
 } from './operator-drilldown'
 import {
   OperatorOverviewTab,
-  OperatorCSVTab,
-  OperatorCRDsTab,
-  OperatorAITab,
   OperatorDrillDownHeader,
   OperatorTabBar,
 } from './OperatorDrillDown.parts'
+import {
+  OperatorCSVTab,
+  OperatorCRDsTab,
+  OperatorAITab,
+} from './OperatorDrillDown.detailTabs.parts'
 import { useOperatorDrillDown } from './useOperatorDrillDown'
 
 export function OperatorDrillDown({ data }: Props) {

@@ -4,8 +4,9 @@ import { useKustomizationDrillDown } from './useKustomizationDrillDown'
 import type { AppliedResource } from './useKustomizationDrillDown'
 import {
   KustomizationDrillDownHeader, KustomizationTabBar, KustomizationOverviewTab,
-  KustomizationResourcesTab, KustomizationConditionsTab, KustomizationAITab,
+  KustomizationConditionsTab,
 } from './KustomizationDrillDown.parts'
+import { KustomizationResourcesTab, KustomizationAITab } from './KustomizationDrillDown.tabs.parts'
 
 interface Props {
   data: Record<string, unknown>

@@ -8,10 +8,12 @@ import {
   RemediationHeader,
   RemediationTabs,
   RemediationAiOutput,
+} from './RemediationConsole.parts'
+import {
   RemediationShellOutput,
   RemediationShellInput,
   RemediationFooter,
-} from './RemediationConsole.parts'
+} from './RemediationConsole.shell.parts'
 import type { RemediationConsoleProps } from './RemediationConsole.types'
 
 const REMEDIATION_TABS = ['ai', 'shell'] as const
