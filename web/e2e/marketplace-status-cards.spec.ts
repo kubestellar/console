@@ -30,6 +30,9 @@ const CARD_TYPES = [
 const CARDS_UNDER_TEST = CARD_TYPES.map((cardType, i) => ({
   id: `test-${cardType}-1`,
   card_type: cardType,
+  // config is required: loadDashboardCardsFromStorage rejects entries without
+  // a plain-object config and silently falls back to the default card set.
+  config: {},
   position: { w: 6, h: 3, x: (i % 2) * 6, y: Math.floor(i / 2) * 3 },
 }))
 
