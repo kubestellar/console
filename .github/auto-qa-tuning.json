@@ -61,12 +61,12 @@
     }
   },
   "weekly_insights": {
-    "best_pr_size": "XXL",
+    "best_pr_size": "L",
     "size_acceptance": {},
     "type_acceptance": {},
     "common_rejection_reasons": [],
     "best_change_type": "bug_fix",
-    "last_report_date": "2026-10-14"
+    "last_report_date": "2026-10-18"
   },
   "cncf_insights": {
     "last_scan_date": "2026-10-14",
