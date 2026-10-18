@@ -265,17 +265,6 @@ function getDemoOpenShiftUsers(cluster?: string): OpenShiftUser[] {
   ]
 }
 
-// Demo data for all OpenShift users across multiple clusters
-// Note: Keeping for future use when we want demo data for all clusters mode
-function _getDemoAllOpenShiftUsers(clusters: string[]): OpenShiftUser[] {
-  const allUsers: OpenShiftUser[] = []
-  clusters.forEach(cluster => {
-    allUsers.push(...getDemoOpenShiftUsers(cluster))
-  })
-  return allUsers
-}
-void _getDemoAllOpenShiftUsers // prevent unused warning
-
 /**
  * Hook for OpenShift users (users.user.openshift.io)
  */
@@ -437,17 +426,6 @@ function getDemoK8sServiceAccounts(cluster?: string, namespace?: string): K8sSer
   }
   return accounts
 }
-
-// Demo data for all service accounts across multiple clusters
-// Note: Keeping for future use when we want demo data for all clusters mode
-function _getDemoAllK8sServiceAccounts(clusters: string[]): K8sServiceAccount[] {
-  const allSAs: K8sServiceAccount[] = []
-  clusters.forEach(cluster => {
-    allSAs.push(...getDemoK8sServiceAccounts(cluster))
-  })
-  return allSAs
-}
-void _getDemoAllK8sServiceAccounts // prevent unused warning
 
 /**
  * Hook for Kubernetes service accounts
