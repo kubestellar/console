@@ -175,6 +175,9 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
       <CardStatGrid className="gap-3">
         <div
           className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 cursor-pointer transition-colors"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
           onClick={() => cluster && drillToCluster(cluster.name, {
             healthy: cluster.healthy,
             nodeCount: cluster.nodeCount,
@@ -218,6 +221,9 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
       <div className="space-y-2">
         <div
           className="flex flex-wrap items-center justify-between gap-y-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
           onClick={() => {
             if (podIssues.length > 0) {
               const issue = podIssues[0]
@@ -239,6 +245,9 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
 
         <div
           className="flex flex-wrap items-center justify-between gap-y-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
           onClick={() => {
             if (deploymentIssues.length > 0) {
               const issue = deploymentIssues[0]

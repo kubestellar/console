@@ -243,6 +243,9 @@ export function GPUInventory({ config }: GPUInventoryProps) {
         {nodes.map((node) => (
           <div
             key={`${node.cluster}-${node.name}`}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
             onClick={() => drillToGPUNode(node.cluster, node.name, {
               gpuType: node.gpuType,
               gpuCount: node.gpuCount,

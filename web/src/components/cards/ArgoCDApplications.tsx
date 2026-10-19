@@ -317,6 +317,9 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
             return (
               <div
                 key={`${app.cluster}-${app.namespace}-${app.name}-${idx}`}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
                 onClick={() => drillToArgoApp(app.cluster, app.namespace, app.name, {
                   syncStatus: app.syncStatus,
                   healthStatus: app.healthStatus,

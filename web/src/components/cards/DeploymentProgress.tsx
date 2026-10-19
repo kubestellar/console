@@ -307,6 +307,9 @@ export function DeploymentProgress({ config }: DeploymentProgressProps) {
             return (
               <div
                 key={`${deployment.cluster}-${deployment.namespace}-${deployment.name}`}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
                 onClick={() => handleDeploymentClick(deployment)}
                 className="p-2.5 rounded-lg bg-secondary/30 border border-border/50 cursor-pointer hover:bg-secondary/50 hover:border-border transition-colors group"
                 title={`Click to view details for ${deployment.name}`}

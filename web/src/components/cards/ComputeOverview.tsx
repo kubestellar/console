@@ -260,6 +260,10 @@ export function ComputeOverview() {
       {/* GPU Section */}
       <div
         className={`p-3 rounded-lg bg-purple-500/10 border border-purple-500/20 ${stats.totalGPUs > 0 ? 'cursor-pointer hover:bg-purple-500/20' : 'cursor-default'} transition-colors`}
+        role="button"
+        tabIndex={stats.totalGPUs > 0 ? 0 : -1}
+        aria-disabled={stats.totalGPUs === 0}
+        onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
         onClick={() => stats.totalGPUs > 0 && drillToResources()}
         title={stats.totalGPUs > 0 ? t('computeOverview.gpuAllocatedTitle', { allocated: stats.allocatedGPUs, total: stats.totalGPUs, percent: stats.gpuUtilization }) : t('computeOverview.noGPUsInClusters')}
       >

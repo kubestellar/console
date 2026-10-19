@@ -320,6 +320,9 @@ function DriftItem({
   return (
     <div
       className={`group p-3 rounded-lg bg-secondary/30 border border-border/50 border-l-2 ${severityColors[drift.severity]} cursor-pointer hover:bg-secondary/50 transition-colors`}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
       onClick={() => onOpenModal?.(drift)}
       title={`Click to view drift details for ${drift.resource}`}
     >

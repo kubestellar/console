@@ -114,6 +114,9 @@ export function Checkers(_props: CardComponentProps) {
                 return (
                   <div
                     key={colIdx}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
                     onClick={() => handleCellClick(rowIdx, colIdx)}
                     className={`
                       ${cellSize} shrink-0 flex items-center justify-center cursor-pointer transition-colors relative

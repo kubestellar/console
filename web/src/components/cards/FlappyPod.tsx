@@ -323,6 +323,9 @@ export function FlappyPod(_props: CardComponentProps) {
         {!isPlaying && !gameOver && (
           <div
             className="absolute inset-0 bg-background/90 flex items-center justify-center rounded-lg cursor-pointer backdrop-blur-sm"
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
             onClick={handleClick}
           >
             <div className="text-center px-4">

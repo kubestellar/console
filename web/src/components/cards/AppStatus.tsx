@@ -232,6 +232,9 @@ export function AppStatus(_props: AppStatusProps) {
         return (
           <div
             key={`${app.name}-${app.namespace}`}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
             onClick={() => {
               // When app is deployed to multiple clusters, drill down to the first cluster.
               // Future enhancement: show cluster selector modal (#16050)
