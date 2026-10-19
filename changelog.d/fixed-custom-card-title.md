@@ -1,0 +1,1 @@
+- Fixed custom card titles being ignored: `useCardWrapperState` now prefers a stored custom `title` over the built-in `card_type` title (#24458).

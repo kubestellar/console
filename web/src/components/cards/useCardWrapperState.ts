@@ -228,7 +228,7 @@ export function useCardWrapperState(props: CardWrapperProps) {
   // Use external messages if provided, otherwise use local state
   const messages = externalMessages ?? localMessages
 
-  const title = t(`titles.${cardType}`, CARD_TITLES[cardType] || '') || customTitle || cardType
+  const title = customTitle || t(`titles.${cardType}`, CARD_TITLES[cardType] || '') || cardType
   const description = t(`descriptions.${cardType}`, CARD_DESCRIPTIONS[cardType] || '')
   const swapType = pendingSwap?.newType || ''
   const newTitle = pendingSwap?.newTitle || t(`titles.${swapType}`, CARD_TITLES[swapType] || '') || swapType
