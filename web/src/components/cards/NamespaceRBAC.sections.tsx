@@ -61,6 +61,9 @@ export function RBACListItem({ item, activeTab, isFetching, onClick }: RBACListI
   const { t } = useTranslation(['cards', 'common'])
   return (
     <div
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
       onClick={onClick}
       className={`p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 cursor-pointer transition-colors group ${isFetching ? 'opacity-50' : ''}`}
     >

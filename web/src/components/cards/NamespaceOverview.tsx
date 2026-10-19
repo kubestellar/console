@@ -297,6 +297,9 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
               <>
                 {deploymentIssues.slice(0, 3).map((issue, idx) => (
                   <div
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
                     key={`dep-${idx}`}
                     className="p-2 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
                     onClick={() => drillToDeployment(selectedCluster, issue.namespace, issue.name)}
@@ -313,6 +316,9 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
                 ))}
                 {podIssues.slice(0, 3).map((issue, idx) => (
                   <div
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
                     key={`pod-${idx}`}
                     className="p-2 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
                     onClick={() => drillToPod(selectedCluster, issue.namespace, issue.name)}

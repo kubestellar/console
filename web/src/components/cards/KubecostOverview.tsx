@@ -138,6 +138,9 @@ export function KubecostOverview({ config: _config }: KubecostOverviewProps) {
         <div className="space-y-2">
           {DEMO_RECOMMENDATIONS.map((rec, i) => (
             <div
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
               key={i}
               onClick={() => drillToCost('all', {
                 type: rec.type,

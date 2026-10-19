@@ -315,6 +315,9 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
 
               return (
                 <div
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
                   key={idx}
                   onClick={() => drillToHelm(release.cluster || '', release.namespace, release.name, {
                     chart: release.chart,

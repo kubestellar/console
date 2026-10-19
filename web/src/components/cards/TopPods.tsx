@@ -205,6 +205,9 @@ function TopPodsInternal({ config }: TopPodsProps) {
             const displayIndex = (currentPage - 1) * effectivePerPage + index + 1
             return (
             <div
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
               key={`${pod.cluster}-${pod.namespace}-${pod.name}`}
               className="group p-2 rounded-lg bg-secondary/30 border border-border/50 hover:border-border transition-colors cursor-pointer"
               onClick={() => pod.cluster && drillToPod(pod.cluster, pod.namespace, pod.name, {

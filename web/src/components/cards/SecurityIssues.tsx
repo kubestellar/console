@@ -307,6 +307,9 @@ function SecurityIssuesInternal({ config }: SecurityIssuesProps) {
 
           return (
             <div
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
               key={`${issue.name}-${issue.issue}-${idx}`}
               className={`p-2 rounded-lg ${colors.bg} border ${colors.border} cursor-pointer hover:opacity-80 transition-opacity`}
               onClick={() => handleIssueClick(issue)}

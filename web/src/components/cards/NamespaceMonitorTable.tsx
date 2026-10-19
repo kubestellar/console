@@ -67,6 +67,9 @@ function NamespaceMonitorTableComponent({
           return (
             <div key={cluster.name} className="mb-1">
               <div
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
                 className="flex items-center gap-2 py-2 px-2 rounded-md hover:bg-secondary/50 transition-colors cursor-pointer group"
                 onClick={() => onToggleCluster(cluster.name)}
               >
@@ -102,6 +105,9 @@ function NamespaceMonitorTableComponent({
                       return (
                         <div key={namespace} className="mb-0.5">
                           <div
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
                             className={`flex items-center gap-2 py-1.5 px-4 rounded-md hover:bg-secondary/50 transition-colors cursor-pointer ${
                               data.hasIssues ? 'bg-red-500/5' : ''
                             }`}

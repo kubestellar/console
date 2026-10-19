@@ -40,6 +40,9 @@ function NamespaceMonitorChangesPanelComponent({
         ) : (
           (recentChanges || []).slice(0, MAX_VISIBLE_CHANGES).map((change, index) => (
             <div
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
               key={`${change.cluster}:${change.namespace}:${change.name}:${index}`}
               className={`flex items-start gap-2 p-2 border-b border-border/50 hover:bg-secondary/50 cursor-pointer ${
                 change.type === 'added'

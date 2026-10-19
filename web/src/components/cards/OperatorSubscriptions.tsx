@@ -233,6 +233,9 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
           <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto" style={containerStyle}>
             {subscriptions.map((sub) => (
               <div
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
                 key={`${sub.cluster || 'unknown'}-${sub.namespace}-${sub.name}`}
                 onClick={() => sub.cluster && drillToOperator(sub.cluster, sub.namespace, sub.name, {
                   channel: sub.channel,

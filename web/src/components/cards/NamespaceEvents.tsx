@@ -280,6 +280,9 @@ export function NamespaceEvents({ config }: NamespaceEventsProps) {
 
             return (
               <div
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
                 key={`${event.cluster}-${event.namespace}-${event.object}-${idx}`}
                 onClick={() => drillToEvents(event.cluster || '', event.namespace, event.object)}
                 className={`p-3 rounded-lg border cursor-pointer transition-colors group overflow-hidden ${EVENT_CARD_CLASSES[color]}`}

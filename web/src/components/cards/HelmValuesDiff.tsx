@@ -301,6 +301,9 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
         <>
           {/* Scope badge - clickable to drill into Helm release */}
           <div
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
             onClick={() => {
               if (selectedCluster && selectedRelease && selectedReleaseNamespace) {
                 drillToHelm(selectedCluster, selectedReleaseNamespace, selectedRelease, {

@@ -18,6 +18,9 @@ export function HelmHistoryEntryRow({ entry, onSelect }: HelmHistoryEntryRowProp
 
   return (
     <div
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
       className="relative pl-6 group cursor-pointer"
       onClick={() => onSelect(entry)}
       title={`Click to view details for revision ${entry.revision}`}
