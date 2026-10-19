@@ -11,7 +11,7 @@ import { fetchSSE } from '../sseClient'
 import { clusterCacheRef } from '../../hooks/mcp/clusterCacheRef'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_HAS_SESSION, STORAGE_KEY_TOKEN } from '../constants'
 import { getStoredAuthTokenSync } from '../authToken'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, isLocalAgentSuppressed } from '../constants/network'
 import { settledWithConcurrency } from '../utils/concurrency'
 import {
   ClustersResponseSchema,
@@ -33,6 +33,12 @@ const BACKEND_PREF_KEY = 'kc_agent_backend_preference'
  *   backend via the agent selector (kc_agent_backend_preference), OR
  * - The backend is running in-cluster (Helm deployment) — no local kc-agent
  *   exists in-cluster; the Go backend has ServiceAccount access instead.
+ * - The local kc-agent is suppressed (build-time, hosted host, or the backend
+ *   reported `no_local_agent` via /health). LOCAL_AGENT_HTTP_URL is empty in
+ *   that case, so agent-routed REST calls would hit SPA routes (e.g.
+ *   `/deployments?cluster=x` returns index.html) instead of real data. This
+ *   covers kubeconfig-backed deployments such as console-live that report
+ *   `in_cluster: false` but have no local agent (#24438).
  * See issue #10510.
  */
 export function isClusterModeBackend(): boolean {
@@ -41,7 +47,7 @@ export function isClusterModeBackend(): boolean {
     if (pref === 'kagenti' || pref === 'kagent') return true
     // In-cluster Helm deployments have no local kc-agent. The Go backend
     // authenticates via the pod's ServiceAccount — always route through it.
-    return isInClusterMode()
+    return isInClusterMode() || isLocalAgentSuppressed()
   } catch {
     return false
   }

@@ -16,6 +16,7 @@ const mockIsBackendUnavailable = vi.fn(() => false)
 const mockFetchSSE = vi.fn()
 const mockSettledWithConcurrency = vi.fn()
 const mockValidateArrayResponse = vi.fn((_schema: unknown, raw: unknown) => raw)
+const mockIsLocalAgentSuppressed = vi.fn(() => false)
 
 vi.mock('../../api', () => ({
   isBackendUnavailable: (...args: unknown[]) => mockIsBackendUnavailable(...args),
@@ -32,6 +33,7 @@ vi.mock('../../constants', () => ({
 }))
 vi.mock('../../constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 10_000,
+  isLocalAgentSuppressed: () => mockIsLocalAgentSuppressed(),
 }))
 vi.mock('../../utils/concurrency', () => ({
   settledWithConcurrency: (...args: unknown[]) => mockSettledWithConcurrency(...args),
@@ -60,6 +62,7 @@ import { clusterCacheRef } from '../../../hooks/mcp/clusterCacheRef'
 describe('fetcherUtils extended coverage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockIsLocalAgentSuppressed.mockReturnValue(false)
     localStorage.clear()
     ;(clusterCacheRef as { clusters: unknown[] }).clusters = []
   })
@@ -95,6 +98,16 @@ describe('fetcherUtils extended coverage', () => {
     it('returns false when preference is an arbitrary string', () => {
       localStorage.setItem('kc_agent_backend_preference', 'something-else')
       expect(isClusterModeBackend()).toBe(false)
+    })
+
+    it('returns true when the local agent is suppressed (#24438)', () => {
+      mockIsLocalAgentSuppressed.mockReturnValue(true)
+      expect(isClusterModeBackend()).toBe(true)
+    })
+
+    it('routes getClusterFetcher to the backend when the local agent is suppressed (#24438)', () => {
+      mockIsLocalAgentSuppressed.mockReturnValue(true)
+      expect(getClusterFetcher()).toBe(fetchBackendAPI)
     })
 
     it('returns false when localStorage throws', () => {
