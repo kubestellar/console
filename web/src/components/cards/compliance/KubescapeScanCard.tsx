@@ -182,9 +182,6 @@ Please proceed step by step.`,
       )}
 
       <div
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
         className="cursor-pointer"
         onClick={() => {
           const firstCluster = Object.values(statuses).find((status) =>

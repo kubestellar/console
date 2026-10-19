@@ -172,9 +172,6 @@ Please proceed step by step.`,
       )}
 
       <div
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
         className="grid grid-cols-2 gap-2 cursor-pointer"
         onClick={() => {
           const firstCluster = Object.values(statuses).find((status) =>
