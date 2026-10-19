@@ -2,6 +2,8 @@ import { test, expect, Page } from '@playwright/test'
 import { mockApiFallback, mockLocalAgentUnavailable, reloadPageSafely } from './helpers/setup'
 import { setupLiveMode } from './helpers/storage-setup'
 
+const CLUSTER_HEALTH_URL = /\/api\/mcp\/clusters\/[^/?]+\/health/
+
 /**
  * Sets up authentication and MCP mocks for cluster tests
  */
@@ -60,7 +62,11 @@ async function setupClustersTest(page: Page) {
   // Registered AFTER mockApiFallback → higher priority, overrides catch-all
   await page.route('**/api/mcp/**', (route) => {
     const url = route.request().url()
-    if (url.includes('/clusters')) {
+    if (CLUSTER_HEALTH_URL.test(url)) {
+      // Per-cluster health is requested now that no_local_agent routes through the
+      // backend; return 404 so the cluster list payload is not parsed as health.
+      route.fulfill({ status: 404, contentType: 'application/json', body: '{}' })
+    } else if (url.includes('/clusters')) {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -219,7 +225,11 @@ test.describe('Clusters Page', () => {
       // isClusterHealthy returns true only when healthy === true (not based on nodeCount).
       await page.route('**/api/mcp/**', (route) => {
         const url = route.request().url()
-        if (url.includes('/clusters')) {
+        if (CLUSTER_HEALTH_URL.test(url)) {
+          // Per-cluster health is requested now that no_local_agent routes through the
+          // backend; return 404 so the cluster list payload is not parsed as health.
+          route.fulfill({ status: 404, contentType: 'application/json', body: '{}' })
+        } else if (url.includes('/clusters')) {
           route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -295,7 +305,11 @@ test.describe('Clusters Page', () => {
     test('Unhealthy stat count matches clusters shown after clicking Unhealthy tab', async ({ page }) => {
       await page.route('**/api/mcp/**', (route) => {
         const url = route.request().url()
-        if (url.includes('/clusters')) {
+        if (CLUSTER_HEALTH_URL.test(url)) {
+          // Per-cluster health is requested now that no_local_agent routes through the
+          // backend; return 404 so the cluster list payload is not parsed as health.
+          route.fulfill({ status: 404, contentType: 'application/json', body: '{}' })
+        } else if (url.includes('/clusters')) {
           route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -361,7 +375,11 @@ test.describe('Clusters Page', () => {
     test('Offline tab filters to only unreachable clusters', async ({ page }) => {
       await page.route('**/api/mcp/**', (route) => {
         const url = route.request().url()
-        if (url.includes('/clusters')) {
+        if (CLUSTER_HEALTH_URL.test(url)) {
+          // Per-cluster health is requested now that no_local_agent routes through the
+          // backend; return 404 so the cluster list payload is not parsed as health.
+          route.fulfill({ status: 404, contentType: 'application/json', body: '{}' })
+        } else if (url.includes('/clusters')) {
           route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -517,7 +535,11 @@ test.describe('Clusters Page', () => {
     test('stale context banner appears when staleContexts > 0', async ({ page }) => {
       await page.route('**/api/mcp/**', (route) => {
         const url = route.request().url()
-        if (url.includes('/clusters')) {
+        if (CLUSTER_HEALTH_URL.test(url)) {
+          // Per-cluster health is requested now that no_local_agent routes through the
+          // backend; return 404 so the cluster list payload is not parsed as health.
+          route.fulfill({ status: 404, contentType: 'application/json', body: '{}' })
+        } else if (url.includes('/clusters')) {
           route.fulfill({
             status: 200,
             contentType: 'application/json',

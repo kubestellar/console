@@ -666,7 +666,7 @@ test.describe('Dashboard Live Card Data Validation', () => {
         body: JSON.stringify(API_RESPONSES.mcp()),
       })
     })
-    await page.route('**/api/mcp/clusters**', (route) =>
+    await page.route(/\/api\/mcp\/clusters(\?.*)?$/, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -703,7 +703,7 @@ test.describe('Dashboard Live Card Data Validation', () => {
         body: JSON.stringify(API_RESPONSES.mcp()),
       })
     })
-    await page.route('**/api/mcp/clusters**', (route) =>
+    await page.route(/\/api\/mcp\/clusters(\?.*)?$/, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -737,7 +737,7 @@ test.describe('Dashboard Live Card Data Validation', () => {
       }],
     })
 
-    await page.route('**/api/mcp/clusters**', (route) =>
+    await page.route(/\/api\/mcp\/clusters(\?.*)?$/, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -850,7 +850,7 @@ test.describe('Dashboard Data Accuracy (#6459)', () => {
       clusters: deterministicClusters,
     })
 
-    await page.route('**/api/mcp/clusters**', (route) =>
+    await page.route(/\/api\/mcp\/clusters(\?.*)?$/, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
