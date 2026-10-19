@@ -46,6 +46,9 @@ export function OfflineStatusDisplay({
   return (
     <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-4" data-demo={isDemoData || undefined}>
       <div
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
         className={cn(
           'p-2 rounded-lg border',
           currentClusterIssueCount > 0
@@ -67,6 +70,9 @@ export function OfflineStatusDisplay({
         </div>
       </div>
       <div
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
         className={cn(
           'p-2 rounded-lg border',
           gpuIssueCount > 0
@@ -86,6 +92,9 @@ export function OfflineStatusDisplay({
         </div>
       </div>
       <div
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
         className={cn(
           'p-2 rounded-lg border',
           totalPredicted > 0 && aiEnabled && !isAnalyzing

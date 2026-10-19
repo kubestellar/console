@@ -30,6 +30,9 @@ export function CardShell({ title, icon: Icon, children, onClick }: {
 }) {
   return (
     <div
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
       className={`h-full flex flex-col ${onClick ? 'cursor-pointer hover:bg-secondary transition-colors min-h-11 min-w-11' : ''}`}
       onClick={onClick}
     >

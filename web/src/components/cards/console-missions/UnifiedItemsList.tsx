@@ -143,6 +143,9 @@ function OfflineNodeRow({
 
   return (
     <div
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
       className="p-2 rounded bg-red-500/10 text-xs cursor-pointer hover:bg-red-500/20 transition-colors group flex flex-wrap items-center justify-between gap-y-2"
       onClick={() => node.cluster && drillToNode(node.cluster, node.name, {
         status: node.unschedulable ? 'Cordoned' : node.status,
@@ -192,6 +195,9 @@ function ClusterHealthIssueRow({
 
   return (
     <div
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
       className={cn(
         'p-2 rounded text-xs cursor-pointer transition-colors group flex flex-wrap items-center justify-between gap-y-2',
         isCritical ? 'bg-red-500/10 hover:bg-red-500/20' : 'bg-yellow-500/10 hover:bg-yellow-500/20'
@@ -234,6 +240,9 @@ function GpuIssueRow({
 
   return (
     <div
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
       className="p-2 rounded bg-yellow-500/10 text-xs cursor-pointer hover:bg-yellow-500/20 transition-colors group flex flex-wrap items-center justify-between gap-y-2"
       onClick={() => drillToCluster(issue.cluster)}
       title={`Click to view cluster ${issue.cluster}`}
@@ -284,6 +293,9 @@ function PredictionRow({
     >
       <div className="flex flex-wrap items-center justify-between gap-y-2">
         <div
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
           className="min-w-0 flex items-center gap-2 flex-1 cursor-pointer"
           onClick={() => risk.cluster && drillToCluster(risk.cluster)}
         >

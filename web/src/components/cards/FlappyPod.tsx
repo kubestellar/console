@@ -308,6 +308,9 @@ export function FlappyPod(_props: CardComponentProps) {
 
       {/* Game area - relative container for overlays */}
       <div
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
         className={`flex-1 flex items-center justify-center relative ${isExpanded ? 'min-h-0' : ''}`}
         onClick={handleClick}
       >

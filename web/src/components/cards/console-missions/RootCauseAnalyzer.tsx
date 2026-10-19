@@ -107,6 +107,9 @@ export function RootCauseAnalyzer({
           <div key={group.cause} className="space-y-1">
             {/* Group Header */}
             <div
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
               className={cn(
                 'p-2 rounded text-xs cursor-pointer transition-colors flex flex-wrap items-center justify-between gap-y-2',
                 `bg-${severityColor}-500/10 hover:bg-${severityColor}-500/20 border border-${severityColor}-500/20`
@@ -185,6 +188,9 @@ TASK:
               <div className="ml-4 space-y-1 border-l-2 border-border/50 pl-2">
                 {group.items.map((item) => (
                   <div
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
                     key={item.id}
                     className="p-1.5 rounded bg-secondary/30 text-xs cursor-pointer hover:bg-secondary/50 transition-colors flex flex-wrap items-center justify-between gap-y-2"
                     onClick={() => {

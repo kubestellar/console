@@ -52,6 +52,9 @@ export function OPAPoliciesTab({
       ) : (
         policies.map(policy => (
           <div
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
             key={policy.name}
             onClick={() => onEditYaml(policy)}
             className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"

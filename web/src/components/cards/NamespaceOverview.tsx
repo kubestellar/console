@@ -258,6 +258,9 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
           {/* Stats */}
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
               className={`p-3 rounded-lg ${podIssues.length > 0 ? 'bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20' : 'bg-secondary/30 cursor-default'} transition-colors`}
               onClick={() => podIssues.length > 0 && podIssues[0] && drillToPod(selectedCluster, podIssues[0].namespace, podIssues[0].name)}
               title={podIssues.length > 0 ? `${podIssues.length} pod issue${podIssues.length !== 1 ? 's' : ''} - Click to view first issue` : 'No pod issues detected'}
@@ -269,6 +272,9 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
               <span className="text-2xl font-bold text-foreground">{podIssues.length}</span>
             </div>
             <div
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
               className={`p-3 rounded-lg ${deploymentIssues.length > 0 ? 'bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20' : 'bg-secondary/30 cursor-default'} transition-colors`}
               onClick={() => deploymentIssues.length > 0 && deploymentIssues[0] && drillToDeployment(selectedCluster, deploymentIssues[0].namespace, deploymentIssues[0].name)}
               title={deploymentIssues.length > 0 ? `${deploymentIssues.length} deployment issue${deploymentIssues.length !== 1 ? 's' : ''} - Click to view first issue` : 'No deployment issues detected'}

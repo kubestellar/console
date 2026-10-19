@@ -141,6 +141,9 @@ Please:
       {/* Issue Summary */}
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
           className={cn(
             "p-3 rounded-lg bg-orange-500/10 border border-orange-500/20",
             podIssues.length > 0 && "cursor-pointer hover:bg-orange-500/20 transition-colors"
@@ -152,6 +155,9 @@ Please:
           <div className="text-xs text-orange-400">Pod Issues</div>
         </div>
         <div
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
           className={cn(
             "p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20",
             deploymentIssues.length > 0 && "cursor-pointer hover:bg-yellow-500/20 transition-colors"

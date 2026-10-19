@@ -199,6 +199,9 @@ const MemoizedCustomQASMModal = React.memo(function MemoizedCustomQASMModal({
                 Select a .qasm file from your computer.
               </p>
               <div
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
                 className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer"
                 onClick={() => fileInputRef.current?.click()}
               >

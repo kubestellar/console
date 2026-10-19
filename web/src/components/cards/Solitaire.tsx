@@ -91,6 +91,9 @@ export function Solitaire(_props: CardComponentProps) {
             {/* Foundations */}
             {game.foundations.map((foundation, idx) => (
               <div
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
                 key={idx}
                 onClick={() => handleCardClick(`foundation-${idx}`)}
                 className="cursor-pointer"
@@ -123,6 +126,9 @@ export function Solitaire(_props: CardComponentProps) {
               <div key={colIdx} className="flex flex-col" style={{ minWidth: cardWidth }}>
                 {column.length === 0 ? (
                   <div
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
                     onClick={() => handleCardClick(`tableau-${colIdx}`)}
                     style={{ width: cardWidth, height: cardHeight }}
                     className="rounded border-2 border-dashed border-border/30 bg-secondary/20 cursor-pointer hover:border-primary/30"

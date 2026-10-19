@@ -347,6 +347,9 @@ export function ResourceCapacity({ config: _config }: ResourceCapacityProps) {
       {/* Summary */}
       {/* Summary footer */}
       <div
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
         className={`mt-3 pt-3 border-t border-border/50 grid ${totals.totalGPUs > 0 ? 'grid-cols-2 @md:grid-cols-4' : 'grid-cols-2 @md:grid-cols-3'} gap-2 text-center cursor-pointer hover:bg-secondary/30 rounded-lg transition-colors`}
         onClick={() => drillToResources()}
       >

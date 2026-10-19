@@ -110,6 +110,9 @@ Please:
           <div className="text-xs text-cyan-400">Total Contexts</div>
         </div>
         <div
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
           className={cn(
             'p-3 rounded-lg border',
             unreachableClusters.length > 0

@@ -207,6 +207,9 @@ export function WeatherSearch({
 
               return (
                 <div
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
                   key={location.id}
                   className={`flex items-center gap-2 p-2 rounded-lg transition-colors cursor-pointer ${
                     isCurrentLoc

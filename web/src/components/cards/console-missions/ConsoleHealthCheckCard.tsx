@@ -176,6 +176,9 @@ Please provide:
       {/* Quick Stats */}
       <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-2 text-center">
         <div
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
           className={cn(
             "p-2 rounded bg-green-500/10",
             healthyClusters > 0 && "cursor-pointer hover:bg-green-500/20 transition-colors"
@@ -187,6 +190,9 @@ Please provide:
           <div className="text-2xs text-muted-foreground">{t('common.healthy')}</div>
         </div>
         <div
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
           className={cn(
             "p-2 rounded bg-red-500/10",
             unhealthyClusters > 0 && "cursor-pointer hover:bg-red-500/20 transition-colors"
@@ -198,6 +204,9 @@ Please provide:
           <div className="text-2xs text-muted-foreground">{t('common.unhealthy')}</div>
         </div>
         <div
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
           className={cn(
             "p-2 rounded bg-yellow-500/10",
             unreachableClusters > 0 && "cursor-pointer hover:bg-yellow-500/20 transition-colors"

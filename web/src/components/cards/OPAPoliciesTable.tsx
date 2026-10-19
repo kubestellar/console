@@ -259,6 +259,9 @@ export const OPAPoliciesTable = memo(function OPAPoliciesTable({
                   <div className="flex flex-wrap items-center justify-between gap-y-2">
                     <span className="text-xs text-muted-foreground">Not installed</span>
                     <span
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
                       onClick={(e) => { e.stopPropagation(); onInstallOPA(cluster.name) }}
                       className="text-xs text-purple-400 hover:text-purple-300 cursor-pointer"
                     >

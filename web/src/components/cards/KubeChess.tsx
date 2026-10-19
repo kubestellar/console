@@ -240,6 +240,9 @@ function KubeChessInternal() {
 
         cols.push(
           <div
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
             key={`${row}-${col}`}
             onClick={() => handleSquareClick(row, col)}
             className={`

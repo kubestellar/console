@@ -44,6 +44,9 @@ function ResourceItemRow({
       }`}
     >
       <span
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
         className={`flex-1 truncate cursor-pointer hover:text-purple-400 ${
           item.healthy ? 'text-foreground' : 'text-yellow-400'
         }`}

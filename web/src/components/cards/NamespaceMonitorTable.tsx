@@ -120,6 +120,9 @@ function NamespaceMonitorTableComponent({
                             )}
                             <Layers className={`w-3.5 h-3.5 ${data.hasIssues ? 'text-yellow-400' : 'text-blue-400'}`} />
                             <span
+                              role="button"
+                              tabIndex={0}
+                              onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
                               className="text-sm text-foreground flex-1 hover:text-purple-400"
                               onClick={event => {
                                 event.stopPropagation()

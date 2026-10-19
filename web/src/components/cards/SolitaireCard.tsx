@@ -33,6 +33,9 @@ export function SolitaireCard({
   if (!card.faceUp) {
     return (
       <div
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
         onClick={onClick}
         style={{ width: w, height: h }}
         className="rounded border border-border bg-linear-to-br from-blue-600 to-purple-700 cursor-pointer hover:brightness-110 transition-all shadow-xs flex items-center justify-center"
@@ -46,6 +49,9 @@ export function SolitaireCard({
 
   return (
     <div
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
       onClick={onClick}
       onDoubleClick={onDoubleClick}
       style={{ width: w, height: h }}
@@ -84,6 +90,9 @@ export function StockPile({
   if (cards.length === 0) {
     return (
       <div
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
         onClick={onClick}
         style={{ width: w, height: h }}
         className="rounded border-2 border-dashed border-green-500/50 bg-green-500/10 cursor-pointer hover:bg-green-500/20 transition-colors flex items-center justify-center"

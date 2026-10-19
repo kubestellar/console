@@ -89,6 +89,9 @@ export function GitHubRepoEditor({
       <div className="flex flex-wrap gap-1.5">
         {savedRepos.map((repo) => (
           <span
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
             key={repo}
             onClick={() => onSelectRepo(repo)}
             className={cn(
