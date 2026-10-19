@@ -16,20 +16,12 @@ import { Loader2, AlertCircle, RotateCcw, Power, ChevronDown, WifiOff, RefreshCw
 import '@xterm/xterm/css/xterm.css'
 import { useTranslation } from 'react-i18next'
 import { useKeyboardNav } from '../../hooks/useKeyboardNav'
-import { usePodExecTerminal } from './usePodExecTerminal'
+import { usePodExecTerminal, type PodExecTerminalProps } from './usePodExecTerminal'
 
 /** Terminal container style to prevent inline object creation on each render */
 const TERMINAL_CONTAINER_STYLE = { minHeight: 0 } as const
 
-export interface PodExecTerminalProps {
-  cluster: string
-  namespace: string
-  pod: string
-  /** Available container names */
-  containers?: string[]
-  /** Pre-selected container (defaults to first in list) */
-  defaultContainer?: string
-}
+export type { PodExecTerminalProps }
 
 // ============================================================================
 // Component

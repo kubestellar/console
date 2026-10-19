@@ -2,7 +2,16 @@ import { useEffect, useRef, useState } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { useExecSession, type ExecSessionConfig } from '../../hooks/useExecSession'
-import type { PodExecTerminalProps } from './PodExecTerminal'
+
+export interface PodExecTerminalProps {
+  cluster: string
+  namespace: string
+  pod: string
+  /** Available container names */
+  containers?: string[]
+  /** Pre-selected container (defaults to first in list) */
+  defaultContainer?: string
+}
 
 /** Debounce delay for terminal resize events */
 const RESIZE_DEBOUNCE_MS = 100 // Debounce terminal resize handling to avoid thrashing on rapid container resizes
