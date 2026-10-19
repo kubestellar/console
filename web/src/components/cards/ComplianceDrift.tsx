@@ -245,9 +245,6 @@ export function ComplianceDrift({ config: _config }: CardConfig) {
 
         return (
           <div
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
             key={`${d.cluster}-${d.tool}-${i}`}
             className="flex items-center gap-2 p-2 rounded-lg bg-card/50 border border-border/50 cursor-pointer hover:bg-secondary/50 transition-colors group"
             onClick={() => handleDriftClick(d)}

@@ -288,9 +288,6 @@ Please proceed step by step.`,
         </p>
         {(filteredPolicies || []).map((policy, i) => (
           <div
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
             key={`${policy.cluster}-${policy.name}-${i}`}
             className="p-2.5 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer"
             onClick={() => handlePolicyClick(policy)}
