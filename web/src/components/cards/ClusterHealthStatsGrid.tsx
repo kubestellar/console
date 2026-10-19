@@ -37,15 +37,15 @@ export function ClusterHealthStatsGrid({
       </div>
       <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 min-w-0 overflow-hidden" title={t('clusterHealth.unhealthyTooltip', { count: unhealthyClusters })}>
         <CardStatHeader className="gap-1.5 min-w-0">
-          <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
-          <span className="text-xs text-red-400 truncate">{t('common:common.unhealthy')}</span>
+          <AlertTriangle className="w-4 h-4 text-status-error shrink-0" />
+          <span className="text-xs text-status-error truncate">{t('common:common.unhealthy')}</span>
         </CardStatHeader>
         <span className="text-2xl font-bold text-foreground">{unhealthyClusters}</span>
       </div>
       <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 min-w-0 overflow-hidden" title={t('clusterHealth.authErrorTooltip', { count: tokenExpiredClusters })}>
         <CardStatHeader className="gap-1.5 min-w-0">
-          <KeyRound className="w-4 h-4 text-red-400 shrink-0" />
-          <span className="text-xs text-red-400 truncate">{t('clusterHealth.authErrorLabel')}</span>
+          <KeyRound className="w-4 h-4 text-status-error shrink-0" />
+          <span className="text-xs text-status-error truncate">{t('clusterHealth.authErrorLabel')}</span>
         </CardStatHeader>
         <span className="text-2xl font-bold text-foreground">{tokenExpiredClusters}</span>
       </div>

@@ -21,7 +21,7 @@ import {
   TOOLTIP_SWATCH_SIZE_PX } from '../../../lib/llmd/tooltipSpacing'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../../ui/StatusBadge'
-import { CHART_MIN_HEIGHT_PX, CHART_TEXT_WHITE, CHART_AXIS_FONT_SIZE, CHART_BODY_FONT_SIZE } from '../../../lib/constants/ui'
+import { CHART_MIN_HEIGHT_PX, CHART_TEXT_WHITE, CHART_AXIS_FONT_SIZE, CHART_BODY_FONT_SIZE, CHART_TICK_COLOR, CHART_AXIS_STROKE, CHART_GRID_STROKE } from '../../../lib/constants/ui'
 
 const GRID_LEFT_PX = 55
 const FULL_SIZE_STYLE = { height: '100%', width: '100%' } as const
@@ -131,9 +131,9 @@ export function ThroughputComparison() {
         name: 'QPS (queries/sec)',
         nameLocation: 'middle' as const,
         nameGap: 30,
-        nameTextStyle: { color: '#a1a1aa', fontSize: CHART_AXIS_FONT_SIZE },
-        axisLabel: { color: '#a1a1aa', fontSize: CHART_AXIS_FONT_SIZE },
-        axisLine: { lineStyle: { color: '#71717a' } },
+        nameTextStyle: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE },
+        axisLabel: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE },
+        axisLine: { lineStyle: { color: CHART_AXIS_STROKE } },
         axisTick: { show: false },
       },
       yAxis: {
@@ -141,15 +141,15 @@ export function ThroughputComparison() {
         name: 'tok/s',
         nameLocation: 'middle' as const,
         nameGap: 40,
-        nameTextStyle: { color: '#71717a', fontSize: CHART_AXIS_FONT_SIZE },
+        nameTextStyle: { color: CHART_AXIS_STROKE, fontSize: CHART_AXIS_FONT_SIZE },
         axisLabel: {
-          color: '#71717a',
+          color: CHART_AXIS_STROKE,
           fontSize: CHART_AXIS_FONT_SIZE,
           formatter: (v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v),
         },
-        axisLine: { lineStyle: { color: '#71717a' } },
+        axisLine: { lineStyle: { color: CHART_AXIS_STROKE } },
         axisTick: { show: false },
-        splitLine: { lineStyle: { color: '#334155', opacity: 0.5, type: 'dashed' as const } },
+        splitLine: { lineStyle: { color: CHART_GRID_STROKE, opacity: 0.5, type: 'dashed' as const } },
       },
       tooltip: {
         trigger: 'axis' as const,
