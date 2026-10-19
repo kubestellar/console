@@ -30,8 +30,8 @@ export function ClusterHealthStatsGrid({
     <CardStatGrid className="@md:grid-cols-4 gap-2" data-demo={isDemoData || undefined}>
       <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 min-w-0 overflow-hidden" title={t('clusterHealth.healthyTooltip', { count: healthyClusters })}>
         <CardStatHeader className="gap-1.5 min-w-0">
-          <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
-          <span className="text-xs text-green-400 truncate">{t('common:common.healthy')}</span>
+          <CheckCircle className="w-4 h-4 text-status-success shrink-0" />
+          <span className="text-xs text-status-success truncate">{t('common:common.healthy')}</span>
         </CardStatHeader>
         <span className="text-2xl font-bold text-foreground">{healthyClusters}</span>
       </div>

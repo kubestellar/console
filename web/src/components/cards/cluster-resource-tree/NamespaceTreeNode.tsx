@@ -67,7 +67,7 @@ export function NamespaceTreeNode({
       icon={Folder}
       iconColor="text-yellow-400"
       badge={totalIssues > 0 ? totalIssues : undefined}
-      badgeColor="bg-red-500/20 text-red-400"
+      badgeColor="bg-red-500/20 text-status-error"
       onClick={() => drillToNamespace(clusterName, namespaceName)}
       indent={3}
       expandedNodes={expandedNodes}
@@ -82,7 +82,7 @@ export function NamespaceTreeNode({
             return (
               <TreeNode key={deployment.name} id={deploymentId} label={deployment.name} icon={ResourceIcon.deployment} iconColor={isHealthy ? 'text-status-success' : 'text-status-warning'} badge={`${deployment.readyReplicas}/${deployment.replicas}`} badgeColor={isHealthy ? 'bg-green-500/20 text-status-success' : 'bg-yellow-500/20 text-status-warning'} onClick={() => drillToDeployment(clusterName, namespaceName, deployment.name)} indent={5} expandedNodes={expandedNodes} toggleNode={toggleNode}>
                 {deploymentPods.length > 0 && deploymentPods.slice(0, renderLimit).map(pod => (
-                  <TreeNode key={pod.name} id={`${deploymentId}:pod:${pod.name}`} label={pod.name} icon={ResourceIcon.pod} iconColor={pod.status === 'Running' ? 'text-green-400' : 'text-red-400'} badge={pod.status} badgeColor={pod.status === 'Running' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'} onClick={() => drillToPod(clusterName, namespaceName, pod.name, { status: pod.status, restarts: pod.restarts })} indent={6} expandedNodes={expandedNodes} toggleNode={toggleNode} />
+                  <TreeNode key={pod.name} id={`${deploymentId}:pod:${pod.name}`} label={pod.name} icon={ResourceIcon.pod} iconColor={pod.status === 'Running' ? 'text-status-success' : 'text-status-error'} badge={pod.status} badgeColor={pod.status === 'Running' ? 'bg-green-500/20 text-status-success' : 'bg-red-500/20 text-status-error'} onClick={() => drillToPod(clusterName, namespaceName, pod.name, { status: pod.status, restarts: pod.restarts })} indent={6} expandedNodes={expandedNodes} toggleNode={toggleNode} />
                 ))}
                 {deploymentPods.length > renderLimit && <TruncatedIndicator total={deploymentPods.length} shown={renderLimit} indent={6} />}
               </TreeNode>
@@ -95,7 +95,7 @@ export function NamespaceTreeNode({
       {showPods && (
         <TreeNode id={`${nsId}:pods`} label={t('resourceTree.pods')} icon={ResourceIcon.pod} iconColor="text-cyan-400" count={nsData.pods.length} badge={nsPodIssues > 0 ? nsPodIssues : undefined} badgeColor="bg-red-500/20 text-red-400" indent={4} expandedNodes={expandedNodes} toggleNode={toggleNode}>
           {nsData.pods.slice(0, renderLimit).map(pod => (
-            <TreeNode key={pod.name} id={`${nsId}:pod:${pod.name}`} label={pod.name} icon={ResourceIcon.pod} iconColor={pod.status === 'Running' || pod.status === 'Succeeded' ? 'text-green-400' : 'text-red-400'} badge={pod.restarts > 0 ? `${pod.status} (${pod.restarts} restarts)` : pod.status} badgeColor={pod.status === 'Running' || pod.status === 'Succeeded' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'} onClick={() => drillToPod(clusterName, namespaceName, pod.name, { status: pod.status, restarts: pod.restarts })} indent={5} expandedNodes={expandedNodes} toggleNode={toggleNode} />
+            <TreeNode key={pod.name} id={`${nsId}:pod:${pod.name}`} label={pod.name} icon={ResourceIcon.pod} iconColor={pod.status === 'Running' || pod.status === 'Succeeded' ? 'text-status-success' : 'text-status-error'} badge={pod.restarts > 0 ? `${pod.status} (${pod.restarts} restarts)` : pod.status} badgeColor={pod.status === 'Running' || pod.status === 'Succeeded' ? 'bg-green-500/20 text-status-success' : 'bg-red-500/20 text-status-error'} onClick={() => drillToPod(clusterName, namespaceName, pod.name, { status: pod.status, restarts: pod.restarts })} indent={5} expandedNodes={expandedNodes} toggleNode={toggleNode} />
           ))}
           <TruncatedIndicator total={nsData.pods.length} shown={renderLimit} indent={5} />
         </TreeNode>
@@ -113,7 +113,7 @@ export function NamespaceTreeNode({
       {showPVCs && (
         <TreeNode id={`${nsId}:pvcs`} label={t('resourceTree.pvcs')} icon={ResourceIcon.pvc} iconColor="text-green-400" count={nsData.pvcs.length} indent={4} expandedNodes={expandedNodes} toggleNode={toggleNode}>
           {nsData.pvcs.slice(0, renderLimit).map(pvc => (
-            <TreeNode key={pvc.name} id={`${nsId}:pvc:${pvc.name}`} label={pvc.name} icon={ResourceIcon.pvc} iconColor={pvc.status === 'Bound' ? 'text-green-400' : 'text-yellow-400'} badge={pvc.status} badgeColor={pvc.status === 'Bound' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'} onClick={() => drillToPVC(clusterName, namespaceName, pvc.name)} indent={5} expandedNodes={expandedNodes} toggleNode={toggleNode} />
+            <TreeNode key={pvc.name} id={`${nsId}:pvc:${pvc.name}`} label={pvc.name} icon={ResourceIcon.pvc} iconColor={pvc.status === 'Bound' ? 'text-status-success' : 'text-status-warning'} badge={pvc.status} badgeColor={pvc.status === 'Bound' ? 'bg-green-500/20 text-status-success' : 'bg-yellow-500/20 text-status-warning'} onClick={() => drillToPVC(clusterName, namespaceName, pvc.name)} indent={5} expandedNodes={expandedNodes} toggleNode={toggleNode} />
           ))}
           <TruncatedIndicator total={nsData.pvcs.length} shown={renderLimit} indent={5} />
         </TreeNode>
@@ -151,7 +151,7 @@ export function NamespaceTreeNode({
           {nsData.jobs.slice(0, renderLimit).map(job => {
             const isComplete = job.status === 'Complete'
             const isRunning = job.status === 'Running'
-            return <TreeNode key={job.name} id={`${nsId}:job:${job.name}`} label={job.name} icon={ResourceIcon.job} iconColor={isComplete || isRunning ? 'text-green-400' : 'text-red-400'} badge={`${job.status} (${job.completions})`} badgeColor={isComplete || isRunning ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'} indent={5} expandedNodes={expandedNodes} toggleNode={toggleNode} />
+            return <TreeNode key={job.name} id={`${nsId}:job:${job.name}`} label={job.name} icon={ResourceIcon.job} iconColor={isComplete || isRunning ? 'text-status-success' : 'text-status-error'} badge={`${job.status} (${job.completions})`} badgeColor={isComplete || isRunning ? 'bg-green-500/20 text-status-success' : 'bg-red-500/20 text-status-error'} indent={5} expandedNodes={expandedNodes} toggleNode={toggleNode} />
           })}
           <TruncatedIndicator total={nsData.jobs.length} shown={renderLimit} indent={5} />
         </TreeNode>
@@ -199,7 +199,7 @@ export function NamespaceTreeNode({
       {showCronJobs && (
         <TreeNode id={`${nsId}:cronjobs`} label={t('resourceTree.cronJobs')} icon={ResourceIcon.cronjob} iconColor="text-yellow-400" count={nsData.cronjobs.length} indent={4} expandedNodes={expandedNodes} toggleNode={toggleNode}>
           {nsData.cronjobs.slice(0, renderLimit).map(cronJob => (
-            <TreeNode key={cronJob.name} id={`${nsId}:cj:${cronJob.name}`} label={cronJob.name} icon={ResourceIcon.cronjob} iconColor={cronJob.suspend ? 'text-muted-foreground' : 'text-yellow-400'} badge={cronJob.suspend ? t('resourceTree.suspended') : cronJob.schedule} badgeColor={cronJob.suspend ? 'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground' : 'bg-yellow-500/20 text-yellow-400'} indent={5} expandedNodes={expandedNodes} toggleNode={toggleNode} />
+            <TreeNode key={cronJob.name} id={`${nsId}:cj:${cronJob.name}`} label={cronJob.name} icon={ResourceIcon.cronjob} iconColor={cronJob.suspend ? 'text-muted-foreground' : 'text-status-warning'} badge={cronJob.suspend ? t('resourceTree.suspended') : cronJob.schedule} badgeColor={cronJob.suspend ? 'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground' : 'bg-yellow-500/20 text-status-warning'} indent={5} expandedNodes={expandedNodes} toggleNode={toggleNode} />
           ))}
           <TruncatedIndicator total={nsData.cronjobs.length} shown={renderLimit} indent={5} />
         </TreeNode>
