@@ -36,6 +36,12 @@ import {
   ps,
 } from './previewStyles'
 
+// Static mock branding colors for widget previews
+const PREV_COLOR_OCP = '#f97316'
+const PREV_COLOR_GKE = '#3b82f6'
+const PREV_COLOR_PURPLE = '#a855f7'
+const PREV_COLOR_RED = '#ef4444'
+
 export function CardPreviewB({ cardType, card }: { cardType: string; card: WidgetCardDefinition }) {
   switch (cardType) {
       case 'workflow_matrix':
@@ -323,7 +329,7 @@ export function GenericCardPreview({ card }: { card: WidgetCardDefinition }) {
 export function NightlyE2EPreview() {
   const platforms = [
     {
-      name: 'OCP', color: '#f97316',
+      name: 'OCP', color: PREV_COLOR_OCP,
       guides: [
         { acronym: 'IS', dots: ['g','g','r','g','g','g','g'] },
         { acronym: 'PD', dots: ['g','g','g','g','g','g','g'] },
@@ -333,29 +339,29 @@ export function NightlyE2EPreview() {
         { acronym: 'WVA', dots: ['g','r','g','g','r','g','g'] },
       ] },
     {
-      name: 'GKE', color: '#3b82f6',
+      name: 'GKE', color: PREV_COLOR_GKE,
       guides: [
         { acronym: 'IS', dots: ['g','g','g','g','g','g','g'] },
         { acronym: 'PD', dots: ['r','g','g','g','g','g','g'] },
         { acronym: 'WEP', dots: ['g','g','g','g','g','g','g'] },
       ] },
     {
-      name: 'CKS', color: '#a855f7',
+      name: 'CKS', color: PREV_COLOR_PURPLE,
       guides: [
         { acronym: 'IS', dots: [] as string[] },
         { acronym: 'PD', dots: [] as string[] },
         { acronym: 'WEP', dots: [] as string[] },
       ] },
   ]
-  const dotColor: Record<string, string> = { g: '#22c55e', r: '#ef4444', b: '#60a5fa' }
+  const dotColor: Record<string, string> = { g: '#22c55e', r: PREV_COLOR_RED, b: '#60a5fa' }
 
   return (
     <div style={{ ...ps.card, width: 320, fontSize: PREV_FS_CAPTION, padding: PREV_CARD_PAD }}>
       <div style={ps.title}><span style={ps.dot('#22c55e')} /> Nightly E2E Status</div>
       <div style={{ display: 'flex', gap: PREV_LG, marginBottom: PREV_SM }}>
-        <div><span style={{ fontSize: PREV_FS_STAT, fontWeight: 700, color: '#a855f7' }}>87%</span><div style={ps.muted}>Pass Rate</div></div>
+        <div><span style={{ fontSize: PREV_FS_STAT, fontWeight: 700, color: PREV_COLOR_PURPLE }}>87%</span><div style={ps.muted}>Pass Rate</div></div>
         <div><span style={{ fontSize: PREV_FS_STAT, fontWeight: 700 }}>16</span><div style={ps.muted}>Guides</div></div>
-        <div><span style={{ fontSize: PREV_FS_STAT, fontWeight: 700, color: '#ef4444' }}>3</span><div style={ps.muted}>Failing</div></div>
+        <div><span style={{ fontSize: PREV_FS_STAT, fontWeight: 700, color: PREV_COLOR_RED }}>3</span><div style={ps.muted}>Failing</div></div>
       </div>
       {platforms.map((p) => (
         <div key={p.name} className="mb-1">

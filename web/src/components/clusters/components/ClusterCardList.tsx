@@ -61,15 +61,15 @@ export const ClusterCardList = memo(function ClusterCardList({
               <StatusIndicator status="loading" size="md" showLabel={false} />
             ) : isTokenExpired(cluster) ? (
               <div className="w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center" title="Token Expired">
-                <KeyRound className="w-3 h-3 text-red-400" />
+                <KeyRound className="w-3 h-3 text-status-error" />
               </div>
             ) : unreachable ? (
               <div className="w-6 h-6 rounded-full bg-yellow-500/20 flex items-center justify-center" title="Offline">
-                <WifiOff className="w-3 h-3 text-yellow-400" />
+                <WifiOff className="w-3 h-3 text-status-warning" />
               </div>
             ) : !isClusterHealthy(cluster) ? (
               <div className="w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center" title="Unhealthy">
-                <AlertCircle className="w-3 h-3 text-red-400" />
+                <AlertCircle className="w-3 h-3 text-status-error" />
               </div>
             ) : (
               <StatusIndicator status="healthy" size="md" showLabel={false} />
