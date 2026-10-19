@@ -1,5 +1,6 @@
 import { Eye } from 'lucide-react'
 import { CardPreview } from './shared/CardPreview'
+import { CompactErrorBoundary } from '../CompactErrorBoundary'
 import { visualizationIcons, wrapAbbreviations } from './shared/cardCatalog'
 import type { AddCardPreviewPanelProps } from './addCardModal.types'
 
@@ -10,7 +11,9 @@ export function AddCardPreviewPanel({ hoveredCard, t, tCard }: AddCardPreviewPan
 
       {hoveredCard ? (
         <div>
-          <CardPreview card={hoveredCard} />
+          <CompactErrorBoundary context="CardPreview">
+            <CardPreview card={hoveredCard} />
+          </CompactErrorBoundary>
           <div className="mt-3 space-y-2">
             <div>
               <h3 className="text-sm font-medium text-foreground">

@@ -1,9 +1,14 @@
 import { DashboardView } from './DashboardView'
+import { PageErrorBoundary } from '../PageErrorBoundary'
 
 /**
  * Main dashboard page component.
  * Health status is displayed via DashboardHealthIndicator in the DashboardView header.
  */
 export function Dashboard() {
-  return <DashboardView />
+  return (
+    <PageErrorBoundary>
+      <DashboardView />
+    </PageErrorBoundary>
+  )
 }
