@@ -11,6 +11,7 @@ import { deleteDynamicCard, getAllDynamicCards } from '../../lib/dynamic-cards'
 import type { DynamicCardDefinition } from '../../lib/dynamic-cards/types'
 import { CardFactoryTemplates } from './CardFactoryTemplates'
 import { CardFactoryCode } from './CardFactoryCode'
+import { CompactErrorBoundary } from '../CompactErrorBoundary'
 import { AiCardTab } from './cardFactoryAiTab'
 import { ManageCardsTab } from './cardFactoryManageTab'
 
@@ -125,28 +126,34 @@ export function CardFactoryModal({ isOpen, onClose, onCardCreated, embedded = fa
         <div className="flex-1">
           {/* Declarative (Tier 1) — split pane */}
           {tab === 'declarative' && (
-            <CardFactoryTemplates
-              onCardCreated={onCardCreated}
-              onSaveMessage={handleSaveMessage}
-            />
+            <CompactErrorBoundary context="CardFactoryTemplates">
+              <CardFactoryTemplates
+                onCardCreated={onCardCreated}
+                onSaveMessage={handleSaveMessage}
+              />
+            </CompactErrorBoundary>
           )}
 
           {/* Code (Tier 2) — split pane */}
           {tab === 'code' && (
-            <CardFactoryCode
-              onCardCreated={onCardCreated}
-              onSaveMessage={handleSaveMessage}
-            />
+            <CompactErrorBoundary context="CardFactoryCode">
+              <CardFactoryCode
+                onCardCreated={onCardCreated}
+                onSaveMessage={handleSaveMessage}
+              />
+            </CompactErrorBoundary>
           )}
 
           {/* AI Create */}
           {tab === 'ai' && (
-            <AiCardTab
-              onCardCreated={(id) => {
-                handleSaveMessage('Card created with AI!')
-                onCardCreated?.(id)
-              }}
-            />
+            <CompactErrorBoundary context="AiCardTab">
+              <AiCardTab
+                onCardCreated={(id) => {
+                  handleSaveMessage('Card created with AI!')
+                  onCardCreated?.(id)
+                }}
+              />
+            </CompactErrorBoundary>
           )}
 
           {/* Manage */}

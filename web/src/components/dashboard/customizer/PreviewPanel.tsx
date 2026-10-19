@@ -10,6 +10,7 @@ import { Eye } from 'lucide-react'
 import type { HoveredCard } from '../shared/cardCatalog'
 import { visualizationIcons, wrapAbbreviations } from '../shared/cardCatalog'
 import { CardPreview } from '../shared/CardPreview'
+import { CompactErrorBoundary } from '../../CompactErrorBoundary'
 
 interface PreviewPanelProps {
   hoveredCard: HoveredCard | null
@@ -27,7 +28,9 @@ export function PreviewPanel({ hoveredCard }: PreviewPanelProps) {
 
       {hoveredCard ? (
         <div>
-          <CardPreview card={hoveredCard} />
+          <CompactErrorBoundary context="CardPreview">
+            <CardPreview card={hoveredCard} />
+          </CompactErrorBoundary>
           <div className="mt-3 space-y-2">
             <div>
               <h3 className="text-sm font-medium text-foreground">

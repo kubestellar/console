@@ -1,0 +1,1 @@
+- Wrapped the dashboard page, card factory tabs, and card preview panels in `PageErrorBoundary`/`CompactErrorBoundary` so a render error no longer unmounts the whole tree (#24460).
