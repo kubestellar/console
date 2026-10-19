@@ -216,6 +216,9 @@ export const JaegerStatus: React.FC<CardComponentProps> = () => {
                             const colStatus = STATUS_CONFIG[collector.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.Healthy
                             return (
                                 <div
+                                    role="button"
+                                    tabIndex={0}
+                                    onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
                                     key={collector.name}
                                     onClick={() => drillToNode(collector.cluster || 'all', collector.name)}
                                     className="flex flex-wrap items-center justify-between gap-y-2 p-2 rounded-lg bg-secondary/20 border border-border/40 hover:border-border/80 transition-all cursor-pointer group/row"

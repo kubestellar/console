@@ -168,6 +168,9 @@ Please:
       <div className="flex-1 space-y-2 overflow-y-auto mb-4">
         {podIssues.slice(0, 3).map((issue, i) => (
           <div
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
             key={`pod-${i}`}
             className="p-2 rounded bg-orange-500/10 text-xs cursor-pointer hover:bg-orange-500/20 transition-colors group flex flex-wrap items-center justify-between gap-y-2"
             onClick={() => issue.cluster && drillToPod(issue.cluster, issue.namespace, issue.name, { status: issue.status, reason: issue.reason, restarts: issue.restarts, issues: issue.issues })}

@@ -86,6 +86,9 @@ export function ServiceRow({ service, onSelect }: ServiceRowProps) {
   const endpointCount = service.endpoints ?? 0
   return (
     <div
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
       onClick={() => onSelect(service)}
       className="flex flex-wrap items-center justify-between gap-y-2 p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group gap-2"
     >

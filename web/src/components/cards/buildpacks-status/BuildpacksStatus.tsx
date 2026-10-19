@@ -272,6 +272,9 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
 
           return (
             <div key={`${build.cluster}-${build.namespace}-${build.name}`}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
               onClick={() =>
                 drillToBuildpack(build.cluster || '',
                   build.namespace,

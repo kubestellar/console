@@ -237,6 +237,9 @@ export function PolicyViolationsCard({ config: _config }: CardConfig) {
         <div className="space-y-2">
           {displayedViolations.map((violation, index) => (
             <div
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
               key={index}
               className="group flex flex-wrap items-center justify-between gap-y-2 p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer"
               onClick={() => setSelectedViolation(violation)}

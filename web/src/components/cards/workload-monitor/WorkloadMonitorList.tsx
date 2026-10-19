@@ -51,6 +51,9 @@ export function WorkloadMonitorList({ resources, onResourceClick }: ListProps) {
         const ResourceIcon = getIconForKind(resource.kind)
         return (
           <div
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
             key={resource.id}
             className="flex items-center gap-2 py-1.5 px-2 rounded-md hover:bg-card/50 cursor-pointer transition-colors border border-transparent hover:border-border/50"
             onClick={() => onResourceClick?.(resource)}

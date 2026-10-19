@@ -16,6 +16,9 @@ export function UpgradeClusterRow({ cluster, onDrill, onStartUpgrade }: UpgradeC
       className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
     >
       <div
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
         className="cursor-pointer"
         onClick={() => onDrill(cluster.name, {
           tab: 'upgrade',

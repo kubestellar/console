@@ -177,6 +177,9 @@ function KagentToolRegistryInternal({ config }: KagentToolRegistryProps) {
           return (
             <div key={toolKey}>
               <div
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
                 className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-secondary transition-colors cursor-pointer"
                 onClick={() => setExpandedTool(isExpanded ? null : toolKey)}
               >

@@ -187,6 +187,9 @@ export const CiliumStatus: React.FC<CardComponentProps> = () => {
                             const nodeStatus = STATUS_CONFIG[node.status] || STATUS_CONFIG.Healthy
                             return (
                                 <div
+                                    role="button"
+                                    tabIndex={0}
+                                    onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
                                     key={node.name}
                                     onClick={() => drillToNode('all', node.name)}
                                     className="flex flex-wrap items-center justify-between gap-y-2 p-2 rounded-lg bg-secondary/30 border border-border/40 hover:border-border/80 transition-colors cursor-pointer group/row"

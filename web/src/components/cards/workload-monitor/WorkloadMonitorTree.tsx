@@ -95,6 +95,9 @@ export function WorkloadMonitorTree({ resources, onResourceClick }: TreeProps) {
                   const ResourceIcon = getIconForKind(resource.kind)
                   return (
                     <div
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
                       key={resource.id}
                       className="flex items-center gap-2 py-0.5 px-1 rounded hover:bg-card/30 cursor-pointer transition-colors"
                       onClick={() => onResourceClick?.(resource)}

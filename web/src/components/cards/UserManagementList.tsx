@@ -241,6 +241,9 @@ export const ClusterUsersTab = memo(function ClusterUsersTab({
         <div className="space-y-2 w-full">
           {users.map((user: OpenShiftUser, idx: number) => (
             <div
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
               key={`${user.cluster}-${user.name}-${idx}`}
               onClick={() => onDrillToUser(user.cluster, user.name)}
               className="p-2 rounded bg-secondary/30 text-sm hover:bg-secondary/50 transition-colors cursor-pointer group w-full overflow-hidden"
@@ -352,6 +355,9 @@ export const ServiceAccountsTab = memo(function ServiceAccountsTab({
         <div className="space-y-2">
           {serviceAccounts.map((sa, idx) => (
             <div
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
               key={`${sa.cluster}-${sa.namespace}-${sa.name}-${idx}`}
               onClick={() => onDrillToServiceAccount(sa.cluster, sa.namespace, sa.name, sa.roles)}
               className="p-2 rounded bg-secondary/30 text-sm hover:bg-secondary/50 transition-colors cursor-pointer group"

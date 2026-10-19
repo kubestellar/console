@@ -25,6 +25,9 @@ export function TrestleScanProfiles({ allProfiles, expandedProfile, setExpandedP
 
         return (
           <div
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
             key={profile.name}
             className="w-full text-left p-2.5 rounded-lg border border-border/50 hover:border-border transition-colors bg-secondary/20 cursor-pointer"
             onClick={() => setExpandedProfile(isExpanded ? null : profile.name)}

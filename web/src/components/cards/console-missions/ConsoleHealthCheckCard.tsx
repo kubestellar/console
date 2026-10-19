@@ -216,6 +216,9 @@ Please provide:
       {/* Issues Summary */}
       {totalIssues > 0 && (
         <div
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
           className="mb-2 p-2 rounded bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
           onClick={() => {
             if (podIssues.length > 0 && podIssues[0]?.cluster) {

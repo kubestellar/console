@@ -130,6 +130,9 @@ Please:
       <div className="flex-1 space-y-2 overflow-y-auto mb-4">
         {unreachableClusters.slice(0, 3).map((cluster, i) => (
           <div
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
             key={i}
             className="p-2 rounded bg-yellow-500/10 text-xs cursor-pointer hover:bg-yellow-500/20 transition-colors group flex flex-wrap items-center justify-between gap-y-2"
             onClick={() => drillToCluster(cluster.name)}
