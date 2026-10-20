@@ -192,23 +192,10 @@ func karmadaExtractAvailable(obj *unstructured.Unstructured) string {
 	return "Unknown"
 }
 
+// karmadaExtractTaints delegates to the shared spec.taints parser (also used
+// by the OCM provider); kept as a named wrapper since tests call it directly.
 func karmadaExtractTaints(obj *unstructured.Unstructured) []federation.Taint {
-	raw, found, _ := unstructured.NestedSlice(obj.Object, "spec", "taints")
-	if !found || len(raw) == 0 {
-		return nil
-	}
-	taints := make([]federation.Taint, 0, len(raw))
-	for _, t := range raw {
-		tm, ok := t.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		key, _ := tm["key"].(string)
-		value, _ := tm["value"].(string)
-		effect, _ := tm["effect"].(string)
-		taints = append(taints, federation.Taint{Key: key, Value: value, Effect: effect})
-	}
-	return taints
+	return extractTaintsFromUnstructured(obj)
 }
 
 func parseKarmadaPropagationPolicy(obj *unstructured.Unstructured) federation.FederatedGroup {
