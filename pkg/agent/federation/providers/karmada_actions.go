@@ -2,12 +2,10 @@ package providers
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 
@@ -165,81 +163,8 @@ func executeKarmadaUnjoinCluster(ctx context.Context, cfg *rest.Config, req fede
 // The taint is specified in Payload as "key", "value", "effect". If the exact
 // taint already exists on the cluster, returns Already=true (idempotent).
 func executeKarmadaTaintCluster(ctx context.Context, cfg *rest.Config, req federation.ActionRequest) (federation.ActionResult, error) {
-	if req.ClusterName == "" {
-		return federation.ActionResult{}, fmt.Errorf("clusterName is required for %s", karmadaActionTaintCluster)
-	}
-
-	taintKey, _ := req.Payload["key"].(string)
-	taintValue, _ := req.Payload["value"].(string)
-	taintEffect, _ := req.Payload["effect"].(string)
-	if taintKey == "" || taintEffect == "" {
-		return federation.ActionResult{}, fmt.Errorf("payload.key and payload.effect are required for %s", karmadaActionTaintCluster)
-	}
-
-	dc, err := dynamic.NewForConfig(cfg)
-	if err != nil {
-		return federation.ActionResult{}, fmt.Errorf("building dynamic client: %w", err)
-	}
-
-	current, err := dc.Resource(karmadaClusterGVR).Get(ctx, req.ClusterName, metav1.GetOptions{})
-	if err != nil {
-		return federation.ActionResult{}, fmt.Errorf("getting Karmada Cluster %s: %w", req.ClusterName, err)
-	}
-
-	existingTaints, _, _ := unstructured.NestedSlice(current.Object, "spec", "taints")
-
-	// Check if the exact taint already exists — idempotency guard.
-	for _, t := range existingTaints {
-		tm, ok := t.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		k, _ := tm["key"].(string)
-		v, _ := tm["value"].(string)
-		e, _ := tm["effect"].(string)
-		if k == taintKey && v == taintValue && e == taintEffect {
-			return federation.ActionResult{
-				OK:      true,
-				Already: true,
-				Message: fmt.Sprintf("taint %s=%s:%s already exists on Karmada Cluster %s", taintKey, taintValue, taintEffect, req.ClusterName),
-			}, nil
-		}
-	}
-
-	// Append the new taint and patch.
-	newTaint := map[string]interface{}{
-		"key":    taintKey,
-		"value":  taintValue,
-		"effect": taintEffect,
-	}
-	updatedTaints := append(existingTaints, newTaint)
-
-	patchBody := map[string]interface{}{
-		"spec": map[string]interface{}{
-			"taints": updatedTaints,
-		},
-	}
-	patchBytes, err := json.Marshal(patchBody)
-	if err != nil {
-		return federation.ActionResult{}, fmt.Errorf("marshaling taint patch: %w", err)
-	}
-
-	_, err = dc.Resource(karmadaClusterGVR).Patch(ctx, req.ClusterName, types.MergePatchType, patchBytes, metav1.PatchOptions{})
-	if err != nil {
-		if isConflictError(err) {
-			return federation.ActionResult{
-				OK:      true,
-				Already: true,
-				Message: "patch conflict — taint may already exist",
-			}, nil
-		}
-		return federation.ActionResult{}, fmt.Errorf("patching taints on Karmada Cluster %s: %w", req.ClusterName, err)
-	}
-
-	return federation.ActionResult{
-		OK:      true,
-		Message: fmt.Sprintf("taint %s=%s:%s added to Karmada Cluster %s", taintKey, taintValue, taintEffect, req.ClusterName),
-	}, nil
+	return taintClusterResource(ctx, cfg, karmadaClusterGVR, "Karmada Cluster", karmadaActionTaintCluster,
+		func(clusterName string) string { return "Karmada Cluster " + clusterName }, req)
 }
 
 // Ensure compile-time ActionProvider conformance.
