@@ -190,3 +190,119 @@ func TestValidateJWT_Revoked(t *testing.T) {
 	_, err := ValidateJWT(signed, secret)
 	assert.ErrorIs(t, err, ErrTokenRevoked)
 }
+
+// recordingRevoker captures write-through calls so tests can assert that a
+// rotated token is persisted immediately even while it is still accepted.
+type recordingRevoker struct {
+	revoked []string
+}
+
+func (r *recordingRevoker) RevokeToken(_ context.Context, jti string, _ time.Time) error {
+	r.revoked = append(r.revoked, jti)
+	return nil
+}
+func (r *recordingRevoker) IsTokenRevoked(_ context.Context, _ string) (bool, error) {
+	return false, nil
+}
+func (r *recordingRevoker) CleanupExpiredTokens(_ context.Context) (int64, error) { return 0, nil }
+
+// TestRevokeRotatedToken_GraceWindow covers #24495: a JTI superseded by
+// POST /auth/refresh must keep authenticating for RotationGracePeriod so
+// requests already in flight with the previous kc_auth cookie do not fail
+// with 401 "Token has been revoked".
+func TestRevokeRotatedToken_GraceWindow(t *testing.T) {
+	ResetTokenRevocationForTest()
+	t.Cleanup(ResetTokenRevocationForTest)
+
+	store := &recordingRevoker{}
+	InitTokenRevocation(store)
+
+	tests := []struct {
+		name      string
+		grace     time.Duration
+		expiresAt time.Time
+		wantGrace bool
+	}{
+		{name: "inside grace window", grace: time.Minute, expiresAt: time.Now().Add(time.Hour), wantGrace: true},
+		{name: "grace already elapsed", grace: -time.Second, expiresAt: time.Now().Add(time.Hour), wantGrace: false},
+		{name: "grace capped at token expiry", grace: time.Minute, expiresAt: time.Now().Add(-time.Second), wantGrace: false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			jti := "rotated-" + tc.name
+			revokedTokens.RevokeAfterRotation(jti, tc.expiresAt, tc.grace)
+
+			revoked, err := IsTokenRevokedChecked(jti)
+			assert.NoError(t, err)
+			assert.Equal(t, !tc.wantGrace, revoked)
+			assert.Contains(t, store.revoked, jti, "rotation must still write the revocation through")
+		})
+	}
+}
+
+func TestRevokeRotatedToken_RevokedAfterGrace(t *testing.T) {
+	ResetTokenRevocationForTest()
+	t.Cleanup(ResetTokenRevocationForTest)
+
+	jti := "rotated-expiring"
+	revokedTokens.RevokeAfterRotation(jti, time.Now().Add(time.Hour), 20*time.Millisecond)
+	assert.False(t, IsTokenRevoked(jti), "accepted during grace")
+
+	time.Sleep(40 * time.Millisecond)
+	assert.True(t, IsTokenRevoked(jti), "rejected once grace has elapsed")
+
+	revokedTokens.RLock()
+	_, stillTracked := revokedTokens.rotated[jti]
+	revokedTokens.RUnlock()
+	assert.False(t, stillTracked, "expired grace entry is pruned")
+}
+
+func TestRevokeToken_LogoutHasNoGrace(t *testing.T) {
+	ResetTokenRevocationForTest()
+	t.Cleanup(ResetTokenRevocationForTest)
+
+	jti := "logout-jti"
+	RevokeToken(jti, time.Now().Add(time.Hour))
+	assert.True(t, IsTokenRevoked(jti), "explicit revocation takes effect immediately")
+}
+
+func TestValidateJWT_AcceptsRotatedTokenDuringGrace(t *testing.T) {
+	ResetTokenRevocationForTest()
+	t.Cleanup(ResetTokenRevocationForTest)
+
+	secret := "test-secret"
+	jti := "rotated-jwt"
+	claims := UserClaims{
+		UserID: uuid.New(),
+		Role:   models.UserRoleViewer,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        jti,
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		},
+	}
+	tok := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signed, err := tok.SignedString([]byte(secret))
+	assert.NoError(t, err)
+
+	RevokeRotatedToken(jti, time.Now().Add(time.Hour))
+
+	_, err = ValidateJWT(signed, secret)
+	assert.NoError(t, err)
+}
+
+func TestRevocation_CleanupPrunesRotated(t *testing.T) {
+	ResetTokenRevocationForTest()
+	t.Cleanup(ResetTokenRevocationForTest)
+
+	revokedTokens.RevokeAfterRotation("rotated-old", time.Now().Add(time.Hour), -time.Minute)
+	revokedTokens.RevokeAfterRotation("rotated-new", time.Now().Add(time.Hour), time.Minute)
+
+	revokedTokens.cleanup()
+
+	revokedTokens.RLock()
+	_, oldTracked := revokedTokens.rotated["rotated-old"]
+	_, newTracked := revokedTokens.rotated["rotated-new"]
+	revokedTokens.RUnlock()
+	assert.False(t, oldTracked)
+	assert.True(t, newTracked)
+}

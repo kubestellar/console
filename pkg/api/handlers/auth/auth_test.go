@@ -296,9 +296,24 @@ func TestRefreshToken_FullRefreshCycle(t *testing.T) {
 	assert.Equal(t, user.ID, newClaims.UserID)
 	assert.NotEqual(t, oldClaims.ID, newClaims.ID)
 
+	// #24495 — the superseded JTI stays accepted for a short grace window so
+	// requests already in flight with the previous cookie do not 401.
 	revoked, err := middleware.IsTokenRevokedChecked(oldClaims.ID)
 	require.NoError(t, err)
-	assert.True(t, revoked)
+	assert.False(t, revoked, "rotated token is tolerated during the grace window")
+
+	inFlightReq := httptest.NewRequest(http.MethodGet, "/api/protected", nil)
+	inFlightReq.Host = "localhost"
+	inFlightReq.AddCookie(&http.Cookie{Name: jwtCookieName, Value: oldToken})
+	inFlightResp, err := app.Test(inFlightReq, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, inFlightResp.StatusCode, "in-flight request with the previous cookie must succeed")
+
+	middleware.ExpireRotationGraceForTest(oldClaims.ID)
+
+	revoked, err = middleware.IsTokenRevokedChecked(oldClaims.ID)
+	require.NoError(t, err)
+	assert.True(t, revoked, "rotated token is revoked once the grace window elapses")
 
 	_, err = middleware.ValidateJWT(oldToken, handler.jwtSecret)
 	assert.ErrorIs(t, err, middleware.ErrTokenRevoked)
