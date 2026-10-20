@@ -90,12 +90,34 @@ export function _resetAgentTokenState(): void {
   agentTokenNegativeCacheUntil = 0
 }
 
-function suppressedAgentResponse(input: RequestInfo | URL): Response {
-  const url = typeof input === 'string'
+function requestURLString(input: RequestInfo | URL): string {
+  return typeof input === 'string'
     ? input
     : input instanceof URL
       ? input.toString()
       : input.url
+}
+
+/**
+ * True when the request targets the same-origin Go backend (e.g. `/api/mcp/...`)
+ * rather than the kc-agent. Relative paths are same-origin by definition;
+ * absolute URLs are compared against the page origin. Suppressing the local
+ * agent must never block these calls — in-cluster deployments route every
+ * hook through the backend (#24495).
+ */
+export function isSameOriginBackendRequest(input: RequestInfo | URL): boolean {
+  const url = requestURLString(input)
+  if (!url || url.startsWith('/')) return true
+  if (typeof window === 'undefined' || !window.location) return false
+  try {
+    return new URL(url, window.location.origin).origin === window.location.origin
+  } catch {
+    return false
+  }
+}
+
+function suppressedAgentResponse(input: RequestInfo | URL): Response {
+  const url = requestURLString(input)
 
   return new Response(JSON.stringify({
     error: 'local_agent_suppressed',
@@ -175,7 +197,12 @@ export function getAgentToken(): Promise<string> {
 export async function agentFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   if (isLocalAgentSuppressed()) {
     clearAgentToken()
-    return suppressedAgentResponse(input)
+    // Only kc-agent targets are short-circuited. Same-origin backend URLs
+    // (e.g. `${getClusterModeBaseUrl()}/deployments`) must still be fetched,
+    // otherwise hooks report a 503 that never happened on the wire (#24495).
+    if (!isSameOriginBackendRequest(input)) {
+      return suppressedAgentResponse(input)
+    }
   }
 
   const token = await getAgentToken()

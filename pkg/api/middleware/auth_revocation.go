@@ -20,6 +20,18 @@ const revokedTokenCleanupInterval = 1 * time.Hour
 // never hits it, but low enough to cap memory consumption.
 const revokedTokenCacheMaxSize = 10_000
 
+// RotationGracePeriod is how long a JTI that was superseded by POST
+// /auth/refresh keeps authenticating after it has been revoked (#24495).
+//
+// The frontend calls /auth/refresh on every page load while data hooks fire
+// concurrently with the *previous* kc_auth cookie. Revoking the old JTI
+// instantly made those in-flight requests fail with 401 "Token has been
+// revoked" even though the session is perfectly valid. The grace window is
+// deliberately short — just enough for requests that were already on the
+// wire when the cookie rotated — and only applies to refresh rotation, never
+// to explicit logout, which keeps revoking immediately.
+const RotationGracePeriod = 15 * time.Second
+
 // TokenRevoker is the subset of store.Store needed for token revocation.
 // Defined here to avoid a circular import with the store package.
 type TokenRevoker interface {
@@ -56,7 +68,12 @@ type TokenRevoker interface {
 type revokedTokenCache struct {
 	sync.RWMutex
 	tokens map[string]time.Time // jti -> expiresAt
-	store  TokenRevoker         // nil when running without persistence
+	// rotated holds JTIs superseded by a token refresh that remain accepted
+	// until the stored deadline (#24495). Entries are only ever added
+	// alongside a persisted revocation, so after the grace window (or a
+	// process restart) the normal revocation path takes over.
+	rotated map[string]time.Time // jti -> acceptUntil
+	store   TokenRevoker         // nil when running without persistence
 	// cleanupCancel cancels the background cleanupLoop goroutine on shutdown
 	// (#6578). Nil until InitTokenRevocation has been called.
 	cleanupCancel context.CancelFunc
@@ -64,7 +81,8 @@ type revokedTokenCache struct {
 
 var (
 	revokedTokens = &revokedTokenCache{
-		tokens: make(map[string]time.Time),
+		tokens:  make(map[string]time.Time),
+		rotated: make(map[string]time.Time),
 	}
 	// initOnce ensures InitTokenRevocation is idempotent (#6586). Calling it a
 	// second time would otherwise spawn additional cleanupLoop goroutines.
@@ -111,9 +129,46 @@ func ResetTokenRevocationForTest() {
 	ShutdownTokenRevocation()
 	revokedTokens.Lock()
 	revokedTokens.tokens = make(map[string]time.Time)
+	revokedTokens.rotated = make(map[string]time.Time)
 	revokedTokens.store = nil
 	revokedTokens.Unlock()
 	initOnce = sync.Once{}
+}
+
+// RevokeAfterRotation revokes jti like Revoke but keeps accepting it for
+// grace so requests already in flight with the superseded token succeed
+// (#24495). The revocation itself is written through immediately; only the
+// local acceptance decision is deferred.
+func (c *revokedTokenCache) RevokeAfterRotation(jti string, expiresAt time.Time, grace time.Duration) {
+	acceptUntil := time.Now().Add(grace)
+	if !expiresAt.IsZero() && expiresAt.Before(acceptUntil) {
+		acceptUntil = expiresAt
+	}
+	c.Lock()
+	c.rotated[jti] = acceptUntil
+	c.Unlock()
+	c.Revoke(jti, expiresAt)
+}
+
+// inRotationGrace reports whether jti was superseded by a refresh and is
+// still inside its acceptance window. Expired grace entries are pruned on
+// the way out so the map cannot grow past the number of recent refreshes.
+func (c *revokedTokenCache) inRotationGrace(jti string, now time.Time) bool {
+	c.RLock()
+	acceptUntil, ok := c.rotated[jti]
+	c.RUnlock()
+	if !ok {
+		return false
+	}
+	if now.Before(acceptUntil) {
+		return true
+	}
+	c.Lock()
+	if current, still := c.rotated[jti]; still && current.Equal(acceptUntil) {
+		delete(c.rotated, jti)
+	}
+	c.Unlock()
+	return false
 }
 
 func (c *revokedTokenCache) Revoke(jti string, expiresAt time.Time) {
@@ -168,6 +223,12 @@ var errRevocationCheckFailed = fmt.Errorf("revocation check failed")
 // IsRevokedChecked returns (revoked, err). On err != nil the caller MUST
 // fail closed. Used by JWTAuth and ValidateJWT to enforce #6577.
 func (c *revokedTokenCache) IsRevokedChecked(jti string) (bool, error) {
+	// A JTI superseded by /auth/refresh stays valid for a short grace window
+	// so concurrent in-flight requests do not 401 (#24495).
+	if c.inRotationGrace(jti, time.Now()) {
+		return false, nil
+	}
+
 	// Fast path: check in-memory cache first.
 	c.RLock()
 	_, ok := c.tokens[jti]
@@ -236,6 +297,11 @@ func (c *revokedTokenCache) cleanupLoop(ctx context.Context) {
 func (c *revokedTokenCache) cleanup() {
 	c.Lock()
 	now := time.Now()
+	for jti, acceptUntil := range c.rotated {
+		if now.After(acceptUntil) {
+			delete(c.rotated, jti)
+		}
+	}
 	for jti, exp := range c.tokens {
 		// Remove entries whose JWT has expired.
 		if !exp.IsZero() && now.After(exp) {
@@ -272,6 +338,21 @@ func (c *revokedTokenCache) cleanup() {
 // RevokeToken adds a token to the revocation store. Exported for use by handlers.
 func RevokeToken(jti string, expiresAt time.Time) {
 	revokedTokens.Revoke(jti, expiresAt)
+}
+
+// ExpireRotationGraceForTest drops the rotation grace entry for jti so tests
+// can observe post-grace behaviour without sleeping. NOT for production use.
+func ExpireRotationGraceForTest(jti string) {
+	revokedTokens.Lock()
+	delete(revokedTokens.rotated, jti)
+	revokedTokens.Unlock()
+}
+
+// RevokeRotatedToken revokes a JTI that was superseded by POST /auth/refresh
+// while tolerating it for RotationGracePeriod (#24495). Use RevokeToken for
+// logout and other revocations that must take effect immediately.
+func RevokeRotatedToken(jti string, expiresAt time.Time) {
+	revokedTokens.RevokeAfterRotation(jti, expiresAt, RotationGracePeriod)
 }
 
 // IsTokenRevoked checks if a token has been revoked. Errors are hidden and

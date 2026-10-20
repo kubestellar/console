@@ -619,12 +619,15 @@ func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 	}
 
 	// Revoke the old token to prevent reuse of the old JTI after refresh.
+	// The superseded JTI stays accepted for middleware.RotationGracePeriod so
+	// requests the browser already sent with the previous kc_auth cookie are
+	// not rejected with "Token has been revoked" (#24495).
 	if claims.ID != "" {
 		expiresAt := time.Now().Add(jwtExpiration)
 		if claims.ExpiresAt != nil {
 			expiresAt = claims.ExpiresAt.Time
 		}
-		middleware.RevokeToken(claims.ID, expiresAt)
+		middleware.RevokeRotatedToken(claims.ID, expiresAt)
 	}
 
 	// Get fresh user data
