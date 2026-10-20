@@ -254,6 +254,23 @@ ENVEOF
       # Check page serves actual HTML
       assert_page_has_content "http://localhost:8080" "<div id=\"root\"" "container page" || FAILURES=$((FAILURES+1))
 
+      # The image distrusts a withdrawn Mozilla root at build time (see the
+      # ca-certificates block in Dockerfile). Prove the running image rejects a
+      # chain ending in it: busybox wget verifies against the system bundle and
+      # reports "certificate verify failed". An unreachable host is a skip, not a
+      # pass, so a runner without egress cannot go green by accident.
+      echo -e "${DIM}  Testing distrusted CA root is rejected...${NC}"
+      CA_TEST_URL="https://dv-g3b-emudhra.we-have-a-problem.com/"
+      CA_TEST_OUT="$(docker exec kc-smoke-test wget -O /dev/null "$CA_TEST_URL" 2>&1 || true)"
+      if echo "$CA_TEST_OUT" | grep -q "certificate verify failed"; then
+        echo -e "${GREEN}  ✓ Distrusted root rejected${NC}"
+      elif echo "$CA_TEST_OUT" | grep -qE "bad address|Connection (refused|timed out)|Network is unreachable"; then
+        echo -e "${YELLOW}  ⚠ Could not reach ${CA_TEST_URL}; skipping CA distrust check${NC}"
+      else
+        echo -e "${RED}  ✗ Distrusted root still trusted (wget output: ${CA_TEST_OUT})${NC}"
+        FAILURES=$((FAILURES+1))
+      fi
+
       # Verify clean shutdown
       echo -e "${DIM}  Testing clean shutdown...${NC}"
       docker stop kc-smoke-test --timeout 10

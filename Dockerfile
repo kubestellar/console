@@ -99,6 +99,17 @@ WORKDIR /app
 # Install runtime dependencies
 RUN apk add --no-cache ca-certificates tzdata sqlite
 
+# CA trust bundle refresh: distrust a Mozilla root the browser/OS root programs
+# withdrew on 2026-10-17..20 that Alpine's ca-certificates package still ships
+# (no fixed package yet — drop this once the package carries the change). The
+# Go binaries read /etc/ssl/certs/ca-certificates.crt, so regenerating it here
+# is what changes their trust. The grep/test make a renamed upstream entry fail
+# the build instead of silently re-trusting.
+RUN sed -i -e 's|^mozilla/emSign_ECC_Root_CA_-_G3.crt|!&|' /etc/ca-certificates.conf \
+    && grep -q '^!mozilla/emSign_ECC_Root_CA_-_G3.crt' /etc/ca-certificates.conf \
+    && update-ca-certificates --fresh \
+    && ! test -e /etc/ssl/certs/ca-cert-emSign_ECC_Root_CA_-_G3.pem
+
 # Copy backend and watcher binaries
 COPY --from=backend-builder /app/console .
 COPY --from=backend-builder /app/kc-watcher .
