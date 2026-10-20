@@ -80,7 +80,17 @@ jobs:
           # SSAR fix is present in the baseline. The upgrade changes the
           # Deployment's image tag from :ci-baseline to :ci-head, proving
           # the rollout mechanism works.
-          docker build -t ${{ env.IMAGE_REPO }}:${{ env.TARGET_TAG }} .
+          # Retry up to 3 attempts: anonymous pulls from public.ecr.aws can hit
+          # 429 Too Many Requests on shared runner IPs. Backoff is 90s then
+          # 180s, and the final attempt uses docker.io/library mirrors (same
+          # pinned digests as build-deploy.yml).
+          IMG=${{ env.IMAGE_REPO }}:${{ env.TARGET_TAG }}
+          docker build -t "$IMG" . \
+            || { echo "::warning::build failed (likely 429); retrying in 90s"; sleep 90; docker build -t "$IMG" .; } \
+            || { echo "::warning::build failed again; final attempt via docker.io in 180s"; sleep 180; docker build -t "$IMG" \
+              --build-arg GOLANG_BASE=docker.io/library/golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d \
+              --build-arg ALPINE_BASE=docker.io/library/alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 \
+              --build-arg NODE_BASE=docker.io/library/node:26-alpine@sha256:0b36e8c136b94cd4fcf02188228e76c31ad5872eef3fec8cbd2eee500cfd9e80 .; }
           docker tag ${{ env.IMAGE_REPO }}:${{ env.TARGET_TAG }} \
                      ${{ env.IMAGE_REPO }}:${{ env.BASELINE_TAG }}
 
