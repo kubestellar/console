@@ -1,0 +1,1 @@
+- Image build no longer fails when Alpine ca-certificates already removed the emSign ECC Root CA - G3 root; the distrust guard is now conditional.
