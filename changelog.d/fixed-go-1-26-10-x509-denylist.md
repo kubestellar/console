@@ -1,0 +1,1 @@
+- Bump the minimum Go toolchain to 1.26.10 to pick up the `crypto/x509` fix that distrusts a compromised intermediate certificate (GO-2026-6809).
