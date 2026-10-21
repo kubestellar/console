@@ -147,22 +147,10 @@ func executeCAPIDeleteCluster(ctx context.Context, cfg *rest.Config, req federat
 		return federation.ActionResult{}, fmt.Errorf("building dynamic client: %w", err)
 	}
 
-	err = dc.Resource(capiClusterGVR).Namespace(ns).Delete(ctx, req.ClusterName, metav1.DeleteOptions{})
-	if err != nil {
-		if isNotFoundError(err) {
-			return federation.ActionResult{
-				OK:      true,
-				Already: true,
-				Message: fmt.Sprintf("Cluster %s/%s already deleted", ns, req.ClusterName),
-			}, nil
-		}
-		return federation.ActionResult{}, fmt.Errorf("deleting Cluster %s/%s: %w", ns, req.ClusterName, err)
-	}
-
-	return federation.ActionResult{
-		OK:      true,
-		Message: fmt.Sprintf("Cluster %s/%s deleted", ns, req.ClusterName),
-	}, nil
+	return deleteResourceIdempotent(ctx, dc, capiClusterGVR, ns, req.ClusterName, fmt.Sprintf("%s/%s", ns, req.ClusterName),
+		"deleting", "Cluster",
+		fmt.Sprintf("Cluster %s/%s already deleted", ns, req.ClusterName),
+		fmt.Sprintf("Cluster %s/%s deleted", ns, req.ClusterName))
 }
 
 // executeCAPIRetryProvisioning adds a force-reconcile annotation to the Cluster

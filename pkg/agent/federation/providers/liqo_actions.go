@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 
@@ -52,14 +51,10 @@ func liqoUnpeerWith(ctx context.Context, cfg *rest.Config, clusterName string) (
 		return federation.ActionResult{}, err
 	}
 
-	err = dc.Resource(liqoForeignClusterGVR).Delete(ctx, clusterName, metav1.DeleteOptions{})
-	if err != nil {
-		if isNotFoundError(err) {
-			return federation.ActionResult{OK: true, Already: true, Message: "ForeignCluster " + clusterName + " already removed"}, nil
-		}
-		return federation.ActionResult{}, fmt.Errorf("unpeer ForeignCluster %s: %w", clusterName, err)
-	}
-	return federation.ActionResult{OK: true, Message: "ForeignCluster " + clusterName + " deleted; Liqo peering terminated"}, nil
+	return deleteResourceIdempotent(ctx, dc, liqoForeignClusterGVR, "", clusterName, clusterName,
+		"unpeer", "ForeignCluster",
+		"ForeignCluster "+clusterName+" already removed",
+		"ForeignCluster "+clusterName+" deleted; Liqo peering terminated")
 }
 
 // Ensure compile-time interface conformance.
