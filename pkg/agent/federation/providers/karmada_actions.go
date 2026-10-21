@@ -141,22 +141,10 @@ func executeKarmadaUnjoinCluster(ctx context.Context, cfg *rest.Config, req fede
 		return federation.ActionResult{}, fmt.Errorf("building dynamic client: %w", err)
 	}
 
-	err = dc.Resource(karmadaClusterGVR).Delete(ctx, req.ClusterName, metav1.DeleteOptions{})
-	if err != nil {
-		if isNotFoundError(err) {
-			return federation.ActionResult{
-				OK:      true,
-				Already: true,
-				Message: fmt.Sprintf("Karmada Cluster %s already deleted", req.ClusterName),
-			}, nil
-		}
-		return federation.ActionResult{}, fmt.Errorf("deleting Karmada Cluster %s: %w", req.ClusterName, err)
-	}
-
-	return federation.ActionResult{
-		OK:      true,
-		Message: fmt.Sprintf("Karmada Cluster %s deleted", req.ClusterName),
-	}, nil
+	return deleteResourceIdempotent(ctx, dc, karmadaClusterGVR, "", req.ClusterName, req.ClusterName,
+		"deleting", "Karmada Cluster",
+		fmt.Sprintf("Karmada Cluster %s already deleted", req.ClusterName),
+		fmt.Sprintf("Karmada Cluster %s deleted", req.ClusterName))
 }
 
 // executeKarmadaTaintCluster adds a taint to the Karmada Cluster's spec.taints.

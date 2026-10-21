@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 
@@ -51,14 +50,10 @@ func kubeAdmiralUnfederateCluster(ctx context.Context, cfg *rest.Config, cluster
 		return federation.ActionResult{}, err
 	}
 
-	err = dc.Resource(kubeAdmiralFederatedClusterGVR).Delete(ctx, clusterName, metav1.DeleteOptions{})
-	if err != nil {
-		if isNotFoundError(err) {
-			return federation.ActionResult{OK: true, Already: true, Message: "FederatedCluster " + clusterName + " already removed"}, nil
-		}
-		return federation.ActionResult{}, fmt.Errorf("unfederate FederatedCluster %s: %w", clusterName, err)
-	}
-	return federation.ActionResult{OK: true, Message: "FederatedCluster " + clusterName + " deleted from KubeAdmiral control plane"}, nil
+	return deleteResourceIdempotent(ctx, dc, kubeAdmiralFederatedClusterGVR, "", clusterName, clusterName,
+		"unfederate", "FederatedCluster",
+		"FederatedCluster "+clusterName+" already removed",
+		"FederatedCluster "+clusterName+" deleted from KubeAdmiral control plane")
 }
 
 // Ensure compile-time interface conformance.

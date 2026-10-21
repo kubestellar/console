@@ -177,15 +177,10 @@ func executeOCMDetachCluster(ctx context.Context, cfg *rest.Config, req federati
 		return federation.ActionResult{}, fmt.Errorf("building dynamic client: %w", err)
 	}
 
-	err = dc.Resource(ocmManagedClusterGVR).Delete(ctx, req.ClusterName, metav1.DeleteOptions{})
-	if err != nil {
-		if isNotFoundError(err) {
-			return federation.ActionResult{OK: true, Already: true, Message: fmt.Sprintf("ManagedCluster %s already deleted", req.ClusterName)}, nil
-		}
-		return federation.ActionResult{}, fmt.Errorf("deleting ManagedCluster %s: %w", req.ClusterName, err)
-	}
-
-	return federation.ActionResult{OK: true, Message: fmt.Sprintf("ManagedCluster %s deleted", req.ClusterName)}, nil
+	return deleteResourceIdempotent(ctx, dc, ocmManagedClusterGVR, "", req.ClusterName, req.ClusterName,
+		"deleting", "ManagedCluster",
+		fmt.Sprintf("ManagedCluster %s already deleted", req.ClusterName),
+		fmt.Sprintf("ManagedCluster %s deleted", req.ClusterName))
 }
 
 // executeOCMTaintCluster adds a taint to the ManagedCluster's spec.taints.

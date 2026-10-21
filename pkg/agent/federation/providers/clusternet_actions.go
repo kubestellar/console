@@ -105,14 +105,10 @@ func clusternetUnregisterCluster(ctx context.Context, cfg *rest.Config, clusterN
 		return federation.ActionResult{}, err
 	}
 
-	err = dc.Resource(clusternetManagedClusterGVR).Delete(ctx, clusterName, metav1.DeleteOptions{})
-	if err != nil {
-		if isNotFoundError(err) {
-			return federation.ActionResult{OK: true, Already: true, Message: "cluster " + clusterName + " already removed"}, nil
-		}
-		return federation.ActionResult{}, fmt.Errorf("unregister ManagedCluster %s: %w", clusterName, err)
-	}
-	return federation.ActionResult{OK: true, Message: "ManagedCluster " + clusterName + " deleted from Clusternet hub"}, nil
+	return deleteResourceIdempotent(ctx, dc, clusternetManagedClusterGVR, "", clusterName, clusterName,
+		"unregister", "ManagedCluster",
+		"cluster "+clusterName+" already removed",
+		"ManagedCluster "+clusterName+" deleted from Clusternet hub")
 }
 
 // unstructuredNestedBool extracts a bool field from an unstructured object's
