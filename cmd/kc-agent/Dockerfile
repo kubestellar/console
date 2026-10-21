@@ -23,14 +23,17 @@ RUN apk add --no-cache ca-certificates \
     && adduser -u 65532 -S nonroot -G nonroot
 
 # CA trust bundle refresh: distrust a Mozilla root the browser/OS root programs
-# withdrew on 2026-10-17..20 that Alpine's ca-certificates package still ships
-# (no fixed package yet — drop this once the package carries the change). The
-# Go binaries read /etc/ssl/certs/ca-certificates.crt, so regenerating it here
-# is what changes their trust. The grep/test make a renamed upstream entry fail
-# the build instead of silently re-trusting.
-RUN sed -i -e 's|^mozilla/emSign_ECC_Root_CA_-_G3.crt|!&|' /etc/ca-certificates.conf \
-    && grep -q '^!mozilla/emSign_ECC_Root_CA_-_G3.crt' /etc/ca-certificates.conf \
-    && update-ca-certificates --fresh \
+# withdrew on 2026-10-17..20. Older Alpine ca-certificates packages still ship it
+# (blacklisted here); newer ones (20261020-r0+) already dropped it, so the
+# blacklist is applied only if the entry is present. The Go binaries read
+# /etc/ssl/certs/ca-certificates.crt, so regenerating it here is what changes
+# their trust. The final test fails the build instead of silently re-trusting;
+# the guard is harmless once the package removal is universal.
+RUN if grep -q '^mozilla/emSign_ECC_Root_CA_-_G3.crt' /etc/ca-certificates.conf; then \
+      sed -i -e 's|^mozilla/emSign_ECC_Root_CA_-_G3.crt|!&|' /etc/ca-certificates.conf \
+      && grep -q '^!mozilla/emSign_ECC_Root_CA_-_G3.crt' /etc/ca-certificates.conf \
+      && update-ca-certificates --fresh; \
+    fi \
     && ! test -e /etc/ssl/certs/ca-cert-emSign_ECC_Root_CA_-_G3.pem
 
 COPY --from=builder /kc-agent /usr/local/bin/kc-agent
