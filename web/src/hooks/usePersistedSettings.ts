@@ -9,7 +9,7 @@ import {
   SETTINGS_CHANGED_EVENT } from '../lib/settingsSync'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { agentFetch } from './mcp/shared'
-import { FETCH_DEFAULT_TIMEOUT_MS, FETCH_EXTERNAL_TIMEOUT_MS } from '../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, FETCH_EXTERNAL_TIMEOUT_MS, isLocalAgentSuppressed } from '../lib/constants/network'
 import { isNetlifyDeployment } from '../lib/demoMode'
 import { safeRevokeObjectURL } from '../lib/download'
 import { STORAGE_KEY_PENDING_SETTINGS_SYNC } from '../lib/constants/storage'
@@ -75,6 +75,11 @@ export function usePersistedSettings() {
 
   // Save current localStorage state to backend (debounced, with retry)
   const saveToBackend = useCallback(() => {
+    // Suppressed agent => LOCAL_AGENT_HTTP_URL is empty and the PUT would hit the app origin (405)
+    if (isLocalAgentSuppressed()) {
+      setSyncStatus('offline')
+      return
+    }
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current)
     }
@@ -122,6 +127,9 @@ export function usePersistedSettings() {
 
   // Export settings as encrypted backup file
   const exportSettings = async () => {
+    if (isLocalAgentSuppressed()) {
+      throw new Error('Local agent unavailable')
+    }
     try {
       const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/settings/export`, {
         method: 'POST',
@@ -145,6 +153,9 @@ export function usePersistedSettings() {
 
   // Import settings from a backup file
   const importSettings = async (file: File) => {
+    if (isLocalAgentSuppressed()) {
+      throw new Error('Local agent unavailable')
+    }
     try {
       const text = await file.text()
       await settingsFetch('/settings/import', {
@@ -170,9 +181,11 @@ export function usePersistedSettings() {
   useEffect(() => {
     mountedRef.current = true
 
-    if (!isAuthenticated || isNetlifyDeployment) {
-      // Not logged in yet or on Netlify (no local agent) — skip agent sync
-      setSyncStatus(isNetlifyDeployment ? 'offline' : 'idle')
+    // Evaluated at run time: suppression can be enabled after module load
+    const agentUnavailable = isNetlifyDeployment || isLocalAgentSuppressed()
+    if (!isAuthenticated || agentUnavailable) {
+      // Not logged in yet, on Netlify, or agent suppressed (no local agent) — skip agent sync
+      setSyncStatus(agentUnavailable ? 'offline' : 'idle')
       setLoaded(true)
       return () => { mountedRef.current = false }
     }
@@ -237,7 +250,7 @@ export function usePersistedSettings() {
 
   // Listen for settings changes from individual hooks
   useEffect(() => {
-    if (!isAuthenticated || isNetlifyDeployment) return
+    if (!isAuthenticated || isNetlifyDeployment || isLocalAgentSuppressed()) return
     const handleChange = () => {
       saveToBackend()
     }

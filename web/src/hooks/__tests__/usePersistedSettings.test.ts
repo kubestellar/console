@@ -46,9 +46,11 @@ vi.mock('../../lib/constants', async (importOriginal) => {
   LOCAL_AGENT_HTTP_URL: 'http://127.0.0.1:8585',
 } })
 
+let mockIsLocalAgentSuppressed = false
 vi.mock('../../lib/constants/network', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>
   return { ...actual,
+  isLocalAgentSuppressed: () => mockIsLocalAgentSuppressed,
   FETCH_DEFAULT_TIMEOUT_MS: 10_000,
 } })
 
@@ -113,6 +115,7 @@ describe('usePersistedSettings', () => {
     mockHasNotificationConfig.mockImplementation((notifications?: { slackWebhookConfigured?: boolean }) => Boolean(notifications && Object.keys(notifications).length > 0))
     mockIsAuthenticated.mockReturnValue(true)
     mockIsNetlifyDeployment = false
+    mockIsLocalAgentSuppressed = false
     localStorage.clear()
   })
 
@@ -255,6 +258,21 @@ describe('usePersistedSettings', () => {
     mockIsNetlifyDeployment = true
     const { result } = renderHook(() => usePersistedSettings())
 
+    await flushMicrotasks()
+
+    expect(result.current.loaded).toBe(true)
+    expect(result.current.syncStatus).toBe('offline')
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it('sets syncStatus to "offline" and sends no requests when the local agent is suppressed', async () => {
+    mockIsLocalAgentSuppressed = true
+    const { result } = renderHook(() => usePersistedSettings())
+
+    await flushMicrotasks()
+    act(() => {
+      window.dispatchEvent(new Event('kubestellar-settings-changed'))
+    })
     await flushMicrotasks()
 
     expect(result.current.loaded).toBe(true)
