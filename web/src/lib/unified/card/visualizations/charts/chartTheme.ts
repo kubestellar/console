@@ -62,3 +62,49 @@ export function normalizeAxisConfig(axis?: CardAxisConfig | string | string[]): 
   }
   return axis
 }
+
+/**
+ * Shared grid/xAxis/yAxis/tooltip/legend option shape for the category-axis
+ * chart renderers (Area/Line/Bar). Each renderer supplies its own `series`
+ * entries, which is the only part of the ECharts option that differs
+ * between chart types.
+ */
+export function buildCategoryAxisChartOption(
+  typedData: Record<string, unknown>[],
+  xField: string,
+  series: CardChartSeries[],
+  showLegend: boolean | undefined,
+  yAxis: CardAxisConfig | undefined,
+) {
+  return {
+    backgroundColor: 'transparent',
+    grid: { left: 50, right: 10, top: 10, bottom: showLegend ? 40 : 25 },
+    xAxis: {
+      type: 'category' as const,
+      data: typedData.map(d => d[xField]),
+      axisLabel: { color: CHART_THEME_COLORS.axisLabel, fontSize: 11 },
+      axisLine: { lineStyle: { color: CHART_THEME_COLORS.axisLine } },
+      axisTick: { lineStyle: { color: CHART_THEME_COLORS.axisTick } },
+    },
+    yAxis: {
+      type: 'value' as const,
+      axisLabel: { color: CHART_THEME_COLORS.axisLabel, fontSize: 11 },
+      axisLine: { lineStyle: { color: CHART_THEME_COLORS.axisLine } },
+      axisTick: { lineStyle: { color: CHART_THEME_COLORS.axisTick } },
+      splitLine: { lineStyle: { color: CHART_THEME_COLORS.gridLine, type: 'dashed' as const } },
+      name: yAxis?.label,
+      nameTextStyle: { color: CHART_THEME_COLORS.axisLabel },
+    },
+    tooltip: {
+      trigger: 'axis' as const,
+      backgroundColor: TOOLTIP_BG,
+      borderColor: TOOLTIP_BORDER,
+      textStyle: { color: CHART_THEME_COLORS.tooltipText, fontSize: 12 },
+    },
+    legend: showLegend ? {
+      data: series.map(s => s.label ?? s.field),
+      bottom: 0,
+      textStyle: { color: CHART_THEME_COLORS.legendText, fontSize: 11 },
+    } : undefined,
+  }
+}
