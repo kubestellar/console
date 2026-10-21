@@ -1,6 +1,6 @@
 module github.com/kubestellar/console
 
-go 1.26.9
+go 1.26.10
 
 require (
 	github.com/fasthttp/websocket v1.5.12
