@@ -5,7 +5,7 @@ import { detectCloudProvider, getProviderLabel } from '../components/ui/CloudPro
 import type { CloudProvider } from '../components/ui/CloudProviderIcon'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { agentFetch } from './mcp/shared'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, isLocalAgentSuppressed } from '../lib/constants/network'
 import { isInClusterMode } from './useBackendHealth'
 import { fetchKagentiProviderStatus } from '../lib/kagentiProviderBackend'
 
@@ -125,6 +125,7 @@ function createAIProviderHealth(
 
 async function fetchLocalAIProviders(): Promise<ProviderHealthInfo[]> {
   const result: ProviderHealthInfo[] = []
+  if (isLocalAgentSuppressed()) return result
 
   try {
     const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/settings/keys`, {
