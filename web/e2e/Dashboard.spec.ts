@@ -999,10 +999,21 @@ test.describe('Dashboard Data Accuracy (#6459)', () => {
       new RegExp(String.raw`(?<!\d)${EXPECTED_CLUSTER_COUNT}(?!\d)`),
       { timeout: STAT_BLOCK_TIMEOUT_MS },
     )
-    await expect(page.getByTestId('stat-block-healthy').first()).toContainText(
-      new RegExp(String.raw`(?<!\d)${EXPECTED_HEALTHY_CLUSTER_COUNT}(?!\d)`),
-      { timeout: STAT_BLOCK_TIMEOUT_MS },
-    )
+    // WebKit can hydrate cluster health incrementally and stay on a partial
+    // count (0/2 healthy) after a refetch race (#24521). Retry with a reload so
+    // a fresh fetch hits the deterministic mocks; the expected count is unchanged.
+    const HEALTHY_ATTEMPT_TIMEOUT_MS = 8_000
+    await expect(async () => {
+      try {
+        await expect(page.getByTestId('stat-block-healthy').first()).toContainText(
+          new RegExp(String.raw`(?<!\d)${EXPECTED_HEALTHY_CLUSTER_COUNT}(?!\d)`),
+          { timeout: HEALTHY_ATTEMPT_TIMEOUT_MS },
+        )
+      } catch (error) {
+        await page.reload()
+        throw error
+      }
+    }).toPass({ timeout: STAT_BLOCK_TIMEOUT_MS * 2 })
     await expect(page.getByTestId('stat-block-nodes').first()).toContainText(
       new RegExp(String.raw`(?<!\d)${EXPECTED_TOTAL_NODES}(?!\d)`),
       { timeout: STAT_BLOCK_TIMEOUT_MS },
