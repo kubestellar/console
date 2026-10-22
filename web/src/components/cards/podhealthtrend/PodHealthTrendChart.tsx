@@ -1,3 +1,4 @@
+// demoData-exempt: presentational chart; demo data is supplied by parent PodHealthTrend (useCardDemoState + isDemoFallback).
 import { useMemo } from 'react'
 import { LazyEChart } from '../../charts/LazyEChart'
 import { CHART_HEIGHT_STANDARD, CHART_GRID_STROKE, CHART_AXIS_STROKE, CHART_TOOLTIP_CONTENT_STYLE, CHART_TICK_COLOR, CHART_AXIS_FONT_SIZE, CHART_BODY_FONT_SIZE } from '../../../lib/constants'

@@ -1,3 +1,4 @@
+// demoData-exempt: game card (Kubedle) uses a local word puzzle; no cluster data, so no demo data is required.
 import { RotateCcw, HelpCircle, BarChart3, X } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry.types'
 import { useCardExpanded } from './CardWrapper'

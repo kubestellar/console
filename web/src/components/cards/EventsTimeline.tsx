@@ -1,3 +1,4 @@
+// demoData: demo data handled in useEventsTimeline (isDemoData: isDemoMode || isDemoFallback via useCardLoadingState).
 import { memo } from 'react'
 import { Activity, AlertTriangle, CheckCircle, Clock, Server } from 'lucide-react'
 import { LazyEChart } from '../charts/LazyEChart'
