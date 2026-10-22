@@ -73,7 +73,7 @@ export function TeamMemberManager({ members, currentUserId, onAddMember, onRemov
                 {m.email && <span className="text-xs text-muted-foreground hidden sm:inline">{m.email}</span>}
               </div>
               {m.userId !== currentUserId && (
-                <button onClick={() => setRemovingUserId(m.userId)} className="text-muted-foreground hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={() => setRemovingUserId(m.userId)} aria-label={t('actions.remove')} className="inline-flex items-center justify-center min-h-11 min-w-11 text-muted-foreground hover:text-red-400 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity">
                   <X className="w-3.5 h-3.5" />
                 </button>
               )}
@@ -101,7 +101,7 @@ export function TeamMemberManager({ members, currentUserId, onAddMember, onRemov
                 <option value="admin">{t('teams.admin')}</option>
               </select>
               {m.userId !== currentUserId && (
-                <button onClick={() => setRemovingUserId(m.userId)} className="text-muted-foreground hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={() => setRemovingUserId(m.userId)} aria-label={t('actions.remove')} className="inline-flex items-center justify-center min-h-11 min-w-11 text-muted-foreground hover:text-red-400 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity">
                   <X className="w-3.5 h-3.5" />
                 </button>
               )}

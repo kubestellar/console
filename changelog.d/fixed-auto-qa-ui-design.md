@@ -1,0 +1,1 @@
+- Enlarged hit area of GPU inventory view-toggle buttons and team member remove buttons to 44px (Auto-QA touch targets).

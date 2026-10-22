@@ -119,8 +119,8 @@ export function GPUInventoryHistoryChart(props: GPUInventoryHistoryChartProps) {
           )}
           <CardClusterFilter availableClusters={availableClusters} selectedClusters={localClusterFilter} onToggle={toggleClusterFilter} onClear={() => setLocalClusterFilter([])} isOpen={showClusterFilter} setIsOpen={setShowClusterFilter} containerRef={clusterFilterRef} minClusters={1} />
           <div className="flex items-center border border-border rounded overflow-hidden">
-            <button onClick={() => setViewMode('chart')} className={cn('p-1 transition-colors', viewMode === 'chart' ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:text-foreground')} title={t('cards:gpuInventoryHistory.chartView', 'Chart view')}><BarChart3 className="w-3.5 h-3.5" /></button>
-            <button onClick={() => setViewMode('table')} className={cn('p-1 transition-colors', viewMode === 'table' ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:text-foreground')} title={t('cards:gpuInventoryHistory.tableView', 'Table view')}><Table2 className="w-3.5 h-3.5" /></button>
+            <button onClick={() => setViewMode('chart')} className={cn('p-1 min-h-11 min-w-11 inline-flex items-center justify-center transition-colors', viewMode === 'chart' ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:text-foreground')} title={t('cards:gpuInventoryHistory.chartView', 'Chart view')}><BarChart3 className="w-3.5 h-3.5" /></button>
+            <button onClick={() => setViewMode('table')} className={cn('p-1 min-h-11 min-w-11 inline-flex items-center justify-center transition-colors', viewMode === 'table' ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:text-foreground')} title={t('cards:gpuInventoryHistory.tableView', 'Table view')}><Table2 className="w-3.5 h-3.5" /></button>
           </div>
         </div>
       </div>
