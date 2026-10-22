@@ -50,6 +50,7 @@ export function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, o
   const [aiPrompt, setAiPrompt] = useState('')
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState<string | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
 
   const toggleCluster = (cluster: string) => {
     setSelectedClusters(prev => {
@@ -128,7 +129,8 @@ export function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, o
   )
 
   const handleSave = () => {
-    if (!canSave) return
+    if (!canSave || isSaving || isPreviewing || aiLoading) return
+    setIsSaving(true)
     if (kind === 'static') {
       onSave({
         name: name.trim(),
@@ -302,7 +304,7 @@ export function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, o
       {/* Save button */}
       <button
         onClick={handleSave}
-        disabled={!canSave}
+        disabled={!canSave || isSaving || isPreviewing || aiLoading}
         className={cn(
           'w-full py-1.5 text-xs font-medium rounded-md transition-colors',
           canSave
