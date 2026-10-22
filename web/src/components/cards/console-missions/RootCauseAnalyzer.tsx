@@ -34,16 +34,23 @@ type RootCauseAnalyzerProps = {
   isDemoData?: boolean
 }
 
-const SEVERITY_RGB: Record<string, string> = {
-  red: '239,68,68',
-  yellow: '234,179,8',
-  blue: '59,130,246',
-}
-
-const SEVERITY_LIGHT_RGB: Record<string, string> = {
-  red: '248,113,113',
-  yellow: '250,204,21',
-  blue: '96,165,250',
+// Static class names so Tailwind can detect them (dynamic `bg-${color}-500` is purged)
+const SEVERITY_CLASSES: Record<string, { header: string; text: string; badge: string }> = {
+  red: {
+    header: 'bg-red-500/10 hover:bg-red-500/20 border-red-500/20',
+    text: 'text-red-600 dark:text-red-400',
+    badge: 'bg-red-500/20 text-red-600 dark:text-red-400',
+  },
+  yellow: {
+    header: 'bg-yellow-500/10 hover:bg-yellow-500/20 border-yellow-500/20',
+    text: 'text-yellow-600 dark:text-yellow-400',
+    badge: 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400',
+  },
+  blue: {
+    header: 'bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/20',
+    text: 'text-blue-600 dark:text-blue-400',
+    badge: 'bg-blue-500/20 text-blue-600 dark:text-blue-400',
+  },
 }
 
 function getSeverityColor(severity: string): string {
@@ -100,8 +107,7 @@ export function RootCauseAnalyzer({
       {rootCauseGroups.map((group) => {
         const isExpanded = expandedGroups.has(group.cause)
         const severityColor = getSeverityColor(group.severity)
-        const rgb = SEVERITY_RGB[severityColor] || SEVERITY_RGB.blue
-        const lightRgb = SEVERITY_LIGHT_RGB[severityColor] || SEVERITY_LIGHT_RGB.blue
+        const severityClasses = SEVERITY_CLASSES[severityColor] || SEVERITY_CLASSES.blue
 
         return (
           <div key={group.cause} className="space-y-1">
@@ -112,31 +118,24 @@ export function RootCauseAnalyzer({
               onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
               className={cn(
                 'p-2 rounded text-xs cursor-pointer transition-colors flex flex-wrap items-center justify-between gap-y-2',
-                `bg-${severityColor}-500/10 hover:bg-${severityColor}-500/20 border border-${severityColor}-500/20`
+                'border',
+                severityClasses.header
               )}
-              style={{
-                backgroundColor: `rgba(${rgb}, 0.1)`,
-                borderColor: `rgba(${rgb}, 0.2)`,
-              }}
               onClick={() => toggleGroupExpand(group.cause)}
             >
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <ChevronRight
                   className={cn(
                     'w-3.5 h-3.5 shrink-0 transition-transform',
+                    severityClasses.text,
                     isExpanded && 'rotate-90'
                   )}
-                  style={{ color: `rgb(${lightRgb})` }}
                 />
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-foreground">{group.cause}</span>
                     <span
-                      className="px-1.5 py-0.5 text-2xs font-bold rounded"
-                      style={{
-                        backgroundColor: `rgba(${rgb}, 0.2)`,
-                        color: `rgb(${lightRgb})`,
-                      }}
+                      className={cn('px-1.5 py-0.5 text-2xs font-bold rounded', severityClasses.badge)}
                     >
                       {group.items.length} item{group.items.length !== 1 ? 's' : ''}
                     </span>
