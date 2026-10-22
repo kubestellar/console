@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_updated": "2026-10-21T03:07:23Z",
+  "last_updated": "2026-10-22T03:07:15Z",
   "rolling_window_days": 30,
   "categories": {
     "performance": {
@@ -11,25 +11,25 @@
       "last_evaluated": "2026-08-16T03:18:35Z"
     },
     "security": {
-      "merged": 132,
+      "merged": 133,
       "closed": 71,
       "acceptance_rate": 0.65,
       "status": "normal",
-      "last_evaluated": "2026-10-21T03:07:23Z"
+      "last_evaluated": "2026-10-22T03:07:15Z"
     },
     "a11y": {
-      "merged": 103,
+      "merged": 104,
       "closed": 29,
       "acceptance_rate": 0.78,
       "status": "normal",
-      "last_evaluated": "2026-10-20T03:07:09Z"
+      "last_evaluated": "2026-10-22T03:07:15Z"
     },
     "operator": {
-      "merged": 1091,
+      "merged": 1095,
       "closed": 277,
       "acceptance_rate": 0.8,
       "status": "normal",
-      "last_evaluated": "2026-10-21T03:07:23Z"
+      "last_evaluated": "2026-10-22T03:07:15Z"
     },
     "sre": {
       "merged": 670,
@@ -46,11 +46,11 @@
       "last_evaluated": "2026-10-16T03:07:13Z"
     },
     "resilience": {
-      "merged": 143,
+      "merged": 144,
       "closed": 66,
-      "acceptance_rate": 0.68,
+      "acceptance_rate": 0.69,
       "status": "normal",
-      "last_evaluated": "2026-10-21T03:07:23Z"
+      "last_evaluated": "2026-10-22T03:07:15Z"
     },
     "consistency": {
       "merged": 41,
@@ -98,16 +98,6 @@
     ]
   },
   "history": [
-    {
-      "date": "2026-08-23",
-      "total_merged": 1856,
-      "total_closed": 578,
-      "categories_blocked": [],
-      "categories_boosted": [
-        "sre",
-        "features"
-      ]
-    },
     {
       "date": "2026-08-26",
       "total_merged": 1863,
@@ -397,6 +387,16 @@
         "sre",
         "features"
       ]
+    },
+    {
+      "date": "2026-10-22",
+      "total_merged": 2262,
+      "total_closed": 586,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "sre",
+        "features"
+      ]
     }
   ],
   "rotation_weights": {
@@ -406,7 +406,7 @@
     "operator": 1.2,
     "sre": 2.0,
     "features": 2.0,
-    "resilience": 1.02,
+    "resilience": 1.03,
     "consistency": 0.99
   },
   "max_issues_override": 5,
