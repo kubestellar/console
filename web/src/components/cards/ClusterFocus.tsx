@@ -176,6 +176,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
         <div
           className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 cursor-pointer transition-colors"
           role="button"
+          aria-label={cluster?.name}
           tabIndex={0}
           onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
           onClick={() => cluster && drillToCluster(cluster.name, {
@@ -222,6 +223,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
         <div
           className="flex flex-wrap items-center justify-between gap-y-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
           role="button"
+          aria-label={t('cards:clusterFocus.podIssues')}
           tabIndex={0}
           onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
           onClick={() => {
@@ -246,6 +248,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
         <div
           className="flex flex-wrap items-center justify-between gap-y-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
           role="button"
+          aria-label={t('cards:clusterFocus.deploymentIssues')}
           tabIndex={0}
           onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
           onClick={() => {

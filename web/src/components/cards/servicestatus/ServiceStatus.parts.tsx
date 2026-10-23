@@ -87,6 +87,7 @@ export function ServiceRow({ service, onSelect }: ServiceRowProps) {
   return (
     <div
       role="button"
+      aria-label={service.name}
       tabIndex={0}
       onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
       onClick={() => onSelect(service)}
