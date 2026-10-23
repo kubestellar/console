@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_updated": "2026-10-22T03:07:15Z",
+  "last_updated": "2026-10-23T03:07:09Z",
   "rolling_window_days": 30,
   "categories": {
     "performance": {
@@ -18,39 +18,39 @@
       "last_evaluated": "2026-10-22T03:07:15Z"
     },
     "a11y": {
-      "merged": 104,
+      "merged": 105,
       "closed": 29,
       "acceptance_rate": 0.78,
       "status": "normal",
-      "last_evaluated": "2026-10-22T03:07:15Z"
+      "last_evaluated": "2026-10-23T03:07:09Z"
     },
     "operator": {
-      "merged": 1095,
+      "merged": 1096,
       "closed": 277,
       "acceptance_rate": 0.8,
       "status": "normal",
-      "last_evaluated": "2026-10-22T03:07:15Z"
+      "last_evaluated": "2026-10-23T03:07:09Z"
     },
     "sre": {
-      "merged": 670,
+      "merged": 671,
       "closed": 101,
       "acceptance_rate": 0.87,
       "status": "boosted",
-      "last_evaluated": "2026-10-21T03:07:23Z"
+      "last_evaluated": "2026-10-23T03:07:09Z"
     },
     "features": {
-      "merged": 56,
+      "merged": 58,
       "closed": 10,
       "acceptance_rate": 0.85,
       "status": "boosted",
-      "last_evaluated": "2026-10-16T03:07:13Z"
+      "last_evaluated": "2026-10-23T03:07:09Z"
     },
     "resilience": {
-      "merged": 144,
+      "merged": 145,
       "closed": 66,
       "acceptance_rate": 0.69,
       "status": "normal",
-      "last_evaluated": "2026-10-22T03:07:15Z"
+      "last_evaluated": "2026-10-23T03:07:09Z"
     },
     "consistency": {
       "merged": 41,
@@ -98,16 +98,6 @@
     ]
   },
   "history": [
-    {
-      "date": "2026-08-26",
-      "total_merged": 1863,
-      "total_closed": 578,
-      "categories_blocked": [],
-      "categories_boosted": [
-        "sre",
-        "features"
-      ]
-    },
     {
       "date": "2026-08-27",
       "total_merged": 1877,
@@ -391,6 +381,16 @@
     {
       "date": "2026-10-22",
       "total_merged": 2262,
+      "total_closed": 586,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "sre",
+        "features"
+      ]
+    },
+    {
+      "date": "2026-10-23",
+      "total_merged": 2268,
       "total_closed": 586,
       "categories_blocked": [],
       "categories_boosted": [
