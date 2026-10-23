@@ -22,10 +22,14 @@ import { useMissionRecommendations } from './useMissionRecommendations'
 import { useMissionTree } from './useMissionTree'
 import { useMissionWatchedSources } from './useMissionWatchedSources'
 
+/** Gap between the navbar and the top of the modal */
 const MODAL_NAVBAR_GAP_PX = 16
 const MODAL_TOP_INSET_PX = NAVBAR_HEIGHT_PX + MODAL_NAVBAR_GAP_PX
+/** Left/right inset of the modal from the viewport edges */
 const MODAL_SIDE_INSET_PX = 16
+/** Viewport width below which filters collapse (Tailwind sm breakpoint) */
 const COLLAPSIBLE_FILTERS_BREAKPOINT_PX = 640
+/** Delay before refreshing the mission tree so state updates settle */
 const TREE_REFRESH_DELAY_MS = 50
 
 interface MissionBrowserProps {

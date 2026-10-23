@@ -5,7 +5,7 @@
  * without mixing teaser content into the live dashboard cards.
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Plus, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { formatCardTitle } from '../../lib/formatCardTitle'
@@ -48,7 +48,10 @@ export function DiscoverCardsPlaceholder({
   const { t } = useTranslation()
 
   // Filter out cards the user already has
-  const available = DISCOVERABLE_CARDS.filter(c => !existingCardTypes.includes(c.type))
+  const available = useMemo(
+    () => DISCOVERABLE_CARDS.filter(c => !existingCardTypes.includes(c.type)),
+    [existingCardTypes],
+  )
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isHovering, setIsHovering] = useState(false)
 
@@ -60,6 +63,17 @@ export function DiscoverCardsPlaceholder({
     }, CAROUSEL_INTERVAL_MS)
     return () => clearInterval(timer)
   }, [available.length, isHovering])
+
+  const handleMouseEnter = useCallback(() => setIsHovering(true), [])
+  const handleMouseLeave = useCallback(() => setIsHovering(false), [])
+  const handlePrev = useCallback(
+    () => setCurrentIndex(prev => (prev - 1 + available.length) % available.length),
+    [available.length],
+  )
+  const handleNext = useCallback(
+    () => setCurrentIndex(prev => (prev + 1) % available.length),
+    [available.length],
+  )
 
   // Nothing to suggest
   if (available.length === 0) return null
@@ -92,14 +106,14 @@ export function DiscoverCardsPlaceholder({
             'group w-full max-w-md rounded-xl border border-dashed border-border/70 bg-card/40 p-4',
             'shadow-sm transition-colors hover:border-accent/50 lg:flex-shrink-0',
           )}
-          onMouseEnter={() => setIsHovering(true)}
-          onMouseLeave={() => setIsHovering(false)}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
         >
           <div className="flex flex-col gap-3 text-center">
             <div className="flex items-center justify-between gap-2">
               {available.length > 1 ? (
                 <button
-                  onClick={() => setCurrentIndex(prev => (prev - 1 + available.length) % available.length)}
+                  onClick={handlePrev}
                   className="rounded p-1 text-muted-foreground opacity-0 transition-colors hover:bg-secondary hover:text-foreground group-hover:opacity-100"
                   aria-label={t('dashboard.discover.previousCard', 'Previous card')}
                 >
@@ -119,7 +133,7 @@ export function DiscoverCardsPlaceholder({
               </div>
               {available.length > 1 ? (
                 <button
-                  onClick={() => setCurrentIndex(prev => (prev + 1) % available.length)}
+                  onClick={handleNext}
                   className="rounded p-1 text-muted-foreground opacity-0 transition-colors hover:bg-secondary hover:text-foreground group-hover:opacity-100"
                   aria-label={t('dashboard.discover.nextCard', 'Next card')}
                 >
