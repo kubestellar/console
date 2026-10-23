@@ -860,7 +860,13 @@ test.describe('Dashboard Data Accuracy (#6459)', () => {
 
     // Catch-all fallback for any other MCP endpoints used by the grid.
     await page.route('**/api/mcp/**', (route) => {
-      if (route.request().url().includes('/clusters')) {
+      const requestUrl = route.request().url()
+      if (/\/api\/mcp\/clusters\/[^/?]+\/health/.test(requestUrl)) {
+        // Per-cluster health is requested when no_local_agent routes through the
+        // backend; a list payload here is parsed as health and zeroes the stats.
+        return route.fulfill({ status: 404, contentType: 'application/json', body: '{}' })
+      }
+      if (requestUrl.includes('/clusters')) {
         // Already handled above; must not double-fulfill.
         return route.fallback()
       }
