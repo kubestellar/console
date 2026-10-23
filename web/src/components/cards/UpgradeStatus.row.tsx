@@ -17,6 +17,7 @@ export function UpgradeClusterRow({ cluster, onDrill, onStartUpgrade }: UpgradeC
     >
       <div
         role="button"
+        aria-label={cluster.name}
         tabIndex={0}
         onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
         className="cursor-pointer"

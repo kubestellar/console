@@ -234,6 +234,7 @@ export function GPUStatus({ config }: GPUStatusProps) {
           <div
             key={stats.clusterName}
             role="button"
+            aria-label={stats.clusterName}
             tabIndex={0}
             onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
             onClick={() => drillToCluster(stats.clusterName, {
