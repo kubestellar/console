@@ -9,12 +9,14 @@ on:
         description: Issue number to work on
         required: true
 
-# Use the gh-aw agent model alias so the firewall can steer to an available
-# Copilot model for this account. Direct Claude pins have failed on main when
-# unavailable for the subscription tier; see #23769.
+# Use the Copilot CLI "sonnet" alias: the CLI resolves it to the newest
+# Sonnet available for this account tier (avoiding the hard-pin failures from
+# #23769), and the firewall steering map still matches it. The previous
+# gh-aw "agent" alias is now rejected client-side by the Copilot CLI before
+# the api-proxy can steer it; see #24579.
 engine:
   id: copilot
-  model: agent
+  model: sonnet
 
 permissions:
   issues: write
