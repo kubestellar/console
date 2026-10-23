@@ -159,7 +159,10 @@ for script in "${ALL_SCRIPTS[@]}"; do
     # unit-test: 2648+ test files run in 48 sequential shards. At ~55 files/shard and
     # ~1.3s/file, total runtime is ~3450s plus shard startup overhead. Cap at 5400s (90 min)
     # to absorb variance and future suite growth without hitting the 3600s default (#22004).
-    unit-test) SUITE_TIMEOUT=5400 ;;
+    # Raised to 7200s (120 min) after the 2026-10-23 nightly hit the 5400s cap (#24572) one
+    # day after passing in 3515s; the window only touched 12 small web/src files, so the
+    # swing is runner variance on top of organic growth. Still inside the 180m job timeout.
+    unit-test) SUITE_TIMEOUT=7200 ;;
   esac
   SUITE_START=$(date +%s)
   SUITE_OUTPUT="/tmp/suite-${SUITE_NAME}.log"
