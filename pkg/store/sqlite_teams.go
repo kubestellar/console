@@ -138,24 +138,7 @@ func (s *SQLiteStore) ListTeams(ctx context.Context, userID *uuid.UUID, limit, o
 	}
 	defer rows.Close()
 
-	teams := make([]models.Team, 0)
-	for rows.Next() {
-		var t models.Team
-		var idStr, createdByStr string
-		var description sql.NullString
-
-		if err := rows.Scan(&idStr, &t.Name, &description, &createdByStr, &t.CreatedAt, &t.UpdatedAt, &t.MemberCount); err != nil {
-			return nil, err
-		}
-
-		t.ID = parseUUID(idStr, "t.ID")
-		t.CreatedBy = parseUUID(createdByStr, "t.CreatedBy")
-		if description.Valid {
-			t.Description = description.String
-		}
-		teams = append(teams, t)
-	}
-	return teams, rows.Err()
+	return scanTeamRows(rows)
 }
 
 func (s *SQLiteStore) AddTeamMember(ctx context.Context, teamID, userID uuid.UUID, role models.TeamRole) error {
@@ -229,6 +212,13 @@ func (s *SQLiteStore) GetUserTeams(ctx context.Context, userID uuid.UUID) ([]mod
 	}
 	defer rows.Close()
 
+	return scanTeamRows(rows)
+}
+
+// scanTeamRows scans the common team-list row shape (id, name, description,
+// created_by, created_at, updated_at, member_count) shared by ListTeams and
+// GetUserTeams, which differ only in their WHERE/pagination clauses.
+func scanTeamRows(rows *sql.Rows) ([]models.Team, error) {
 	teams := make([]models.Team, 0)
 	for rows.Next() {
 		var t models.Team
