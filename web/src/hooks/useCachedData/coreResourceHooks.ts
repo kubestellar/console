@@ -302,7 +302,12 @@ export function useCachedWorkloads(
 
       // Fall back to SSE streaming -> progressive per-cluster
       try {
-        return await fetchViaSSE<Workload>('workloads', 'workloads', {}, onProgress)
+        const sseData = await fetchViaSSE<Workload>('workloads', 'workloads', {}, onProgress)
+        if (sseData.length > 0) return sseData
+        // An empty fan-out result (e.g. per-cluster endpoint answers 200 with
+        // no items) must not mask workloads available from GET /api/workloads.
+        const emptyFallback = await fetchWorkloadsViaRest()
+        return emptyFallback && emptyFallback.length > 0 ? emptyFallback : sseData
       } catch (sseError) {
         // The SSE/per-cluster chain is agent-routed in non-cluster mode, so it
         // always fails when no local kc-agent is running. cacheCore only calls
