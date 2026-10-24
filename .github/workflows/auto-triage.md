@@ -14,7 +14,7 @@ engine:
   model: sonnet
 
 permissions:
-  issues: write
+  issues: read
 
 safe-outputs:
   report-failure-as-issue: false

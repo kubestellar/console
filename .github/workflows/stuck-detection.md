@@ -11,8 +11,8 @@ on:
         default: "false"
 
 permissions:
-  issues: write
-  pull-requests: write
+  issues: read
+  pull-requests: read
 
 safe-outputs:
   report-failure-as-issue: false

@@ -23,8 +23,6 @@ safe-outputs:
   noop: false
   add-comment:
     max: 1
-  add-labels:
-    max: 0
 ---
 
 # Threat Detection Runs Tracker
