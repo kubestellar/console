@@ -24,8 +24,16 @@ rules:
   - apiGroups: ["events.k8s.io"]
     resources: ["events"]
     verbs: ["get", "list", "watch"]
+  # /deployments live page also lists ReplicaSets, StatefulSets and DaemonSets
+  # via /api/mcp/{replicasets,statefulsets,daemonsets}; without these the live
+  # console returns 503 for every CI cluster (#24242, run 39601160527).
   - apiGroups: ["apps"]
-    resources: ["deployments"]
+    resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]
+    verbs: ["get", "list", "watch"]
+  # /api/mcp/hpas (deployments page autoscaling widget) lists HPAs cluster-wide
+  # (autoscaling/v2 with a v1 fallback); same 503 failure mode as above.
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
     verbs: ["get", "list", "watch"]
   # /api/mcp/pvcs (live canary storage widget) lists PVCs cluster-wide; without
   # this the live console returns 503 for every CI cluster (#24242, #24490).
