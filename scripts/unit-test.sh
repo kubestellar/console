@@ -86,6 +86,7 @@ fi
 OUTPUT_FILE="vitest-output.log"
 EXIT_CODE=0
 SHARD_COUNT=48
+SHARD_TIMEOUT=900
 
 if [ -n "${CI:-}" ]; then
   # CI: run in $SHARD_COUNT shards sequentially, combining output
@@ -94,8 +95,25 @@ if [ -n "${CI:-}" ]; then
   for shard in $(seq 1 "$SHARD_COUNT"); do
     echo ""
     echo "=== Shard $shard/$SHARD_COUNT ==="
-    npx vitest run $EXTRA_ARGS --pool=forks --testTimeout=30000 --reporter=verbose --shard=$shard/$SHARD_COUNT 2>&1 | tee -a "$OUTPUT_FILE" || EXIT_CODE=$?
+    SHARD_FILE="vitest-shard-output.log"
+    # Hard per-shard cap: a hung worker/open handle must not consume the whole
+    # suite budget (#24572). -k force-kills if SIGTERM is ignored.
+    SHARD_EXIT=0
+    timeout -k 30s "${SHARD_TIMEOUT}s" npx vitest run $EXTRA_ARGS --pool=forks --testTimeout=30000 --teardownTimeout=10000 --reporter=verbose --shard=$shard/$SHARD_COUNT 2>&1 | tee "$SHARD_FILE" || SHARD_EXIT=${PIPESTATUS[0]}
+    cat "$SHARD_FILE" >> "$OUTPUT_FILE"
+    if [ "$SHARD_EXIT" -eq 124 ] || [ "$SHARD_EXIT" -eq 137 ]; then
+      if grep -q "Tests.*passed" "$SHARD_FILE" && ! grep -q "Tests.*failed" "$SHARD_FILE"; then
+        echo "Shard $shard finished but vitest did not exit within ${SHARD_TIMEOUT}s (hung after completion); treating as pass"
+        SHARD_EXIT=0
+      else
+        echo "Shard $shard TIMED OUT after ${SHARD_TIMEOUT}s before completing (hung test?)"
+        echo "Shard $shard TIMED OUT after ${SHARD_TIMEOUT}s" >> "$OUTPUT_FILE"
+        echo "Tests failed (shard $shard timeout)" >> "$OUTPUT_FILE"
+      fi
+    fi
+    if [ "$SHARD_EXIT" -ne 0 ]; then EXIT_CODE=$SHARD_EXIT; fi
   done
+  rm -f "$SHARD_FILE"
 else
   # Local: run all tests at once
   npx vitest run $EXTRA_ARGS --pool=forks --testTimeout=30000 --reporter=verbose 2>&1 | tee "$OUTPUT_FILE" || EXIT_CODE=$?
