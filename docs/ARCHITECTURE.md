@@ -188,7 +188,7 @@ For the full route mapping table and the list of backend-only routes, see the `R
 
 ## Card Configuration
 
-Each dashboard card is registered in `CARD_CONFIGS` (`web/src/config/cards/index.ts`).
+Each dashboard card is registered in `CARD_CONFIGS` (`web/src/config/cards/cardConfigRegistry.ts`, re-exported from `web/src/config/cards/index.ts`).
 Card configs specify a `category` field (e.g., `'security'`, `'insights'`, `'ci-cd'`,
 `'network'`) used for browse/filter in the Add Card dialog. The card component itself
 lives in `web/src/components/cards/` and is registered in `cardRegistry.ts`.

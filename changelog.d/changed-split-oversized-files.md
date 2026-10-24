@@ -1,1 +1,1 @@
-- Split oversized source files and bucket large card chunks for faster loads
+- Split oversized web modules into focused sibling files with unchanged public exports: `useTokenUsage.ts` (constants/store), `useAIPredictions.ts` (helpers/store), `config/cards/index.ts` (registry/project tags/config re-exports) and `mcp/workloadQueries/pods.ts` (demo data/cache/usePodIssues) (#24590).
