@@ -61,12 +61,15 @@
     }
   },
   "weekly_insights": {
-    "best_pr_size": "L",
+    "best_pr_size": "S",
     "size_acceptance": {},
     "type_acceptance": {},
-    "common_rejection_reasons": [],
+    "common_rejection_reasons": [
+      "- PR #24474: Closing as superseded: `@codemirror/legacy-modes` 6.5.5 changed its dependency from `@codemirror/language` to the new `@codemirror/streamparser` package, so its parsers are now typed as `streamparser.StreamParser`. This repo's lockfile pins `@codemirror/language` 6.12.3, whose `StreamLanguage.define` only accepts its own `StreamParser` type — hence the TS2345 failures in `DrasiConfigModals.tsx` / `DrasiStreamSamples.tsx` on this PR. The bump is only type-safe together with `@codemirror/language` >= 6.13.0, which re-exports the streamparser types.",
+      "A superseding PR bumps both (`legacy-modes` 6.5.5 + `language` 6.13.1) from branch `scanner/fix-24474-codemirror`."
+    ],
     "best_change_type": "bug_fix",
-    "last_report_date": "2026-10-18"
+    "last_report_date": "2026-10-25"
   },
   "cncf_insights": {
     "last_scan_date": "2026-10-21",
