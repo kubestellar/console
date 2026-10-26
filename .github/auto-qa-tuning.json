@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_updated": "2026-10-25T03:07:10Z",
+  "last_updated": "2026-10-26T03:09:41Z",
   "rolling_window_days": 30,
   "categories": {
     "performance": {
@@ -25,18 +25,18 @@
       "last_evaluated": "2026-10-23T03:07:09Z"
     },
     "operator": {
-      "merged": 1110,
+      "merged": 1113,
       "closed": 277,
       "acceptance_rate": 0.8,
       "status": "normal",
-      "last_evaluated": "2026-10-25T03:07:10Z"
+      "last_evaluated": "2026-10-26T03:09:41Z"
     },
     "sre": {
-      "merged": 674,
+      "merged": 675,
       "closed": 101,
       "acceptance_rate": 0.87,
       "status": "boosted",
-      "last_evaluated": "2026-10-25T03:07:10Z"
+      "last_evaluated": "2026-10-26T03:09:41Z"
     },
     "features": {
       "merged": 58,
@@ -46,11 +46,11 @@
       "last_evaluated": "2026-10-23T03:07:09Z"
     },
     "resilience": {
-      "merged": 147,
+      "merged": 148,
       "closed": 66,
       "acceptance_rate": 0.69,
       "status": "normal",
-      "last_evaluated": "2026-10-25T03:07:10Z"
+      "last_evaluated": "2026-10-26T03:09:41Z"
     },
     "consistency": {
       "merged": 41,
@@ -101,16 +101,6 @@
     ]
   },
   "history": [
-    {
-      "date": "2026-08-29",
-      "total_merged": 1920,
-      "total_closed": 582,
-      "categories_blocked": [],
-      "categories_boosted": [
-        "sre",
-        "features"
-      ]
-    },
     {
       "date": "2026-08-30",
       "total_merged": 1938,
@@ -400,6 +390,16 @@
         "sre",
         "features"
       ]
+    },
+    {
+      "date": "2026-10-26",
+      "total_merged": 2292,
+      "total_closed": 586,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "sre",
+        "features"
+      ]
     }
   ],
   "rotation_weights": {
@@ -413,7 +413,7 @@
     "consistency": 0.99
   },
   "max_issues_override": 5,
-  "pr_guidance": "Keep PRs small and focused. Smaller PRs have higher acceptance rates.",
+  "pr_guidance": "Keep changes under 50 lines (size S) for best acceptance rate. Split larger fixes into multiple PRs.",
   "regression_insights": {
     "focus_overrides": [],
     "repeat_issue_patterns": [],
