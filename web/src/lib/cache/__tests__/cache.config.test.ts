@@ -258,10 +258,4 @@ describe('cache module', () => {
         await expect(importFresh()).resolves.toBeDefined()
       })
     })
-  
-    // ── initPreloadedMeta ──────────────────────────────────────────────────
-  
-    describe('initPreloadedMeta', () => {
-  
-})
 })

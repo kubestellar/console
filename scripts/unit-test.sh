@@ -109,6 +109,10 @@ if [ -n "${CI:-}" ]; then
         echo "Shard $shard TIMED OUT after ${SHARD_TIMEOUT}s before completing (hung test?)"
         echo "Shard $shard TIMED OUT after ${SHARD_TIMEOUT}s" >> "$OUTPUT_FILE"
         echo "Tests failed (shard $shard timeout)" >> "$OUTPUT_FILE"
+        # Report as a test failure, not exit 124: run-all-tests.sh maps 124 to
+        # "suite exceeded its wall-clock cap", which misdiagnosed a hung shard as
+        # a suite-wide timeout and led to cap bumps instead of fixes (#24572).
+        SHARD_EXIT=1
       fi
     fi
     if [ "$SHARD_EXIT" -ne 0 ]; then EXIT_CODE=$SHARD_EXIT; fi

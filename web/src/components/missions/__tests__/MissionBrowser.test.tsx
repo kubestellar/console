@@ -33,9 +33,10 @@ const toastMockState = vi.hoisted(() => ({
 
 // ── Mocks ────────────────────────────────────────────────────────────────
 
-vi.mock('react-i18next', () => ({
-  initReactI18next: { type: '3rdParty', init: () => {} },
-  useTranslation: () => ({
+// Return a stable translation object: react-i18next memoizes `t`, and a fresh
+// `t` per render re-fires every effect that lists it as a dependency (#24572).
+vi.mock('react-i18next', () => {
+  const translation = {
     t: (key: string, options?: Record<string, unknown>) => {
       const map: Record<string, string> = {
         'actions.clearAll': 'Clear All',
@@ -51,8 +52,12 @@ vi.mock('react-i18next', () => ({
       return value
     },
     i18n: { language: 'en' },
-  }),
-}))
+  }
+  return {
+    initReactI18next: { type: '3rdParty', init: () => {} },
+    useTranslation: () => translation,
+  }
+})
 
 vi.mock('../../../lib/auth', () => ({
   useAuth: () => ({
