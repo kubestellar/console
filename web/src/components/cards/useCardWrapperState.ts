@@ -326,7 +326,7 @@ export function useCardWrapperState(props: CardWrapperProps) {
   const headerT = useCallback(
     (key: string, defaultValue?: string, options?: Record<string, unknown>): string => {
       if (defaultValue !== undefined) {
-        return t(key, defaultValue, options) as string
+        return (options !== undefined ? t(key, defaultValue, options) : t(key, defaultValue)) as string
       }
       return t(key) as string
     },
