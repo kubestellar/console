@@ -4,12 +4,14 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
 
-vi.mock('react-i18next', () => ({
-  initReactI18next: { type: '3rdParty', init: () => {} },
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}))
+// Stable `t` identity, matching real react-i18next memoization (#24572).
+vi.mock('react-i18next', () => {
+  const translation = { t: (key: string) => key }
+  return {
+    initReactI18next: { type: '3rdParty', init: () => {} },
+    useTranslation: () => translation,
+  }
+})
 
 vi.mock('react-router-dom', () => ({
   useNavigate: () => vi.fn(),

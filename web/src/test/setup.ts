@@ -14,8 +14,14 @@ const isBrowserEnvironment = typeof window !== 'undefined'
 // which caused "failed to load" OOM crashes in coverage suite CI runs (#20789).
 // The initReactI18next stub satisfies i18n.ts's `.use(initReactI18next)` call;
 // i18n.ts already guards with `if (initReactI18next)` for safety.
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
+//
+// useTranslation must return a STABLE `t` / `i18n` identity across renders, like
+// the real react-i18next does. A fresh `t` per render re-fires every effect with
+// `t` in its dependency list; effects that also set state (e.g. UnifiedStatsSection
+// restoring custom blocks) then re-render forever, growing the worker heap until
+// the fork OOMs or hangs its nightly shard (#24572).
+vi.mock('react-i18next', () => {
+  const translation = {
     // Support both t(key, opts) and t(key, defaultValue, opts) i18next overloads.
     // Without the 3-arg form, components that call t(key, 'default {{count}}', {count})
     // would pass the string as `opts`, causing `'count' in string` TypeErrors.
@@ -38,14 +44,17 @@ vi.mock('react-i18next', () => ({
       return template
     },
     i18n: { language: 'en', changeLanguage: vi.fn() },
-  }),
-  Trans: ({ children }: { children: React.ReactNode }) => children,
-  initReactI18next: { type: '3rdParty', init: () => {} },
-  I18nextProvider: ({ children }: { children: React.ReactNode }) => children,
-  withTranslation: () => (Component: unknown) => Component,
-  Translation: ({ children }: { children: (t: (k: string) => string) => React.ReactNode }) =>
-    children((k: string) => k),
-}))
+  }
+  return {
+    useTranslation: () => translation,
+    Trans: ({ children }: { children: React.ReactNode }) => children,
+    initReactI18next: { type: '3rdParty', init: () => {} },
+    I18nextProvider: ({ children }: { children: React.ReactNode }) => children,
+    withTranslation: () => (Component: unknown) => Component,
+    Translation: ({ children }: { children: (t: (k: string) => string) => React.ReactNode }) =>
+      children((k: string) => k),
+  }
+})
 
 // Mock lib/demoMode globally to prevent module-level initialization that accesses
 // localStorage and getStoredAuthTokenSync at import time. This ensures tests don't
