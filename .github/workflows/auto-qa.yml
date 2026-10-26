@@ -4686,7 +4686,7 @@ jobs:
             // Waits for x-ratelimit-reset on 403/429, with exponential backoff fallback.
             const MAX_RETRIES = 3;
             const INITIAL_BACKOFF_MS = 5000;
-            const fallbackGithub = require('@actions/github').getOctokit(process.env.FALLBACK_GITHUB_TOKEN);
+            const fallbackGithub = new github.constructor({ auth: process.env.FALLBACK_GITHUB_TOKEN });
             let issueApi = github;
             async function withRetry(fn, label = 'API call') {
               for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
