@@ -1,0 +1,1 @@
+- Bump i18next to 26.5.2 and adapt `t()` call types for stricter overloads.
