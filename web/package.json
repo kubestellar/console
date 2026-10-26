@@ -90,7 +90,7 @@
     "jose": "^6.2.12",
     "js-yaml": "^5.5.0",
     "lucide-react": "^1.55.0",
-    "react": "^19.3.0",
+    "react": "^19.3.1",
     "react-dom": "^19.3.0",
     "react-i18next": "^17.0.16",
     "react-markdown": "^10.1.0",
