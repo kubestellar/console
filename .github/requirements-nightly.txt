@@ -258,9 +258,9 @@ opentelemetry-instrumentation==0.66b0 \
     --hash=sha256:0b32e2fcfec1e4bd48511a3b77ce32bfb1c16dcd5479396b21f9086a4b06c0c9 \
     --hash=sha256:316715ed7b33a12530c0ae3e8d4cdf26d70e1aad358d7ba256e5dea2d4ceed71
 
-opentelemetry-instrumentation-requests==0.66b0 \
-    --hash=sha256:053dde08fbc1d223058e33d477cf81e2bdcbe7af3893787283339b2b557d4b7a \
-    --hash=sha256:2f9df08bf99f5da4bcfda70735492b4364bfcc5bd3f48232658e936f97ee1a22
+opentelemetry-instrumentation-requests==0.66b1 \
+    --hash=sha256:28578f72e68e3a5be3226c618ac9570ed360ef1dd22d5d6e0721c6905a4ccc67 \
+    --hash=sha256:7ba17d984a2bd876b88bf0aafcca27b5e3ff4c1821e0fe07641e380a3cf3a3a2
 
 opentelemetry-proto==1.45.0 \
     --hash=sha256:96ee414f24bc3f61ea8e17dc56b4348d4049d73db3eb17c6b3edf75b5b403300 \
