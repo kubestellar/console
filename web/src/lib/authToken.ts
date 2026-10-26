@@ -28,6 +28,27 @@ function readLegacyTestAuthToken(storage: Storage): string | null {
   return null
 }
 
+// Clearing the auth token must also drop the legacy raw test keys that
+// readLegacyTestAuthToken() falls back to; otherwise an expired legacy
+// token survives clearStoredAuthToken() and AuthProvider.refreshUser()
+// recurses on it forever, starving the event loop until the test
+// worker OOMs (#24572).
+function clearLegacyTestAuthTokens(): void {
+  if (!isTestEnvironment()) {
+    return
+  }
+
+  for (const storage of [sessionStorage, localStorage]) {
+    try {
+      for (const key of LEGACY_TEST_STORAGE_KEYS) {
+        storage.removeItem(key)
+      }
+    } catch {
+      // Storage may be unavailable — ignore.
+    }
+  }
+}
+
 type AuthTokenSyncState = 'cleared' | 'demo' | 'session'
 
 interface AuthTokenSyncEvent {
@@ -135,6 +156,9 @@ export async function getStoredAuthToken(): Promise<string | null> {
 export async function setStoredAuthToken(token: string | null): Promise<void> {
   await writeSessionAuthToken(token)
   await writeLocalAuthToken(token)
+  if (!token) {
+    clearLegacyTestAuthTokens()
+  }
 
   if (token === DEMO_TOKEN_VALUE) {
     writeAuthTokenSyncEvent('demo')
