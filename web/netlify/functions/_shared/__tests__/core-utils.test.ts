@@ -328,8 +328,11 @@ describe("shared core utilities", () => {
       maxRetries: 1,
       initialDelayMs: 25,
     });
+    // Attach the rejection handler before running timers so the final retry's
+    // rejection is never reported as unhandled (#24572).
+    const assertion = expect(promise).rejects.toThrow("network down");
     await vi.runAllTimersAsync();
-    await expect(promise).rejects.toThrow("network down");
+    await assertion;
     expect(failingFetch).toHaveBeenCalledTimes(2);
   });
 

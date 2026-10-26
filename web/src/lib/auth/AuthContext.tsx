@@ -137,7 +137,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // /api/me with it (which will just 401). Clear it and recurse so the
     // no-token branch above can try restoring from the HttpOnly cookie.
     if (effectiveToken !== DEMO_TOKEN_VALUE && isJWTExpired(effectiveToken)) {
-      clearStoredAuthToken()
+      // Await the clear so the recursive refreshUser() cannot re-read the
+      // expired token and loop (#24572).
+      await clearStoredAuthToken()
       safeRemove(AUTH_USER_CACHE_KEY)
       safeRemove(AUTH_USER_CACHE_VALIDATED_KEY)
       setTokenState(null)

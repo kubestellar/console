@@ -383,9 +383,13 @@ describe('api.ts - HTTP client layer', () => {
       )
 
       const pending = api.get('/api/test', { timeout: 50 })
+      // Attach the rejection handler before advancing timers: `pending` rejects
+      // while the timers run, and an unobserved rejection at that point is
+      // reported by Vitest as an unhandled error that fails the shard (#24572).
+      const assertion = expect(pending).rejects.toThrow(/timeout/)
       // Advance past both the 50ms abort timeout and the 100ms mock rejection.
       await vi.advanceTimersByTimeAsync(110)
-      await expect(pending).rejects.toThrow(/timeout/)
+      await assertion
     })
 
     it('parses JSON response body', async () => {
