@@ -4712,13 +4712,19 @@ jobs:
                   const resetEpoch = err.response?.headers?.['x-ratelimit-reset'];
                   const backoffMs = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
                   let waitMs = backoffMs;
+                  const MAX_BACKOFF_WAIT_MS = 120000;
                   if (resetEpoch) {
                     const resetMs = parseInt(resetEpoch, 10) * 1000 - Date.now();
                     const RATE_LIMIT_BUFFER_MS = 1000;
-                    waitMs = Math.max(resetMs + RATE_LIMIT_BUFFER_MS, backoffMs);
+                    // Rate limit windows can be up to an hour; cap generously so we
+                    // don't give up before the quota actually resets (was 120s, too
+                    // short — see console issue for the 2026-10-16/17 failures this
+                    // caused).
+                    const MAX_RESET_WAIT_MS = 15 * 60 * 1000; // 15 minutes
+                    waitMs = Math.max(Math.min(resetMs + RATE_LIMIT_BUFFER_MS, MAX_RESET_WAIT_MS), backoffMs);
+                  } else {
+                    waitMs = Math.min(waitMs, MAX_BACKOFF_WAIT_MS);
                   }
-                  const MAX_WAIT_MS = 120000;
-                  waitMs = Math.min(waitMs, MAX_WAIT_MS);
                   core.warning(`${label}: rate limited (attempt ${attempt + 1}/${MAX_RETRIES}), waiting ${Math.round(waitMs / 1000)}s...`);
                   await new Promise(resolve => setTimeout(resolve, waitMs));
                 }
