@@ -176,6 +176,8 @@ export function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, o
           <button
             key={c.name}
             onClick={() => setSelectedColor(c.name)}
+            aria-label={c.name}
+            aria-pressed={selectedColor === c.name}
             className={cn(
               'w-4 h-4 rounded-full transition-all',
               c.dot,
