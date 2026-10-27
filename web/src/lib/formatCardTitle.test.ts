@@ -92,6 +92,19 @@ describe('formatCardTitle', () => {
     })
   })
 
+  describe('inherited Object.prototype member names', () => {
+    it.each([
+      ['constructor', 'Constructor'],
+      ['toString', 'Tostring'],
+      // Underscores become spaces by the ordinary fallback path
+      ['__proto__', '  Proto  '],
+    ])('returns a string title for %s', (input, expected) => {
+      const result = formatCardTitle(input)
+      expect(typeof result).toBe('string')
+      expect(result).toBe(expected)
+    })
+  })
+
   describe('custom overrides win over acronym handling', () => {
     // llm_inference contains 'llm' but the override should win over generic case.
     it('uses the override for llm_inference (not "LLM Inference")', () => {
