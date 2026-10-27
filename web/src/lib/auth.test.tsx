@@ -5,7 +5,7 @@
  * Addresses: #20697 — zero test coverage creates OAuth session leak risk
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { AuthProvider, useAuth, isJWTExpired } from './auth'
 import { ReactNode } from 'react'
 import { MS_PER_SECOND } from './constants/time'
@@ -410,8 +410,20 @@ describe('auth.tsx — OAuth session management', () => {
       const validToken = encodeJWT(VALID_JWT_PAYLOAD)
       
       localStorageMock.set('kc_token', validToken)
-      
-      fetchMock.mockResolvedValueOnce({ ok: true })
+
+      // Mount-time refreshUser() hits /api/me first. It must succeed: a failed
+      // /api/me drops to login and clears the stored token (including the
+      // legacy test key since #24637), leaving logout() with no bearer token.
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: 'user-123',
+          github_id: '456',
+          github_login: 'testuser',
+          onboarded: true,
+        }),
+      })
+      fetchMock.mockResolvedValueOnce({ ok: true }) // /auth/logout
 
       const wrapper = ({ children }: { children: ReactNode }) => (
         <AuthProvider>{children}</AuthProvider>
@@ -514,7 +526,7 @@ describe('auth.tsx — OAuth session management', () => {
       })
     })
 
-    it('setToken() triggers refreshUser() to fetch new user data', async () => {
+    it('setToken() followed by refreshUser() fetches new user data with the new token', async () => {
       const newToken = encodeJWT(VALID_JWT_PAYLOAD)
       
       fetchMock.mockResolvedValueOnce({
@@ -535,12 +547,23 @@ describe('auth.tsx — OAuth session management', () => {
 
       await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-      result.current.setToken(newToken, false)
+      // setToken() does not fetch on its own — the OAuth callback
+      // (AuthCallback.tsx) calls refreshUser() right after it.
+      await act(async () => {
+        result.current.setToken(newToken, false)
+        await result.current.refreshUser(newToken)
+      })
 
-      // refreshUser should eventually call /api/me
       await waitFor(() => {
-        const apiMeCalls = fetchMock.mock.calls.filter(call => call[0] === '/api/me')
-        expect(apiMeCalls.length).toBeGreaterThan(0)
+        expect(fetchMock).toHaveBeenCalledWith(
+          '/api/me',
+          expect.objectContaining({
+            headers: expect.objectContaining({
+              Authorization: `Bearer ${newToken}`,
+            }),
+          })
+        )
+        expect(result.current.user?.github_login).toBe('callback-user')
       })
     })
   })
