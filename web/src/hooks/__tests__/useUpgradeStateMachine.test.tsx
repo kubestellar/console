@@ -450,8 +450,11 @@ describe('useUpgradeStateMachine — Cleanup', () => {
 
   describe('loading state exposure', () => {
     it('exposes fetchCompleted state (loading indicator) to consumers', () => {
+      // Stable reference: an inline [] is a new dep every render, and the hook's
+      // not-connected branch always calls setState, so it re-rendered forever (#24572).
+      const noClusters: ClusterInfo[] = []
       const { result } = renderHook(() => useUpgradeStateMachine({
-        allClusters: [],
+        allClusters: noClusters,
         agentConnected: false,
         isDemoMode: false,
         openTrackedWs: vi.fn(),
