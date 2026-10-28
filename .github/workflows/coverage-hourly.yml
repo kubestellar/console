@@ -39,7 +39,11 @@ jobs:
   # rather than a graceful V8 heap exhaustion (#21169, #21083).
   test-shard:
     if: github.repository == 'kubestellar/console'
-    runs-on: ubuntu-latest
+    # Pinned to ubuntu-24.04: the ubuntu-26.04 rollout of ubuntu-latest
+    # (2026-10-26) makes vitest shards hang mid-run until the 20-minute
+    # timeout cancels them, so merge-coverage sees <12 shard artifacts
+    # and fails. Last green ubuntu-latest run: 2026-10-22.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:
       fail-fast: false
