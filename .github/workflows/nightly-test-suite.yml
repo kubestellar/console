@@ -26,7 +26,11 @@ jobs:
       contents: write
       issues: write
     if: github.repository == 'kubestellar/console'
-    runs-on: ubuntu-latest
+    # Pinned to ubuntu-24.04: ubuntu-latest rolled to ubuntu-26.04 on
+    # 2026-10-27 and that image silently stalls console vitest shards (same
+    # pin as coverage-hourly's test-shard job, #24667). Revisit once vitest
+    # shards are confirmed stable on 26.04 (#24572).
+    runs-on: ubuntu-24.04
     # Three layers prevent benchmark retry storms from blowing the budget:
     #   1. benchmarks.config.ts: retries=0, per-test timeout=60s (was 120s)
     #   2. run-all-tests.sh: per-suite wall-clock cap of 5m via timeout(1)
