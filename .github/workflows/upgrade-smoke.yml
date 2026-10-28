@@ -94,6 +94,17 @@ jobs:
           docker tag ${{ env.IMAGE_REPO }}:${{ env.TARGET_TAG }} \
                      ${{ env.IMAGE_REPO }}:${{ env.BASELINE_TAG }}
 
+      - name: Pin Helm 3
+        # The ubuntu-26.04 runner image (ubuntu-latest since 2026-10-27) ships
+        # Helm 4, which applies manifests with server-side apply. The in-place
+        # self-upgrade patches the Deployment image outside Helm, so a Helm 4
+        # rollback fails with a field-ownership conflict on
+        # .spec.template.spec.containers[].image. Pin Helm 3, whose
+        # three-way-merge rollback re-applies the baseline image cleanly.
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v3.19.0
+
       - name: Create Kind cluster
         uses: helm/kind-action@1544676c07bb3570fcb70166beaa07c4528fd4aa # v1.15.1
         with:
