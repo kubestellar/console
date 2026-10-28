@@ -85,6 +85,10 @@ fi
 # memory in check as the suite has grown to 2648+ test files.
 OUTPUT_FILE="vitest-output.log"
 EXIT_CODE=0
+# Vitest's summary prints "Errors  1 error" (singular) or "Errors  N errors".
+# The old pattern only matched the plural, so a single worker OOM/SIGABRT
+# ("Errors  1 error") was reported as a passing run (#24572).
+VITEST_ERRORS_RE="Errors +[1-9][0-9]* errors?"
 SHARD_COUNT=48
 SHARD_TIMEOUT=900
 
@@ -102,7 +106,7 @@ if [ -n "${CI:-}" ]; then
     timeout -k 30s "${SHARD_TIMEOUT}s" npx vitest run $EXTRA_ARGS --pool=forks --testTimeout=30000 --teardownTimeout=10000 --reporter=verbose --shard=$shard/$SHARD_COUNT 2>&1 | tee "$SHARD_FILE" || SHARD_EXIT=${PIPESTATUS[0]}
     cat "$SHARD_FILE" >> "$OUTPUT_FILE"
     if [ "$SHARD_EXIT" -eq 124 ] || [ "$SHARD_EXIT" -eq 137 ]; then
-      if grep -q "Tests.*passed" "$SHARD_FILE" && ! grep -q "Tests.*failed" "$SHARD_FILE"; then
+      if grep -q "Tests.*passed" "$SHARD_FILE" && ! grep -q "Tests.*failed" "$SHARD_FILE" && ! grep -qE "$VITEST_ERRORS_RE" "$SHARD_FILE"; then
         echo "Shard $shard finished but vitest did not exit within ${SHARD_TIMEOUT}s (hung after completion); treating as pass"
         SHARD_EXIT=0
       else
@@ -128,7 +132,7 @@ if [ "$EXIT_CODE" -ne 0 ]; then
   # Also guard against Vitest reporting "Errors N errors" (unhandled rejections)
   # even when no test cases failed — those errors caused the nightly regression in
   # #22004 and must not be silently swallowed. (#22004)
-  if grep -q "Tests.*passed" "$OUTPUT_FILE" && ! grep -q "Tests.*failed" "$OUTPUT_FILE" && ! grep -qE "Errors +[1-9][0-9]* errors" "$OUTPUT_FILE"; then
+  if grep -q "Tests.*passed" "$OUTPUT_FILE" && ! grep -q "Tests.*failed" "$OUTPUT_FILE" && ! grep -qE "$VITEST_ERRORS_RE" "$OUTPUT_FILE"; then
     # All tests passed — exit was likely a pool worker termination timeout
     echo ""
     echo "All tests passed (exit code $EXIT_CODE was a non-test error, e.g. worker cleanup timeout)"

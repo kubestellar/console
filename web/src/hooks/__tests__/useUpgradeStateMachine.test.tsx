@@ -47,6 +47,20 @@ async function tick() {
 }
 
 // ---------------------------------------------------------------------------
+// Helper: fake only the timer APIs the hook uses
+// ---------------------------------------------------------------------------
+// Vitest 5's bare vi.useFakeTimers() fakes every timer-like global except
+// nextTick/queueMicrotask (setImmediate, performance, Date, Intl, rAF, ...).
+// Those are the macrotask/clock primitives React's act() and the async timer
+// advancers rely on, and with them faked this file wedged its shard every
+// nightly (900s timeout or worker heap OOM right after the last real-timer
+// test, #24572). The hook only uses setInterval, so fake just that family,
+// matching the toFake pattern in src/lib/unified/__tests__/registerHooks-*.
+function installIntervalFakeTimers() {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] })
+}
+
+// ---------------------------------------------------------------------------
 // Setup & Teardown
 // ---------------------------------------------------------------------------
 beforeEach(() => {
@@ -220,7 +234,7 @@ describe('useUpgradeStateMachine — Live fetching', () => {
 
 describe('useUpgradeStateMachine — Retry logic', () => {
   it('retries failed clusters after RETRY_INTERVAL_MS (15s) when agentConnected stays true', async () => {
-    vi.useFakeTimers()
+    installIntervalFakeTimers()
     const allClusters = [
       { name: 'success-cluster', healthy: true, nodeCount: 1 },
       { name: 'failed-cluster', healthy: true, nodeCount: 2 },
@@ -271,7 +285,7 @@ describe('useUpgradeStateMachine — Retry logic', () => {
   })
 
   it('does not retry when agentConnected=false during retry interval', async () => {
-    vi.useFakeTimers()
+    installIntervalFakeTimers()
     const allClusters = [
       { name: 'failed-cluster', healthy: true, nodeCount: 2 },
     ] as ClusterInfo[]
@@ -309,7 +323,7 @@ describe('useUpgradeStateMachine — Retry logic', () => {
 
 describe('useUpgradeStateMachine — TTL refresh', () => {
   it('clears fetchedClusters and version cache after VERSION_CACHE_TTL and re-fetches all clusters', async () => {
-    vi.useFakeTimers()
+    installIntervalFakeTimers()
     const allClusters = [
       { name: 'cluster-1', healthy: true, nodeCount: 1 },
       { name: 'cluster-2', healthy: true, nodeCount: 2 },
@@ -359,7 +373,7 @@ describe('useUpgradeStateMachine — TTL refresh', () => {
 
 describe('useUpgradeStateMachine — Agent reconnect', () => {
   it('clears fetchedClusters and failedClusters when agentConnected transitions from false to true, but not when it stays true', async () => {
-    vi.useFakeTimers()
+    installIntervalFakeTimers()
     const allClusters = [
       { name: 'cluster-1', healthy: true, nodeCount: 1 },
     ] as ClusterInfo[]

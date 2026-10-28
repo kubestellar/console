@@ -13,9 +13,31 @@ vi.mock('react-i18next', () => {
   }
 })
 
+// Hook mocks must return referentially stable values, like the real hooks do.
+// useMissionTree's root-node effect lists `showToast` (and `user`) as deps and
+// calls setTreeNodes(newArray) on every run, so a fresh `vi.fn()` per render
+// re-fires it forever: an unbounded passive-effect loop that starves the event
+// loop until the shard hits its 900s cap or the worker OOMs (#24572).
+const stableMocks = vi.hoisted(() => ({
+  navigate: vi.fn(),
+  location: { pathname: '/', search: '' },
+  showToast: vi.fn(),
+  auth: {
+    user: null,
+    token: null,
+    isAuthenticated: false,
+    isLoading: false,
+    login: vi.fn(),
+    logout: vi.fn(),
+    setToken: vi.fn(),
+    refreshUser: vi.fn(),
+  },
+  clusterContext: { clusterContext: null, isLoading: false },
+}))
+
 vi.mock('react-router-dom', () => ({
-  useNavigate: () => vi.fn(),
-  useLocation: () => ({ pathname: '/', search: '' }),
+  useNavigate: () => stableMocks.navigate,
+  useLocation: () => stableMocks.location,
 }))
 
 vi.mock('../../lib/api', () => ({
@@ -23,7 +45,17 @@ vi.mock('../../lib/api', () => ({
 }))
 
 vi.mock('../ui/Toast', () => ({
-  useToast: () => ({ showToast: vi.fn() }),
+  useToast: () => ({ showToast: stableMocks.showToast }),
+}))
+
+// Keep the smoke render off the live auth provider and the five live MCP
+// data hooks behind useClusterContext (same as __tests__/MissionBrowser.test.tsx).
+vi.mock('../../lib/auth', () => ({
+  useAuth: () => stableMocks.auth,
+}))
+
+vi.mock('../../hooks/useClusterContext', () => ({
+  useClusterContext: () => stableMocks.clusterContext,
 }))
 
 vi.mock('./browser', () => ({
