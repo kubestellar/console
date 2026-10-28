@@ -45,6 +45,11 @@ export function ServiceTypeTile({
       <div className="flex items-center gap-1.5 mb-1">
         <Icon className={`w-3 h-3 ${textClass}`} />
         <span className={`text-xs ${textClass}`}>{serviceType}</span>
+        <span
+          role="img"
+          aria-label={isClickable ? 'Status: active' : 'Status: no services'}
+          className={`ml-auto w-1.5 h-1.5 rounded-full ${isClickable ? 'bg-green-500' : 'bg-muted-foreground/40'}`}
+        />
       </div>
       <span className="text-lg font-bold text-foreground">{count}</span>
     </div>
