@@ -21,7 +21,7 @@ import {
   TOOLTIP_TIGHT_GAP_PX } from '../../../lib/llmd/tooltipSpacing'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../../ui/StatusBadge'
-import { CHART_MIN_HEIGHT_PX, CHART_TEXT_WHITE, CHART_AXIS_FONT_SIZE, CHART_BODY_FONT_SIZE } from '../../../lib/constants/ui'
+import { CHART_MIN_HEIGHT_PX, CHART_TOOLTIP_BG, CHART_TOOLTIP_BORDER, CHART_TEXT_WHITE, CHART_AXIS_FONT_SIZE, CHART_BODY_FONT_SIZE } from '../../../lib/constants/ui'
 import { useChartTokens } from '../../../hooks/useChartTokens'
 
 const GRID_LEFT_PX = 145
@@ -148,8 +148,8 @@ export function ResourceUtilization() {
         axisTick: { show: false },
       },
       tooltip: {
-        backgroundColor: 'rgba(15,23,42,0.95)',
-        borderColor: 'rgba(100,116,139,0.3)',
+        backgroundColor: CHART_TOOLTIP_BG,
+        borderColor: CHART_TOOLTIP_BORDER,
         textStyle: { color: CHART_TEXT_WHITE, fontSize: CHART_BODY_FONT_SIZE },
         formatter: (params: { data: { entry: BarEntry } }) => {
           const e = params.data?.entry
