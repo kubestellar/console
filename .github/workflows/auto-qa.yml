@@ -2276,35 +2276,10 @@ jobs:
           echo "Checking for stale data patterns..."
           ISSUES=""
 
-          # Find components with cache but no freshness indicator
-          CACHE_NO_TIMESTAMP=""
-          for f in $(grep -rln "useCached\|useQuery\|cache\|Cache" src/components --include="*.tsx" 2>/dev/null | head -30); do
-            HAS_TIMESTAMP=$(grep -l "lastUpdated\|lastFetched\|updatedAt\|refreshedAt\|timestamp\|Timestamp\|ago\|timeAgo" "$f" 2>/dev/null || true)
-            if [ -z "$HAS_TIMESTAMP" ]; then
-              CACHE_NO_TIMESTAMP="${CACHE_NO_TIMESTAMP}  - \`$(basename "$f")\`\n"
-            fi
-          done
-
-          if [ -n "$CACHE_NO_TIMESTAMP" ]; then
-            ISSUES="${ISSUES}### Components with caching but no freshness indicator\nUsers should know when data was last updated:\n${CACHE_NO_TIMESTAMP}\n\n"
-          fi
-
-          # Find cards that don't respect demo mode toggle (check for demo mode subscription)
-          # Cards using useCached* hooks get demo mode handling automatically via useCache's useSyncExternalStore(subscribeDemoMode)
-          NO_DEMO_SUBSCRIPTION=""
-          for f in $(find src/components/cards -name "*.tsx" 2>/dev/null | grep -v "index\|test" | head -40); do
-            HAS_DEMO=$(grep -l "useDemoMode\|useCardDemoState\|isDemoMode\|subscribeDemoMode\|isDemoFallback\|isDemoData\|useCached" "$f" 2>/dev/null || true)
-            if [ -z "$HAS_DEMO" ]; then
-              # Only flag if it has data fetching (exclude useCached which handles demo internally)
-              HAS_FETCH=$(grep -l "fetch\|useQuery\|useEffect.*api" "$f" 2>/dev/null || true)
-              if [ -n "$HAS_FETCH" ]; then
-                NO_DEMO_SUBSCRIPTION="${NO_DEMO_SUBSCRIPTION}  - \`$(basename "$f")\`\n"
-              fi
-            fi
-          done
-
-          if [ -n "$NO_DEMO_SUBSCRIPTION" ]; then
-            ISSUES="${ISSUES}### Cards with data fetching but no demo mode subscription\nMay not respond to demo mode toggle:\n${NO_DEMO_SUBSCRIPTION}\n\n"
+          # Invocation-based checks exclude tests and import/comment-only matches.
+          ISSUES=$(bash ../scripts/check-data-freshness.sh)
+          if [ -n "$ISSUES" ]; then
+            ISSUES="${ISSUES}\n\n"
           fi
 
           # Find components showing "Loading..." text instead of skeletons
