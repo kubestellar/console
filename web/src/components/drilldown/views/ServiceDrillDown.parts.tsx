@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Globe, Server, Info, Tag, Loader2, Copy, Check, ExternalLink, Activity } from 'lucide-react'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { cn } from '../../../lib/cn'
+import { TOUCH_TARGET_HEIGHT_CLASS } from '../../../lib/constants/ui'
 import { SERVICE_HEALTH_DOT_CLASSES, SERVICE_HEALTH_LABELS, type ServiceHealthStatus } from '../../../lib/services/serviceHealth'
 import type { ServiceTabType, ServiceEndpointAddress } from './useServiceDrillDown'
 
@@ -101,6 +102,7 @@ export function ServiceTabBar({ activeTab, tabs, onChange }: ServiceTabBarProps)
           onClick={() => onChange(tab.id)}
           className={cn(
             'px-3 py-2 text-sm transition-colors',
+            TOUCH_TARGET_HEIGHT_CLASS,
             activeTab === tab.id
               ? 'text-foreground border-b-2 border-primary'
               : 'text-muted-foreground hover:text-foreground'
@@ -338,7 +340,7 @@ export function ServiceOutputPane({
     return (
       <button
         onClick={onLoad}
-        className="px-3 py-1.5 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm transition-colors"
+        className={cn('px-3 py-1.5 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm transition-colors', TOUCH_TARGET_HEIGHT_CLASS)}
       >
         {loadLabel}
       </button>
