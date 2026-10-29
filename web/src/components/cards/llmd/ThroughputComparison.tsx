@@ -21,7 +21,7 @@ import {
   TOOLTIP_SWATCH_SIZE_PX } from '../../../lib/llmd/tooltipSpacing'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../../ui/StatusBadge'
-import { CHART_MIN_HEIGHT_PX, CHART_TEXT_WHITE, CHART_AXIS_FONT_SIZE, CHART_BODY_FONT_SIZE, CHART_TICK_COLOR, CHART_AXIS_STROKE, CHART_GRID_STROKE } from '../../../lib/constants/ui'
+import { CHART_MIN_HEIGHT_PX, CHART_TOOLTIP_BG, CHART_TOOLTIP_BORDER, CHART_TEXT_WHITE, CHART_AXIS_FONT_SIZE, CHART_BODY_FONT_SIZE, CHART_TICK_COLOR, CHART_AXIS_STROKE, CHART_GRID_STROKE } from '../../../lib/constants/ui'
 
 const GRID_LEFT_PX = 55
 const FULL_SIZE_STYLE = { height: '100%', width: '100%' } as const
@@ -153,8 +153,8 @@ export function ThroughputComparison() {
       },
       tooltip: {
         trigger: 'axis' as const,
-        backgroundColor: 'rgba(15,23,42,0.95)',
-        borderColor: 'rgba(100,116,139,0.3)',
+        backgroundColor: CHART_TOOLTIP_BG,
+        borderColor: CHART_TOOLTIP_BORDER,
         textStyle: { color: CHART_TEXT_WHITE, fontSize: CHART_BODY_FONT_SIZE },
         formatter: (params: Array<{ seriesName: string; value: number | null; color: string; dataIndex: number }>) => {
           const qps = chartData[params[0]?.dataIndex]?.qps ?? ''
