@@ -1,3 +1,4 @@
+// demoData-exempt: presentational sparkline; demo data is supplied by the parent nightly E2E card.
 import { useTranslation } from 'react-i18next'
 import type { NightlyRun } from '../../../lib/llmd/nightlyE2EDemoData'
 import {

@@ -1,3 +1,4 @@
+// demoData-exempt: presentational piece; demo data is supplied by the parent NightlyReleasePulse card.
 import { useState, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import {

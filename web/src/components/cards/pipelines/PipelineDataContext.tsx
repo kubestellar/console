@@ -1,3 +1,4 @@
+// demoData-exempt: context provider with no UI; demo fallback comes from useUnifiedPipelineData and each consuming card renders its own Skeleton loading state.
 /**
  * PipelineDataContext — unified data provider for the CI/CD dashboard.
  *

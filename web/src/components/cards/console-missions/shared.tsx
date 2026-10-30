@@ -1,5 +1,5 @@
 // Pure utility module — mission card utilities: types, hooks, formatters, and UI components.
-// Demo data support provided by individual mission card implementations via useCachedOfflineDetection.
+// demoData-exempt: demo data is supplied by individual mission card implementations via useCachedOfflineDetection.
 import { useState, useEffect, useCallback } from 'react'
 import { Bot } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
