@@ -241,6 +241,7 @@ function KubeChessInternal() {
         cols.push(
           <div
             role="button"
+            aria-label={`Square row ${row + 1}, column ${col + 1}${piece ? `, ${piece.color} ${piece.type}` : }`}
             tabIndex={0}
             onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
             key={`${row}-${col}`}

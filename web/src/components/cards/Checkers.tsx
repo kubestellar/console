@@ -115,6 +115,7 @@ export function Checkers(_props: CardComponentProps) {
                   <div
                     key={colIdx}
                     role="button"
+                    aria-label={`Square row ${rowIdx + 1}, column ${colIdx + 1}`}
                     tabIndex={0}
                     onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
                     onClick={() => handleCellClick(rowIdx, colIdx)}
