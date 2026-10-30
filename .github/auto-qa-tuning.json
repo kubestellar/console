@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_updated": "2026-10-29T03:05:39Z",
+  "last_updated": "2026-10-30T03:05:28Z",
   "rolling_window_days": 30,
   "categories": {
     "performance": {
@@ -18,11 +18,11 @@
       "last_evaluated": "2026-10-28T03:05:28Z"
     },
     "a11y": {
-      "merged": 107,
+      "merged": 109,
       "closed": 29,
       "acceptance_rate": 0.79,
       "status": "normal",
-      "last_evaluated": "2026-10-28T03:05:28Z"
+      "last_evaluated": "2026-10-30T03:05:28Z"
     },
     "operator": {
       "merged": 1133,
@@ -32,25 +32,25 @@
       "last_evaluated": "2026-10-29T03:05:39Z"
     },
     "sre": {
-      "merged": 680,
+      "merged": 682,
       "closed": 101,
       "acceptance_rate": 0.87,
       "status": "boosted",
-      "last_evaluated": "2026-10-29T03:05:39Z"
+      "last_evaluated": "2026-10-30T03:05:28Z"
     },
     "features": {
-      "merged": 59,
+      "merged": 60,
       "closed": 10,
       "acceptance_rate": 0.86,
       "status": "boosted",
-      "last_evaluated": "2026-10-29T03:05:39Z"
+      "last_evaluated": "2026-10-30T03:05:28Z"
     },
     "resilience": {
-      "merged": 151,
+      "merged": 152,
       "closed": 66,
       "acceptance_rate": 0.7,
       "status": "normal",
-      "last_evaluated": "2026-10-29T03:05:39Z"
+      "last_evaluated": "2026-10-30T03:05:28Z"
     },
     "consistency": {
       "merged": 41,
@@ -95,16 +95,6 @@
     ]
   },
   "history": [
-    {
-      "date": "2026-09-02",
-      "total_merged": 1999,
-      "total_closed": 584,
-      "categories_blocked": [],
-      "categories_boosted": [
-        "sre",
-        "features"
-      ]
-    },
     {
       "date": "2026-09-03",
       "total_merged": 2011,
@@ -388,6 +378,16 @@
     {
       "date": "2026-10-29",
       "total_merged": 2325,
+      "total_closed": 588,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "sre",
+        "features"
+      ]
+    },
+    {
+      "date": "2026-10-30",
+      "total_merged": 2331,
       "total_closed": 588,
       "categories_blocked": [],
       "categories_boosted": [
