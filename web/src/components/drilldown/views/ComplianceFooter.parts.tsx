@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { TOUCH_TARGET_HEIGHT_CLASS } from '../../../lib/constants/ui'
+import { Button } from '../../ui/Button'
 import { PAGE_SIZE } from './compliance-drilldown'
 import type { ControlRow } from './compliance-drilldown'
 
@@ -32,45 +33,45 @@ export function CompliancePagination({
         Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, totalRows)} of {totalRows} controls
       </span>
       <div className="flex items-center gap-1">
-        <button
+        <Button
+          variant="ghost"
           onClick={onFirst}
           disabled={page === 0}
           className="p-2 rounded hover:bg-card/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors min-h-11 min-w-11"
           title="First page"
           aria-label="First page"
-        >
-          <ChevronsLeft className="w-4 h-4" />
-        </button>
-        <button
+          icon={<ChevronsLeft className="w-4 h-4" />}
+        />
+        <Button
+          variant="ghost"
           onClick={onPrev}
           disabled={page === 0}
           className="p-2 rounded hover:bg-card/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors min-h-11 min-w-11"
           title="Previous page"
           aria-label="Previous page"
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
+          icon={<ChevronLeft className="w-4 h-4" />}
+        />
         <span className="px-3 text-xs">
           Page {page + 1} of {totalPages}
         </span>
-        <button
+        <Button
+          variant="ghost"
           onClick={onNext}
           disabled={page >= totalPages - 1}
           className="p-2 rounded hover:bg-card/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors min-h-11 min-w-11"
           title="Next page"
           aria-label="Next page"
-        >
-          <ChevronRight className="w-4 h-4" />
-        </button>
-        <button
+          icon={<ChevronRight className="w-4 h-4" />}
+        />
+        <Button
+          variant="ghost"
           onClick={onLast}
           disabled={page >= totalPages - 1}
           className="p-2 rounded hover:bg-card/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors min-h-11 min-w-11"
           title="Last page"
           aria-label="Last page"
-        >
-          <ChevronsRight className="w-4 h-4" />
-        </button>
+          icon={<ChevronsRight className="w-4 h-4" />}
+        />
       </div>
     </div>
   )
