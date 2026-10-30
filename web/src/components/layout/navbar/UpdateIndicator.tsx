@@ -99,6 +99,7 @@ export function UpdateIndicator({ showLabel = false }: UpdateIndicatorProps) {
           }}
           className={buttonClassName}
           title={buttonTitle}
+          aria-label={buttonTitle}
         >
           {isUpgradeError ? (
             <AlertTriangle className={ICON_SIZE} />
