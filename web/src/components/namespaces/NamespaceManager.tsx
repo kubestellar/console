@@ -127,6 +127,7 @@ function NamespaceManagerContent() {
       if (selectedNamespace?.name === namespaceToDelete.name && selectedNamespace?.cluster === namespaceToDelete.cluster) {
         setSelectedNamespace(null)
       }
+      showToast(`Namespace "${namespaceToDelete.name}" deleted`, 'success')
       setNamespaceToDelete(null)
     } catch (err: unknown) {
       console.error('Failed to delete namespace:', err)
