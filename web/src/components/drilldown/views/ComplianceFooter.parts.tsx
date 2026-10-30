@@ -106,6 +106,7 @@ export function ComplianceClusterBreakdown({
             <button
               key={cluster}
               onClick={() => onClusterClick(cluster)}
+              aria-pressed={clusterFilter === cluster}
               className={cn(
                 'rounded-lg border p-2 text-left transition-colors',
                 TOUCH_TARGET_HEIGHT_CLASS,

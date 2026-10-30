@@ -38,6 +38,7 @@ export function ComplianceSummaryStats({
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
       <button
         onClick={onClearFilter}
+        aria-pressed={!statusFilter}
         className={cn(
           cn('rounded-lg border p-3 text-left transition-colors', TOUCH_TARGET_HEIGHT_CLASS),
           !statusFilter ? 'border-teal-500/40 bg-teal-500/10' : 'border-border bg-card/50 hover:border-border/80'
@@ -48,6 +49,7 @@ export function ComplianceSummaryStats({
       </button>
       <button
         onClick={onPassClick}
+        aria-pressed={statusFilter === 'pass'}
         className={cn(
           cn('rounded-lg border p-3 text-left transition-colors', TOUCH_TARGET_HEIGHT_CLASS),
           statusFilter === 'pass' ? 'border-green-500/40 bg-green-500/10' : 'border-border bg-card/50 hover:border-border/80'
@@ -58,6 +60,7 @@ export function ComplianceSummaryStats({
       </button>
       <button
         onClick={onFailClick}
+        aria-pressed={statusFilter === 'fail'}
         className={cn(
           cn('rounded-lg border p-3 text-left transition-colors', TOUCH_TARGET_HEIGHT_CLASS),
           statusFilter === 'fail' ? 'border-red-500/40 bg-red-500/10' : 'border-border bg-card/50 hover:border-border/80'
@@ -68,6 +71,7 @@ export function ComplianceSummaryStats({
       </button>
       <button
         onClick={onOtherClick}
+        aria-pressed={statusFilter === 'other'}
         className={cn(
           cn('rounded-lg border p-3 text-left transition-colors', TOUCH_TARGET_HEIGHT_CLASS),
           statusFilter === 'other' ? 'border-yellow-500/40 bg-yellow-500/10' : 'border-border bg-card/50 hover:border-border/80'
