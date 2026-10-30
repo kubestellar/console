@@ -1,3 +1,4 @@
+// demoData-exempt: presentational piece; demo data is supplied by the parent NamespaceRBAC card.
 import { Users, Key, Lock, ChevronRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Select } from '../ui/Select'

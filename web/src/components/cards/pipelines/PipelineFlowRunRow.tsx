@@ -1,3 +1,4 @@
+// demoData-exempt: presentational row; demo data is supplied by the parent PipelineFlow card.
 import { useState, useMemo, useRef, useLayoutEffect } from 'react'
 import { XCircle, ExternalLink, Stethoscope } from 'lucide-react'
 import { useReducedMotion } from 'framer-motion'

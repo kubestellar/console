@@ -1,3 +1,4 @@
+// demoData-exempt: presentational piece; demo data is supplied by the parent NamespaceMonitor card.
 import { memo, useEffect } from 'react'
 import { Eye } from 'lucide-react'
 import type { ChangeType, ResourceListItem, ResourceType } from '../NamespaceMonitor.types'

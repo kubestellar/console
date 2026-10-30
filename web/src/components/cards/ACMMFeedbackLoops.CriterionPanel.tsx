@@ -1,3 +1,4 @@
+// demoData-exempt: presentational piece; demo data is supplied by the parent ACMMFeedbackLoops card.
 /**
  * Single criterion row (with optional dimension header / level-break
  * divider, lock prompt, and expanded detail panel) for ACMMFeedbackLoops.
