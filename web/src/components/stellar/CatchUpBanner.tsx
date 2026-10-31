@@ -12,6 +12,7 @@ const BANNER_PADDING = '10px 12px'
 const TITLE_MARGIN_BOTTOM_PX = 4
 const TITLE_LETTER_SPACING_EM = '0.08em'
 const SUMMARY_LINE_HEIGHT = 1.55
+const SUMMARY_LEAD_STYLE = { color: 'var(--s-text)', lineHeight: SUMMARY_LINE_HEIGHT } as const
 const HIGHLIGHT_MARGIN_TOP_PX = 8
 const HIGHLIGHT_PADDING_LEFT_PX = 18
 const SUMMARY_SPLIT_LIMIT = 4
@@ -63,7 +64,7 @@ export function CatchUpBanner({ catchUp, onDismiss }: Props) {
             {tTyped('stellar.catchUp.title')}
           </div>
           {lead && (
-            <div className="text-xs" style={{ color: 'var(--s-text)', lineHeight: SUMMARY_LINE_HEIGHT }}>
+            <div className="text-xs" style={SUMMARY_LEAD_STYLE}>
               {lead}
             </div>
           )}

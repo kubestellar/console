@@ -25,6 +25,7 @@ interface Msg {
 const CHAT_PANEL_ROOT_STYLE = { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 } as const
 const FLEX_SPACER_STYLE = { flex: 1 } as const
 const CLEAR_BUTTON_STYLE = { background: 'none', border: 'none', cursor: 'pointer', color: 'var(--s-text-dim)' } as const
+const PENDING_CANCEL_BUTTON_STYLE = { marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--s-text-dim)' } as const
 const INPUT_FOOTER_STYLE = { flexShrink: 0, borderTop: '1px solid var(--s-border)' } as const
 const TEXT_DIM_STYLE = { color: 'var(--s-text-dim)' } as const
 
@@ -288,7 +289,7 @@ export function ChatPanel({
             <button
               className="text-xs"
               onClick={() => setLocalPendingAction(null)}
-              style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--s-text-dim)' }}
+              style={PENDING_CANCEL_BUTTON_STYLE}
               title="Cancel — send as chat instead"
             >
               ✕
