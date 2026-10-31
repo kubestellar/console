@@ -67,6 +67,12 @@ lint:
 dashboard-lint:
 	bash scripts/lint-dashboards.sh
 
+## duplication-check: Run jscpd against pkg/ and cmd/ (Go). No CI workflow
+## runs this yet (kubestellar/console#24660); run locally before a refactor
+## PR to confirm a dedup actually lowers the clone count.
+duplication-check:
+	npx --yes jscpd --config .jscpd.json
+
 ## test: Run all Go tests with a hard 5-minute timeout per package
 ## Prevents zombie agent.test process leaks from ad-hoc test runs
 test:
