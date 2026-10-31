@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type { TFunction } from 'i18next'
 import { ConfigureCardBehaviorsTab } from './ConfigureCardBehaviorsTab'
 import type { CardBehavior } from './cardConfigData'
@@ -57,6 +58,27 @@ describe('ConfigureCardBehaviorsTab Component', () => {
     )
 
     fireEvent.click(screen.getByText('Auto-refresh'))
+    expect(toggleBehavior).toHaveBeenCalledWith('autoRefresh')
+  })
+
+  it('exposes the state and toggles with Enter and Space', async () => {
+    const user = userEvent.setup()
+    const toggleBehavior = vi.fn()
+    render(
+      <ConfigureCardBehaviorsTab
+        cardBehaviors={cardBehaviors}
+        behaviors={{ autoRefresh: true }}
+        t={t}
+        toggleBehavior={toggleBehavior}
+      />,
+    )
+
+    const button = screen.getByRole('button', { name: /Auto-refresh/ })
+    expect(button).toHaveAttribute('aria-pressed', 'true')
+    await user.tab()
+    expect(button).toHaveFocus()
+    await user.keyboard('{Enter}[Space]')
+    expect(toggleBehavior).toHaveBeenCalledTimes(2)
     expect(toggleBehavior).toHaveBeenCalledWith('autoRefresh')
   })
 
