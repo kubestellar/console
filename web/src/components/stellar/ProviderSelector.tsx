@@ -10,6 +10,7 @@ const PROVIDER_DIM_TEXT_STYLE = { color: 'var(--s-text-dim)' } as const
 const PROVIDER_AUTO_ICON_STYLE = { fontSize: 14, width: 16, textAlign: 'center' } as const
 const PROVIDER_ACTIVE_DOT_STYLE = { fontSize: 8, color: 'var(--s-success)', flexShrink: 0 } as const
 const PROVIDER_RETRY_BUTTON_STYLE = { border: 'none', background: 'transparent', color: 'var(--s-text)', fontSize: 10, fontWeight: 600, textDecoration: 'underline', cursor: 'pointer', padding: 0 } as const
+const PROVIDER_ERROR_BOX_STYLE = { borderColor: 'rgba(var(--s-error-rgb), 0.3)', background: 'rgba(var(--s-error-rgb), 0.08)', color: 'var(--s-text)' } as const
 const PROVIDER_ROOT_STYLE = { position: 'relative' } as const
 
 const PROVIDER_LABEL_STYLE = { fontWeight: 600 } as const
@@ -223,7 +224,7 @@ export function ProviderSelector({ session, onSelect }: Props) {
                   <span>{t('loading', 'Loading…')}</span>
                 </div>
               ) : providersError ? (
-                <div className="mx-2 mt-1.5 rounded-lg border px-2.5 py-2" style={{ borderColor: 'rgba(var(--s-error-rgb), 0.3)', background: 'rgba(var(--s-error-rgb), 0.08)', color: 'var(--s-text)' }}>
+                <div className="mx-2 mt-1.5 rounded-lg border px-2.5 py-2" style={PROVIDER_ERROR_BOX_STYLE}>
                   <div className="flex items-center gap-2 text-[11px]">
                     <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
                     <span>{providersError}</span>
