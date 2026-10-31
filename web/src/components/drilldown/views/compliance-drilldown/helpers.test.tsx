@@ -9,7 +9,9 @@ import {
   statusIcon,
   statusLabel,
   computeSummaryCounts,
+  complianceScoreColor,
 } from './helpers'
+import { COMPLIANCE_SCORE_GOOD_PERCENT, COMPLIANCE_SCORE_WARN_PERCENT } from './types'
 
 describe('normalizeComplianceStatus', () => {
   it('maps passing → pass', () => {
@@ -222,5 +224,22 @@ describe('computeSummaryCounts', () => {
       other: 0,
       total: 0,
     })
+  })
+})
+
+describe('complianceScoreColor', () => {
+  it('returns green at or above the good threshold', () => {
+    expect(complianceScoreColor(COMPLIANCE_SCORE_GOOD_PERCENT)).toBe('text-green-400')
+    expect(complianceScoreColor(100)).toBe('text-green-400')
+  })
+
+  it('returns yellow between the warn and good thresholds', () => {
+    expect(complianceScoreColor(COMPLIANCE_SCORE_WARN_PERCENT)).toBe('text-yellow-400')
+    expect(complianceScoreColor(COMPLIANCE_SCORE_GOOD_PERCENT - 1)).toBe('text-yellow-400')
+  })
+
+  it('returns red below the warn threshold', () => {
+    expect(complianceScoreColor(COMPLIANCE_SCORE_WARN_PERCENT - 1)).toBe('text-red-400')
+    expect(complianceScoreColor(0)).toBe('text-red-400')
   })
 })

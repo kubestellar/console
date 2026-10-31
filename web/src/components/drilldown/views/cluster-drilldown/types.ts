@@ -39,3 +39,14 @@ export interface ClusterResourceTreeProps {
   drillToNamespace: (cluster: string, namespace: string) => void
   drillToPod: (cluster: string, namespace: string, pod: string, data?: Record<string, unknown>) => void
 }
+
+/** Max nodes listed in the resource tree before collapsing into a "+N more" row. */
+export const TREE_MAX_VISIBLE_NODES = 20
+/** Max namespaces listed in the resource tree before collapsing into a "+N more" row. */
+export const TREE_MAX_VISIBLE_NAMESPACES = 15
+/** Max pod issues listed in the resource tree before collapsing into a "+N more" row. */
+export const TREE_MAX_VISIBLE_POD_ISSUES = 10
+/** Max PVCs listed in the resource tree before collapsing into a "+N more" row. */
+export const TREE_MAX_VISIBLE_PVCS = 10
+/** Max services listed in the resource tree before collapsing into a "+N more" row. */
+export const TREE_MAX_VISIBLE_SERVICES = 15

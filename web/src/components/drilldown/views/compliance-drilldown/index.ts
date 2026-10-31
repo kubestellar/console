@@ -7,4 +7,5 @@ export {
   statusIcon,
   statusLabel,
   computeSummaryCounts,
+  complianceScoreColor,
 } from './helpers'
