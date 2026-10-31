@@ -105,6 +105,10 @@ useDefault = true
     '''__tests__/''',
     '''\.test\.(ts|tsx)$''',
     '''\.spec\.(ts|tsx)$''',
+    # Generated test logs (e.g. web/vitest-output.log from unit-test.sh) are
+    # gitignored via *.log but present in the working tree during the nightly
+    # run; they echo fake JWT fixtures from test output (#24652).
+    '''\.log$''',
   ]
   description = "Ignore test fixtures, examples, vendor, and CI docs"
 
