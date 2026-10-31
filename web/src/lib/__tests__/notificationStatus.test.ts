@@ -33,6 +33,41 @@ describe('isBrowserNotifVerified', () => {
     localStorage.setItem('kc_browser_notif_verified', 'not-json')
     expect(isBrowserNotifVerified()).toBe(false)
   })
+
+  it('stays valid for a new period after renewing an expired confirmation', () => {
+    vi.useFakeTimers()
+    try {
+      const DAY_MS = 24 * 60 * 60 * 1000
+      vi.setSystemTime(new Date('2026-01-01T00:00:00Z'))
+      setBrowserNotifVerified(true)
+      vi.setSystemTime(Date.now() + 31 * DAY_MS)
+      expect(isBrowserNotifVerified()).toBe(false)
+
+      setBrowserNotifVerified(true)
+      expect(isBrowserNotifVerified()).toBe(true)
+
+      vi.setSystemTime(Date.now() + 29 * DAY_MS)
+      expect(isBrowserNotifVerified()).toBe(true)
+
+      vi.setSystemTime(Date.now() + 2 * DAY_MS)
+      expect(isBrowserNotifVerified()).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('returns false while reads throw SecurityError and recovers afterwards', () => {
+    setBrowserNotifVerified(true)
+    const getItemSpy = vi.spyOn(window.localStorage, 'getItem').mockImplementation(() => {
+      throw new DOMException('denied', 'SecurityError')
+    })
+    try {
+      expect(isBrowserNotifVerified()).toBe(false)
+    } finally {
+      getItemSpy.mockRestore()
+    }
+    expect(isBrowserNotifVerified()).toBe(true)
+  })
 })
 
 describe('setBrowserNotifVerified', () => {
