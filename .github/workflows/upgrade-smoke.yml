@@ -111,6 +111,13 @@ jobs:
           cluster_name: upgrade-smoke
           wait: 60s
 
+      # Pin Helm so install and rollback use the same known SSA semantics,
+      # rather than whichever major version ubuntu-latest happens to include.
+      - name: Set up Helm
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.3.1
+
       - name: Load images into Kind
         run: |
           kind load docker-image ${{ env.IMAGE_REPO }}:${{ env.BASELINE_TAG }} --name upgrade-smoke
@@ -275,9 +282,13 @@ jobs:
           # The self-upgrade patches the Deployment directly (not via helm upgrade),
           # so only one Helm revision exists. helm rollback re-applies it,
           # reverting the image tag from :ci-head back to :ci-baseline.
+          # Helm 4 uses server-side apply: the console now owns the image
+          # field, so this intentional rollback must reclaim field ownership.
+          # --force-conflicts does not replace/delete resources (--force does).
           echo "Rolling back $DEPLOY to revision 1 (:${{ env.BASELINE_TAG }})"
           helm rollback ${{ env.RELEASE_NAME }} 1 \
             -n ${{ env.NAMESPACE }} \
+            --force-conflicts \
             --wait \
             --timeout=${{ env.HELM_INSTALL_TIMEOUT }}
 
