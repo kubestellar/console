@@ -1,5 +1,6 @@
 import { CheckCircle, XCircle, AlertCircle, Info } from 'lucide-react'
 import type { SummaryCounts } from './types'
+import { COMPLIANCE_SCORE_GOOD_PERCENT, COMPLIANCE_SCORE_WARN_PERCENT } from './types'
 
 export function normalizeComplianceStatus(status?: string): string {
   switch (status) {
@@ -32,6 +33,13 @@ export function severityColor(s?: string): string {
     case 'low': return 'text-blue-400 bg-blue-500/15 border-blue-500/30'
     default: return 'text-muted-foreground bg-secondary border-border'
   }
+}
+
+/** Tailwind text color for a per-cluster compliance score percentage. */
+export function complianceScoreColor(score: number): string {
+  if (score >= COMPLIANCE_SCORE_GOOD_PERCENT) return 'text-green-400'
+  if (score >= COMPLIANCE_SCORE_WARN_PERCENT) return 'text-yellow-400'
+  return 'text-red-400'
 }
 
 export function statusIcon(status: string) {

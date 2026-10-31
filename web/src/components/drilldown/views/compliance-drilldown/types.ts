@@ -22,5 +22,10 @@ export interface SummaryCounts {
 /** Controls per page */
 export const PAGE_SIZE = 25
 
+/** Per-cluster compliance score (%) at or above which the score is shown green. */
+export const COMPLIANCE_SCORE_GOOD_PERCENT = 80
+/** Per-cluster compliance score (%) at or above which the score is shown yellow (below is red). */
+export const COMPLIANCE_SCORE_WARN_PERCENT = 60
+
 export const SEVERITY_ORDER: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
 export const STATUS_ORDER: Record<string, number> = { fail: 0, other: 1, 'not-applicable': 2, pass: 3 }
