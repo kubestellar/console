@@ -1946,9 +1946,9 @@ jobs:
             fi
           fi
 
-          # Find cards not using the standardized card hooks
+          # Accept all supported card-state hooks and documented parent-owned data exemptions.
           NON_STANDARD_CARDS=$(for f in $CARD_FILES; do
-            HAS_CARD_HOOK=$(grep -l "useCardData\|useCardDemoState" "$f" 2>/dev/null || true)
+            HAS_CARD_HOOK=$(grep -lE '\b(useCardData|useCardDemoState|useCardLoadingState|useReportCardDataState)\b|^[[:space:]]*//[[:space:]]*demoData-exempt:' "$f" 2>/dev/null || true)
             if [ -z "$HAS_CARD_HOOK" ]; then
               HAS_STATE=$(grep -c "useState\|useEffect" "$f" 2>/dev/null || echo "0")
               if [ "$HAS_STATE" -gt 2 ]; then
