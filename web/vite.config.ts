@@ -107,7 +107,7 @@ export default defineConfig(({ mode }) => ({
           }
           // Bucket remaining root-level card files alphabetically to keep cards-misc under 300KB
           const CARDS_MISC_BUCKETS: ReadonlyArray<readonly [string, string]> = [
-            ['a', 'c'], ['d', 'h'], ['i', 'o'], ['p', 's'], ['t', 'z'],
+            ['a', 'b'], ['c', 'c'], ['d', 'h'], ['i', 'o'], ['p', 's'], ['t', 'z'],
           ]
           const cardsMiscChunkName = (moduleId: string): string => {
             const rest = moduleId.split('/src/components/cards/')[1] ?? ''
@@ -180,7 +180,8 @@ export default defineConfig(({ mode }) => ({
             ['cards-misc', ['/src/components/cards/']],
             // Split drilldown into modal and views to reduce 468KB chunk
             ['drilldown-modal', ['/src/components/drilldown/DrillDownModal']],
-            // Split drilldown-views (460K) into domain groups
+            // Split drilldown-views (460K) into domain groups; shared .parts helpers get their own chunk
+            ['drilldown-parts', ['/src/components/drilldown/views/ServiceDrillDown.parts', '/src/components/drilldown/views/SecretDrillDown.parts', '/src/components/drilldown/views/DriftDrillDown.parts', '/src/components/drilldown/views/ResourcesDrillDown.parts', '/src/components/drilldown/views/ComplianceDrillDown.parts', '/src/components/drilldown/views/ConfigMapDrillDown.parts']],
             ['drilldown-k8s', ['/src/components/drilldown/views/PodDrillDown', '/src/components/drilldown/views/pod-drilldown/', '/src/components/drilldown/views/NodeDrillDown', '/src/components/drilldown/views/DeploymentDrillDown', '/src/components/drilldown/views/ReplicaSetDrillDown', '/src/components/drilldown/views/ServiceDrillDown', '/src/components/drilldown/views/PVCDrillDown', '/src/components/drilldown/views/NamespaceDrillDown', '/src/components/drilldown/views/ConfigMapDrillDown', '/src/components/drilldown/views/SecretDrillDown', '/src/components/drilldown/views/ServiceAccountDrillDown', '/src/components/drilldown/views/ResourcesDrillDown']],
             ['drilldown-gitops', ['/src/components/drilldown/views/ArgoAppDrillDown', '/src/components/drilldown/views/KustomizationDrillDown', '/src/components/drilldown/views/DriftDrillDown', '/src/components/drilldown/views/HelmReleaseDrillDown', '/src/components/drilldown/views/BuildpackDrillDown', '/src/components/drilldown/views/CRDDrillDown', '/src/components/drilldown/views/OperatorDrillDown']],
             ['drilldown-security', ['/src/components/drilldown/views/PolicyDrillDown', '/src/components/drilldown/views/AttestationDrillDown', '/src/components/drilldown/views/RBACDrillDown', '/src/components/drilldown/views/ComplianceDrillDown']],
