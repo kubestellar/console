@@ -41,7 +41,7 @@ export function getPrimaryPodProblem(problems: string[], fallback: string): stri
 
 export function parseResourceQuantity(value: string | undefined): number {
   if (!value) return 0
-  const match = value.match(/^(\d+(?:\.\d+)?)(Ki|Mi|Gi|Ti|K|M|G|T|m)?$/)
+  const match = value.match(/^(\d+(?:\.\d+)?)(Ki|Mi|Gi|Ti|k|K|M|G|T|m)?$/)
   if (!match) {
     const num = parseFloat(value)
     return isNaN(num) ? 0 : num
@@ -57,6 +57,7 @@ export function parseResourceQuantity(value: string | undefined): number {
       return num * 1024 * 1024 * 1024
     case 'Ti':
       return num * 1024 * 1024 * 1024 * 1024
+    case 'k':
     case 'K':
       return num * 1000
     case 'M':
