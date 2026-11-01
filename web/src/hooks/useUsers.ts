@@ -6,7 +6,6 @@ import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { getStoredAuthToken } from '../lib/authToken'
 import { agentFetch } from './mcp/shared'
 import { FETCH_DEFAULT_TIMEOUT_MS, RBAC_QUERY_TIMEOUT_MS } from '../lib/constants/network'
-import { MS_PER_DAY, MS_PER_HOUR } from '../lib/constants/time'
 import type {
   ConsoleUser,
   K8sServiceAccount,
@@ -20,6 +19,12 @@ import type {
   CreateServiceAccountRequest,
   CreateRoleBindingRequest } from '../types/users'
 
+import {
+  getDemoConsoleUsers,
+  getDemoUserManagementSummary,
+  getDemoOpenShiftUsers,
+  getDemoK8sServiceAccounts } from './useUsers.demoData'
+
 // agentAuthHeaders attaches the local-agent Bearer token when one is stored.
 // The token is optional — the agent accepts unauthenticated requests from
 // allowed origins when KC_AGENT_TOKEN is unset — so we simply omit the
@@ -30,86 +35,6 @@ async function agentAuthHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = {}
   if (token) headers['Authorization'] = `Bearer ${token}`
   return headers
-}
-
-// Demo data for console users
-const DEMO_USER_MAX_AGE_MS = 90 * MS_PER_DAY
-
-function getDemoConsoleUsers(): ConsoleUser[] {
-  return [
-    {
-      id: '1',
-      github_id: '12345',
-      github_login: 'admin-user',
-      email: 'admin@example.com',
-      avatar_url: 'https://avatars.githubusercontent.com/u/12345?v=4',
-      role: 'admin',
-      onboarded: true,
-      created_at: new Date(Date.now() - DEMO_USER_MAX_AGE_MS).toISOString(),
-      last_login: new Date(Date.now() - 2 * MS_PER_HOUR).toISOString() },
-    {
-      id: '2',
-      github_id: '23456',
-      github_login: 'developer-jane',
-      email: 'jane@example.com',
-      avatar_url: 'https://avatars.githubusercontent.com/u/23456?v=4',
-      role: 'editor',
-      onboarded: true,
-      created_at: new Date(Date.now() - 60 * MS_PER_DAY).toISOString(),
-      last_login: new Date(Date.now() - 5 * MS_PER_HOUR).toISOString() },
-    {
-      id: '3',
-      github_id: '34567',
-      github_login: 'viewer-bob',
-      email: 'bob@example.com',
-      role: 'viewer',
-      onboarded: true,
-      created_at: new Date(Date.now() - 30 * MS_PER_DAY).toISOString(),
-      last_login: new Date(Date.now() - MS_PER_DAY).toISOString() },
-    {
-      id: '4',
-      github_id: '45678',
-      github_login: 'ops-engineer',
-      email: 'ops@example.com',
-      avatar_url: 'https://avatars.githubusercontent.com/u/45678?v=4',
-      role: 'editor',
-      onboarded: true,
-      created_at: new Date(Date.now() - 45 * MS_PER_DAY).toISOString(),
-      last_login: new Date(Date.now() - 1 * MS_PER_HOUR).toISOString() },
-  ]
-}
-
-// Demo data for user management summary
-function getDemoUserManagementSummary(): UserManagementSummary {
-  return {
-    consoleUsers: {
-      total: 4,
-      admins: 1,
-      editors: 2,
-      viewers: 1 },
-    k8sServiceAccounts: {
-      total: 11,
-      clusters: ['prod-east', 'staging', 'dev-cluster'] },
-    currentUserPermissions: [
-      {
-        cluster: 'prod-east',
-        isClusterAdmin: true,
-        canCreateServiceAccounts: true,
-        canManageRBAC: true,
-        canViewSecrets: true },
-      {
-        cluster: 'staging',
-        isClusterAdmin: false,
-        canCreateServiceAccounts: true,
-        canManageRBAC: false,
-        canViewSecrets: false },
-      {
-        cluster: 'dev-cluster',
-        isClusterAdmin: true,
-        canCreateServiceAccounts: true,
-        canManageRBAC: true,
-        canViewSecrets: true },
-    ] }
 }
 
 /**
@@ -228,41 +153,6 @@ export function useUserManagementSummary() {
   }, [fetchSummary])
 
   return { summary, isLoading, isRefreshing, error, refetch: fetchSummary }
-}
-
-// Demo data for OpenShift users
-function getDemoOpenShiftUsers(cluster?: string): OpenShiftUser[] {
-  if (!cluster) return []
-
-  return [
-    {
-      name: 'admin',
-      fullName: 'Cluster Admin',
-      identities: ['htpasswd:admin'],
-      groups: ['system:cluster-admins', 'system:authenticated'],
-      cluster,
-      createdAt: new Date(Date.now() - 90 * MS_PER_DAY).toISOString() },
-    {
-      name: 'developer',
-      fullName: 'Dev User',
-      identities: ['htpasswd:developer'],
-      groups: ['developers', 'system:authenticated'],
-      cluster,
-      createdAt: new Date(Date.now() - 60 * MS_PER_DAY).toISOString() },
-    {
-      name: 'ops-user',
-      fullName: 'Operations Engineer',
-      identities: ['ldap:ops-user'],
-      groups: ['operations', 'system:authenticated'],
-      cluster,
-      createdAt: new Date(Date.now() - 45 * MS_PER_DAY).toISOString() },
-    {
-      name: 'viewer',
-      identities: ['htpasswd:viewer'],
-      groups: ['viewers', 'system:authenticated'],
-      cluster,
-      createdAt: new Date(Date.now() - 30 * MS_PER_DAY).toISOString() },
-  ]
 }
 
 /**
@@ -403,28 +293,6 @@ export function useK8sUsers(cluster?: string) {
   }, [fetchUsers])
 
   return { users, isLoading, error, refetch: fetchUsers }
-}
-
-// Demo data for K8s service accounts - generates for the specified cluster
-function getDemoK8sServiceAccounts(cluster?: string, namespace?: string): K8sServiceAccount[] {
-  // If no cluster specified, return empty (user needs to select a cluster)
-  if (!cluster) return []
-
-  // Generate demo SAs for the selected cluster with varied namespaces
-  const accounts: K8sServiceAccount[] = [
-    { name: 'default', namespace: 'default', cluster, roles: ['view'] },
-    { name: 'admin-sa', namespace: 'default', cluster, roles: ['admin', 'cluster-admin'] },
-    { name: 'prometheus', namespace: 'monitoring', cluster, roles: ['cluster-view'] },
-    { name: 'grafana', namespace: 'monitoring', cluster, roles: ['view'] },
-    { name: 'argocd', namespace: 'argocd', cluster, roles: ['cluster-admin'] },
-    { name: 'builder', namespace: 'kube-system', cluster, roles: ['edit'] },
-  ]
-
-  // Filter by namespace only if specified
-  if (namespace) {
-    return accounts.filter(sa => sa.namespace === namespace)
-  }
-  return accounts
 }
 
 /**
