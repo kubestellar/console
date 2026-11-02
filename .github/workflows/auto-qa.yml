@@ -2718,91 +2718,32 @@ jobs:
           echo "Checking refresh icon animation consistency..."
           ISSUES=""
 
-          # Find all refresh icon usages
-          REFRESH_ICONS=$(grep -rn "RefreshCw\|RefreshCcw\|refresh\|Refresh" src/ --include="*.tsx" 2>/dev/null | \
-            grep -v "node_modules\|\.test\." | head -100 || true)
+          # Parse rendered controls, not imports, metadata icons, or nearby CSS.
+          node --test scripts/check-refresh-spin.test.mjs
+          ISSUES=$(node scripts/check-refresh-spin.mjs src)
 
-          if [ -n "$REFRESH_ICONS" ]; then
-            # Check for animate-spin on refresh icons
-            MISSING_SPIN=""
-            for f in $(grep -rl "RefreshCw\|RefreshCcw" src/ --include="*.tsx" 2>/dev/null | head -50); do
-              # Check if file has animate-spin with refresh icon
-              HAS_SPIN=$(grep -n "RefreshCw\|RefreshCcw" "$f" | while read line; do
-                LINE_NO=$(echo "$line" | cut -d: -f1)
-                # Check context around the line (5 lines before/after) for animate-spin
-                HAS_ANIMATE=$(sed -n "$((LINE_NO > 5 ? LINE_NO - 5 : 1)),$((LINE_NO + 5))p" "$f" | grep "animate-spin" || true)
-                if [ -z "$HAS_ANIMATE" ]; then
-                  echo "missing:$LINE_NO"
-                fi
-              done | head -3 || true)
+          # Check inventory items for refresh functionality (separate from icon animation).
+          INVENTORY_FILES=$(find src -path "*card*" -name "*.tsx" 2>/dev/null | head -50 || true)
+          CARDS_WITHOUT_REFRESH=""
+          for f in $INVENTORY_FILES; do
+            case "$f" in
+              *index*|*types*|*utils*|*hooks*) continue ;;
+            esac
 
-              if [ -n "$HAS_SPIN" ]; then
+            HAS_DATA_FETCH=$(grep -l "useQuery\|useFetch\|fetch\|axios" "$f" 2>/dev/null || true)
+            if [ -n "$HAS_DATA_FETCH" ]; then
+              HAS_REFRESH=$(grep -l "RefreshCw\|RefreshCcw\|refetch\|refresh" "$f" 2>/dev/null || true)
+              if [ -z "$HAS_REFRESH" ]; then
                 RELATIVE_PATH=$(echo "$f" | sed 's|^src/||')
-                MISSING_SPIN="${MISSING_SPIN}  - \`${RELATIVE_PATH}\` — refresh icon without animate-spin\n"
+                CARDS_WITHOUT_REFRESH="${CARDS_WITHOUT_REFRESH}  - \`${RELATIVE_PATH}\`\n"
               fi
-            done
-
-            if [ -n "$MISSING_SPIN" ]; then
-              ISSUES="${ISSUES}### Refresh icons without spin animation\nThese components may not show loading feedback:\n${MISSING_SPIN}\n\n"
             fi
+          done
 
-            # Check that animation triggers on loading state
-            SPIN_WITHOUT_LOADING=""
-            for f in $(grep -rl "animate-spin" src/ --include="*.tsx" 2>/dev/null | head -50); do
-              # Check if animate-spin is tied to a loading/isLoading condition
-              HAS_LOADING_CONDITION=$(grep -n "animate-spin" "$f" | while read line; do
-                LINE_NO=$(echo "$line" | cut -d: -f1)
-                # Check if line or nearby lines have loading state check
-                CONTEXT=$(sed -n "$((LINE_NO > 3 ? LINE_NO - 3 : 1)),$((LINE_NO + 3))p" "$f")
-                HAS_CONDITION=$(echo "$CONTEXT" | grep -E "isLoading|loading|isRefreshing|isFetching|\? " || true)
-                if [ -z "$HAS_CONDITION" ]; then
-                  echo "unconditional:$LINE_NO"
-                fi
-              done | head -1 || true)
-
-              if [ -n "$HAS_LOADING_CONDITION" ]; then
-                RELATIVE_PATH=$(echo "$f" | sed 's|^src/||')
-                SPIN_WITHOUT_LOADING="${SPIN_WITHOUT_LOADING}  - \`${RELATIVE_PATH}\` — animate-spin may not be tied to loading state\n"
-              fi
-            done
-
-            if [ -n "$SPIN_WITHOUT_LOADING" ]; then
-              ISSUES="${ISSUES}### Spin animation not tied to loading state\nAnimation should only spin during loading:\n${SPIN_WITHOUT_LOADING}\n\n"
-            fi
-
-            # Check for consistent spin duration (full rotation)
-            # Look for any custom animation durations on refresh icons
-            CUSTOM_DURATION=$(grep -rn "RefreshCw\|RefreshCcw" src/ --include="*.tsx" 2>/dev/null | \
-              grep -E "duration|transition|animation:" | head -10 || true)
-            if [ -n "$CUSTOM_DURATION" ]; then
-              ISSUES="${ISSUES}### Custom animation durations on refresh icons\nEnsure all refresh icons complete a full rotation:\n\`\`\`\n$(echo "$CUSTOM_DURATION" | head -5)\n\`\`\`\n\n"
-            fi
-
-            # Check inventory items for refresh functionality
-            INVENTORY_FILES=$(find src -path "*card*" -name "*.tsx" 2>/dev/null | head -50)
-            CARDS_WITHOUT_REFRESH=""
-            for f in $INVENTORY_FILES; do
-              # Skip non-card files
-              case "$f" in
-                *index*|*types*|*utils*|*hooks*) continue ;;
-              esac
-
-              # Check if it's a card that might need refresh
-              HAS_DATA_FETCH=$(grep -l "useQuery\|useFetch\|fetch\|axios" "$f" 2>/dev/null || true)
-              if [ -n "$HAS_DATA_FETCH" ]; then
-                HAS_REFRESH=$(grep -l "RefreshCw\|RefreshCcw\|refetch\|refresh" "$f" 2>/dev/null || true)
-                if [ -z "$HAS_REFRESH" ]; then
-                  RELATIVE_PATH=$(echo "$f" | sed 's|^src/||')
-                  CARDS_WITHOUT_REFRESH="${CARDS_WITHOUT_REFRESH}  - \`${RELATIVE_PATH}\`\n"
-                fi
-              fi
-            done
-
-            if [ -n "$CARDS_WITHOUT_REFRESH" ]; then
-              FIRST_FEW=$(echo -e "$CARDS_WITHOUT_REFRESH" | head -10)
-              COUNT=$(echo -e "$CARDS_WITHOUT_REFRESH" | grep -c "^" || echo "0")
-              ISSUES="${ISSUES}### Inventory cards without refresh icon\n${COUNT} cards fetch data but don't have refresh:\n${FIRST_FEW}\n\n"
-            fi
+          if [ -n "$CARDS_WITHOUT_REFRESH" ]; then
+            FIRST_FEW=$(echo -e "$CARDS_WITHOUT_REFRESH" | head -10)
+            COUNT=$(echo -e "$CARDS_WITHOUT_REFRESH" | grep -c "^" || echo "0")
+            ISSUES="${ISSUES}### Inventory cards without refresh icon\n${COUNT} cards fetch data but don't have refresh:\n${FIRST_FEW}\n\n"
           fi
 
           if [ -n "$ISSUES" ]; then
