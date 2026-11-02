@@ -63,6 +63,49 @@ The second command shows whether the alert workflow itself ran and succeeded for
 given promotion failure. If the alert workflow run failed or is missing for a known
 promotion failure, that (not the promotion workflow) is the gap to investigate.
 
+## Recurring semantic 429/503 failures (#24736)
+
+Do not infer MCP pod exhaustion from the HTTP status alone. The authenticated API
+has a shared limiter in `pkg/api/routes_auth.go` (2,000 requests/minute, a
+`Retry-After: 60` rejection). A single Playwright worker still allows each page to
+fan out across clusters and dashboard cards. Authentication/storage failures and
+upstream routing can also return 503; distinguish these using response bodies,
+traces and server logs before changing capacity or limits.
+
+Run [41200746066](https://github.com/kubestellar/console/actions/runs/41200746066)
+passed the deployments UI/data assertions, then failed the final network check on
+six GET 503s: replicasets and HPAs for all three CI clusters. This proves a
+network-gate failure, not its infrastructure cause. The earlier shell-rendering
+failure remains a separate symptom; retries must not replace shell or groundtruth
+assertions.
+
+The live API helper retries only GET reads returning 429/503, at most three
+attempts, with exponential backoff, jitter and five-second request timeouts.
+`Retry-After` seconds and HTTP dates are respected; delays over five seconds remain
+failures rather than being retried early. The final network check probes distinct
+failed app-origin API reads sequentially within a shared 30-second budget. Only a
+2xx JSON response from the **same path and query** proves recovery. Persistent
+errors, mutations, other status codes, and failed UI/data invariants still fail
+the gate. Original network errors remain in evidence, and probe status histories
+and Retry-After values are written to `test-results/reports/live-routes.json` as
+`live-api-transient-recovery`, including when the test passes.
+
+For the next scheduled runs:
+
+1. Compare `live-api-transient-recovery` entries with the trace's original failed
+   responses and `network.requestCountsByEndpoint` / `network.rateLimitEvents` in
+   the failure evidence. Look for a shared limiter window versus endpoint-specific
+   failures; a green recovered run is not evidence that the underlying cause is fixed.
+2. Correlate the failure timestamps with the existing workflow's pod logs and
+   rollout diagnostics. Have an authorized operator inspect CPU/memory throttling,
+   restarts, API limiter keying, and Kubernetes API latency when those metrics are
+   not available in artifacts. Do not change replica counts, limits, or ingress
+   policy merely to make the smoke gate green.
+3. Keep #24736 open until consecutive scheduled runs establish whether failures
+   recover and the repeated capacity/rate-limit signature has been explained.
+   Escalate persistent failures with the exact endpoint, cluster, status history,
+   Retry-After and timestamp rather than filing another unrelated one-off fix.
+
 ## Escalation
 
 If a scheduled `console-live-promote.yml` run is found to have failed, check which

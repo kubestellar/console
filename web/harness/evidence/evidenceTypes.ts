@@ -30,6 +30,12 @@ export interface LiveUiFailureEvidence {
   unexpectedNetworkResponses?: string[]
   unexpectedRequestFailures?: string[]
   recoveredAuthBoundaryResponses?: string[]
+  liveApiRecovery?: Array<{
+    endpoint: string
+    status?: number
+    attempts?: Array<{ status: number; retryAfter: string | null }>
+    error?: string
+  }>
   networkClassifications?: Array<{ classification: string; method?: string; status?: number; url: string }>
   dashboardMismatches?: Array<{ field: string; expected: number | string; actual: number | string | null; actualValues?: Array<number | null>; route: string; reason?: string }>
   routeFailures?: Array<{ route: string; reason: string; expected?: string; actual?: string | null }>
