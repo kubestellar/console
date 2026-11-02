@@ -15,7 +15,7 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 export function ComputeOverview() {
   const { t } = useTranslation(['cards', 'common'])
   const { deduplicatedClusters: clusters, isLoading, isRefreshing: clustersRefreshing, isFailed: clustersFailed, consecutiveFailures: clustersConsecutiveFailures } = useClusters()
-  const { nodes: gpuNodes, isLoading: gpuLoading, isRefreshing: gpuRefreshing, isDemoFallback } = useCachedGPUNodes()
+  const { nodes: gpuNodes, isLoading: gpuLoading, isRefreshing: gpuRefreshing, isDemoFallback, lastRefresh } = useCachedGPUNodes()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToResources } = useDrillDownActions()
   const { isDemoMode } = useDemoMode()
@@ -113,7 +113,8 @@ export function ComputeOverview() {
     hasAnyData: hasData,
     isFailed: clustersFailed,
     consecutiveFailures: clustersConsecutiveFailures,
-    isDemoData: isDemoMode || isDemoFallback })
+    isDemoData: isDemoMode || isDemoFallback,
+    lastRefresh })
 
   if (showSkeleton) {
     return (

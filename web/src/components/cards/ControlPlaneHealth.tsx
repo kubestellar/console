@@ -25,7 +25,7 @@ export function ControlPlaneHealth() {
   const { t } = useTranslation('cards')
   // Fetch from all namespaces so we catch control-plane pods in both
   // kube-system (vanilla K8s) and openshift-* namespaces (OpenShift)
-  const { pods: allPods, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures } = useCachedPods()
+  const { pods: allPods, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, lastRefresh } = useCachedPods()
   const { deduplicatedClusters: allClusters } = useClusters()
   // (#11145) Exclude clusters confirmed unreachable — unreachable primary
   // contexts should not influence health determination. Clusters with
@@ -46,7 +46,8 @@ export function ControlPlaneHealth() {
     hasAnyData: hasData,
     isDemoData: isDemoFallback,
     isFailed,
-    consecutiveFailures })
+    consecutiveFailures,
+    lastRefresh })
 
   const clusterNames = useMemo(() => {
     const names = new Set(pods.map(p => p.cluster).filter(Boolean))

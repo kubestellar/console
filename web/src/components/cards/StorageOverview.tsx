@@ -14,7 +14,7 @@ import { Skeleton, SkeletonStats, SkeletonList } from '../ui/Skeleton'
 export function StorageOverview() {
   const { t } = useTranslation(['cards', 'common'])
   const { deduplicatedClusters: clusters, isLoading, isRefreshing: clustersRefreshing } = useClusters()
-  const { pvcs, isLoading: pvcsLoading, isRefreshing: pvcsRefreshing, consecutiveFailures, isFailed, isDemoFallback, error: pvcsError } = useCachedPVCs()
+  const { pvcs, isLoading: pvcsLoading, isRefreshing: pvcsRefreshing, consecutiveFailures, isFailed, isDemoFallback, error: pvcsError, lastRefresh } = useCachedPVCs()
 
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { isDemoMode } = useDemoMode()
@@ -27,7 +27,8 @@ export function StorageOverview() {
     hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
-    isDemoData: isDemoFallback || isDemoMode })
+    isDemoData: isDemoFallback || isDemoMode,
+    lastRefresh })
 
   // Local cluster filter
   const {
