@@ -97,4 +97,13 @@ describe('ControlPlaneHealth', () => {
     const { container } = render(<ControlPlaneHealth />)
     expect(container).toMatchSnapshot()
   })
+
+  it('passes useCachedPods().lastRefresh through to useCardLoadingState (#24787)', () => {
+    const lastRefresh = Date.now()
+    mockCachedPods.mockReturnValue({ ...basePods, lastRefresh } as unknown as ReturnType<typeof useCachedPods>)
+    render(<ControlPlaneHealth />)
+    expect(mockLoadingState).toHaveBeenCalledWith(
+      expect.objectContaining({ lastRefresh })
+    )
+  })
 })

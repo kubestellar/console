@@ -249,4 +249,15 @@ describe('StorageOverview', () => {
       expect(screen.getByText(/PVCs, 1 clusters/)).toBeInTheDocument()
     })
   })
+
+  describe('lastRefresh propagation (#24787)', () => {
+    it('passes useCachedPVCs().lastRefresh through to useCardLoadingState', () => {
+      const lastRefresh = Date.now()
+      mockUseCachedPVCs.mockReturnValue({ ...defaultPVCsReturn, lastRefresh })
+      render(<StorageOverview />)
+      expect(mockUseCardLoadingState).toHaveBeenCalledWith(
+        expect.objectContaining({ lastRefresh })
+      )
+    })
+  })
 })

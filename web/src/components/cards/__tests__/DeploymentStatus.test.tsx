@@ -144,6 +144,7 @@ function setupHooks({
   consecutiveFailures = 0,
   showSkeleton = false,
   showEmptyState = false,
+  lastRefresh = null as number | null,
 } = {}) {
   mockUseCachedDeployments.mockReturnValue({
     deployments,
@@ -152,6 +153,7 @@ function setupHooks({
     isDemoFallback,
     isFailed,
     consecutiveFailures,
+    lastRefresh,
   })
   mockUseCardLoadingState.mockReturnValue({ showSkeleton, showEmptyState })
 }
@@ -463,6 +465,15 @@ describe('DeploymentStatus', () => {
           consecutiveFailures: 3,
           hasAnyData: false,
         })
+      )
+    })
+
+    it('passes useCachedDeployments().lastRefresh through (#24787)', () => {
+      const lastRefresh = Date.now()
+      setupHooks({ lastRefresh })
+      render(<DeploymentStatus />)
+      expect(mockUseCardLoadingState).toHaveBeenCalledWith(
+        expect.objectContaining({ lastRefresh })
       )
     })
   })

@@ -197,4 +197,28 @@ describe('ControlPlaneHealth', () => {
       expect(screen.getByText('1/1')).toBeTruthy()
     })
   })
+
+  describe('lastRefresh propagation (#24787)', () => {
+    it('passes useCachedPods().lastRefresh through to useCardLoadingState', async () => {
+      const lastRefresh = Date.now()
+      const { useCachedPods } = await import('../../../hooks/useCachedData')
+      vi.mocked(useCachedPods).mockReturnValue({
+        pods: [],
+        isLoading: false,
+        isRefreshing: false,
+        isDemoFallback: false,
+        isFailed: false,
+        consecutiveFailures: 0,
+        lastRefresh,
+      } as never)
+
+      const { useCardLoadingState } = await import('../CardDataContext')
+      vi.mocked(useCardLoadingState).mockReturnValue({ showSkeleton: false } as never)
+
+      render(<ControlPlaneHealth />)
+      expect(useCardLoadingState).toHaveBeenCalledWith(
+        expect.objectContaining({ lastRefresh })
+      )
+    })
+  })
 })
