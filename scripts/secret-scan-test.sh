@@ -105,10 +105,12 @@ useDefault = true
     '''__tests__/''',
     '''\.test\.(ts|tsx)$''',
     '''\.spec\.(ts|tsx)$''',
-    # Generated test logs (e.g. web/vitest-output.log from unit-test.sh) are
-    # gitignored via *.log but present in the working tree during the nightly
-    # run; they echo fake JWT fixtures from test output (#24652).
-    '''\.log$''',
+    # Generated vitest logs from unit-test.sh (web/vitest-output.log and the
+    # per-shard web/vitest-shard-output.log) are gitignored via *.log but present
+    # in the working tree during the nightly run; they echo fake JWT fixtures
+    # from test output (#24652). Scoped to these files so SCAN_GIT_HISTORY still
+    # covers any .log committed to history.
+    '''web/vitest(-shard)?-output\.log$''',
   ]
   description = "Ignore test fixtures, examples, vendor, and CI docs"
 
