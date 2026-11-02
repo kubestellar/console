@@ -272,4 +272,20 @@ describe('GPUInventory', () => {
       expect(screen.getByTestId('cluster-filter')).toBeTruthy()
     })
   })
+
+  describe('lastRefresh propagation (#24787)', () => {
+    it('passes useCachedGPUNodes().lastRefresh through to useCardLoadingState', async () => {
+      const lastRefresh = Date.now()
+      const { useCachedGPUNodes } = await import('../../../hooks/useCachedData')
+      vi.mocked(useCachedGPUNodes).mockReturnValue({
+        nodes: [], isLoading: false, isRefreshing: false, error: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
+        lastRefresh,
+      } as never)
+      const { useCardLoadingState } = await import('../CardDataContext')
+      render(<GPUInventory />)
+      expect(useCardLoadingState).toHaveBeenCalledWith(
+        expect.objectContaining({ lastRefresh })
+      )
+    })
+  })
 })
