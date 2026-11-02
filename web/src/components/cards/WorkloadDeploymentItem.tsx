@@ -1,4 +1,5 @@
 import { memo, useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useModalState } from '../../lib/modals'
 import { useDraggable } from '@dnd-kit/core'
 import { AlertTriangle, GripVertical, Loader2, Check, Minus } from 'lucide-react'
 import { Plus } from 'lucide-react'
@@ -35,7 +36,7 @@ function DraggableWorkloadItemComponent({ workload, isSelected, onSelect, onScal
   const [isScaling, setIsScaling] = useState(false)
   const [scaleError, setScaleError] = useState<string | null>(null)
   const [scaleSuccess, setScaleSuccess] = useState(false)
-  const [showScaleToZeroDialog, setShowScaleToZeroDialog] = useState(false)
+  const { isOpen: showScaleToZeroDialog, open: openScaleToZeroDialog, close: closeScaleToZeroDialog } = useModalState()
   const scaleSuccessTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const { mutate: scaleWorkload } = useScaleWorkload()
   const { t } = useTranslation()
@@ -141,7 +142,7 @@ function DraggableWorkloadItemComponent({ workload, isSelected, onSelect, onScal
     }
 
     if (desiredReplicas === ZERO_REPLICAS) {
-      setShowScaleToZeroDialog(true)
+      openScaleToZeroDialog()
       return
     }
 
@@ -149,7 +150,7 @@ function DraggableWorkloadItemComponent({ workload, isSelected, onSelect, onScal
   }
 
   const handleConfirmScaleToZero = async () => {
-    setShowScaleToZeroDialog(false)
+    closeScaleToZeroDialog()
     await performScale()
   }
 
@@ -342,7 +343,7 @@ function DraggableWorkloadItemComponent({ workload, isSelected, onSelect, onScal
 
       <ScaleToZeroConfirmDialog
         isOpen={showScaleToZeroDialog}
-        onClose={() => setShowScaleToZeroDialog(false)}
+        onClose={() => closeScaleToZeroDialog()}
         onConfirm={handleConfirmScaleToZero}
         workloadName={workload.name}
         namespace={workload.namespace}

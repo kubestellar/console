@@ -8,6 +8,7 @@ import { COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
  */
 
 import { useState, useEffect, useRef } from 'react'
+import { useModalState } from '../../lib/modals'
 import { Terminal, Copy, Check, X, Rocket, KeyRound } from 'lucide-react'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 import { isNetlifyDeployment, getDemoMode, hasRealToken } from '../../lib/demoMode'
@@ -35,7 +36,7 @@ export function DemoToLocalCTA() {
     () => safeGetItem(STORAGE_KEY_HINTS_SUPPRESSED) === 'true'
   )
   const [copied, setCopied] = useState(false)
-  const [showSetupDialog, setShowSetupDialog] = useState(false)
+  const { isOpen: showSetupDialog, open: openSetupDialog, close: closeSetupDialog } = useModalState()
   const emittedRef = useRef(false)
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -92,7 +93,7 @@ export function DemoToLocalCTA() {
 
   const handleSetupOAuth = () => {
     emitDemoToLocalActioned('setup_oauth')
-    setShowSetupDialog(true)
+    openSetupDialog()
   }
 
   // ── Localhost without OAuth — prompt to set up GitHub OAuth ──
@@ -130,7 +131,7 @@ export function DemoToLocalCTA() {
 
         <SetupInstructionsDialog
           isOpen={showSetupDialog}
-          onClose={() => setShowSetupDialog(false)}
+          onClose={() => closeSetupDialog()}
         />
       </div>
     )
@@ -195,7 +196,7 @@ export function DemoToLocalCTA() {
 
       <SetupInstructionsDialog
         isOpen={showSetupDialog}
-        onClose={() => setShowSetupDialog(false)}
+        onClose={() => closeSetupDialog()}
       />
     </div>
   )
