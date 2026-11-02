@@ -51,6 +51,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
     isDemoFallback,
     isFailed,
     consecutiveFailures,
+    lastRefresh,
   } = useCachedGPUNodes(cluster)
   const { drillToGPUNode } = useDrillDownActions()
 
@@ -64,6 +65,7 @@ export function GPUInventory({ config }: GPUInventoryProps) {
     isFailed,
     consecutiveFailures,
     isDemoData: isDemoFallback,
+    lastRefresh,
   })
 
   // Taint-aware filtering (taint-filter). Derived from the full raw list so the

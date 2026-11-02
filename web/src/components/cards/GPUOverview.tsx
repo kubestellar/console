@@ -31,7 +31,8 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
     isRefreshing,
     isDemoFallback,
     isFailed,
-    consecutiveFailures } = useCachedGPUNodes()
+    consecutiveFailures,
+    lastRefresh } = useCachedGPUNodes()
   const { deduplicatedClusters: clusters } = useClusters()
   const { isDemoMode } = useDemoMode()
 
@@ -45,7 +46,8 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
     hasAnyData: hasData,
     isDemoData: isDemoMode || isDemoFallback,
     isFailed,
-    consecutiveFailures })
+    consecutiveFailures,
+    lastRefresh })
   const isLoading = showSkeleton
   const { drillToResources } = useDrillDownActions()
 

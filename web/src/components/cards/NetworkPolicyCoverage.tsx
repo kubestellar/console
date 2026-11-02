@@ -19,7 +19,7 @@ interface NamespaceCoverage {
 
 export function NetworkPolicyCoverage() {
   const { t } = useTranslation('cards')
-  const { pods, isLoading: podsLoading, isRefreshing, isDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedPods()
+  const { pods, isLoading: podsLoading, isRefreshing, isDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures, lastRefresh } = useCachedPods()
   const { networkpolicies, isLoading: policiesLoading, isFailed: policiesFailed } = useNetworkPolicies()
   const [showUncovered, setShowUncovered] = useState(false)
 
@@ -36,6 +36,7 @@ export function NetworkPolicyCoverage() {
     isDemoData: isDemoFallback,
     isFailed,
     consecutiveFailures: podsFailures,
+    lastRefresh,
     errorMessage: isFailed ? t('networkPolicyCoverage.failedToLoad') : undefined })
 
   // Build a set of namespace keys that have real NetworkPolicy resources
