@@ -533,6 +533,11 @@ export default defineConfig(({ mode }) => ({
         'src/components/dashboard/customizer/**',
         'src/components/dashboard/shared/cardCatalog.ts',
         'src/components/dashboard/shared/CardPreview.tsx',
+        // First staged addition from `src/components/cards/**` (#23320's
+        // follow-up list didn't cover this directory): a small, fully-tested
+        // subdirectory, added narrowly rather than the whole (much larger,
+        // partially-untested) `cards/**` tree to avoid a surprise gate drop.
+        'src/components/cards/workload-import/**',
       ],
       exclude: [
         'node_modules/',
