@@ -1833,11 +1833,8 @@ jobs:
           ISSUES=""
 
           # Find rapid consecutive setState calls (potential flicker)
-          RAPID_SETSTATE=$(grep -rn "set[A-Z][A-Za-z]*(" src/ --include="*.tsx" 2>/dev/null | \
-            grep -v "node_modules" | \
-            awk -F: '{file=$1; line=$2}
-              prev_file==file && line-prev_line<=2 {print prev_file":"prev_line" and "file":"line" - consecutive setState calls"}
-              {prev_file=file; prev_line=line}' | head -15 || true)
+          bash ../scripts/check-flicker-patterns-test.sh
+          RAPID_SETSTATE=$(bash ../scripts/check-flicker-patterns.sh setstate | head -15 || true)
 
           if [ -n "$RAPID_SETSTATE" ]; then
             ISSUES="${ISSUES}### Potential flicker: consecutive setState calls\nBatch these with a single state update or useReducer:\n\`\`\`\n${RAPID_SETSTATE}\n\`\`\`\n\n"
@@ -1851,13 +1848,8 @@ jobs:
             ISSUES="${ISSUES}### Components with loading state but no skeleton/spinner\nAdd visual loading indicators to prevent flicker:\n${LOADING_NO_SKELETON}\n\n"
           fi
 
-          # Find async data without Suspense boundaries
-          ASYNC_NO_SUSPENSE=$(grep -rln "await\|\.then(" src/components --include="*.tsx" 2>/dev/null | while read f; do
-            HAS_SUSPENSE=$(grep -l "Suspense" "$f" 2>/dev/null || true)
-            if [ -z "$HAS_SUSPENSE" ]; then
-              basename "$f"
-            fi
-          done | head -10 || true)
+          # Find lazy-loaded components without Suspense boundaries
+          ASYNC_NO_SUSPENSE=$(bash ../scripts/check-flicker-patterns.sh suspense | head -10 || true)
 
           if [ -n "$ASYNC_NO_SUSPENSE" ]; then
             COUNT=$(echo "$ASYNC_NO_SUSPENSE" | wc -l | tr -d ' ')
@@ -1867,8 +1859,7 @@ jobs:
           fi
 
           # Find useLayoutEffect usage (can cause visible flicker if misused)
-          LAYOUT_EFFECT=$(grep -rn "useLayoutEffect" src/ --include="*.tsx" 2>/dev/null | \
-            grep -v "node_modules" | head -10 || true)
+          LAYOUT_EFFECT=$(bash ../scripts/check-flicker-patterns.sh layout | head -10 || true)
 
           if [ -n "$LAYOUT_EFFECT" ]; then
             COUNT=$(echo "$LAYOUT_EFFECT" | wc -l | tr -d ' ')
