@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useModalState } from '../../lib/modals'
 import { Box, Plus } from 'lucide-react'
 import { Skeleton } from '../ui/Skeleton'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
@@ -38,7 +39,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
   const [typeFilter, setTypeFilter] = useState<WorkloadType | 'All'>('All')
   const [statusFilter, setStatusFilter] = useState<WorkloadStatus | 'All'>('All')
   const [selectedWorkload, setSelectedWorkload] = useState<Workload | null>(null)
-  const [showImportDialog, setShowImportDialog] = useState(false)
+  const { isOpen: showImportDialog, open: openImportDialog, close: closeImportDialog } = useModalState()
   const [importedWorkloads, setImportedWorkloads] = useState<Workload[]>([])
   const refetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -218,7 +219,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
           className="mb-0! flex-1"
         />
         <button
-          onClick={() => setShowImportDialog(true)}
+          onClick={openImportDialog}
           className="self-start px-3 py-1.5 text-xs font-medium rounded-md bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap"
           aria-label="Add workload"
         >
@@ -320,7 +321,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
 
       <WorkloadImportDialog
         isOpen={showImportDialog}
-        onClose={() => setShowImportDialog(false)}
+        onClose={closeImportDialog}
         onImport={handleImportWorkloads}
       />
     </div>

@@ -51,8 +51,8 @@ export function ProfileCard({
   onMenuKeyDown,
   triggerButtonRef,
 }: ProfileCardProps) {
-  const [showSetupDialog, setShowSetupDialog] = useState(false)
-  const [showDevSetupDialog, setShowDevSetupDialog] = useState(false)
+  const { isOpen: showSetupDialog, open: openSetupDialog, close: closeSetupDialog } = useModalState()
+  const { isOpen: showDevSetupDialog, open: openDevSetupDialog, close: closeDevSetupDialog } = useModalState()
   const [showRewards, setShowRewards] = useState(false)
   const { isOpen: showFeedbackModal, open: openFeedbackModal, close: closeFeedbackModal } = useModalState()
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
@@ -122,8 +122,8 @@ export function ProfileCard({
             <ProfileDevPanel
               oauthStatus={oauthStatus}
               closeDropdown={closeDropdown}
-              onShowSetupDialog={() => setShowSetupDialog(true)}
-              onShowDevSetupDialog={() => setShowDevSetupDialog(true)}
+              onShowSetupDialog={openSetupDialog}
+              onShowDevSetupDialog={openDevSetupDialog}
             />
           )}
 
@@ -131,7 +131,7 @@ export function ProfileCard({
             closeDropdown={closeDropdown}
             openFeedbackModal={openFeedbackModal}
             awardCoins={awardCoins}
-            onShowSetupDialog={() => setShowSetupDialog(true)}
+            onShowSetupDialog={openSetupDialog}
             onPreferences={onPreferences}
             onShowLogoutConfirm={() => setShowLogoutConfirm(true)}
           />
@@ -141,12 +141,12 @@ export function ProfileCard({
 
       <SetupInstructionsDialog
         isOpen={showSetupDialog}
-        onClose={() => setShowSetupDialog(false)}
+        onClose={closeSetupDialog}
       />
 
       <DeveloperSetupDialog
         isOpen={showDevSetupDialog}
-        onClose={() => setShowDevSetupDialog(false)}
+        onClose={closeDevSetupDialog}
       />
 
       {showRewards && (
