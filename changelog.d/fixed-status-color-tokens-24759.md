@@ -1,0 +1,1 @@
+- Status indicators in OpenFeature, Namespace Monitor, etcd, cluster filter, and Nightly E2E views now use semantic status color tokens and consistent shades (Auto-QA color consistency).
