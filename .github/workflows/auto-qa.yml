@@ -2131,12 +2131,12 @@ jobs:
           fi
 
           # Find console.error usage without proper error handling.
-          # Check a 4-line window (the match line + 3 following) for user-visible
-          # handlers — the handler (showToast, setXxxError, fallback) is almost
+          # Check an 8-line window (the match line + 7 following) for user-visible
+          # handlers — the handler (showToast, setError, setXxxError, fallback) is almost
           # always on the next line, not the same one, so a line-only grep -v
-          # misses them. Patterns excluded: showToast, set<Name>Error,
+          # misses them. Patterns excluded: showToast, setError, set<Name>Error,
           # setYamlContent, generateMock* fallbacks, fallback/Fallback.
-          HANDLER_PATTERN='showToast|set[A-Z][a-zA-Z_]*Error|setYamlContent|generateMock|[Ff]allback'
+          HANDLER_PATTERN='showToast|set([A-Z][a-zA-Z_]*)?Error|setYamlContent|generateMock|[Ff]allback'
           CONSOLE_ERROR_CANDIDATES=$(grep -rn "console\.error" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | \
             grep -v "node_modules\|test\|spec" | \
             grep -v "setError\|onError\|ErrorBoundary\|throw" || true)
@@ -2146,7 +2146,7 @@ jobs:
             file="${entry%%:*}"
             rest="${entry#*:}"
             lineno="${rest%%:*}"
-            ctx=$(sed -n "${lineno},$((lineno + 3))p" "$file" 2>/dev/null)
+            ctx=$(sed -n "${lineno},$((lineno + 7))p" "$file" 2>/dev/null)
             if ! echo "$ctx" | grep -qE "$HANDLER_PATTERN"; then
               CONSOLE_ERROR_ONLY="${CONSOLE_ERROR_ONLY}${entry}"$'\n'
             fi
@@ -2160,8 +2160,8 @@ jobs:
             fi
           fi
 
-          # Find null/undefined access patterns that cause console errors
-          UNSAFE_ACCESS=$(grep -rn "\.[a-zA-Z_]*\.[a-zA-Z_]*\.[a-zA-Z_]*" src/ --include="*.tsx" 2>/dev/null | \
+          # Require identifiers between dots: spread/rest syntax is not property access.
+          UNSAFE_ACCESS=$(grep -rnE '\b[[:alpha:]_$][[:alnum:]_$]*(\.[[:alpha:]_$][[:alnum:]_$]*){3,}' src/ --include="*.tsx" --exclude="*.test.tsx" --exclude="*.spec.tsx" 2>/dev/null | \
             grep -v "node_modules\|\?\.\|&&\|import\|from\|console\|window\." | head -15 || true)
 
           if [ -n "$UNSAFE_ACCESS" ]; then
