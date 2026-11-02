@@ -1843,16 +1843,9 @@ jobs:
             ISSUES="${ISSUES}### Potential flicker: consecutive setState calls\nBatch these with a single state update or useReducer:\n\`\`\`\n${RAPID_SETSTATE}\n\`\`\`\n\n"
           fi
 
-          # Find components with loading state but no skeleton/spinner
-          LOADING_NO_SKELETON=$(for f in $(find src -name "*.tsx" 2>/dev/null | grep -v node_modules); do
-            HAS_LOADING=$(grep -l "isLoading\|loading" "$f" 2>/dev/null || true)
-            if [ -n "$HAS_LOADING" ]; then
-              HAS_SKELETON=$(grep -l "Skeleton\|Spinner\|Loading\|skeleton" "$f" 2>/dev/null || true)
-              if [ -z "$HAS_SKELETON" ]; then
-                echo "  - \`${f}\`"
-              fi
-            fi
-          done | head -15)
+          # Find production components with loading state but no known indicator.
+          bash ../scripts/check-flicker-loading-test.sh
+          LOADING_NO_SKELETON=$(bash ../scripts/check-flicker-loading.sh | head -15 || true)
 
           if [ -n "$LOADING_NO_SKELETON" ]; then
             ISSUES="${ISSUES}### Components with loading state but no skeleton/spinner\nAdd visual loading indicators to prevent flicker:\n${LOADING_NO_SKELETON}\n\n"
