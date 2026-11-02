@@ -343,7 +343,7 @@ function DraggableWorkloadItemComponent({ workload, isSelected, onSelect, onScal
 
       <ScaleToZeroConfirmDialog
         isOpen={showScaleToZeroDialog}
-        onClose={() => closeScaleToZeroDialog()}
+        onClose={closeScaleToZeroDialog}
         onConfirm={handleConfirmScaleToZero}
         workloadName={workload.name}
         namespace={workload.namespace}

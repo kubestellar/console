@@ -131,7 +131,7 @@ export function DemoToLocalCTA() {
 
         <SetupInstructionsDialog
           isOpen={showSetupDialog}
-          onClose={() => closeSetupDialog()}
+          onClose={closeSetupDialog}
         />
       </div>
     )
@@ -196,7 +196,7 @@ export function DemoToLocalCTA() {
 
       <SetupInstructionsDialog
         isOpen={showSetupDialog}
-        onClose={() => closeSetupDialog()}
+        onClose={closeSetupDialog}
       />
     </div>
   )

@@ -122,8 +122,8 @@ export function ProfileCard({
             <ProfileDevPanel
               oauthStatus={oauthStatus}
               closeDropdown={closeDropdown}
-              onShowSetupDialog={() => openSetupDialog()}
-              onShowDevSetupDialog={() => openDevSetupDialog()}
+              onShowSetupDialog={openSetupDialog}
+              onShowDevSetupDialog={openDevSetupDialog}
             />
           )}
 
@@ -131,7 +131,7 @@ export function ProfileCard({
             closeDropdown={closeDropdown}
             openFeedbackModal={openFeedbackModal}
             awardCoins={awardCoins}
-            onShowSetupDialog={() => openSetupDialog()}
+            onShowSetupDialog={openSetupDialog}
             onPreferences={onPreferences}
             onShowLogoutConfirm={() => setShowLogoutConfirm(true)}
           />
@@ -141,12 +141,12 @@ export function ProfileCard({
 
       <SetupInstructionsDialog
         isOpen={showSetupDialog}
-        onClose={() => closeSetupDialog()}
+        onClose={closeSetupDialog}
       />
 
       <DeveloperSetupDialog
         isOpen={showDevSetupDialog}
-        onClose={() => closeDevSetupDialog()}
+        onClose={closeDevSetupDialog}
       />
 
       {showRewards && (

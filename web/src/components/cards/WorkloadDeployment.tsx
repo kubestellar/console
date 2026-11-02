@@ -219,7 +219,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
           className="mb-0! flex-1"
         />
         <button
-          onClick={() => openImportDialog()}
+          onClick={openImportDialog}
           className="self-start px-3 py-1.5 text-xs font-medium rounded-md bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 transition-colors flex items-center gap-1.5 shrink-0 whitespace-nowrap"
           aria-label="Add workload"
         >
@@ -321,7 +321,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
 
       <WorkloadImportDialog
         isOpen={showImportDialog}
-        onClose={() => closeImportDialog()}
+        onClose={closeImportDialog}
         onImport={handleImportWorkloads}
       />
     </div>
