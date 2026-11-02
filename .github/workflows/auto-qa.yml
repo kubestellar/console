@@ -1843,16 +1843,9 @@ jobs:
             ISSUES="${ISSUES}### Potential flicker: consecutive setState calls\nBatch these with a single state update or useReducer:\n\`\`\`\n${RAPID_SETSTATE}\n\`\`\`\n\n"
           fi
 
-          # Find components with loading state but no skeleton/spinner
-          LOADING_NO_SKELETON=$(for f in $(find src -name "*.tsx" 2>/dev/null | grep -v node_modules); do
-            HAS_LOADING=$(grep -l "isLoading\|loading" "$f" 2>/dev/null || true)
-            if [ -n "$HAS_LOADING" ]; then
-              HAS_SKELETON=$(grep -l "Skeleton\|Spinner\|Loading\|skeleton" "$f" 2>/dev/null || true)
-              if [ -z "$HAS_SKELETON" ]; then
-                echo "  - \`${f}\`"
-              fi
-            fi
-          done | head -15)
+          # Find production components with loading state but no known indicator.
+          bash ../scripts/check-flicker-loading-test.sh
+          LOADING_NO_SKELETON=$(bash ../scripts/check-flicker-loading.sh | head -15 || true)
 
           if [ -n "$LOADING_NO_SKELETON" ]; then
             ISSUES="${ISSUES}### Components with loading state but no skeleton/spinner\nAdd visual loading indicators to prevent flicker:\n${LOADING_NO_SKELETON}\n\n"
@@ -1946,9 +1939,9 @@ jobs:
             fi
           fi
 
-          # Find cards not using the standardized card hooks
+          # Accept all supported card-state hooks and documented parent-owned data exemptions.
           NON_STANDARD_CARDS=$(for f in $CARD_FILES; do
-            HAS_CARD_HOOK=$(grep -l "useCardData\|useCardDemoState" "$f" 2>/dev/null || true)
+            HAS_CARD_HOOK=$(grep -lE '\b(useCardData|useCardDemoState|useCardLoadingState|useReportCardDataState)\b|^[[:space:]]*//[[:space:]]*demoData-exempt:' "$f" 2>/dev/null || true)
             if [ -z "$HAS_CARD_HOOK" ]; then
               HAS_STATE=$(grep -c "useState\|useEffect" "$f" 2>/dev/null || echo "0")
               if [ "$HAS_STATE" -gt 2 ]; then
@@ -2131,12 +2124,12 @@ jobs:
           fi
 
           # Find console.error usage without proper error handling.
-          # Check a 4-line window (the match line + 3 following) for user-visible
-          # handlers — the handler (showToast, setXxxError, fallback) is almost
+          # Check an 8-line window (the match line + 7 following) for user-visible
+          # handlers — the handler (showToast, setError, setXxxError, fallback) is almost
           # always on the next line, not the same one, so a line-only grep -v
-          # misses them. Patterns excluded: showToast, set<Name>Error,
+          # misses them. Patterns excluded: showToast, setError, set<Name>Error,
           # setYamlContent, generateMock* fallbacks, fallback/Fallback.
-          HANDLER_PATTERN='showToast|set[A-Z][a-zA-Z_]*Error|setYamlContent|generateMock|[Ff]allback'
+          HANDLER_PATTERN='showToast|set([A-Z][a-zA-Z_]*)?Error|setYamlContent|generateMock|[Ff]allback'
           CONSOLE_ERROR_CANDIDATES=$(grep -rn "console\.error" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | \
             grep -v "node_modules\|test\|spec" | \
             grep -v "setError\|onError\|ErrorBoundary\|throw" || true)
@@ -2146,7 +2139,7 @@ jobs:
             file="${entry%%:*}"
             rest="${entry#*:}"
             lineno="${rest%%:*}"
-            ctx=$(sed -n "${lineno},$((lineno + 3))p" "$file" 2>/dev/null)
+            ctx=$(sed -n "${lineno},$((lineno + 7))p" "$file" 2>/dev/null)
             if ! echo "$ctx" | grep -qE "$HANDLER_PATTERN"; then
               CONSOLE_ERROR_ONLY="${CONSOLE_ERROR_ONLY}${entry}"$'\n'
             fi
@@ -2160,8 +2153,8 @@ jobs:
             fi
           fi
 
-          # Find null/undefined access patterns that cause console errors
-          UNSAFE_ACCESS=$(grep -rn "\.[a-zA-Z_]*\.[a-zA-Z_]*\.[a-zA-Z_]*" src/ --include="*.tsx" 2>/dev/null | \
+          # Require identifiers between dots: spread/rest syntax is not property access.
+          UNSAFE_ACCESS=$(grep -rnE '\b[[:alpha:]_$][[:alnum:]_$]*(\.[[:alpha:]_$][[:alnum:]_$]*){3,}' src/ --include="*.tsx" --exclude="*.test.tsx" --exclude="*.spec.tsx" 2>/dev/null | \
             grep -v "node_modules\|\?\.\|&&\|import\|from\|console\|window\." | head -15 || true)
 
           if [ -n "$UNSAFE_ACCESS" ]; then
@@ -2276,35 +2269,10 @@ jobs:
           echo "Checking for stale data patterns..."
           ISSUES=""
 
-          # Find components with cache but no freshness indicator
-          CACHE_NO_TIMESTAMP=""
-          for f in $(grep -rln "useCached\|useQuery\|cache\|Cache" src/components --include="*.tsx" 2>/dev/null | head -30); do
-            HAS_TIMESTAMP=$(grep -l "lastUpdated\|lastFetched\|updatedAt\|refreshedAt\|timestamp\|Timestamp\|ago\|timeAgo" "$f" 2>/dev/null || true)
-            if [ -z "$HAS_TIMESTAMP" ]; then
-              CACHE_NO_TIMESTAMP="${CACHE_NO_TIMESTAMP}  - \`$(basename "$f")\`\n"
-            fi
-          done
-
-          if [ -n "$CACHE_NO_TIMESTAMP" ]; then
-            ISSUES="${ISSUES}### Components with caching but no freshness indicator\nUsers should know when data was last updated:\n${CACHE_NO_TIMESTAMP}\n\n"
-          fi
-
-          # Find cards that don't respect demo mode toggle (check for demo mode subscription)
-          # Cards using useCached* hooks get demo mode handling automatically via useCache's useSyncExternalStore(subscribeDemoMode)
-          NO_DEMO_SUBSCRIPTION=""
-          for f in $(find src/components/cards -name "*.tsx" 2>/dev/null | grep -v "index\|test" | head -40); do
-            HAS_DEMO=$(grep -l "useDemoMode\|useCardDemoState\|isDemoMode\|subscribeDemoMode\|isDemoFallback\|isDemoData\|useCached" "$f" 2>/dev/null || true)
-            if [ -z "$HAS_DEMO" ]; then
-              # Only flag if it has data fetching (exclude useCached which handles demo internally)
-              HAS_FETCH=$(grep -l "fetch\|useQuery\|useEffect.*api" "$f" 2>/dev/null || true)
-              if [ -n "$HAS_FETCH" ]; then
-                NO_DEMO_SUBSCRIPTION="${NO_DEMO_SUBSCRIPTION}  - \`$(basename "$f")\`\n"
-              fi
-            fi
-          done
-
-          if [ -n "$NO_DEMO_SUBSCRIPTION" ]; then
-            ISSUES="${ISSUES}### Cards with data fetching but no demo mode subscription\nMay not respond to demo mode toggle:\n${NO_DEMO_SUBSCRIPTION}\n\n"
+          # Invocation-based checks exclude tests and import/comment-only matches.
+          ISSUES=$(bash ../scripts/check-data-freshness.sh)
+          if [ -n "$ISSUES" ]; then
+            ISSUES="${ISSUES}\n\n"
           fi
 
           # Find components showing "Loading..." text instead of skeletons
@@ -2718,91 +2686,32 @@ jobs:
           echo "Checking refresh icon animation consistency..."
           ISSUES=""
 
-          # Find all refresh icon usages
-          REFRESH_ICONS=$(grep -rn "RefreshCw\|RefreshCcw\|refresh\|Refresh" src/ --include="*.tsx" 2>/dev/null | \
-            grep -v "node_modules\|\.test\." | head -100 || true)
+          # Parse rendered controls, not imports, metadata icons, or nearby CSS.
+          node --test scripts/check-refresh-spin.test.mjs
+          ISSUES=$(node scripts/check-refresh-spin.mjs src)
 
-          if [ -n "$REFRESH_ICONS" ]; then
-            # Check for animate-spin on refresh icons
-            MISSING_SPIN=""
-            for f in $(grep -rl "RefreshCw\|RefreshCcw" src/ --include="*.tsx" 2>/dev/null | head -50); do
-              # Check if file has animate-spin with refresh icon
-              HAS_SPIN=$(grep -n "RefreshCw\|RefreshCcw" "$f" | while read line; do
-                LINE_NO=$(echo "$line" | cut -d: -f1)
-                # Check context around the line (5 lines before/after) for animate-spin
-                HAS_ANIMATE=$(sed -n "$((LINE_NO > 5 ? LINE_NO - 5 : 1)),$((LINE_NO + 5))p" "$f" | grep "animate-spin" || true)
-                if [ -z "$HAS_ANIMATE" ]; then
-                  echo "missing:$LINE_NO"
-                fi
-              done | head -3 || true)
+          # Check inventory items for refresh functionality (separate from icon animation).
+          INVENTORY_FILES=$(find src -path "*card*" -name "*.tsx" 2>/dev/null | head -50 || true)
+          CARDS_WITHOUT_REFRESH=""
+          for f in $INVENTORY_FILES; do
+            case "$f" in
+              *index*|*types*|*utils*|*hooks*) continue ;;
+            esac
 
-              if [ -n "$HAS_SPIN" ]; then
+            HAS_DATA_FETCH=$(grep -l "useQuery\|useFetch\|fetch\|axios" "$f" 2>/dev/null || true)
+            if [ -n "$HAS_DATA_FETCH" ]; then
+              HAS_REFRESH=$(grep -l "RefreshCw\|RefreshCcw\|refetch\|refresh" "$f" 2>/dev/null || true)
+              if [ -z "$HAS_REFRESH" ]; then
                 RELATIVE_PATH=$(echo "$f" | sed 's|^src/||')
-                MISSING_SPIN="${MISSING_SPIN}  - \`${RELATIVE_PATH}\` — refresh icon without animate-spin\n"
+                CARDS_WITHOUT_REFRESH="${CARDS_WITHOUT_REFRESH}  - \`${RELATIVE_PATH}\`\n"
               fi
-            done
-
-            if [ -n "$MISSING_SPIN" ]; then
-              ISSUES="${ISSUES}### Refresh icons without spin animation\nThese components may not show loading feedback:\n${MISSING_SPIN}\n\n"
             fi
+          done
 
-            # Check that animation triggers on loading state
-            SPIN_WITHOUT_LOADING=""
-            for f in $(grep -rl "animate-spin" src/ --include="*.tsx" 2>/dev/null | head -50); do
-              # Check if animate-spin is tied to a loading/isLoading condition
-              HAS_LOADING_CONDITION=$(grep -n "animate-spin" "$f" | while read line; do
-                LINE_NO=$(echo "$line" | cut -d: -f1)
-                # Check if line or nearby lines have loading state check
-                CONTEXT=$(sed -n "$((LINE_NO > 3 ? LINE_NO - 3 : 1)),$((LINE_NO + 3))p" "$f")
-                HAS_CONDITION=$(echo "$CONTEXT" | grep -E "isLoading|loading|isRefreshing|isFetching|\? " || true)
-                if [ -z "$HAS_CONDITION" ]; then
-                  echo "unconditional:$LINE_NO"
-                fi
-              done | head -1 || true)
-
-              if [ -n "$HAS_LOADING_CONDITION" ]; then
-                RELATIVE_PATH=$(echo "$f" | sed 's|^src/||')
-                SPIN_WITHOUT_LOADING="${SPIN_WITHOUT_LOADING}  - \`${RELATIVE_PATH}\` — animate-spin may not be tied to loading state\n"
-              fi
-            done
-
-            if [ -n "$SPIN_WITHOUT_LOADING" ]; then
-              ISSUES="${ISSUES}### Spin animation not tied to loading state\nAnimation should only spin during loading:\n${SPIN_WITHOUT_LOADING}\n\n"
-            fi
-
-            # Check for consistent spin duration (full rotation)
-            # Look for any custom animation durations on refresh icons
-            CUSTOM_DURATION=$(grep -rn "RefreshCw\|RefreshCcw" src/ --include="*.tsx" 2>/dev/null | \
-              grep -E "duration|transition|animation:" | head -10 || true)
-            if [ -n "$CUSTOM_DURATION" ]; then
-              ISSUES="${ISSUES}### Custom animation durations on refresh icons\nEnsure all refresh icons complete a full rotation:\n\`\`\`\n$(echo "$CUSTOM_DURATION" | head -5)\n\`\`\`\n\n"
-            fi
-
-            # Check inventory items for refresh functionality
-            INVENTORY_FILES=$(find src -path "*card*" -name "*.tsx" 2>/dev/null | head -50)
-            CARDS_WITHOUT_REFRESH=""
-            for f in $INVENTORY_FILES; do
-              # Skip non-card files
-              case "$f" in
-                *index*|*types*|*utils*|*hooks*) continue ;;
-              esac
-
-              # Check if it's a card that might need refresh
-              HAS_DATA_FETCH=$(grep -l "useQuery\|useFetch\|fetch\|axios" "$f" 2>/dev/null || true)
-              if [ -n "$HAS_DATA_FETCH" ]; then
-                HAS_REFRESH=$(grep -l "RefreshCw\|RefreshCcw\|refetch\|refresh" "$f" 2>/dev/null || true)
-                if [ -z "$HAS_REFRESH" ]; then
-                  RELATIVE_PATH=$(echo "$f" | sed 's|^src/||')
-                  CARDS_WITHOUT_REFRESH="${CARDS_WITHOUT_REFRESH}  - \`${RELATIVE_PATH}\`\n"
-                fi
-              fi
-            done
-
-            if [ -n "$CARDS_WITHOUT_REFRESH" ]; then
-              FIRST_FEW=$(echo -e "$CARDS_WITHOUT_REFRESH" | head -10)
-              COUNT=$(echo -e "$CARDS_WITHOUT_REFRESH" | grep -c "^" || echo "0")
-              ISSUES="${ISSUES}### Inventory cards without refresh icon\n${COUNT} cards fetch data but don't have refresh:\n${FIRST_FEW}\n\n"
-            fi
+          if [ -n "$CARDS_WITHOUT_REFRESH" ]; then
+            FIRST_FEW=$(echo -e "$CARDS_WITHOUT_REFRESH" | head -10)
+            COUNT=$(echo -e "$CARDS_WITHOUT_REFRESH" | grep -c "^" || echo "0")
+            ISSUES="${ISSUES}### Inventory cards without refresh icon\n${COUNT} cards fetch data but don't have refresh:\n${FIRST_FEW}\n\n"
           fi
 
           if [ -n "$ISSUES" ]; then

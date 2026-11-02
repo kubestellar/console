@@ -1,11 +1,13 @@
 import { expect, type Page } from '@playwright/test'
 import type { EvidenceCollectors } from '../../../harness/evidence/evidenceTypes'
-import { markLiveRateLimitDataLoss } from './liveReporting'
+import { markLiveRateLimitDataLoss, writeLiveRouteEvidence } from './liveReporting'
+import { isTransientLiveRead, readLiveApiWithBackoff } from './liveApiRead'
 
 type LiveApiEndpointFact = {
   status: number | null
   count: number | null
   error?: string
+  attempts?: Array<{ status: number; retryAfter: string | null }>
 }
 
 export type LiveApiFacts = {
@@ -128,6 +130,33 @@ export async function assertNoUnexpectedLiveNetworkErrors(
     ...optionalLiveNetworkPatterns,
     ...additionalAllowed,
   ]
+  // Probe each distinct failed read sequentially, not one request per cluster/error.
+  // UI/groundtruth assertions must still pass; this only proves transient API recovery.
+  const RECOVERY_BUDGET_MS = 30_000
+  const recoveryDeadline = Date.now() + RECOVERY_BUDGET_MS
+  const recoveredReads = new Set<string>()
+  const recoveryEvidence: Array<{ endpoint: string; status?: number; attempts?: Array<{ status: number; retryAfter: string | null }>; error?: string }> = []
+  const candidates = [...new Set(collectors.errorResponses
+    .filter(entry => isTransientLiveRead(entry, origin) && !allowed.some(pattern => pattern.test(entry.url)))
+    .map(entry => normalizeEndpointKey(entry.url, origin)))]
+  for (const endpoint of candidates) {
+    if (Date.now() >= recoveryDeadline) break
+    try {
+      const result = await page.evaluate(readLiveApiWithBackoff, { endpoint, budgetMs: recoveryDeadline - Date.now() })
+      recoveryEvidence.push({ endpoint, status: result.status, attempts: result.attempts })
+      if (result.status >= 200 && result.status < 300) {
+        JSON.parse(result.text) // A login/static HTML fallback is not API recovery.
+        recoveredReads.add(endpoint)
+      }
+    } catch (error) {
+      recoveryEvidence.push({ endpoint, error: String(error) })
+    }
+  }
+  if (recoveryEvidence.length > 0) {
+    writeLiveRouteEvidence({ route, kind: 'live-api-transient-recovery', endpoints: recoveryEvidence })
+  }
+  const isRecoveredRead = (entry: { method: string; status?: number; url: string }) =>
+    isTransientLiveRead(entry, origin) && recoveredReads.has(normalizeEndpointKey(entry.url, origin))
   const successfulEndpoints = await successfulLiveApiEndpointKeys(page, origin)
   const sessionStillValid = await liveSessionStillValid(page)
   const recoveredAuthResponses = collectors.errorResponses
@@ -148,6 +177,7 @@ export async function assertNoUnexpectedLiveNetworkErrors(
         return false
       }
     })
+    .filter(entry => !isRecoveredRead(entry))
     .filter(entry => !isRecoveredAuthBoundaryResponse(entry, successfulEndpoints, origin, sessionStillValid))
     .filter(entry => !allowed.some(pattern => pattern.test(entry.url)))
     .map(entry => `${entry.method} ${entry.status} ${entry.url}`)
@@ -172,6 +202,9 @@ export async function assertNoUnexpectedLiveNetworkErrors(
       }
     })
     .flatMap(entry => {
+      if (isRecoveredRead(entry)) {
+        return [{ classification: 'live-transient-read-recovered', method: entry.method, status: entry.status, url: entry.url }]
+      }
       if (isRecoveredAuthBoundaryResponse(entry, successfulEndpoints, origin, sessionStillValid)) {
         return [{
           classification: 'auth-boundary-recovered',
@@ -192,6 +225,7 @@ export async function assertNoUnexpectedLiveNetworkErrors(
 
   collectors.liveUiFailures = {
     ...(collectors.liveUiFailures || {}),
+    liveApiRecovery: recoveryEvidence,
     unexpectedNetworkResponses: unexpectedResponses,
     unexpectedRequestFailures: unexpectedFailures,
     recoveredAuthBoundaryResponses: recoveredAuthResponses,
@@ -205,41 +239,21 @@ export async function assertNoUnexpectedLiveNetworkErrors(
 }
 
 export async function collectLiveApiFacts(page: Page, scope: LiveApiFactScope = 'all'): Promise<LiveApiFacts> {
-  return page.evaluate(async (factScope: LiveApiFactScope) => {
-    type EndpointFact = { status: number | null; count: number | null; error?: string }
-    const endpoints: Record<string, EndpointFact> = {}
-    const successfulEndpointKeys = new Set(
-      ((window as unknown as { __KC_LIVE_SUCCESSFUL_API_ENDPOINTS__?: string[] }).__KC_LIVE_SUCCESSFUL_API_ENDPOINTS__ || [])
-    )
-    const rememberSuccessfulEndpoint = (endpoint: string) => {
-      const url = new URL(endpoint, window.location.origin)
-      successfulEndpointKeys.add(`${url.pathname}${url.search}`)
-      ;(window as unknown as { __KC_LIVE_SUCCESSFUL_API_ENDPOINTS__?: string[] }).__KC_LIVE_SUCCESSFUL_API_ENDPOINTS__ = [...successfulEndpointKeys]
-    }
+    const factScope = scope
+    const endpoints: Record<string, LiveApiEndpointFact> = {}
+    const rememberSuccessfulEndpoint = (endpoint: string) => page.evaluate((key) => {
+      const state = window as unknown as { __KC_LIVE_SUCCESSFUL_API_ENDPOINTS__?: string[] }
+      state.__KC_LIVE_SUCCESSFUL_API_ENDPOINTS__ = [...new Set([...(state.__KC_LIVE_SUCCESSFUL_API_ENDPOINTS__ || []), key])]
+    }, endpoint)
     const shouldFetch = (endpointScope: LiveApiFactScope) =>
       factScope === 'all'
       || factScope === endpointScope
       || (factScope === 'dashboard' && (endpointScope === 'clusters' || endpointScope === 'namespaces'))
-    const retryAfterMs = (response: Response) => {
-      const rawValue = response.headers.get('retry-after')
-      const jitterMs = Math.floor(Math.random() * 1_000)
-      if (!rawValue) return 2_000 + jitterMs
-      const seconds = Number(rawValue)
-      if (Number.isFinite(seconds)) return Math.min(Math.max(seconds * 1_000, 1_000), 65_000) + jitterMs
-      const dateMs = Date.parse(rawValue)
-      if (Number.isFinite(dateMs)) return Math.min(Math.max(dateMs - Date.now(), 1_000), 65_000) + jitterMs
-      return 2_000 + jitterMs
-    }
-    const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
     async function getJson(endpoint: string): Promise<{ status: number | null; data: unknown; count: number | null; error?: string }> {
       try {
-        let response = await fetch(endpoint, { credentials: 'include', headers: { Accept: 'application/json' } })
-        if (response.status === 429) {
-          await sleep(retryAfterMs(response))
-          response = await fetch(endpoint, { credentials: 'include', headers: { Accept: 'application/json' } })
-        }
-        const text = await response.text()
+        const response = await page.evaluate(readLiveApiWithBackoff, endpoint)
+        const text = response.text
         let data: unknown = null
         try {
           data = text ? JSON.parse(text) : null
@@ -259,9 +273,9 @@ export async function collectLiveApiFacts(page: Page, scope: LiveApiFactScope = 
                   : Array.isArray((data as { namespaces?: unknown[] } | null)?.namespaces)
                     ? (data as { namespaces: unknown[] }).namespaces.length
                     : null
-        endpoints[endpoint] = { status: response.status, count }
-        if (response.ok) {
-          rememberSuccessfulEndpoint(endpoint)
+        endpoints[endpoint] = { status: response.status, count, attempts: response.attempts }
+        if (response.status >= 200 && response.status < 300) {
+          await rememberSuccessfulEndpoint(endpoint)
         }
         return { status: response.status, data, count }
       } catch (error) {
@@ -372,6 +386,5 @@ export async function collectLiveApiFacts(page: Page, scope: LiveApiFactScope = 
         failedClusters: namespaceFailedClusters,
       },
     }
-  }, scope)
 }
 
