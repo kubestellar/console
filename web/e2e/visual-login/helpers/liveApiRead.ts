@@ -22,7 +22,8 @@ export async function readLiveApiWithBackoff(input: string | { endpoint: string;
   const deadline = Date.now() + (typeof input === 'string' ? DEFAULT_BUDGET_MS : input.budgetMs)
   const HTTP_TOO_MANY_REQUESTS = 429
   const HTTP_SERVICE_UNAVAILABLE = 503
-  const attempts: Array<{ status: number; retryAfter: string | null }> = []
+  const attempts: Array<{ status: number; retryAfter: string | null; contentType?: string | null; rateLimitHeaders?: Record<string, string>; bodyExcerpt?: string }> = []
+  const BODY_EXCERPT_MAX_CHARS = 1_024
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
     const response = await fetch(endpoint, {
@@ -32,7 +33,20 @@ export async function readLiveApiWithBackoff(input: string | { endpoint: string;
     })
     const text = await response.text()
     const retryAfter = response.headers.get('retry-after')
-    attempts.push({ status: response.status, retryAfter })
+    // Diagnostic evidence only: failed responses keep a truncated body and limiter headers.
+    const rateLimitHeaders: Record<string, string> = {}
+    response.headers.forEach((value, name) => {
+      if (/^(x-)?ratelimit|^x-rate-limit/i.test(name)) rateLimitHeaders[name] = value
+    })
+    attempts.push(response.ok
+      ? { status: response.status, retryAfter }
+      : {
+        status: response.status,
+        retryAfter,
+        contentType: response.headers.get('content-type'),
+        rateLimitHeaders,
+        bodyExcerpt: text.slice(0, BODY_EXCERPT_MAX_CHARS),
+      })
     const result = { status: response.status, text, attempts }
     if (![HTTP_TOO_MANY_REQUESTS, HTTP_SERVICE_UNAVAILABLE].includes(response.status)
       || attempt === MAX_ATTEMPTS - 1) return result

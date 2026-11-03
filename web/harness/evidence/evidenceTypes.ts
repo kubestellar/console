@@ -33,7 +33,7 @@ export interface LiveUiFailureEvidence {
   liveApiRecovery?: Array<{
     endpoint: string
     status?: number
-    attempts?: Array<{ status: number; retryAfter: string | null }>
+    attempts?: Array<{ status: number; retryAfter: string | null; contentType?: string | null; rateLimitHeaders?: Record<string, string>; bodyExcerpt?: string }>
     error?: string
   }>
   networkClassifications?: Array<{ classification: string; method?: string; status?: number; url: string }>
