@@ -9,6 +9,7 @@ import { useState, useEffect } from 'react'
 import { CheckCircle, XCircle, ChevronDown, Clock, Play, Trash2, Loader2, RefreshCw, Shield, AlertTriangle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
+import { useModalState } from '../../lib/modals'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useGPUHealthCronJob } from '../../hooks/useCachedData'
 import { StatusBadge, CheckRow } from './ProactiveGPUNodeHealthMonitor.StatusPanels'
@@ -23,8 +24,8 @@ import {
 export function CronJobClusterPanel({ cluster }: { cluster: string }) {
   const { t } = useTranslation(['common', 'cards'])
   const { status, isLoading, error, actionInProgress, install, uninstall, refetch } = useGPUHealthCronJob(cluster)
-  const [showInstallDialog, setShowInstallDialog] = useState(false)
-  const [showConfirmUninstall, setShowConfirmUninstall] = useState(false)
+  const { isOpen: showInstallDialog, open: openInstallDialog, close: closeInstallDialog } = useModalState()
+  const { isOpen: showConfirmUninstall, open: openConfirmUninstall, close: closeConfirmUninstall } = useModalState()
   const [showResults, setShowResults] = useState(false)
   const [schedule, setSchedule] = useState(DEFAULT_SCHEDULE)
   const [namespace, setNamespace] = useState(DEFAULT_NAMESPACE)
@@ -37,7 +38,7 @@ export function CronJobClusterPanel({ cluster }: { cluster: string }) {
 
   const handleInstall = async () => {
     await install({ namespace, schedule, tier })
-    setShowInstallDialog(false)
+    closeInstallDialog()
   }
 
   const handleUpdateTier = async () => {
@@ -47,7 +48,7 @@ export function CronJobClusterPanel({ cluster }: { cluster: string }) {
 
   const handleUninstall = async () => {
     await uninstall({ namespace: status?.namespace })
-    setShowConfirmUninstall(false)
+    closeConfirmUninstall()
   }
 
   const tierChanged = status?.installed && status.tier > 0 && tier !== status.tier
@@ -123,7 +124,7 @@ export function CronJobClusterPanel({ cluster }: { cluster: string }) {
               {/* Uninstall button */}
               {!showConfirmUninstall ? (
                 <button
-                  onClick={() => setShowConfirmUninstall(true)}
+                  onClick={() => openConfirmUninstall()}
                   disabled={!!actionInProgress}
                   className="p-1 rounded hover:bg-red-500/10 text-white/30 hover:text-red-400 transition-colors disabled:opacity-50"
                   title={t('cards:gpuNodeHealth.uninstallCronJob')}
@@ -142,7 +143,7 @@ export function CronJobClusterPanel({ cluster }: { cluster: string }) {
                     ) : t('cards:gpuNodeHealth.confirm')}
                   </button>
                   <button
-                    onClick={() => setShowConfirmUninstall(false)}
+                    onClick={() => closeConfirmUninstall()}
                     className="px-2 py-0.5 text-2xs rounded bg-secondary text-white/40 hover:text-white/60 transition-colors"
                   >
                     {t('cards:gpuNodeHealth.cancel')}
@@ -153,7 +154,7 @@ export function CronJobClusterPanel({ cluster }: { cluster: string }) {
           ) : status?.canInstall ? (
             !showInstallDialog ? (
               <button
-                onClick={() => setShowInstallDialog(true)}
+                onClick={() => openInstallDialog()}
                 disabled={!!actionInProgress}
                 className="flex items-center gap-1 px-2 py-1 text-2xs rounded bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 transition-colors disabled:opacity-50"
               >
@@ -218,7 +219,7 @@ export function CronJobClusterPanel({ cluster }: { cluster: string }) {
           </div>
           <div className="flex items-center gap-2 justify-end">
             <button
-              onClick={() => setShowInstallDialog(false)}
+              onClick={() => closeInstallDialog()}
               className="px-2 py-1 text-2xs rounded bg-secondary text-white/40 hover:text-white/60 transition-colors"
             >
               {t('cards:gpuNodeHealth.cancel')}
