@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_updated": "2026-11-02T03:05:09Z",
+  "last_updated": "2026-11-03T03:04:28Z",
   "rolling_window_days": 30,
   "categories": {
     "performance": {
@@ -25,18 +25,18 @@
       "last_evaluated": "2026-10-31T03:04:29Z"
     },
     "operator": {
-      "merged": 1141,
+      "merged": 1167,
       "closed": 280,
-      "acceptance_rate": 0.8,
-      "status": "normal",
-      "last_evaluated": "2026-11-02T03:05:09Z"
+      "acceptance_rate": 0.81,
+      "status": "boosted",
+      "last_evaluated": "2026-11-03T03:04:28Z"
     },
     "sre": {
-      "merged": 684,
+      "merged": 686,
       "closed": 101,
       "acceptance_rate": 0.87,
       "status": "boosted",
-      "last_evaluated": "2026-11-01T03:05:16Z"
+      "last_evaluated": "2026-11-03T03:04:28Z"
     },
     "features": {
       "merged": 61,
@@ -46,11 +46,11 @@
       "last_evaluated": "2026-11-01T03:05:16Z"
     },
     "resilience": {
-      "merged": 156,
+      "merged": 157,
       "closed": 66,
       "acceptance_rate": 0.7,
       "status": "normal",
-      "last_evaluated": "2026-11-02T03:05:09Z"
+      "last_evaluated": "2026-11-03T03:04:28Z"
     },
     "consistency": {
       "merged": 41,
@@ -97,16 +97,6 @@
     ]
   },
   "history": [
-    {
-      "date": "2026-09-09",
-      "total_merged": 2046,
-      "total_closed": 584,
-      "categories_blocked": [],
-      "categories_boosted": [
-        "sre",
-        "features"
-      ]
-    },
     {
       "date": "2026-09-12",
       "total_merged": 2065,
@@ -396,13 +386,24 @@
         "sre",
         "features"
       ]
+    },
+    {
+      "date": "2026-11-03",
+      "total_merged": 2377,
+      "total_closed": 589,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "operator",
+        "sre",
+        "features"
+      ]
     }
   ],
   "rotation_weights": {
     "performance": 0.98,
     "security": 0.99,
     "a11y": 1.19,
-    "operator": 1.2,
+    "operator": 2.0,
     "sre": 2.0,
     "features": 2.0,
     "resilience": 1.05,
