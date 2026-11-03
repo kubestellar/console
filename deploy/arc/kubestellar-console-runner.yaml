@@ -1,6 +1,22 @@
 ---
-# Secret for GitHub API credentials
-# You need to create this with a PAT that has 'repo' scope
+# Secret for GitHub API credentials.
+#
+# PREFERRED: authenticate with a GitHub App installed only on this repo,
+# scoped to the minimal "Administration: read & write" repository permission
+# needed to register self-hosted runners. App installation tokens auto-rotate
+# and are bounded to this repo, unlike a classic PAT.
+# See: https://docs.github.com/en/actions/how-tos/manage-runners/use-actions-runner-controller/authenticate-to-the-api
+#
+# kubectl create secret generic arc-github-secret-kubestellar \
+#   --namespace arc-systems \
+#   --from-literal=github_app_id=<APP_ID> \
+#   --from-literal=github_app_installation_id=<INSTALLATION_ID> \
+#   --from-file=github_app_private_key=<PATH_TO_APP_PRIVATE_KEY.pem>
+#
+# FALLBACK (not recommended): a classic PAT with full 'repo' scope grants
+# read/write access to every private repo the token owner can access, far
+# beyond what registering runners for this repo requires, and does not
+# rotate automatically. Use only if a GitHub App cannot be installed:
 # kubectl create secret generic arc-github-secret-kubestellar \
 #   --namespace arc-systems \
 #   --from-literal=github_token=ghp_xxxxxxxxxxxx
@@ -11,7 +27,9 @@ metadata:
   namespace: arc-systems
 type: Opaque
 stringData:
-  github_token: "REPLACE_WITH_PAT"  # PAT with 'repo' scope
+  # Preferred fields (GitHub App): github_app_id, github_app_installation_id,
+  # github_app_private_key. Replace this PAT-based example accordingly.
+  github_token: "REPLACE_WITH_PAT"  # fallback only; prefer GitHub App auth above
 
 ---
 apiVersion: actions.summerwind.dev/v1alpha1
