@@ -7,7 +7,7 @@ type LiveApiEndpointFact = {
   status: number | null
   count: number | null
   error?: string
-  attempts?: Array<{ status: number; retryAfter: string | null }>
+  attempts?: Array<{ status: number; retryAfter: string | null; contentType?: string | null; rateLimitHeaders?: Record<string, string>; bodyExcerpt?: string }>
 }
 
 export type LiveApiFacts = {
@@ -135,7 +135,7 @@ export async function assertNoUnexpectedLiveNetworkErrors(
   const RECOVERY_BUDGET_MS = 30_000
   const recoveryDeadline = Date.now() + RECOVERY_BUDGET_MS
   const recoveredReads = new Set<string>()
-  const recoveryEvidence: Array<{ endpoint: string; status?: number; attempts?: Array<{ status: number; retryAfter: string | null }>; error?: string }> = []
+  const recoveryEvidence: Array<{ endpoint: string; status?: number; attempts?: Array<{ status: number; retryAfter: string | null; contentType?: string | null; rateLimitHeaders?: Record<string, string>; bodyExcerpt?: string }>; error?: string }> = []
   const candidates = [...new Set(collectors.errorResponses
     .filter(entry => isTransientLiveRead(entry, origin) && !allowed.some(pattern => pattern.test(entry.url)))
     .map(entry => normalizeEndpointKey(entry.url, origin)))]
@@ -234,7 +234,10 @@ export async function assertNoUnexpectedLiveNetworkErrors(
       ...networkClassifications,
     ],
   }
-  expect(unexpectedResponses, 'live UI must not produce unexpected app-origin 4xx/5xx responses').toEqual([])
+  const evidenceHint = recoveryEvidence.length > 0
+    ? ` (response bodies/limiter headers: live-api-transient-recovery evidence for route "${route}")`
+    : ''
+  expect(unexpectedResponses, `live UI must not produce unexpected app-origin 4xx/5xx responses${evidenceHint}`).toEqual([])
   expect(unexpectedFailures, 'live UI must not produce unexpected app-origin request failures').toEqual([])
 }
 
