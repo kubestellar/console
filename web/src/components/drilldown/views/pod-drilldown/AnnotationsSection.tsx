@@ -194,6 +194,8 @@ export function AnnotationsSection({ annotations }: AnnotationsSectionProps) {
                 <button
                   onClick={() => handleCopy(`annot-${key}`, value)}
                   className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground shrink-0"
+                  title={t('drilldown.tooltips.copyValue')}
+                  aria-label={t('drilldown.tooltips.copyValue')}
                 >
                   {copiedField === `annot-${key}` ? (
                     <Check className="w-3 h-3 text-green-400" />

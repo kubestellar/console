@@ -192,6 +192,8 @@ export function LabelsSection({ labels }: LabelsSectionProps) {
               <button
                 onClick={() => handleCopy(`label-${key}`, `${key}=${value}`)}
                 className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground shrink-0 ml-2"
+                title={t('drilldown.tooltips.copyValue')}
+                aria-label={t('drilldown.tooltips.copyValue')}
               >
                 {copiedField === `label-${key}` ? (
                   <Check className="w-3 h-3 text-green-400" />
