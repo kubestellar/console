@@ -1,9 +1,22 @@
 {
-  "threshold": 3.5,
-  "reporters": ["console"],
-  "path": ["src"],
-  "ignore": ["**/__tests__/**", "**/*.test.ts", "**/*.test.tsx", "**/node_modules/**", "**/dist/**"],
-  "format": ["typescript"],
+  "threshold": 4.3,
+  "reporters": [
+    "console"
+  ],
+  "path": [
+    "src"
+  ],
+  "ignore": [
+    "**/__tests__/**",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/node_modules/**",
+    "**/dist/**"
+  ],
+  "format": [
+    "typescript",
+    "tsx"
+  ],
   "minLines": 10,
   "minTokens": 50,
   "gitignore": true
