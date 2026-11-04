@@ -70,6 +70,9 @@ export function useGitOps() {
 
   const resolveAppCluster = (preferred: string): { cluster: string; ambiguous: boolean } => {
     if (preferred) return { cluster: preferred, ambiguous: false }
+    if (selectedCluster && deduplicatedClusters.some(c => clusterDisplayName(c) === selectedCluster)) {
+      return { cluster: selectedCluster, ambiguous: false }
+    }
     // Only auto-select when there is exactly one cluster to avoid silently
     // ignoring all others in a multi-cluster deployment.
     if (deduplicatedClusters.length === EXACTLY_ONE_CLUSTER) {
@@ -121,6 +124,7 @@ export function useGitOps() {
       }
       if (token) agentAuthHeaders['Authorization'] = `Bearer ${token}`
       const promises = configs.map(async (appConfig) => {
+        if (appConfig.clusterAmbiguous) return null
         try {
           const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/gitops/detect-drift`, {
             method: 'POST',
@@ -144,6 +148,7 @@ export function useGitOps() {
           }
           return {
             name: appConfig.name,
+            cluster: appConfig.cluster,
             result: {
               status: 'ok' as const,
               drifted: data.drifted,
@@ -152,6 +157,7 @@ export function useGitOps() {
           const message = e instanceof Error ? e.message : 'Failed to detect drift'
           return {
             name: appConfig.name,
+            cluster: appConfig.cluster,
             result: {
               status: 'error' as const,
               drifted: false,
@@ -163,8 +169,8 @@ export function useGitOps() {
       const settled = await Promise.all(promises)
       if (cancelled) return
 
-      for (const { name, result } of settled) {
-        results.set(name, result)
+      for (const entry of settled) {
+        if (entry) results.set(`${entry.name}:${entry.cluster}`, entry.result)
       }
 
       setDriftResults(results)
@@ -175,23 +181,24 @@ export function useGitOps() {
     detectAllDrift()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deduplicatedClusters])
+  }, [deduplicatedClusters, selectedCluster])
 
   const handleSync = (app: GitOpsApp) => {
-    setSyncDialogApp(app)
+    if (!app.clusterAmbiguous) setSyncDialogApp(app)
   }
 
   const handleSyncComplete = () => {
     if (syncDialogApp) {
-      setSyncedApps(prev => new Set(prev).add(syncDialogApp.name))
+      const key = `${syncDialogApp.name}:${syncDialogApp.cluster}`
+      setSyncedApps(prev => new Set(prev).add(key))
       setDriftResults(prev => {
         const updated = new Map(prev)
-        updated.set(syncDialogApp.name, { status: 'ok', drifted: false, resources: [] })
+        updated.set(key, { status: 'ok', drifted: false, resources: [] })
         return updated
       })
       setSyncedAt(prev => {
         const updated = new Map(prev)
-        updated.set(syncDialogApp.name, new Date().toISOString())
+        updated.set(key, new Date().toISOString())
         return updated
       })
       showToast(`${syncDialogApp.name} synced successfully!`, 'success')
@@ -204,14 +211,18 @@ export function useGitOps() {
       return { ...c, cluster: resolved.cluster, clusterAmbiguous: resolved.ambiguous }
     })
     return configs.map((config): GitOpsApp => {
-      const realSyncTime = syncedAt.get(config.name)
-      if (syncedApps.has(config.name)) {
+      const key = `${config.name}:${config.cluster}`
+      if (config.clusterAmbiguous) {
+        return { ...config, syncStatus: 'unknown', healthStatus: 'unknown', lastSyncTime: undefined, lastSyncTimeAgo: getTimeAgo(undefined, t), driftDetails: undefined }
+      }
+      const realSyncTime = syncedAt.get(key)
+      if (syncedApps.has(key)) {
         return { ...config, syncStatus: 'synced', healthStatus: 'healthy', lastSyncTime: realSyncTime, lastSyncTimeAgo: getTimeAgo(realSyncTime, t), driftDetails: undefined }
       }
       if (isDetecting) {
         return { ...config, syncStatus: 'checking', healthStatus: 'progressing', lastSyncTime: undefined, lastSyncTimeAgo: getTimeAgo(undefined, t), driftDetails: undefined }
       }
-      const drift = driftResults.get(config.name)
+      const drift = driftResults.get(key)
       if (drift) {
         if (drift.status === 'error') {
           return {
@@ -236,12 +247,9 @@ export function useGitOps() {
       return { ...config, syncStatus: 'unknown', healthStatus: 'missing', lastSyncTime: undefined, lastSyncTimeAgo: getTimeAgo(undefined, t), driftDetails: undefined }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [driftResults, isDetecting, syncedApps, syncedAt, clusters])
+  }, [driftResults, isDetecting, syncedApps, syncedAt, clusters, deduplicatedClusters, selectedCluster])
 
   const filteredApps = apps
-    .map(app => syncedApps.has(app.name)
-      ? { ...app, syncStatus: 'synced' as const, healthStatus: 'healthy' as const, driftDetails: undefined }
-      : app)
     .filter(app => {
       if (selectedCluster && app.cluster !== selectedCluster) return false
       if (statusFilter === 'synced' && app.syncStatus !== 'synced') return false
