@@ -115,6 +115,7 @@ export function LabelsSection({ labels }: LabelsSectionProps) {
                         onClick={() => undoLabelChange(key)}
                         className="p-1 rounded hover:bg-secondary/50 text-yellow-400"
                         title={t('drilldown.tooltips.undoChange')}
+                        aria-label={t('drilldown.tooltips.undoChange')}
                       >
                         <X className="w-3 h-3" />
                       </button>
@@ -124,6 +125,7 @@ export function LabelsSection({ labels }: LabelsSectionProps) {
                         onClick={() => handleLabelRemove(key)}
                         className="p-1 rounded hover:bg-red-500/20 text-red-400"
                         title={t('drilldown.tooltips.removeLabel')}
+                        aria-label={t('drilldown.tooltips.removeLabel')}
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>

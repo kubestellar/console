@@ -105,6 +105,7 @@ export function AnnotationsSection({ annotations }: AnnotationsSectionProps) {
                           onClick={() => undoAnnotationChange(key)}
                           className="p-1 rounded hover:bg-secondary/50 text-yellow-400"
                           title={t('drilldown.tooltips.undoChange')}
+                          aria-label={t('drilldown.tooltips.undoChange')}
                         >
                           <X className="w-3 h-3" />
                         </button>
@@ -114,6 +115,7 @@ export function AnnotationsSection({ annotations }: AnnotationsSectionProps) {
                           onClick={() => handleAnnotationRemove(key)}
                           className="p-1 rounded hover:bg-red-500/20 text-red-400"
                           title={t('drilldown.tooltips.removeAnnotation')}
+                          aria-label={t('drilldown.tooltips.removeAnnotation')}
                         >
                           <Trash2 className="w-3 h-3" />
                         </button>
