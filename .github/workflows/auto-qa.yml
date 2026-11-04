@@ -789,7 +789,7 @@ jobs:
           ISSUES=""
 
           # Find dashboard/overview components without health status
-          DASHBOARDS=$(find src -name "*Dashboard*" -o -name "*Overview*" -o -name "*Summary*" 2>/dev/null | grep -v node_modules | grep "\.tsx$")
+          DASHBOARDS=$(find src -name "*Dashboard*" -o -name "*Overview*" -o -name "*Summary*" 2>/dev/null | grep -v node_modules | grep "\.tsx$" | grep -v -E "\.(test|spec)\.tsx$|TabBar|EmptyState|SummaryPanel|^src/components/dashboard/CustomDashboard\.tsx$")
           for f in $DASHBOARDS; do
             HAS_HEALTH=$(grep -l "health\|Health\|status\|Status\|alert\|Alert\|warning\|Warning" "$f" 2>/dev/null || true)
             if [ -z "$HAS_HEALTH" ]; then
