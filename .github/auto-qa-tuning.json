@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_updated": "2026-11-03T03:04:28Z",
+  "last_updated": "2026-11-04T03:04:39Z",
   "rolling_window_days": 30,
   "categories": {
     "performance": {
@@ -25,18 +25,18 @@
       "last_evaluated": "2026-10-31T03:04:29Z"
     },
     "operator": {
-      "merged": 1167,
+      "merged": 1170,
       "closed": 280,
       "acceptance_rate": 0.81,
       "status": "boosted",
-      "last_evaluated": "2026-11-03T03:04:28Z"
+      "last_evaluated": "2026-11-04T03:04:39Z"
     },
     "sre": {
-      "merged": 686,
+      "merged": 687,
       "closed": 101,
       "acceptance_rate": 0.87,
       "status": "boosted",
-      "last_evaluated": "2026-11-03T03:04:28Z"
+      "last_evaluated": "2026-11-04T03:04:39Z"
     },
     "features": {
       "merged": 61,
@@ -46,11 +46,11 @@
       "last_evaluated": "2026-11-01T03:05:16Z"
     },
     "resilience": {
-      "merged": 157,
+      "merged": 158,
       "closed": 66,
-      "acceptance_rate": 0.7,
+      "acceptance_rate": 0.71,
       "status": "normal",
-      "last_evaluated": "2026-11-03T03:04:28Z"
+      "last_evaluated": "2026-11-04T03:04:39Z"
     },
     "consistency": {
       "merged": 41,
@@ -97,16 +97,6 @@
     ]
   },
   "history": [
-    {
-      "date": "2026-09-12",
-      "total_merged": 2065,
-      "total_closed": 584,
-      "categories_blocked": [],
-      "categories_boosted": [
-        "sre",
-        "features"
-      ]
-    },
     {
       "date": "2026-09-13",
       "total_merged": 2077,
@@ -397,6 +387,17 @@
         "sre",
         "features"
       ]
+    },
+    {
+      "date": "2026-11-04",
+      "total_merged": 2382,
+      "total_closed": 589,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "operator",
+        "sre",
+        "features"
+      ]
     }
   ],
   "rotation_weights": {
@@ -406,7 +407,7 @@
     "operator": 2.0,
     "sre": 2.0,
     "features": 2.0,
-    "resilience": 1.05,
+    "resilience": 1.07,
     "consistency": 0.99
   },
   "max_issues_override": 5,
