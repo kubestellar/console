@@ -221,10 +221,10 @@ export function CanIResultPanel({ result, snapshot }: CanIResultPanelProps) {
       <p className="mt-2 text-sm text-muted-foreground">
         {t(result.allowed ? 'rbac.youCan' : 'rbac.youCannot')}{' '}
         <code className="px-1 py-0.5 rounded bg-secondary">{snapshot.verb}</code>{' '}
-        <code className="px-1 py-0.5 rounded bg-secondary">{snapshot.resource}</code>
+        <code className="inline-block max-w-full align-bottom truncate whitespace-nowrap px-1 py-0.5 rounded bg-secondary" title={snapshot.resource}>{snapshot.resource}</code>
         {snapshot.namespace && (
           <>
-            {' '}{t('rbac.inNamespace')} <code className="px-1 py-0.5 rounded bg-secondary">{snapshot.namespace}</code>
+            {' '}{t('rbac.inNamespace')} <code className="inline-block max-w-full align-bottom truncate whitespace-nowrap px-1 py-0.5 rounded bg-secondary" title={snapshot.namespace}>{snapshot.namespace}</code>
           </>
         )}
       </p>
