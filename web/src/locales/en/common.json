@@ -3232,6 +3232,7 @@
     },
     "tooltips": {
       "copyCommand": "Copy command",
+      "copyValue": "Copy value",
       "undoChange": "Undo change",
       "removeLabel": "Remove label",
       "removeAnnotation": "Remove annotation",
