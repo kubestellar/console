@@ -135,7 +135,7 @@ export function InfoField({ label, value, icon, onCopy, copied }: {
       <div className="flex items-center gap-2">
         <span className="text-sm text-foreground truncate" title={value}>{value}</span>
         {onCopy && (
-          <button onClick={onCopy} className="p-2 min-h-11 min-w-11 flex items-center justify-center rounded hover:bg-secondary shrink-0" title={t('drilldown.service.copy')}>
+          <button onClick={onCopy} className="p-2 min-h-11 min-w-11 flex items-center justify-center rounded hover:bg-secondary shrink-0" title={t('drilldown.service.copy')} aria-label={t('drilldown.service.copy')}>
             {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3 text-muted-foreground" />}
           </button>
         )}
@@ -360,6 +360,7 @@ export function ServiceOutputPane({
         onClick={() => onCopy(output as string, copyField)}
         className="absolute top-2 right-2 p-1 rounded bg-secondary hover:bg-secondary/80"
         title={t('drilldown.service.copy')}
+        aria-label={t('drilldown.service.copy')}
       >
         {copiedField === copyField ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
       </button>
