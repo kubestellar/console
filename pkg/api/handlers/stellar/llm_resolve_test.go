@@ -78,7 +78,7 @@ func TestResolveUserProvider_ProviderSelection(t *testing.T) {
 			name: "ollama uses NewOllama and falls back to the default model",
 			cfg: store.StellarProviderConfig{
 				ID: "p-ollama", UserID: "user-ollama", Provider: "ollama",
-				IsDefault: true, IsActive: true,
+				APIKeyEnc: []byte{}, IsDefault: true, IsActive: true,
 			},
 			wantModel: providers.ProviderDefaults["ollama"].DefaultModel,
 			wantProvider: func(t *testing.T, p providers.Provider) {
@@ -90,7 +90,7 @@ func TestResolveUserProvider_ProviderSelection(t *testing.T) {
 			name: "anthropic uses NewAnthropicProvider and keeps the configured model",
 			cfg: store.StellarProviderConfig{
 				ID: "p-anthropic", UserID: "user-anthropic", Provider: "anthropic",
-				Model: "claude-custom", IsDefault: true, IsActive: true,
+				Model: "claude-custom", APIKeyEnc: []byte{}, IsDefault: true, IsActive: true,
 			},
 			wantModel: "claude-custom",
 			wantProvider: func(t *testing.T, p providers.Provider) {
@@ -102,7 +102,7 @@ func TestResolveUserProvider_ProviderSelection(t *testing.T) {
 			name: "unrecognized provider name falls through to NewOpenAICompat",
 			cfg: store.StellarProviderConfig{
 				ID: "p-openai", UserID: "user-openai", Provider: "openai",
-				IsDefault: true, IsActive: true,
+				APIKeyEnc: []byte{}, IsDefault: true, IsActive: true,
 			},
 			wantModel: providers.ProviderDefaults["openai"].DefaultModel,
 			wantProvider: func(t *testing.T, p providers.Provider) {
@@ -134,7 +134,8 @@ func TestResolveUserProvider_InvalidBaseURL(t *testing.T) {
 	h, s := newResolveTestHandler(t)
 	require.NoError(t, s.UpsertProviderConfig(context.Background(), &store.StellarProviderConfig{
 		ID: "p-bad-url", UserID: "user-bad-url", Provider: "openai",
-		BaseURL: "http://has a space.example.com", IsDefault: true, IsActive: true,
+		BaseURL: "http://has a space.example.com", APIKeyEnc: []byte{},
+		IsDefault: true, IsActive: true,
 	}))
 
 	_, err := h.resolveUserProvider(context.Background(), "user-bad-url")
@@ -150,7 +151,8 @@ func TestResolveProviderAndModel_LazyInitializesRegistry(t *testing.T) {
 	h.providerRegistry = nil
 	require.NoError(t, s.UpsertProviderConfig(context.Background(), &store.StellarProviderConfig{
 		ID: "p-registry", UserID: "user-registry", Provider: "anthropic",
-		Model: "claude-registry-model", IsDefault: true, IsActive: true,
+		Model: "claude-registry-model", APIKeyEnc: []byte{},
+		IsDefault: true, IsActive: true,
 	}))
 
 	resolved, err := h.resolveProviderAndModel(context.Background(), "user-registry", "", "")
