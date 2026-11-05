@@ -162,6 +162,21 @@ describe('useCardFilters deep branches', () => {
     expect(localStorage.getItem(`${LOCAL_FILTER_STORAGE_PREFIX}test-filter`)).toBeNull()
   })
 
+  it('filters and clears in memory when storage writes fail', () => {
+    const { result } = renderHook(() => useCardFilters(items, filterConfig))
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('denied') })
+    const removeItem = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => { throw new Error('denied') })
+    try {
+      act(() => { result.current.toggleClusterFilter('prod-east') })
+      expect(result.current.filtered.map(item => item.name)).toEqual(['pod-a', 'pod-c'])
+      act(() => { result.current.clearClusterFilter() })
+      expect(result.current.filtered).toEqual(items)
+    } finally {
+      setItem.mockRestore()
+      removeItem.mockRestore()
+    }
+  })
+
   it('reads persisted cluster filter from localStorage', () => {
     localStorage.setItem(`${LOCAL_FILTER_STORAGE_PREFIX}test-filter`, JSON.stringify(['staging']))
     const { result } = renderHook(() => useCardFilters(items, filterConfig))
