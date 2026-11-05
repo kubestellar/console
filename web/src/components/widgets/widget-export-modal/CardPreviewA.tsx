@@ -5,6 +5,9 @@
 import { useTranslation } from 'react-i18next'
 import type { WidgetCardDefinition } from '../../../lib/widgets/widgetRegistry'
 import {
+  PREV_BG_ERROR,
+  PREV_BG_INFO,
+  PREV_BG_WARNING,
   PREV_BORDER_STD,
   PREV_BORDER_THIN,
   PREV_CLR_CPU,
@@ -55,15 +58,15 @@ export function CardPreviewA({ cardType, card }: { cardType: string; card: Widge
             <div style={ps.title}><span style={ps.dot(ps.colors.warning)} /> Pod Issues</div>
             <div style={ps.muted}>4 total issues</div>
             <div style={{ ...ps.col, marginTop: PREV_SM }}>
-              <div className="px-2 py-1" style={{ ...ps.row, backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: PREV_XS }}>
+              <div className="px-2 py-1" style={{ ...ps.row, backgroundColor: PREV_BG_ERROR, borderRadius: PREV_XS }}>
                 <span style={{ color: ps.colors.error, fontWeight: 600, fontSize: PREV_FS_BODY }}>2</span>
                 <span style={ps.muted}>CrashLoopBackOff</span>
               </div>
-              <div className="px-2 py-1" style={{ ...ps.row, backgroundColor: 'rgba(234,179,8,0.1)', borderRadius: PREV_XS }}>
+              <div className="px-2 py-1" style={{ ...ps.row, backgroundColor: PREV_BG_WARNING, borderRadius: PREV_XS }}>
                 <span style={{ color: ps.colors.warning, fontWeight: 600, fontSize: PREV_FS_BODY }}>1</span>
                 <span style={ps.muted}>OOMKilled</span>
               </div>
-              <div className="px-2 py-1" style={{ ...ps.row, backgroundColor: 'rgba(59,130,246,0.1)', borderRadius: PREV_XS }}>
+              <div className="px-2 py-1" style={{ ...ps.row, backgroundColor: PREV_BG_INFO, borderRadius: PREV_XS }}>
                 <span style={{ color: ps.colors.info, fontWeight: 600, fontSize: PREV_FS_BODY }}>1</span>
                 <span style={ps.muted}>ImagePullBackOff</span>
               </div>
@@ -112,11 +115,11 @@ export function CardPreviewA({ cardType, card }: { cardType: string; card: Widge
             </div>
             <div style={ps.col}>
               <div style={{ fontSize: PREV_FS_MICRO, fontWeight: 600, color: PREV_CLR_MUTED, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Alerts (2)</div>
-              <div className="px-2 py-1" style={{ ...ps.row, backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: PREV_XS, borderLeft: `${PREV_BORDER_STD} solid ${ps.colors.error}` }}>
+              <div className="px-2 py-1" style={{ ...ps.row, backgroundColor: PREV_BG_ERROR, borderRadius: PREV_XS, borderLeft: `${PREV_BORDER_STD} solid ${ps.colors.error}` }}>
                 <span style={{ fontSize: PREV_FS_CAPTION, color: ps.colors.error, fontWeight: 600 }}>GPU</span>
                 <span style={{ fontSize: PREV_FS_MICRO, color: PREV_CLR_MUTED, marginLeft: PREV_XS }}>worker-3 (-2)</span>
               </div>
-              <div className="px-2 py-1" style={{ ...ps.row, backgroundColor: 'rgba(234,179,8,0.1)', borderRadius: PREV_XS, borderLeft: `${PREV_BORDER_STD} solid ${ps.colors.warning}` }}>
+              <div className="px-2 py-1" style={{ ...ps.row, backgroundColor: PREV_BG_WARNING, borderRadius: PREV_XS, borderLeft: `${PREV_BORDER_STD} solid ${ps.colors.warning}` }}>
                 <span style={{ fontSize: PREV_FS_CAPTION, color: ps.colors.warning, fontWeight: 600 }}>NIC</span>
                 <span style={{ fontSize: PREV_FS_MICRO, color: PREV_CLR_MUTED, marginLeft: PREV_XS }}>worker-1 (-1)</span>
               </div>
@@ -137,7 +140,7 @@ export function CardPreviewA({ cardType, card }: { cardType: string; card: Widge
                 { label: 'No resource limits', count: 12, color: ps.colors.warning },
                 { label: 'Running as root', count: 5, color: ps.colors.error },
               ].map((item) => (
-                <div key={item.label} className="px-2 py-1" style={{ ...ps.row, backgroundColor: item.color === ps.colors.error ? 'rgba(239,68,68,0.1)' : 'rgba(234,179,8,0.1)', borderRadius: PREV_XS }}>
+                <div key={item.label} className="px-2 py-1" style={{ ...ps.row, backgroundColor: item.color === ps.colors.error ? PREV_BG_ERROR : PREV_BG_WARNING, borderRadius: PREV_XS }}>
                   <span style={{ color: item.color, fontWeight: 600, fontSize: PREV_FS_BODY, minWidth: '16px' }}>{item.count}</span>
                   <span style={ps.muted}>{item.label}</span>
                 </div>
@@ -156,7 +159,7 @@ export function CardPreviewA({ cardType, card }: { cardType: string; card: Widge
                 { name: 'PodCrashLooping', severity: 'warning', ns: 'default' },
                 { name: 'NodeDiskPressure', severity: 'warning', ns: 'kube-system' },
               ].map((a) => (
-                <div key={a.name} className="px-2 py-1" style={{ ...ps.row, backgroundColor: a.severity === 'critical' ? 'rgba(239,68,68,0.1)' : 'rgba(234,179,8,0.1)', borderRadius: PREV_XS, borderLeft: `${PREV_BORDER_STD} solid ${a.severity === 'critical' ? ps.colors.error : ps.colors.warning}` }}>
+                <div key={a.name} className="px-2 py-1" style={{ ...ps.row, backgroundColor: a.severity === 'critical' ? PREV_BG_ERROR : PREV_BG_WARNING, borderRadius: PREV_XS, borderLeft: `${PREV_BORDER_STD} solid ${a.severity === 'critical' ? ps.colors.error : ps.colors.warning}` }}>
                   <span style={{ fontSize: PREV_FS_CAPTION, color: a.severity === 'critical' ? ps.colors.error : ps.colors.warning, fontWeight: 600 }}>{a.name}</span>
                   <span style={{ fontSize: PREV_FS_MICRO, color: PREV_CLR_MUTED, marginLeft: 'auto' }}>{a.ns}</span>
                 </div>

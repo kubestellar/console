@@ -53,6 +53,12 @@ export const PREV_CLR_MEM = '#c084fc'       // Memory metric color (purple-400)
 // Design token colors for macOS widget preview
 export const PREV_BG_DARK_OPACITY = 'rgba(17, 24, 39, 0.9)'  // Dark gray-900 with 0.9 opacity
 export const PREV_BORDER_LIGHT = 'rgba(255, 255, 255, 0.1)'  // Subtle white border
+export const PREV_BG_ERROR = 'rgba(239,68,68,0.1)'
+export const PREV_BG_WARNING = 'rgba(234,179,8,0.1)'
+export const PREV_BG_INFO = 'rgba(59,130,246,0.1)'
+export const PREV_BG_ROW = 'rgba(30,41,59,0.5)'
+export const PREV_BG_MINI_CARD = 'rgba(31, 41, 55, 0.5)'
+export const PREV_BORDER_MINI_CARD = 'rgba(255, 255, 255, 0.05)'
 export const PREV_SHADOW = '0 4px 6px -1px rgba(0, 0, 0, 0.1)' // Shadow
 
 /** Shared preview styles matching macOS Übersicht widget appearance.
