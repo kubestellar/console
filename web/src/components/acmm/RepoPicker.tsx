@@ -223,6 +223,7 @@ export function RepoPicker() {
             variant="ghost"
             size="sm"
             onClick={() => setShowBadge((v) => !v)}
+            aria-expanded={showBadge}
             title="Get a README badge for this repo's ACMM level"
           >
             <Award className="w-3.5 h-3.5 mr-1" />
@@ -263,7 +264,15 @@ export function RepoPicker() {
       </div>
 
       {showBadge && (
-        <div className="max-w-(--breakpoint-2xl) mx-auto px-6 pb-3 space-y-2 text-xs">
+        <div
+          className="max-w-(--breakpoint-2xl) mx-auto px-6 pb-3 space-y-2 text-xs"
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.stopPropagation()
+              setShowBadge(false)
+            }
+          }}
+        >
           <div className="flex items-center gap-3 pt-1">
             <BadgePreview
               level={scan.level.level}
