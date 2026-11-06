@@ -1,3 +1,4 @@
+// demoData-exempt: pure overlay UI driven by props; game state is owned by the parent KubeChess card.
 import { Crown } from 'lucide-react'
 import { type PieceType, type Color, PIECE_SYMBOLS } from './KubeChess.engine'
 

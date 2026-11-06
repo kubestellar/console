@@ -1,3 +1,4 @@
+// demoData-exempt: presentational controls; demo data is supplied by the parent ClusterCosts card.
 // Pricing-mode toggle + uniform provider selector for the ClusterCosts card.
 // Extracted from ClusterCosts.tsx (issue #24058) — markup unchanged.
 import { useState } from 'react'

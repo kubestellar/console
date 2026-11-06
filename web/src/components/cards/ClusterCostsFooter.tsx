@@ -1,3 +1,4 @@
+// demoData-exempt: static footer; demo data is supplied by the parent ClusterCosts card.
 // Footer (pricing attribution + methodology links) for the ClusterCosts card.
 // Extracted from ClusterCosts.tsx (issue #21615) — markup unchanged.
 import { ExternalLink, TrendingUp } from 'lucide-react'

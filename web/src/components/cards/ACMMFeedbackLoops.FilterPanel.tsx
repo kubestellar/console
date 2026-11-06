@@ -1,3 +1,4 @@
+// demoData-exempt: presentational controls; demo data and Skeleton loading are handled by the parent ACMMFeedbackLoops card.
 /**
  * Filter/controls row for ACMMFeedbackLoops: view-mode toggle, source
  * filter, re-scan button, lock-status chip, and status filter.
