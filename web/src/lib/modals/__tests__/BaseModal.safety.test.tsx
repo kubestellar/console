@@ -2,6 +2,7 @@ import React from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { BaseModal } from '../BaseModal'
+import { ConfirmDialog } from '../ConfirmDialog'
 
 interface ModalHarnessProps {
   onClose: () => void
@@ -38,6 +39,12 @@ afterEach(() => {
 })
 
 describe('BaseModal safety behavior', () => {
+  it('exposes the confirmation title as the dialog name', () => {
+    render(<ConfirmDialog isOpen onClose={vi.fn()} onConfirm={vi.fn()} title="Reset dashboard" message="This cannot be undone." />)
+
+    expect(screen.getByRole('dialog', { name: 'Reset dashboard' })).toHaveAttribute('aria-modal', 'true')
+  })
+
   it('does not close a form modal on backdrop click when backdrop closing is disabled', () => {
     const onClose = vi.fn()
 
