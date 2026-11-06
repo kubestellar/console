@@ -1966,6 +1966,9 @@ jobs:
           # Find card components without demo data functions
           # Exclude: games (client-only), modals/dialogs (no data fetching), pure UI components
           EXCLUDE_PATTERN="index\|test\|spec\|types\|utils\|KubeKong\|KubeSnake\|KubeBert\|WeatherAnimation\|NotificationVerifyIndicator\|Modal\|Dialog\|PremiumGauge\|HorseshoeGauge\|PortalTooltip\|AlertListItem\|LLMdFlowNodes\|EPPRoutingMetrics\|TreeRenderer\|NamespaceTreeNode\|GPUTaintFilter"
+          # Extracted presentational helpers receive data/loading state from their parent cards;
+          # chess overlays are client-only UI. None fetches data or owns a card skeleton.
+          EXCLUDE_PATTERN="${EXCLUDE_PATTERN}\|KubeChess\.overlays\.tsx$\|ClusterCostsPricingControls\.tsx$\|HelmHistory\.EntryRow\.tsx$\|ClusterCostsFooter\.tsx$\|ACMMFeedbackLoops\.FilterPanel\.tsx$\|CardToolbar\.tsx$"
           CARDS_NO_DEMO=""
           for f in $(find src/components/cards -name "*.tsx" 2>/dev/null | grep -v "$EXCLUDE_PATTERN" | head -60); do
             # Check if it's a card component (exports a component)
