@@ -44,7 +44,27 @@ export function TargetClusterSelector({ selected, onChange }: TargetClusterSelec
       event.preventDefault()
       closeDropdownAndFocusTrigger()
     }
+    const options = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="option"]'))
+    const index = options.indexOf(document.activeElement as HTMLButtonElement)
+    let next: number
+    if (event.key === 'ArrowDown') next = Math.min(index + 1, options.length - 1)
+    else if (event.key === 'ArrowUp') next = Math.max(index - 1, 0)
+    else if (event.key === 'Home') next = 0
+    else if (event.key === 'End') next = options.length - 1
+    else return
+    event.preventDefault()
+    options[next]?.focus()
   }
+
+  useEffect(() => {
+    if (isOpen) {
+      const list = ref.current?.querySelector('[role="listbox"]')
+      const selectedOption = list?.querySelector<HTMLButtonElement>('[role="option"][aria-selected="true"]')
+      const firstOption = list?.querySelector<HTMLButtonElement>('[role="option"]')
+      const initialOption = selectedOption ?? firstOption
+      initialOption?.focus()
+    }
+  }, [isOpen])
 
   useEffect(() => {
     const handler = (event: MouseEvent) => {

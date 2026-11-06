@@ -31,6 +31,10 @@ link. The findings below identify areas that still need remediation.
 | Color contrast (hardcoded values) | ⚠️ Needs review |
 | Heading hierarchy | ⚠️ Needs review |
 
+The Mission Control target-cluster picker focuses the selected option when opened.
+Use Up/Down to move between options, Home/End to jump to the first/last,
+Space or Enter to select, and Escape to close and return to the trigger.
+
 ---
 
 ## Critical Findings
