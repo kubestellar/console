@@ -1,0 +1,42 @@
+name: Duplication Check
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "pkg/**"
+      - "cmd/**"
+      - ".jscpd.json"
+      - ".github/workflows/duplication-check.yml"
+  push:
+    branches: [main]
+    paths:
+      - "pkg/**"
+      - "cmd/**"
+      - ".jscpd.json"
+      - ".github/workflows/duplication-check.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  duplication-check:
+    name: jscpd duplication ratchet
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Warning-only warm-up period (per the ruling applied in #24660);
+    # flip to `continue-on-error: false` (or drop the line) to enforce.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+
+      - name: Duplication check (jscpd vs .jscpd.json threshold)
+        run: make duplication-check

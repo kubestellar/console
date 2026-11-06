@@ -67,9 +67,9 @@ lint:
 dashboard-lint:
 	bash scripts/lint-dashboards.sh
 
-## duplication-check: Run jscpd against pkg/ and cmd/ (Go). No CI workflow
-## runs this yet (kubestellar/console#24660); run locally before a refactor
-## PR to confirm a dedup actually lowers the clone count.
+## duplication-check: Run jscpd against pkg/ and cmd/ (Go). CI runs this via
+## .github/workflows/duplication-check.yml (kubestellar/console#24660); run
+## locally before a refactor PR to confirm a dedup lowers the clone count.
 duplication-check:
 	npx --yes jscpd --config .jscpd.json
 
