@@ -361,7 +361,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
         containerStyle={containerStyle}
       />
 
-      <QuotaModal
+      {isModalOpen && <QuotaModal
         key={editingQuota ? `edit-${editingQuota.cluster}-${editingQuota.namespace}-${editingQuota.name}` : 'new'}
         isOpen={isModalOpen}
         onClose={() => {
@@ -375,7 +375,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
         selectedNamespace={selectedNamespace}
         editingQuota={editingQuota}
         isLoading={isSaving}
-      />
+      />}
 
       <NamespaceQuotasDeleteModal
         deleteConfirm={deleteConfirm}

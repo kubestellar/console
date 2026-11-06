@@ -289,6 +289,36 @@ describe('NamespaceQuotas Card Component', () => {
     expect(screen.queryByText('20%')).not.toBeInTheDocument()
   })
 
+  it('protects unsaved quota changes and clears them after discard', async () => {
+    render(<NamespaceQuotas />)
+    await userEvent.click(screen.getByRole('button', { name: /addQuota/i }))
+    await userEvent.type(screen.getByPlaceholderText('quotaNamePlaceholder'), 'draft')
+    await userEvent.keyboard('{Escape}')
+    expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Keep editing' }))
+    expect(screen.getByPlaceholderText('quotaNamePlaceholder')).toHaveValue('draft')
+    await userEvent.click(screen.getByRole('button', { name: 'cancel' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Discard' }))
+    await userEvent.click(screen.getByRole('button', { name: /addQuota/i }))
+    expect(screen.getByPlaceholderText('quotaNamePlaceholder')).toHaveValue('')
+  })
+
+  it('warns on edited limits but not when the original value is restored', async () => {
+    render(<NamespaceQuotas />)
+    await userEvent.click(screen.getAllByTitle('editQuota')[0])
+    const input = screen.getAllByPlaceholderText('e.g., 4, 8Gi')[0]
+    await userEvent.clear(input)
+    await userEvent.type(input, '20')
+    await userEvent.click(screen.getByRole('button', { name: 'cancel' }))
+    expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Keep editing' }))
+    await userEvent.clear(input)
+    await userEvent.type(input, '10')
+    await userEvent.click(screen.getByRole('button', { name: 'cancel' }))
+    expect(screen.queryByText('editQuota')).not.toBeInTheDocument()
+    expect(screen.queryByText('Discard unsaved changes?')).not.toBeInTheDocument()
+  })
+
   it('calls create callback with correct payload on creating a new quota', async () => {
     mockCreateOrUpdateResourceQuota.mockResolvedValueOnce({
       name: 'new-quota',
