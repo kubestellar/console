@@ -35,6 +35,32 @@ The Mission Control target-cluster picker focuses the selected option when opene
 Use Up/Down to move between options, Home/End to jump to the first/last,
 Space or Enter to select, and Escape to close and return to the trigger.
 
+### Dropdown scanner follow-up (#24848)
+
+The agent selector now focuses the selected available agent (or the first available
+agent), supports Home/End as well as Up/Down, and restores trigger focus on close.
+Agent rows retain their Enter/Space activation. The Mission Control payload priority
+menu focuses the current priority, supports Up/Down, Home/End and Enter/Space, and
+returns focus after selection or Escape. Its portalled focus trap and Escape layer
+prevent the containing mission dialog from stealing focus or closing with the menu.
+
+The nine scanner paths were reviewed rather than adding redundant key handlers:
+
+| Scanner path (under `web/src/`) | Finding / coverage |
+|---|---|
+| `lib/cards/__tests__/CardComponents-coverage.test.tsx` | Tests, not a menu implementation. `CardClusterFilter` already uses `useKeyboardNav` with initial focus and Escape focus restoration. |
+| `lib/unified/dashboard/DashboardGrid.tsx` | Mentions a resize menu in comments; does not render a dropdown. |
+| `hooks/useTour.tsx` | Mentions card menus in tour text; already handles tour navigation keys. |
+| `components/drilldown/views/ComplianceDrillDown.tsx` | Computes filter values; filter controls live in the parts file. |
+| `components/drilldown/views/ComplianceDrillDown.parts.tsx` | Uses `Select`, a native HTML select. Preserve browser keyboard behavior. |
+| `components/acmm/RepoPicker.tsx` | Recent repositories use a native input/datalist, not a custom listbox. |
+| `components/agent/AgentConfigForm.test.tsx` | Regression tests now cover Home/End and skipping unavailable agents; hook tests cover initial/return focus. |
+| `components/mission-control/__tests__/ui-data-components.test.tsx` | Regression tests now cover priority-menu focus, navigation, Enter/Space activation and Escape. |
+| `components/cards/GPUOverview.tsx` | Uses a native HTML select. Preserve browser keyboard behavior. |
+
+A Playwright visual regression exercises the priority menu inside the real mission
+dialog, including visible keyboard focus and Escape dismissing only the menu.
+
 ---
 
 ## Critical Findings

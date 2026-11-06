@@ -50,6 +50,24 @@ export function useAgentDropdown(isDemoMode: boolean) {
     }
   }, [isOpen])
 
+  // The portal mounts only after its position is known. Focus the selected
+  // available agent, or the first available option, once it is mounted.
+  useEffect(() => {
+    if (!isOpen || !dropdownPos) return
+    const panel = panelRef.current
+    if (panel?.contains(document.activeElement)) return
+    const selected = panel?.querySelector<HTMLElement>('[role="option"][aria-selected="true"]:not([aria-disabled="true"])')
+    const first = panel?.querySelector<HTMLElement>('[role="option"]:not([aria-disabled="true"])')
+    const target = selected ?? first ?? panel?.querySelector<HTMLElement>('button:not([disabled])')
+    target?.focus()
+  }, [isOpen, dropdownPos])
+
+  const wasOpenRef = useRef(false)
+  useEffect(() => {
+    if (wasOpenRef.current && !isOpen) buttonRef.current?.focus()
+    wasOpenRef.current = isOpen
+  }, [isOpen])
+
   useEffect(() => {
     function handleEscape(event: KeyboardEvent) {
       if (event.key === 'Escape') closeDropdown()

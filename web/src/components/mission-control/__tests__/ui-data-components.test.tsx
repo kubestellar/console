@@ -1,6 +1,7 @@
 import React from 'react'
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { PayloadCard } from '../PayloadCard'
 import { PayloadGrid } from '../PayloadGrid'
 import { ClusterReadinessCard } from '../ClusterReadinessCard'
@@ -109,6 +110,28 @@ describe('PayloadCard', () => {
 
     fireEvent.click(screen.getByText('optional'))
     expect(onUpdatePriority).toHaveBeenCalledWith('optional')
+  })
+
+  it.each(['{Enter}', ' '])('navigates and activates priority options with %s', async (activation) => {
+    const user = userEvent.setup()
+    const onUpdatePriority = vi.fn()
+    render(<PayloadCard project={mockProject} onRemove={vi.fn()} onUpdatePriority={onUpdatePriority} />)
+    const trigger = screen.getByRole('button', { name: 'required' })
+    trigger.focus()
+    await user.keyboard('{ArrowDown}')
+    expect(screen.getByRole('menuitemradio', { name: 'required' })).toHaveFocus()
+    await user.keyboard('{End}')
+    expect(screen.getByRole('menuitemradio', { name: 'optional' })).toHaveFocus()
+    await user.keyboard('{ArrowUp}')
+    expect(screen.getByRole('menuitemradio', { name: 'recommended' })).toHaveFocus()
+    await user.keyboard('{Home}{ArrowDown}')
+    await user.keyboard(activation)
+    expect(onUpdatePriority).toHaveBeenCalledExactlyOnceWith('recommended')
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
+    await user.keyboard('{ArrowUp}{Escape}')
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
   })
 
   it('keeps the card stretched when swapped badges are present', () => {

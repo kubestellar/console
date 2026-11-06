@@ -3,7 +3,7 @@
  * Shows GitHub avatar, maturity badge, category gradient, priority, and remove button.
  */
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import { X, Star, ChevronDown, ArrowLeftRight } from 'lucide-react'
@@ -11,7 +11,8 @@ import { Button } from '../ui/Button'
 import { cn } from '../../lib/cn'
 import { MATURITY_CONFIG, CNCF_CATEGORY_GRADIENTS } from '../../lib/cncf-constants'
 import type { PayloadProject } from './types'
-import { useDropdownKeyNav } from '../../hooks/useDropdownKeyNav'
+import { useKeyboardNav } from '../../hooks/useKeyboardNav'
+import { useModalFocusTrap, useEscapeLayer } from '../../lib/modals/useModalNavigation'
 
 // Reuse InstallerCard's GitHub org mapping
 const PROJECT_TO_GITHUB_ORG: Record<string, string> = {
@@ -67,7 +68,20 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
   const [depsTooltipPosition, setDepsTooltipPosition] = useState<{ left: number, top: number } | null>(null)
   const [priorityMenuPosition, setPriorityMenuPosition] = useState<{ right: number, bottom: number } | null>(null)
   const priorityBtnRef = useRef<HTMLButtonElement>(null)
-  const priorityMenuKeyNav = useDropdownKeyNav(() => setShowPriorityMenu(false))
+  const closePriorityMenu = () => {
+    setShowPriorityMenu(false)
+    priorityBtnRef.current?.focus()
+  }
+  const { containerRef: priorityMenuRef, handleKeyDown: priorityMenuKeyNav, focusMatchingItem } = useKeyboardNav({
+    selector: '[role="menuitemradio"]',
+    onEscape: closePriorityMenu,
+  })
+  // Register the portalled menu above the mission dialog's focus trap.
+  useModalFocusTrap(priorityMenuRef, showPriorityMenu)
+  useEscapeLayer(showPriorityMenu)
+  useEffect(() => {
+    if (showPriorityMenu) focusMatchingItem({ preferredSelector: '[aria-checked="true"]' })
+  }, [showPriorityMenu, focusMatchingItem])
   const depRef = useRef<HTMLSpanElement>(null)
   const gradient = getCategoryGradient(project.category)
   const maturity = project.maturity ? MATURITY_CONFIG[project.maturity] : null
@@ -236,6 +250,14 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
           <div className="relative shrink-0">
             <Button
               ref={priorityBtnRef}
+              aria-haspopup="menu"
+              aria-expanded={showPriorityMenu}
+              onKeyDown={(event) => {
+                if (!showPriorityMenu && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+                  event.preventDefault()
+                  event.currentTarget.click()
+                }
+              }}
               variant="ghost"
               size="sm"
               onClick={(e) => {
@@ -261,11 +283,17 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
             {showPriorityMenu && priorityMenuPosition && createPortal(
               <>
                 {/* Backdrop to close on outside click */}
-                <div className="fixed inset-0 z-[9998]" role="presentation" aria-hidden="true" onClick={() => setShowPriorityMenu(false)} />
+                <div className="fixed inset-0 z-[9998]" role="presentation" aria-hidden="true" onClick={closePriorityMenu} />
                 <div
                   className="fixed bg-slate-900 border border-border rounded-lg shadow-lg py-1 z-[9999] min-w-[100px]"
+                  ref={priorityMenuRef}
                   role="menu"
-                  onKeyDown={priorityMenuKeyNav}
+                  aria-label={project.displayName}
+                  onKeyDown={(event) => {
+                    priorityMenuKeyNav(event)
+                    // Escape dismisses this menu, not the containing mission dialog.
+                    if (event.key === 'Escape') event.stopPropagation()
+                  }}
                   style={{
                     right: priorityMenuPosition.right,
                     bottom: priorityMenuPosition.bottom,
@@ -274,15 +302,17 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
                   {(['required', 'recommended', 'optional'] as const).map((p) => (
                     <Button
                       key={p}
+                      role="menuitemradio"
+                      aria-checked={project.priority === p}
                       variant="ghost"
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation()
                         onUpdatePriority(p)
-                        setShowPriorityMenu(false)
+                        closePriorityMenu()
                       }}
                       className={cn(
-                        'w-full justify-start! text-xs! px-3! py-1.5! rounded-none! capitalize',
+                        'w-full justify-start! text-xs! px-3! py-1.5! rounded-none! capitalize focus-visible:ring-2 focus-visible:ring-ring',
                         project.priority === p && 'font-medium text-primary'
                       )}
                     >
