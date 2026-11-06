@@ -76,6 +76,21 @@ describe('TargetClusterSelector keyboard accessibility', () => {
     expect(trigger).toHaveAttribute('aria-expanded', 'true')
   })
 
+  it('moves focus through cluster options with arrows, Home and End', () => {
+    renderPanel()
+    fireEvent.keyDown(screen.getByRole('button', { name: /select target clusters/i }), { key: 'Enter' })
+    const options = screen.getAllByRole('option')
+    expect(options[0]).toHaveFocus()
+    fireEvent.keyDown(options[0], { key: 'ArrowDown' })
+    expect(options[1]).toHaveFocus()
+    fireEvent.keyDown(options[1], { key: 'End' })
+    expect(options[3]).toHaveFocus()
+    fireEvent.keyDown(options[3], { key: 'ArrowUp' })
+    expect(options[2]).toHaveFocus()
+    fireEvent.keyDown(options[2], { key: 'Home' })
+    expect(options[0]).toHaveFocus()
+  })
+
   it('closes on escape and returns focus to the trigger', () => {
     renderPanel({ targetClusters: ['prod-east'] })
 
