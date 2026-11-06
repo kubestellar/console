@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useLayoutEffect, useCallback, useRef, useState } from 'react'
-import { useModalFocusTrap } from '../../lib/modals/useModalNavigation'
+import { useModalFocusTrap, useEscapeLayer } from '../../lib/modals/useModalNavigation'
 import { useToast } from '../ui/Toast'
 import { useMissions } from '../../hooks/useMissions'
 import { consumePersistQuotaBanner, useMissionControl } from './useMissionControl'
@@ -166,16 +166,18 @@ export function useMissionControlDialog({
     }
   }, [open])
 
+  // Nested portalled menus must consume Escape before the mission dialog.
+  const isTopEscapeLayer = useEscapeLayer(open)
   // #7150 — Escape to close via capture phase
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape' && isTopEscapeLayer()) {
         e.stopImmediatePropagation()
         e.preventDefault()
         handleClose()
       }
     },
-    [handleClose]
+    [handleClose, isTopEscapeLayer]
   )
 
   useEffect(() => {

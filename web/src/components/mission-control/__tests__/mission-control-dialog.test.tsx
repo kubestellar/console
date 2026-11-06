@@ -29,6 +29,7 @@ vi.mock('../missionPlanCodec', () => ({
 // Mock other dependencies
 vi.mock('../../../lib/modals/useModalNavigation', () => ({
   useModalFocusTrap: vi.fn(),
+  useEscapeLayer: vi.fn(() => () => true),
   useModalNavigation: vi.fn(),
   useModalState: vi.fn(() => ({ isOpen: false, open: vi.fn(), close: vi.fn(), toggle: vi.fn(), setIsOpen: vi.fn() })),
 }))

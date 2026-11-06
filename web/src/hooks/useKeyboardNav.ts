@@ -22,12 +22,12 @@ function getFocusableItems(container: HTMLElement, selector: string): HTMLElemen
     .filter((item) => !item.hasAttribute('disabled') && item.getAttribute('aria-disabled') !== 'true')
 }
 
-export function useKeyboardNav({
+export function useKeyboardNav<T extends HTMLElement = HTMLElement>({
   selector = DEFAULT_NAV_SELECTOR,
   orientation = 'vertical',
   onEscape,
 }: UseKeyboardNavOptions = {}) {
-  const containerRef = useRef<HTMLElement | null>(null)
+  const containerRef = useRef<T | null>(null)
 
   const focusMatchingItem = useCallback(({ preferredSelector, fallbackSelector = selector }: FocusTargetOptions = {}) => {
     const container = containerRef.current

@@ -52,8 +52,9 @@ vi.mock('./AgentApprovalDialog', () => ({
 vi.mock('./AgentCardGrid', () => ({
   AgentCardGrid: ({ onSelect }: { onSelect: (name: string) => void }) => (
     <div>
-      <button onClick={() => onSelect('claude')}>select-claude</button>
-      <button onClick={() => onSelect('needs-provider')}>select-needs-provider</button>
+      <button role="option" aria-selected="true" onClick={() => onSelect('claude')}>select-claude</button>
+      <button role="option" aria-disabled="true">unavailable-agent</button>
+      <button role="option" aria-selected="false" onClick={() => onSelect('needs-provider')}>select-needs-provider</button>
     </div>
   ),
 }))
@@ -139,6 +140,26 @@ describe('AgentConfigForm', () => {
     render(<AgentConfigForm {...baseProps({ isDemoMode: true })} />)
     fireEvent.click(screen.getByLabelText('agent.selectAgent'))
     expect(toggleDropdown).not.toHaveBeenCalled()
+  })
+
+  it('opens with arrow keys and navigates available options with Home/End', () => {
+    const { unmount } = render(<AgentConfigForm {...baseProps()} />)
+    fireEvent.keyDown(screen.getByLabelText('agent.selectAgent'), { key: 'ArrowDown' })
+    expect(toggleDropdown).toHaveBeenCalledExactlyOnceWith()
+    unmount()
+    isOpen = true
+    render(<AgentConfigForm {...baseProps()} />)
+    const first = screen.getByRole('option', { name: 'select-claude' })
+    const last = screen.getByRole('option', { name: 'select-needs-provider' })
+    first.focus()
+    fireEvent.keyDown(first, { key: 'End' })
+    expect(last).toHaveFocus()
+    fireEvent.keyDown(last, { key: 'Home' })
+    expect(first).toHaveFocus()
+    fireEvent.keyDown(first, { key: 'ArrowDown' })
+    expect(last).toHaveFocus()
+    fireEvent.keyDown(last, { key: 'ArrowUp' })
+    expect(first).toHaveFocus()
   })
 
   it('renders the dropdown panel and agent grid when open', () => {

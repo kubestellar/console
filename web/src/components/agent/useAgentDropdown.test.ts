@@ -181,6 +181,34 @@ describe('useAgentDropdown', () => {
     })
   })
 
+  it.each([true, false])('focuses an available option (selected available: %s) and restores the trigger', (selectedAvailable) => {
+    const { result } = renderHook(() => useAgentDropdown(false))
+    const button = attachButton({})
+    const panel = document.createElement('div')
+    const first = document.createElement('button')
+    first.setAttribute('role', 'option')
+    const selected = document.createElement('button')
+    selected.setAttribute('role', 'option')
+    selected.setAttribute('aria-selected', 'true')
+    selected.setAttribute('aria-disabled', String(!selectedAvailable))
+    panel.append(first, selected)
+    document.body.append(panel)
+    act(() => {
+      result.current.buttonRef.current = button
+      result.current.panelRef.current = panel
+      result.current.toggleDropdown()
+    })
+    expect(document.activeElement).toBe(selectedAvailable ? selected : first)
+    first.focus()
+    act(() => { window.dispatchEvent(new Event('resize')) })
+    expect(first).toHaveFocus()
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    })
+    expect(button).toHaveFocus()
+    expect(result.current.isOpen).toBe(false)
+  })
+
   describe('dropdownPos', () => {
     it('is set to { top: rect.bottom+GAP, right: innerWidth-rect.right } when opening', () => {
       const { result } = renderHook(() => useAgentDropdown(false))

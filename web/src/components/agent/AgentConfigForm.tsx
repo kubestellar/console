@@ -3,6 +3,7 @@ import { useRef, useState, useEffect } from "react";
 import { ChevronDown, Loader2, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/cn";
+import { moveFocusByKey } from "../../lib/a11y/rovingFocus";
 import { safeGetItem, safeSetItem } from "../../lib/utils/localStorage";
 import { useProviderConnection } from "../../hooks/useProviderConnection";
 import { AgentApprovalDialog, hasApprovedAgents } from "./AgentApprovalDialog";
@@ -128,6 +129,13 @@ export function AgentConfigForm({
         <button
           ref={buttonRef}
           onClick={() => !isDemoMode && toggleDropdown()}
+          onKeyDown={(event) => {
+            if (isDemoMode || isOpen) return;
+            if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+              event.preventDefault();
+              toggleDropdown();
+            }
+          }}
           aria-label={t("agent.selectAgent")}
           aria-haspopup="listbox"
           aria-expanded={isOpen}
@@ -172,19 +180,10 @@ export function AgentConfigForm({
               className="fixed z-modal w-96 max-h-[calc(100vh-8rem)] rounded-lg bg-card border border-border shadow-lg overflow-hidden flex flex-col"
               style={{ top: dropdownPos.top, right: dropdownPos.right }}
               onKeyDown={(e) => {
-                if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
-                e.preventDefault();
-                const items = e.currentTarget.querySelectorAll<HTMLElement>(
-                  '[role="option"]:not([aria-disabled="true"])',
-                );
-                const idx = Array.from(items).indexOf(
-                  document.activeElement as HTMLElement,
-                );
-                if (e.key === "ArrowDown") {
-                  items[Math.min(idx + 1, items.length - 1)]?.focus();
-                } else {
-                  items[Math.max(idx - 1, 0)]?.focus();
-                }
+                moveFocusByKey(e, {
+                  selector: '[role="option"]:not([aria-disabled="true"])',
+                  orientation: "vertical",
+                });
               }}
             >
               <div className="px-3 py-3 border-b border-border shrink-0">
