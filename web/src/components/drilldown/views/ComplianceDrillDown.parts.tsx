@@ -171,7 +171,15 @@ export function ComplianceSearchFilters({
         </button>
       </div>
       {showFilters && (
-        <div id="compliance-filters-panel" className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
+        <div
+          id="compliance-filters-panel"
+          onKeyDown={e => {
+            if (e.key === 'Escape') {
+              e.stopPropagation()
+              onToggleFilters()
+            }
+          }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
           <Select
             value={statusFilter}
             onChange={e => onStatusChange(e.target.value)}
