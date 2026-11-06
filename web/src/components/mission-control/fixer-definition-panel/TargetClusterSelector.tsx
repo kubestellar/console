@@ -46,7 +46,7 @@ export function TargetClusterSelector({ selected, onChange }: TargetClusterSelec
     }
     const options = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="option"]'))
     const index = options.indexOf(document.activeElement as HTMLButtonElement)
-    let next = index
+    let next: number
     if (event.key === 'ArrowDown') next = Math.min(index + 1, options.length - 1)
     else if (event.key === 'ArrowUp') next = Math.max(index - 1, 0)
     else if (event.key === 'Home') next = 0
