@@ -72,7 +72,7 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
     setShowPriorityMenu(false)
     priorityBtnRef.current?.focus()
   }
-  const { containerRef: priorityMenuRef, handleKeyDown: priorityMenuKeyNav, focusMatchingItem } = useKeyboardNav({
+  const { containerRef: priorityMenuRef, handleKeyDown: priorityMenuKeyNav, focusMatchingItem } = useKeyboardNav<HTMLDivElement>({
     selector: '[role="menuitemradio"]',
     onEscape: closePriorityMenu,
   })
