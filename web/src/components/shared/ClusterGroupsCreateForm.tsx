@@ -24,7 +24,7 @@ import { useToast } from '../ui/Toast'
 interface CreateGroupFormProps {
   availableClusters: string[]
   clusterHealthMap: Map<string, boolean | undefined>
-  onSave: (group: ClusterGroup) => void
+  onSave: (group: ClusterGroup) => void | Promise<void>
   onCancel: () => void
 }
 
@@ -128,32 +128,36 @@ export function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, o
       : (labelSelector.trim() || filters.length > 0)
   )
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!canSave || isSaving || isPreviewing || aiLoading) return
     setIsSaving(true)
-    if (kind === 'static') {
-      onSave({
+    try {
+      await onSave(kind === 'static' ? {
         name: name.trim(),
         kind: 'static',
         clusters: Array.from(selectedClusters),
-        color: selectedColor })
-    } else {
-      onSave({
+        color: selectedColor,
+      } : {
         name: name.trim(),
         kind: 'dynamic',
         clusters: previewClusters ?? [],
         color: selectedColor,
         query: buildQuery(),
-        lastEvaluated: previewClusters ? new Date().toISOString() : undefined })
+        lastEvaluated: previewClusters ? new Date().toISOString() : undefined,
+      })
+      showToast(`Cluster group "${name.trim()}" created`, 'success')
+    } catch {
+      showToast(t('cards:clusterGroups.createFailed'), 'error')
+    } finally {
+      setIsSaving(false)
     }
-    showToast(`Cluster group "${name.trim()}" created`, 'success')
   }
 
   return (
     <div className="rounded-lg border border-blue-500/40 bg-blue-500/5 p-3 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-y-2">
         <span className="text-xs font-medium text-blue-400">{t('cards:clusterGroups.newClusterGroup')}</span>
-        <button onClick={onCancel} aria-label={t('common:common.cancel')} className="p-2 hover:bg-gray-900/10 dark:hover:bg-white/10 rounded min-h-11 min-w-11 flex items-center justify-center">
+        <button onClick={onCancel} disabled={isSaving} aria-label={t('common:common.cancel')} className="p-2 hover:bg-gray-900/10 dark:hover:bg-white/10 rounded min-h-11 min-w-11 flex items-center justify-center disabled:opacity-50">
           <X className="w-3.5 h-3.5 text-muted-foreground" />
         </button>
       </div>
@@ -316,7 +320,7 @@ export function CreateGroupForm({ availableClusters, clusterHealthMap, onSave, o
             : 'bg-secondary text-muted-foreground cursor-not-allowed'
         )}
       >
-        {kind === 'dynamic' ? t('cards:clusterGroups.createDynamicGroup') : t('cards:clusterGroups.createGroup')}
+        {isSaving ? t('common:common.saving') : kind === 'dynamic' ? t('cards:clusterGroups.createDynamicGroup') : t('cards:clusterGroups.createGroup')}
       </button>
     </div>
   )

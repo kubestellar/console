@@ -138,8 +138,8 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
         <CreateGroupForm
           availableClusters={availableClusterNames}
           clusterHealthMap={clusterHealthMap}
-          onSave={(group) => {
-            createGroup(group)
+          onSave={async (group) => {
+            await createGroup(group)
             closeCreateForm()
           }}
           onCancel={closeCreateForm}
