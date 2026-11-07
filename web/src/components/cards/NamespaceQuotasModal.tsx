@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Gauge, Plus, Trash2, Zap } from 'lucide-react'
 import { useDropdownKeyNav } from '../../hooks/useDropdownKeyNav'
-import { BaseModal } from '../../lib/modals'
+import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import { Button } from '../ui/Button'
 import {
   useCachedNamespaces,
@@ -48,6 +48,17 @@ export function QuotaModal({
       ? Object.entries(editingQuota.hard).map(([key, value]) => ({ id: crypto.randomUUID(), key, value }))
       : [{ id: crypto.randomUUID(), key: 'limits.nvidia.com/gpu', value: '4' }]
   )
+  const [initial] = useState(() => ({
+    cluster, namespace, name, resources: resources.map(({ key, value }) => ({ key, value })),
+  }))
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
+  const isDirty = cluster !== initial.cluster || namespace !== initial.namespace || name !== initial.name ||
+    resources.length !== initial.resources.length ||
+    resources.some((resource, index) => resource.key !== initial.resources[index]?.key || resource.value !== initial.resources[index]?.value)
+  const handleClose = () => {
+    if (isDirty) setShowDiscardConfirm(true)
+    else onClose()
+  }
   const [showGpuPresets, setShowGpuPresets] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const gpuDropdownKeyNav = useDropdownKeyNav(() => setShowGpuPresets(false))
@@ -68,9 +79,7 @@ export function QuotaModal({
   }
 
   const updateResource = (index: number, field: 'key' | 'value', value: string) => {
-    const updated = [...resources]
-    updated[index][field] = value
-    setResources(updated)
+    setResources(resources.map((resource, i) => i === index ? { ...resource, [field]: value } : resource))
   }
 
   const addGpuPreset = (resourceKey: string) => {
@@ -102,11 +111,21 @@ export function QuotaModal({
   }
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} size="md" closeOnBackdrop={false} closeOnEscape={true}>
+    <BaseModal isOpen={isOpen} onClose={handleClose} size="md" closeOnBackdrop={false} closeOnEscape={true}>
+      <ConfirmDialog
+        isOpen={showDiscardConfirm}
+        onClose={() => setShowDiscardConfirm(false)}
+        onConfirm={onClose}
+        title={t('common:common.discardUnsavedChanges', 'Discard unsaved changes?')}
+        message={t('common:common.discardUnsavedChangesMessage', 'You have unsaved changes that will be lost.')}
+        confirmLabel={t('common:common.discard', 'Discard')}
+        cancelLabel={t('common:common.keepEditing', 'Keep editing')}
+        variant="warning"
+      />
       <BaseModal.Header
         title={editingQuota ? t('namespaceQuotas.editQuota') : t('namespaceQuotas.createQuota')}
         icon={Gauge}
-        onClose={onClose}
+        onClose={handleClose}
         showBack={false}
       />
 
@@ -255,7 +274,7 @@ export function QuotaModal({
       <BaseModal.Footer>
         <div className="flex-1" />
         <div className="flex items-center gap-2">
-          <Button variant="secondary" size="lg" onClick={onClose}>
+          <Button variant="secondary" size="lg" onClick={handleClose}>
             {t('common:common.cancel')}
           </Button>
           <Button
