@@ -3,6 +3,7 @@ import { StatusBadge } from '../../../ui/StatusBadge'
 import { useTranslation } from 'react-i18next'
 import type { Service, PodIssue, Deployment, PVC } from '../../../../hooks/useMCP'
 import type { TreeLens, ClusterResourceTreeProps } from './types'
+import { TREE_MAX_VISIBLE_POD_ISSUES, TREE_MAX_VISIBLE_PVCS, TREE_MAX_VISIBLE_SERVICES } from './types'
 
 interface DeploymentIssuesBranchProps {
   activeLens: TreeLens
@@ -81,7 +82,7 @@ export function PodIssuesBranch({ activeLens, issueCounts, expandedSections, tog
 
       {expandedSections.has('pod-issues') && (
         <div className="ml-6 border-l-2 border-red-500/30 pl-4 mt-1 space-y-1">
-          {podIssues.slice(0, 10).map((issue, i) => (
+          {podIssues.slice(0, TREE_MAX_VISIBLE_POD_ISSUES).map((issue, i) => (
             <div
               key={i}
               onClick={() => drillToPod(effectiveClusterName, issue.namespace, issue.name, { ...issue })}
@@ -94,9 +95,9 @@ export function PodIssuesBranch({ activeLens, issueCounts, expandedSections, tog
               <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 ml-auto" />
             </div>
           ))}
-          {podIssues.length > 10 && (
+          {podIssues.length > TREE_MAX_VISIBLE_POD_ISSUES && (
             <div className="text-xs text-muted-foreground p-2">
-              +{podIssues.length - 10} more pod issues...
+              +{podIssues.length - TREE_MAX_VISIBLE_POD_ISSUES} more pod issues...
             </div>
           )}
         </div>
@@ -139,7 +140,7 @@ export function StorageBranch({ activeLens, issueCounts, expandedSections, toggl
 
       {expandedSections.has('storage') && (
         <div className="ml-6 border-l-2 border-green-500/30 pl-4 mt-1 space-y-1">
-          {filteredPVCs.slice(0, 10).map((pvc, i) => (
+          {filteredPVCs.slice(0, TREE_MAX_VISIBLE_PVCS).map((pvc, i) => (
             <div
               key={i}
               onClick={() => drillToNamespace(effectiveClusterName, pvc.namespace)}
@@ -155,9 +156,9 @@ export function StorageBranch({ activeLens, issueCounts, expandedSections, toggl
               <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 ml-auto" />
             </div>
           ))}
-          {filteredPVCs.length > 10 && (
+          {filteredPVCs.length > TREE_MAX_VISIBLE_PVCS && (
             <div className="text-xs text-muted-foreground p-2">
-              +{filteredPVCs.length - 10} more PVCs...
+              +{filteredPVCs.length - TREE_MAX_VISIBLE_PVCS} more PVCs...
             </div>
           )}
         </div>
@@ -194,7 +195,7 @@ export function NetworkBranch({ activeLens, expandedSections, toggleSection, fil
 
       {expandedSections.has('network') && (
         <div className="ml-6 border-l-2 border-blue-500/30 pl-4 mt-1 space-y-1">
-          {filteredServices.slice(0, 15).map((svc, i) => (
+          {filteredServices.slice(0, TREE_MAX_VISIBLE_SERVICES).map((svc, i) => (
             <div
               key={i}
               onClick={() => drillToNamespace(effectiveClusterName, svc.namespace)}
@@ -207,9 +208,9 @@ export function NetworkBranch({ activeLens, expandedSections, toggleSection, fil
               <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 ml-auto" />
             </div>
           ))}
-          {filteredServices.length > 15 && (
+          {filteredServices.length > TREE_MAX_VISIBLE_SERVICES && (
             <div className="text-xs text-muted-foreground p-2">
-              +{filteredServices.length - 15} more services...
+              +{filteredServices.length - TREE_MAX_VISIBLE_SERVICES} more services...
             </div>
           )}
         </div>

@@ -2,7 +2,7 @@ import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-r
 import { cn } from '../../../lib/cn'
 import { TOUCH_TARGET_HEIGHT_CLASS } from '../../../lib/constants/ui'
 import { Button } from '../../ui/Button'
-import { PAGE_SIZE } from './compliance-drilldown'
+import { PAGE_SIZE, complianceScoreColor } from './compliance-drilldown'
 import type { ControlRow } from './compliance-drilldown'
 
 // ─── Pagination ───────────────────────────────────────────────────────────────
@@ -120,7 +120,7 @@ export function ComplianceClusterBreakdown({
                 <span className="text-xs text-red-400">{cFail} fail</span>
                 <span className={cn(
                   'text-xs font-bold ml-auto',
-                  cScore >= 80 ? 'text-green-400' : cScore >= 60 ? 'text-yellow-400' : 'text-red-400'
+                  complianceScoreColor(cScore)
                 )}>
                   {cScore}%
                 </span>

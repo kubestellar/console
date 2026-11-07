@@ -5,6 +5,9 @@ import { Input } from '../../../ui/Input'
 import { useTranslation } from 'react-i18next'
 import { usePodLabelsContext } from './PodLabelsContext'
 
+/** Labels shown before the "show all" toggle appears. */
+const COLLAPSED_LABEL_COUNT = 10
+
 interface LabelsSectionProps {
   labels: Record<string, string> | null
 }
@@ -35,7 +38,7 @@ export function LabelsSection({ labels }: LabelsSectionProps) {
   } = usePodLabelsContext()
 
   const labelEntries = Object.entries(labels || {})
-  const displayedLabels = showAllLabels ? labelEntries : labelEntries.slice(0, 10)
+  const displayedLabels = showAllLabels ? labelEntries : labelEntries.slice(0, COLLAPSED_LABEL_COUNT)
 
   return (
     <div>
@@ -44,7 +47,7 @@ export function LabelsSection({ labels }: LabelsSectionProps) {
           Labels ({labelEntries.length})
         </h3>
         <div className="flex items-center gap-2">
-          {labelEntries.length > 10 && !editingLabels && (
+          {labelEntries.length > COLLAPSED_LABEL_COUNT && !editingLabels && (
             <button
               onClick={() => setShowAllLabels(!showAllLabels)}
               className="text-xs text-primary hover:text-primary/80 flex items-center gap-1"
