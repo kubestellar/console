@@ -3,6 +3,7 @@ import type { RefObject } from 'react'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useClusters } from '../../hooks/mcp/clusters'
 import type { ClusterErrorType } from '../errorClassifier'
+import { safeRemove, safeSet } from '../safeLocalStorage'
 
 // ============================================================================
 // Cluster with health info for filter dropdowns
@@ -240,9 +241,9 @@ export function useCardFilters<T>(
     setLocalClusterFilterState(clusters)
     if (storageKey) {
       if (clusters.length === 0) {
-        localStorage.removeItem(`${LOCAL_FILTER_STORAGE_PREFIX}${storageKey}`)
+        safeRemove(`${LOCAL_FILTER_STORAGE_PREFIX}${storageKey}`)
       } else {
-        localStorage.setItem(`${LOCAL_FILTER_STORAGE_PREFIX}${storageKey}`, JSON.stringify(clusters))
+        safeSet(`${LOCAL_FILTER_STORAGE_PREFIX}${storageKey}`, JSON.stringify(clusters))
       }
     }
   }
