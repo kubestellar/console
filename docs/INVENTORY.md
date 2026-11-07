@@ -759,6 +759,8 @@ Located in `src/components/modals/hooks/`:
 
 Available drill actions from `useDrillDownActions()`:
 
+The pod, deployment, replica set, and events actions keep stable callback identities while the provider is unchanged, allowing memoized event rows to avoid unnecessary renders.
+
 | Action | Parameters | Description |
 |--------|------------|-------------|
 | drillToCluster | (cluster, context?) | Open cluster details |
