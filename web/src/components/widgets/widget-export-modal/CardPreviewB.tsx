@@ -5,6 +5,8 @@
 import type { WidgetCardDefinition } from '../../../lib/widgets/widgetRegistry'
 import { TechnicalAcronym } from '../../shared/TechnicalAcronym'
 import {
+  PREV_BG_ERROR,
+  PREV_BG_ROW,
   PREV_BAR_CLOSED_BASE,
   PREV_BAR_CLOSED_SCALE,
   PREV_BAR_GAP,
@@ -73,7 +75,7 @@ export function CardPreviewB({ cardType, card }: { cardType: string; card: Widge
                 { name: 'fullstack-smoke', status: 'queued', time: 'queued' },
                 { name: 'coverage-gate', status: 'success', time: '24s' },
               ].map((r) => (
-                <div key={r.name} className="px-2 py-1" style={{ ...ps.row, justifyContent: 'space-between', fontSize: PREV_FS_CAPTION, backgroundColor: 'rgba(30,41,59,0.5)', borderRadius: PREV_XS }}>
+                <div key={r.name} className="px-2 py-1" style={{ ...ps.row, justifyContent: 'space-between', fontSize: PREV_FS_CAPTION, backgroundColor: PREV_BG_ROW, borderRadius: PREV_XS }}>
                   <span style={ps.dot(r.status === 'running' ? ps.colors.info : r.status === 'success' ? ps.colors.healthy : PREV_CLR_MUTED)} />
                   <span style={WIDGET_EXPORT_MODAL_SPAN_STYLE_3}>{r.name}</span>
                   <span style={{ color: PREV_CLR_MUTED, fontSize: PREV_FS_MICRO }}>{r.time}</span>
@@ -92,7 +94,7 @@ export function CardPreviewB({ cardType, card }: { cardType: string; card: Widge
                 { wf: 'nightly-test-suite', step: 'e2e-tests', ago: '2h ago' },
                 { wf: 'build', step: 'lint', ago: '5h ago' },
               ].map((f) => (
-                <div key={f.wf} className="px-2 py-1" style={{ ...ps.row, backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: PREV_XS, borderLeft: `${PREV_BORDER_THIN} solid ${ps.colors.error}` }}>
+                <div key={f.wf} className="px-2 py-1" style={{ ...ps.row, backgroundColor: PREV_BG_ERROR, borderRadius: PREV_XS, borderLeft: `${PREV_BORDER_THIN} solid ${ps.colors.error}` }}>
                   <div style={WIDGET_EXPORT_MODAL_DIV_STYLE_2}>
                     <div style={{ fontSize: PREV_FS_CAPTION, fontWeight: 600, color: ps.colors.error }}>{f.wf}</div>
                     <div style={{ fontSize: PREV_FS_MICRO, color: PREV_CLR_MUTED }}>Failed at: {f.step}</div>
@@ -290,7 +292,7 @@ export function CardPreviewB({ cardType, card }: { cardType: string; card: Widge
                 <span style={ps.statLbl}>GPUs down</span>
               </div>
             </div>
-            <div className="px-2 py-1" style={{ ...ps.row, backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: PREV_XS, borderLeft: `${PREV_BORDER_THIN} solid ${ps.colors.error}`, marginTop: PREV_SM }}>
+            <div className="px-2 py-1" style={{ ...ps.row, backgroundColor: PREV_BG_ERROR, borderRadius: PREV_XS, borderLeft: `${PREV_BORDER_THIN} solid ${ps.colors.error}`, marginTop: PREV_SM }}>
               <span style={{ fontSize: PREV_FS_CAPTION, color: ps.colors.error, fontWeight: 600 }}>worker-4</span>
               <span style={{ fontSize: PREV_FS_MICRO, color: PREV_CLR_MUTED, marginLeft: 'auto' }}>unreachable 12m</span>
             </div>
