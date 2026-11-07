@@ -110,6 +110,14 @@ describe('parseResourceQuantity', () => {
     expect(parseResourceQuantity('500K')).toBe(500000)
   })
 
+  it.each([
+    { quantity: '1k', expected: 1000 },
+    { quantity: '1.5k', expected: 1500 },
+    { quantity: '129000k', expected: 129000000 },
+  ])('parses lowercase decimal kilo quantity $quantity', ({ quantity, expected }) => {
+    expect(parseResourceQuantity(quantity)).toBe(expected)
+  })
+
   it('parses M (megabytes)', () => {
     expect(parseResourceQuantity('100M')).toBe(100000000)
   })
