@@ -180,7 +180,8 @@ export function useClusterGroups() {
   const createGroup = async (group: ClusterGroup) => {
     if (shouldUseCRs) {
       // Create via CR
-      await createCRGroup(localGroupToCR(group) as CRClusterGroup)
+      const created = await createCRGroup(localGroupToCR(group) as CRClusterGroup)
+      if (!created) throw new Error('Failed to create cluster group')
     } else {
       // localStorage mode
       setLocalGroups(prev => {

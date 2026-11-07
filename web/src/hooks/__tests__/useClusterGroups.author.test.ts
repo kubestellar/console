@@ -137,6 +137,7 @@ describe('useClusterGroups', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     vi.stubGlobal('fetch', vi.fn())
     mockCRGroups.length = 0
+    mockCreateCRGroup.mockResolvedValue({ metadata: { name: 'created' } })
     mockUsePersistence.mockReturnValue({ isEnabled: false, isActive: false })
   })
 
@@ -147,6 +148,13 @@ describe('useClusterGroups', () => {
   // =========================================================================
   // 10. CR-backed mode
   // =========================================================================
+
+  it('reports a failed CR creation to the caller', async () => {
+    mockUsePersistence.mockReturnValue({ isEnabled: true, isActive: true })
+    mockCreateCRGroup.mockResolvedValue(null)
+    const { result } = renderHook(() => useClusterGroups())
+    await expect(result.current.createGroup({ name: 'failed', kind: 'static', clusters: ['c1'] })).rejects.toThrow()
+  })
 
   it('uses CR groups when persistence is enabled and active', () => {
     mockUsePersistence.mockReturnValue({ isEnabled: true, isActive: true })

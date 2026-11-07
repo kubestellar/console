@@ -910,6 +910,7 @@
   },
   "clusterGroups": {
     "createGroup": "Create Group",
+    "createFailed": "Failed to create cluster group",
     "createDynamicGroup": "Create Dynamic Group",
     "editGroup": "Edit Group",
     "deleteGroup": "Delete Group",
