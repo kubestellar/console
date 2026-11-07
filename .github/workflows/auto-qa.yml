@@ -1132,17 +1132,15 @@ jobs:
           echo "Checking for inconsistent spacing patterns..."
           ISSUES=""
 
-          # Find inline style px values that should use spacing scale
-          INLINE_PX=$(grep -rn "style={{" src/ --include="*.tsx" 2>/dev/null | \
-            grep -oE "['\"]?[0-9]+px['\"]?" | \
-            sort | uniq -c | sort -rn | head -15 || true)
-
-          if [ -n "$INLINE_PX" ]; then
-            # Count unique non-standard values (not 0, 4, 8, 12, 16, 20, 24, 32, 40, 48)
-            NONSTANDARD=$(echo "$INLINE_PX" | grep -vE "(^[^0-9]*[048]px|12px|16px|20px|24px|32px|40px|48px)" | head -10 || true)
-            if [ -n "$NONSTANDARD" ]; then
-              ISSUES="${ISSUES}### Non-standard spacing values in inline styles\nConsider using Tailwind spacing classes (p-1, m-2, gap-4, etc.):\n\`\`\`\n${NONSTANDARD}\n\`\`\`\n\n"
-            fi
+          # Restrict the scan to spacing properties, not shadows, borders, or sizes.
+          # Filter the complete value before counting so 10px is not mistaken for 0px.
+          NONSTANDARD=$(grep -rh "style={{" src/ --include="*.tsx" 2>/dev/null | \
+            grep -oE "(margin|padding)(Top|Right|Bottom|Left|Inline|Block|InlineStart|InlineEnd|BlockStart|BlockEnd)?[[:space:]]*:[[:space:]]*['\"]?[0-9]+px|(^|[^[:alnum:]_])(gap|rowGap|columnGap)[[:space:]]*:[[:space:]]*['\"]?[0-9]+px" | \
+            grep -oE "[0-9]+px" | \
+            grep -vxE "(0|4|8|12|16|20|24|32|40|48)px" | \
+            sort | uniq -c | sort -rn | head -10 || true)
+          if [ -n "$NONSTANDARD" ]; then
+            ISSUES="${ISSUES}### Non-standard spacing values in inline styles\nConsider using Tailwind spacing classes (p-1, m-2, gap-4, etc.):\n\`\`\`\n${NONSTANDARD}\n\`\`\`\n\n"
           fi
 
           # Find margin/padding with magic numbers
