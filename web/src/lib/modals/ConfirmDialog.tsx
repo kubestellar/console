@@ -20,6 +20,7 @@
 
 import { AlertTriangle, AlertCircle, Info } from 'lucide-react'
 import { BaseModal } from './BaseModal'
+import { ModalTitleIdContext } from './components/modalContexts'
 import { Button } from '../../components/ui/Button'
 
 export interface ConfirmDialogProps {
@@ -87,7 +88,9 @@ export function ConfirmDialog({
         </div>
 
         {/* Content */}
-        <h3 className="text-lg font-semibold text-foreground text-center mb-2">{title}</h3>
+        <ModalTitleIdContext.Consumer>
+          {(titleId) => <h3 id={titleId} className="text-lg font-semibold text-foreground text-center mb-2">{title}</h3>}
+        </ModalTitleIdContext.Consumer>
         <div className="text-sm text-muted-foreground text-center mb-6">{message}</div>
 
         {/* Actions */}
