@@ -1454,10 +1454,13 @@ jobs:
           echo "Checking for hardcoded user-facing strings..."
           ISSUES=""
 
+          # Only shipped UI: fixture, mock, and story labels are not user-facing.
+          SOURCE_FILTER=(--include="*.tsx" --exclude="*.test.tsx" --exclude="*.spec.tsx"
+            --exclude="*.stories.tsx" --exclude-dir=__tests__ --exclude-dir=__mocks__ --exclude-dir=node_modules)
+
           # Find JSX text content that looks like user-facing strings
           # Exclude: className, imports, comments, type definitions
-          HARDCODED=$(grep -rn ">[A-Z][a-z].*</" src/ --include="*.tsx" 2>/dev/null | \
-            grep -v "node_modules\|\.test\.\|\.spec\." | \
+          HARDCODED=$(grep -rn ">[A-Z][a-z].*</" src/ "${SOURCE_FILTER[@]}" 2>/dev/null | \
             grep -v "className\|import\|//\|/\*\|interface\|type " | \
             grep -v "{.*}" | \
             head -25 || true)
@@ -1470,8 +1473,8 @@ jobs:
           fi
 
           # Find button/label text
-          BUTTON_TEXT=$(grep -rn ">[A-Z][a-z]\+</button>\|>[A-Z][a-z]\+</Button>" src/ --include="*.tsx" 2>/dev/null | \
-            grep -v "node_modules" | head -15 || true)
+          BUTTON_TEXT=$(grep -rn ">[A-Z][a-z]\+</button>\|>[A-Z][a-z]\+</Button>" src/ "${SOURCE_FILTER[@]}" 2>/dev/null | \
+            head -15 || true)
 
           if [ -n "$BUTTON_TEXT" ]; then
             ISSUES="${ISSUES}\n### Hardcoded button labels\n\`\`\`\n${BUTTON_TEXT}\n\`\`\`\n"
