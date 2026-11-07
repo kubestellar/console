@@ -27,9 +27,11 @@ export function ConfigureCardBehaviorsTab({
   return (
     <div className="space-y-3">
       {cardBehaviors.map((behavior) => (
-        <div
+        <button
+          type="button"
+          aria-pressed={!!behaviors[behavior.key]}
           key={behavior.key}
-          className="flex items-start gap-3 p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer"
+          className="flex w-full text-left items-start gap-3 p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer"
           onClick={() => toggleBehavior(behavior.key)}
         >
           <div className={cn(
@@ -48,7 +50,7 @@ export function ConfigureCardBehaviorsTab({
             <p className="text-sm font-medium text-foreground">{t(`cardConfig.behaviorLabels.${behavior.key}`, behavior.label)}</p>
             <p className="text-xs text-muted-foreground">{wrapAbbreviations(behavior.description)}</p>
           </div>
-        </div>
+        </button>
       ))}
     </div>
   )
