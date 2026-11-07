@@ -14,6 +14,7 @@ import {
   rectSortingStrategy } from '@dnd-kit/sortable'
 import { useClusters } from '../../hooks/useMCP'
 import { StatusIndicator } from '../charts/StatusIndicator'
+import { Button } from '../ui/Button'
 
 type TranslateFn = (key: string, options?: string | Record<string, unknown>) => string
 
@@ -75,13 +76,13 @@ export function GPUDashboardTab({
         <p className="text-sm text-muted-foreground">
           {t('gpuReservations.dashboard.customizable')}
         </p>
-        <button
+        <Button
           onClick={onShowAddCardModal}
           className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-500 text-white text-sm font-medium hover:bg-purple-600 transition-colors"
         >
           <Plus className="w-4 h-4" />
           {t('gpuReservations.dashboard.addCard')}
-        </button>
+        </Button>
       </div>
       <DndContext
         sensors={gpuDashSensors}
@@ -110,12 +111,12 @@ export function GPUDashboardTab({
         <div className="p-12 rounded-lg bg-card/50 border border-border text-center">
           <LayoutDashboard className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
           <p className="text-muted-foreground">{t('gpuReservations.dashboard.noCardsYet')}</p>
-          <button
+          <Button
             onClick={onShowAddCardModal}
             className="mt-3 px-4 py-2 rounded-lg bg-purple-500 text-white text-sm hover:bg-purple-600 transition-colors"
           >
             {t('gpuReservations.dashboard.addFirstCard')}
-          </button>
+          </Button>
         </div>
       )}
     </div>
