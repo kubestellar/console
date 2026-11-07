@@ -67,14 +67,10 @@ export function WeatherSearch({
         { signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) }
       )
 
-      if (response.ok) {
-        const data = await response.json()
-        setCitySearchResults(data.results || [])
-        setShowCityDropdown(true)
-      } else {
-        setCitySearchResults([])
-        setShowCityDropdown(false)
-      }
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const data = await response.json()
+      setCitySearchResults(data.results || [])
+      setShowCityDropdown(true)
     } catch (error: unknown) {
       console.error('City search error:', error)
       showToast(t('errors.citySearchFailed', 'City search failed. Please try again.'), 'error')
