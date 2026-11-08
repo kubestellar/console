@@ -187,8 +187,15 @@ function StatBlock({ blockId, stats, onClick, color, icon }: StatBlockProps) {
 
   return (
     <div
-      className={`rounded-lg border border-border/50 bg-card p-4 text-card-foreground shadow-sm ${isClickable ? 'cursor-pointer hover:bg-accent/40' : ''} transition-colors`}
+      className={`rounded-lg border border-border/50 bg-card p-4 text-card-foreground shadow-sm ${isClickable ? 'cursor-pointer hover:bg-accent/40 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400' : ''} transition-colors`}
       onClick={() => isClickable && onClick?.()}
+      onKeyDown={(e) => {
+        if (isClickable && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault()
+          onClick?.()
+        }
+      }}
+      {...(isClickable ? { role: 'button' as const, tabIndex: 0 } : {})}
     >
       {/* Allow long labels (e.g. "Unhealthy", "Storage") to wrap to a second
           line at narrow widths instead of being clipped with an ellipsis
