@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { CreateGroupForm, EditGroupForm } from './ClusterGroupsForms'
+import { ToastProvider } from '../ui/Toast'
 
 vi.mock('../../hooks/useClusterGroups', () => ({
   useClusterGroups: vi.fn(),
@@ -81,6 +82,30 @@ describe('CreateGroupForm', () => {
     const cancelBtn = screen.getAllByRole('button', { name: /common:common.cancel/i })[0]
     fireEvent.click(cancelBtn)
     expect(onCancel).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps creation pending until the save completes', async () => {
+    const { promise, resolve: finish } = Promise.withResolvers<void>()
+    const save = vi.fn(() => promise)
+    render(<CreateGroupForm availableClusters={availableClusters} clusterHealthMap={healthyMap} onSave={save} onCancel={onCancel} />)
+    fireEvent.change(screen.getByPlaceholderText('cards:clusterGroups.groupNamePlaceholder'), { target: { value: 'new group' } })
+    fireEvent.click(screen.getByRole('button', { name: 'prod-1' }))
+    fireEvent.click(screen.getByRole('button', { name: 'cards:clusterGroups.createGroup' }))
+    expect(screen.getByRole('button', { name: 'common:common.saving' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'common:common.cancel' })).toBeDisabled()
+    await act(async () => finish())
+    expect(screen.getByRole('button', { name: 'cards:clusterGroups.createGroup' })).toBeEnabled()
+  })
+
+  it('allows retry and reports an unsuccessful save', async () => {
+    const save = vi.fn().mockRejectedValue(new Error('save failed'))
+    render(<ToastProvider><CreateGroupForm availableClusters={availableClusters} clusterHealthMap={healthyMap} onSave={save} onCancel={onCancel} /></ToastProvider>)
+    fireEvent.change(screen.getByPlaceholderText('cards:clusterGroups.groupNamePlaceholder'), { target: { value: 'new group' } })
+    fireEvent.click(screen.getByRole('button', { name: 'prod-1' }))
+    fireEvent.click(screen.getByRole('button', { name: 'cards:clusterGroups.createGroup' }))
+    expect(await screen.findByText('cards:clusterGroups.createFailed')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'cards:clusterGroups.createGroup' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'common:common.cancel' })).toBeEnabled()
   })
 
   it('renders with empty cluster list (empty state)', () => {
