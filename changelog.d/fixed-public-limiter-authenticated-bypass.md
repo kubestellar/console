@@ -1,0 +1,1 @@
+- Authenticated API traffic is no longer throttled by the per-IP public rate limit, fixing spurious 429 "Infrastructure Connection Error" pages behind shared egress.

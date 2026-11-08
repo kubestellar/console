@@ -18,6 +18,21 @@ import (
 	"github.com/kubestellar/console/pkg/api/middleware"
 )
 
+// authCookieName must match the JWT cookie name read by middleware.JWTAuth.
+const authCookieName = "kc_auth"
+
+// bearerAuthPrefix is the Authorization header scheme prefix for JWTs.
+const bearerAuthPrefix = "Bearer "
+
+// hasAuthCredentials reports whether the request carries a bearer header or the
+// auth cookie. It only checks presence; jwtAuth validates the token downstream.
+func hasAuthCredentials(c *fiber.Ctx) bool {
+	if strings.HasPrefix(c.Get(fiber.HeaderAuthorization), bearerAuthPrefix) {
+		return true
+	}
+	return c.Cookies(authCookieName) != ""
+}
+
 type routeSetupContext struct {
 	jwtAuth            fiber.Handler
 	csrfGuard          fiber.Handler
@@ -206,6 +221,11 @@ func (s *Server) setupAuthRoutes(app *fiber.App) *routeSetupContext {
 			return c.Next()
 		}
 		if strings.HasPrefix(path, "/api/auth/") {
+			return c.Next()
+		}
+		// Credential-bearing requests are capped by apiLimiter and validated by
+		// jwtAuth; the per-IP public limiter would starve shared-egress users.
+		if hasAuthCredentials(c) {
 			return c.Next()
 		}
 		return publicLimiter(c)
