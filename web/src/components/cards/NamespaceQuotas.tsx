@@ -58,13 +58,16 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
 
   // Fetch ResourceQuotas and LimitRanges using real hooks
   // Pass undefined for "all" selections to get all data
-  const { resourceQuotas, isLoading: quotasLoading, refetch: refetchQuotas } = useResourceQuotas(
+  const { resourceQuotas, isLoading: quotasLoading, error: quotasError, refetch: refetchQuotas } = useResourceQuotas(
     selectedCluster !== 'all' ? selectedCluster : undefined,
-    selectedNamespace !== 'all' ? selectedNamespace : undefined
+    selectedNamespace !== 'all' ? selectedNamespace : undefined,
+    false,
+    false
   )
-  const { limitRanges, isLoading: limitsLoading } = useLimitRanges(
+  const { limitRanges, isLoading: limitsLoading, error: limitsError } = useLimitRanges(
     selectedCluster !== 'all' ? selectedCluster : undefined,
-    selectedNamespace !== 'all' ? selectedNamespace : undefined
+    selectedNamespace !== 'all' ? selectedNamespace : undefined,
+    false
   )
 
   const isInitialLoading = clustersLoading
@@ -76,8 +79,9 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
     isRefreshing: clustersRefreshing || namespacesRefreshing,
     hasAnyData: allClusters.length > 0 || resourceQuotas.length > 0 || limitRanges.length > 0,
     isDemoData: showDemoBadge || isDemoFallback,
-    isFailed: clustersFailed,
+    isFailed: clustersFailed || !!quotasError || !!limitsError,
     consecutiveFailures: clustersFailures,
+    errorMessage: quotasError || limitsError || undefined,
   })
 
   // Handle save quota

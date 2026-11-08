@@ -216,6 +216,14 @@ describe('useClusterResourceQuery', () => {
       expect(result.current.data).toEqual([])
     })
 
+    it('sets error on non-ok backend response when silentErrors=false', async () => {
+      mockFetchNotOk(500)
+      const config = makeConfig({ silentErrors: false })
+      const { result } = renderHook(() => useClusterResourceQuery(config))
+      await waitFor(() => expect(result.current.isLoading).toBe(false))
+      expect(result.current.error).toContain('HTTP 500')
+    })
+
     it('falls back gracefully when backend fetch throws a network error', async () => {
       mockFetchError('fetch failed')
       const { result } = renderHook(() => useClusterResourceQuery(makeConfig()))
