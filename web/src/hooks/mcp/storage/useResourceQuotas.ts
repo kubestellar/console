@@ -10,7 +10,7 @@ import { getDemoResourceQuotas, getDemoLimitRanges } from './storageDemoData'
 // Used by GPU Reservations to show live data when running in-cluster with OAuth.
 // Returns `isDemoFallback: true` when the hook is serving demo data so callers
 // can render the Demo badge only for true demo output. See Issue 9356.
-export function useResourceQuotas(cluster?: string, namespace?: string, forceLive = false) {
+export function useResourceQuotas(cluster?: string, namespace?: string, forceLive = false, silentErrors = true) {
   const result = useClusterResourceQuery<ResourceQuota>({
     resourceKey: 'resourceQuotas',
     endpoint: 'resourcequotas',
@@ -20,7 +20,7 @@ export function useResourceQuotas(cluster?: string, namespace?: string, forceLiv
     cluster,
     namespace,
     forceLive,
-    silentErrors: true,
+    silentErrors,
   })
 
   return {
@@ -33,7 +33,7 @@ export function useResourceQuotas(cluster?: string, namespace?: string, forceLiv
 }
 
 // Hook to get LimitRanges
-export function useLimitRanges(cluster?: string, namespace?: string) {
+export function useLimitRanges(cluster?: string, namespace?: string, silentErrors = true) {
   const result = useClusterResourceQuery<LimitRange>({
     resourceKey: 'limitRanges',
     endpoint: 'limitranges',
@@ -42,7 +42,7 @@ export function useLimitRanges(cluster?: string, namespace?: string) {
     filterFn: (item, c, ns) => (!c || item.cluster === c) && (!ns || item.namespace === ns),
     cluster,
     namespace,
-    silentErrors: true,
+    silentErrors,
   })
 
   return {
