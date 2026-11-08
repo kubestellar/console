@@ -44,7 +44,7 @@ func hasValidAuthCredentials(c *fiber.Ctx, secret string) bool {
 		return false
 	}
 	token, err := middleware.ParseJWT(tokenString, secret)
-	return err == nil && token.Valid
+	return err == nil && token != nil && token.Valid
 }
 
 type routeSetupContext struct {
