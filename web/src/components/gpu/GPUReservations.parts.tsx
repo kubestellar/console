@@ -1,6 +1,7 @@
 import { Calendar, Plus, Settings2, TrendingUp, FlaskConical, Trash2, Loader2, Server, User, Filter, LayoutDashboard } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { cn } from '../../lib/cn'
+import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { StatusBadge } from '../ui/StatusBadge'
 import { AddCardModal } from '../dashboard/AddCardModal'
@@ -118,13 +119,15 @@ export function GPUReservationsTabBar({
             {t('gpuReservations.myReservations')}
           </label>
         )}
-        <button
+        <Button
           onClick={openCreateForm}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white text-sm font-medium hover:bg-purple-600 transition-colors"
+          variant="primary"
+          size="lg"
+          icon={<Plus className="w-4 h-4" />}
+          className="bg-purple-500 text-white hover:bg-purple-600"
         >
-          <Plus className="w-4 h-4" />
           {t('gpuReservations.createReservation')}
-        </button>
+        </Button>
       </div>
     </div>
   )
