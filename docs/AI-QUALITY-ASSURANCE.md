@@ -93,6 +93,8 @@ This is the loop that catches problems the PR checks missed — the code compile
 | **Playwright nightly** | Daily | Cross-browser (Firefox, WebKit) E2E for key user flows |
 | **GA4 error tracking** | Real-time | `ksc_error` events from production users — runtime crashes, chunk load failures, unhandled rejections |
 
+The Auto-QA inline spacing check scans same-line JSX style declarations for pixel-valued margin, padding, and gap properties. It excludes standard grid values; shadow blur, border, and element dimensions are not spacing findings.
+
 ### Loop 5: User and Community Feedback
 
 | Signal | Feedback |
