@@ -25,7 +25,8 @@ export function ClusterIssuesList({ podIssues, deploymentIssues, clusterName, on
       </h3>
       <div className="space-y-2">
         {podIssues.slice(0, 5).map((issue, i) => (
-          <div
+          <button
+            type="button"
             key={`pod-${i}`}
             onClick={() => {
               onDrillToPod(clusterName, issue.namespace, issue.name, {
@@ -35,7 +36,7 @@ export function ClusterIssuesList({ podIssues, deploymentIssues, clusterName, on
                 reason: issue.reason })
               onClose()
             }}
-            className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
+            className="block w-full text-left p-3 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -51,10 +52,11 @@ export function ClusterIssuesList({ podIssues, deploymentIssues, clusterName, on
             {issue.restarts > 0 && (
               <div className="mt-1 text-xs text-muted-foreground pl-14">{t('clusterDetail.restarts', { count: issue.restarts })}</div>
             )}
-          </div>
+          </button>
         ))}
         {deploymentIssues.slice(0, 3).map((issue, i) => (
-          <div
+          <button
+            type="button"
             key={`dep-${i}`}
             onClick={() => {
               onDrillToDeployment(clusterName, issue.namespace, issue.name, {
@@ -64,7 +66,7 @@ export function ClusterIssuesList({ podIssues, deploymentIssues, clusterName, on
                 message: issue.message })
               onClose()
             }}
-            className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
+            className="block w-full text-left p-3 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -82,7 +84,7 @@ export function ClusterIssuesList({ podIssues, deploymentIssues, clusterName, on
             {issue.message && (
               <div className="mt-1 text-xs text-red-400 pl-16 truncate">{issue.message}</div>
             )}
-          </div>
+          </button>
         ))}
       </div>
     </div>

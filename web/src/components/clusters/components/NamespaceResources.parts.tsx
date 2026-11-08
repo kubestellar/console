@@ -106,8 +106,9 @@ interface ListResourceRowProps {
 /** A single resource row in the flat list view. */
 export function ListResourceRow({ resource, onClick }: ListResourceRowProps) {
   return (
-    <div
-      className="flex items-center justify-between p-2 min-h-11 rounded bg-card/30 text-sm group hover:bg-card/50 transition-colors cursor-pointer"
+    <button
+      type="button"
+      className="flex w-full text-left items-center justify-between p-2 min-h-11 rounded bg-card/30 text-sm group hover:bg-card/50 transition-colors cursor-pointer"
       onClick={onClick}
     >
       <div className="flex items-center gap-2 min-w-0">
@@ -123,7 +124,7 @@ export function ListResourceRow({ resource, onClick }: ListResourceRowProps) {
         )}
         <ChevronRight className="w-3 h-3 text-primary" />
       </div>
-    </div>
+    </button>
   )
 }
 

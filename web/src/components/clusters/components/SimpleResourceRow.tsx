@@ -20,8 +20,9 @@ interface SimpleResourceRowProps {
  */
 export function SimpleResourceRow({ icon, name, primaryText, primaryClassName, secondaryText, onClick }: SimpleResourceRowProps) {
   return (
-    <div
-      className="flex items-center gap-2 min-h-11 px-1 text-xs cursor-pointer hover:bg-card/30 rounded"
+    <button
+      type="button"
+      className="flex w-full text-left items-center gap-2 min-h-11 px-1 text-xs cursor-pointer hover:bg-card/30 rounded"
       onClick={onClick}
     >
       {icon}
@@ -29,6 +30,6 @@ export function SimpleResourceRow({ icon, name, primaryText, primaryClassName, s
       {primaryText !== undefined && <span className={primaryClassName}>{primaryText}</span>}
       {secondaryText !== undefined && <span className="text-muted-foreground">{secondaryText}</span>}
       <ChevronRight className="w-3 h-3 text-primary ml-auto" />
-    </div>
+    </button>
   )
 }
