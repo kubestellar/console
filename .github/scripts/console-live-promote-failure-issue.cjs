@@ -1108,6 +1108,16 @@ module.exports = async ({ github, context, core }) => {
       return
     }
 
+    await github.rest.issues.update({
+      owner,
+      repo,
+      issue_number: existing.number,
+      state: 'open',
+      state_reason: 'reopened',
+      title,
+      body,
+      labels: issueLabels,
+    })
     await github.rest.issues.createComment({
       owner,
       repo,
@@ -1116,14 +1126,14 @@ module.exports = async ({ github, context, core }) => {
         marker,
         `${run.name} failed again with \`${failureType}\`.`,
         '',
-        'This matching issue is closed, so the workflow is leaving it closed and adding the recurrence here instead of reopening it.',
+        'Reopening: this matching issue was closed, but the failure is recurring, so it is being tracked here again instead of only commenting on a closed issue.',
         '',
         `- Run: [#${runId}](${run.html_url})`,
         `- Candidate image: \`${imageState.candidate}\``,
         `- Safety rollback/auth gate triggered: \`${blocked}\``,
       ].join('\n'),
     })
-    core.info(`Commented on closed console live canary failure issue #${existing.number} without reopening it.`)
+    core.info(`Reopened console live canary failure issue #${existing.number} due to recurrence.`)
     return
   }
 
