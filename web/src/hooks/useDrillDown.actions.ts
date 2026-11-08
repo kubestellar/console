@@ -65,20 +65,20 @@ export function useDrillDownActions() {
       data: { cluster, namespace } })
   }
 
-  const drillToDeployment = (cluster: string, namespace: string, deployment: string, deploymentData?: Record<string, unknown>) => {
+  const drillToDeployment = useCallback((cluster: string, namespace: string, deployment: string, deploymentData?: Record<string, unknown>) => {
     openOrPush({
       type: 'deployment',
       title: deployment,
       subtitle: `Deployment in ${namespace}`,
       data: { cluster, namespace, deployment, ...deploymentData } })
-  }
+  }, [openOrPush])
 
-  const drillToPod = (cluster: string, namespace: string, pod: string, podData?: Record<string, unknown>) => {
+  const drillToPod = useCallback((cluster: string, namespace: string, pod: string, podData?: Record<string, unknown>) => {
     openOrPush({
       type: 'pod',
       title: pod,
       data: { cluster, namespace, pod, ...podData } })
-  }
+  }, [openOrPush])
 
   const drillToLogs = (cluster: string, namespace: string, pod: string, container?: string) => {
     openOrPush({
@@ -88,13 +88,13 @@ export function useDrillDownActions() {
       data: { cluster, namespace, pod, container } })
   }
 
-  const drillToEvents = (cluster: string, namespace?: string, objectName?: string) => {
+  const drillToEvents = useCallback((cluster: string, namespace?: string, objectName?: string) => {
     openOrPush({
       type: 'events',
       title: objectName ? `Events: ${objectName}` : 'Events',
       subtitle: namespace || cluster.split('/').pop(),
       data: { cluster, namespace, objectName } })
-  }
+  }, [openOrPush])
 
   const drillToNode = (cluster: string, node: string, nodeData?: Record<string, unknown>) => {
     openOrPush({
@@ -142,12 +142,12 @@ export function useDrillDownActions() {
       data: {} })
   }
 
-  const drillToReplicaSet = (cluster: string, namespace: string, replicaset: string, replicasetData?: Record<string, unknown>) => {
+  const drillToReplicaSet = useCallback((cluster: string, namespace: string, replicaset: string, replicasetData?: Record<string, unknown>) => {
     openOrPush({
       type: 'replicaset',
       title: replicaset,
       data: { cluster, namespace, replicaset, ...replicasetData } })
-  }
+  }, [openOrPush])
 
   const drillToConfigMap = (cluster: string, namespace: string, configmap: string, configmapData?: Record<string, unknown>) => {
     openOrPush({
