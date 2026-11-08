@@ -11,6 +11,7 @@ import {
   X,
   Search,
 } from 'lucide-react'
+import { Button } from '../ui/Button'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { cn } from '../../lib/cn'
 import { Sparkline } from '../charts/Sparkline'
@@ -86,13 +87,15 @@ export function GPUReservationsTab({
             <Filter className="w-4 h-4" />
             <span>{t('gpuReservations.filteringByUser', `Showing reservations for {{user}}`, { user: user?.github_login || 'you' })}</span>
           </div>
-          <button
+          <Button
             onClick={() => onSetShowOnlyMine(false)}
-            className="flex items-center gap-1 px-2 py-1 rounded text-xs text-purple-400 hover:text-purple-300 hover:bg-purple-500/20 transition-colors"
+            variant="ghost"
+            size="sm"
+            icon={<X className="w-3 h-3" />}
+            className="rounded font-normal text-purple-400 hover:text-purple-300 hover:bg-purple-500/20"
           >
-            <X className="w-3 h-3" />
             {t('common:common.clearFilter', 'Clear filter')}
-          </button>
+          </Button>
         </div>
       )}
       {filteredReservations.length === 0 && !reservationsLoading && (
@@ -111,11 +114,13 @@ export function GPUReservationsTab({
               : t('gpuReservations.overview.noReservationsYetShort')}
           </p>
           {!showOnlyMine && (
-            <button onClick={onCreateReservation}
+            <Button onClick={onCreateReservation}
               disabled={deleteConfirmId !== null || showReservationForm}
-              className="px-4 py-2 rounded-lg bg-purple-500 text-white text-sm font-medium hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-purple-500">
+              variant="primary"
+              size="lg"
+              className="bg-purple-500 text-white hover:bg-purple-600 disabled:hover:bg-purple-500">
               {t('gpuReservations.createReservation')}
-            </button>
+            </Button>
           )}
         </div>
       )}
