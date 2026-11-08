@@ -116,6 +116,8 @@ export function useClusterResourceQuery<T>(
             setIsLoading(false)
             return
           }
+          // Non-ok responses (e.g. 403/500) must surface like thrown errors
+          throw new Error(`HTTP ${response.status}`)
         } catch (err) {
           if (!silentErrors) {
             console.error(`[${resourceKey}] Backend fetch failed:`, err)
