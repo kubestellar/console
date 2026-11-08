@@ -7,6 +7,8 @@ import type { CSSProperties } from 'react'
 import { WIDGET_CARDS, WIDGET_STATS, WIDGET_TEMPLATES } from '../../../lib/widgets/widgetRegistry'
 import { type WidgetConfig } from '../../../lib/widgets/codeGenerator'
 import {
+  PREV_BG_MINI_CARD,
+  PREV_BORDER_MINI_CARD,
   PREV_CARD_PAD,
   PREV_CLR_DIM,
   PREV_FS_BODY,
@@ -116,10 +118,10 @@ function TemplatePreview({ templateId }: { templateId: string }) {
 
   const cardMiniStyle: CSSProperties = {
     flex: 1,
-    backgroundColor: 'rgba(31, 41, 55, 0.5)',
+    backgroundColor: PREV_BG_MINI_CARD,
     borderRadius: '6px',
     padding: PREV_ITEM_PAD,
-    border: '1px solid rgba(255, 255, 255, 0.05)' }
+    border: `1px solid ${PREV_BORDER_MINI_CARD}` }
 
   const isGrid = template.layout === 'grid'
   const isRow = template.layout === 'row'
