@@ -154,23 +154,9 @@ describe('useLastRoute hook', () => {
     expect(localStorage.getItem(LAST_ROUTE_KEY)).toBeNull()
   })
 
-  // NOTE: the "save last route" effect and the "restore on mount" effect both
-  // fire on the same initial commit, in declaration order. The save effect
-  // runs FIRST and unconditionally overwrites LAST_ROUTE_KEY with the current
-  // pathname ('/'), so by the time the restore effect reads LAST_ROUTE_KEY it
-  // always sees '/' — the pre-mount saved value is clobbered before it can be
-  // used, and navigate() is never called from a cold mount at '/'. This test
-  // pins that existing (surprising) behavior; see the filed coverage-gap
-  // finding for the regression-risk this raises.
-  it('does not redirect on a cold mount at "/" — the save effect clobbers the saved route before the restore effect reads it', () => {
-    localStorage.setItem(LAST_ROUTE_KEY, '/workloads')
-    mockLocation = { pathname: '/', search: '' }
-
-    renderHook(() => useLastRoute())
-
-    expect(localStorage.getItem(LAST_ROUTE_KEY)).toBe('/')
-    expect(mockNavigate).not.toHaveBeenCalled()
-  })
+  // NOTE: cold-mount redirect behavior (saved route / sidebar fallback) is
+  // covered in useLastRoute.part2.test.ts — the exact behavior changes with
+  // the fix for #24881 (see #24883), so it is intentionally not pinned here.
 
   it('does not redirect when there is no saved last route', () => {
     mockLocation = { pathname: '/', search: '' }
@@ -203,22 +189,6 @@ describe('useLastRoute hook', () => {
 
     renderHook(() => useLastRoute())
 
-    expect(mockNavigate).not.toHaveBeenCalled()
-  })
-
-  it('does not use the first sidebar dashboard route as a fallback either, for the same clobbering reason', () => {
-    localStorage.setItem(
-      SIDEBAR_CONFIG_KEY,
-      JSON.stringify({ primaryNav: [{ href: '/workloads' }] })
-    )
-    mockLocation = { pathname: '/', search: '' }
-
-    renderHook(() => useLastRoute())
-
-    // The `else if (!lastRoute && firstSidebarRoute ...)` branch also never
-    // runs from a cold mount: by the time it is evaluated, the save effect
-    // has already written '/' into LAST_ROUTE_KEY, so `lastRoute` is truthy
-    // (it's '/') and the `!lastRoute` fallback branch is skipped too.
     expect(mockNavigate).not.toHaveBeenCalled()
   })
 
