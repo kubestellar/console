@@ -349,6 +349,36 @@ test('classifies signed-session /api/me 401 as auth boundary before browser layo
   ].join('\n')), 'auth-boundary')
 })
 
+const AUTH_BOUNDARY_STEP_SCRIPT_LOG = [
+  '2026-11-08T12:23:37.2740217Z ##[group]Run set -euo pipefail',
+  '2026-11-08T12:23:37.2757344Z   api_code="$(curl -sS -o /dev/null -w \'%{http_code}\' "$LIVE_URL/api/me" || true)"',
+  '2026-11-08T12:23:37.2759122Z   echo "Waiting for unauthenticated /api/me boundary; attempt $attempt got HTTP $api_code"',
+  '2026-11-08T12:23:37.2760871Z   echo "::error::Unauthenticated /api/me returned HTTP $api_code, expected 401"',
+  '2026-11-08T12:23:37.2761000Z env:',
+  '2026-11-08T12:23:37.2761100Z   LIVE_URL: https://console-live.kubestellar.io',
+  '2026-11-08T12:23:37.2761200Z ##[endgroup]',
+]
+
+test('ignores echoed step scripts and passing auth smoke titles when classifying core-page failures', () => {
+  assert.equal(classify({}, [
+    ...AUTH_BOUNDARY_STEP_SCRIPT_LOG,
+    '2026-11-08T12:25:05.8311328Z   ✓  1 [semantic-groundtruth] › e2e/visual-login/semantic/live-production-smoke.spec.ts:20:1 › production live site keeps OAuth boundary intact @intensive @live-site @invariant:live-production-auth-boundary (1.8s)',
+    '2026-11-08T12:25:10.0945161Z   ✓  2 [semantic-groundtruth] › e2e/visual-login/semantic/live-production-smoke.spec.ts:52:1 › production live signed session reaches dashboard @intensive @live-site @auth-session @invariant:live-production-auth-session (4.3s)',
+    '2026-11-08T12:27:11.3293562Z   ✘   4 [semantic-groundtruth] › e2e/visual-login/semantic/live-core-pages.spec.ts:142:3 › live core page renders real data: pods @intensive @live-site @core-page @invariant:live-core-pages-render-real-data (37.9s)',
+    '2026-11-08T12:27:11.3343466Z     Error: recognizable demo/dashboard content must be visible',
+  ].join('\n')), 'core-page-live-data-missing')
+})
+
+test('still classifies an executed /api/me boundary failure as auth boundary', () => {
+  assert.equal(classify({}, [
+    ...AUTH_BOUNDARY_STEP_SCRIPT_LOG,
+    '2026-11-08T12:23:38.0000000Z ##[error]Unauthenticated /api/me returned HTTP 200, expected 401',
+  ].join('\n')), 'auth-boundary')
+  assert.equal(classify({}, [
+    '2026-11-08T12:25:05.8311328Z   ✘  1 [semantic-groundtruth] › e2e/visual-login/semantic/live-production-smoke.spec.ts:20:1 › production live site keeps OAuth boundary intact @intensive @live-site @invariant:live-production-auth-boundary (1.8s)',
+  ].join('\n')), 'auth-boundary')
+})
+
 test('prioritizes canary setup over product-looking log noise', () => {
   assert.equal(classify({}, 'Candidate image is not available in GHCR: ghcr.io/kubestellar/console:missing\nGET 429 /api/mcp/pods'), 'canary-setup')
 })

@@ -111,6 +111,32 @@ function dedupe(items) {
   return [...new Set((items || []).filter(Boolean))]
 }
 
+const ACTIONS_LOG_TIMESTAMP_PREFIX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z ?/
+// Playwright list-reporter result lines for tests that passed (✓) or were skipped (-).
+const PLAYWRIGHT_NON_FAILURE_RESULT_LINE = /^\s*(?:✓|-)\s+\d+\s+(?:\[[^\]]*\]\s+)?›/
+
+// Job logs echo every step's `run:` script and env inside `##[group]Run … ##[endgroup]`
+// and list passing tests by title (e.g. "production live site keeps OAuth boundary intact").
+// Neither is evidence of a failure, so drop both before matching failure keywords.
+function failureEvidenceLogText(value) {
+  const kept = []
+  let inRunGroup = false
+  for (const line of String(value || '').split(/\r?\n/)) {
+    const body = line.replace(ACTIONS_LOG_TIMESTAMP_PREFIX, '')
+    if (inRunGroup) {
+      if (body.startsWith('##[endgroup]')) inRunGroup = false
+      continue
+    }
+    if (body.startsWith('##[group]Run ')) {
+      inRunGroup = true
+      continue
+    }
+    if (PLAYWRIGHT_NON_FAILURE_RESULT_LINE.test(body)) continue
+    kept.push(line)
+  }
+  return kept.join('\n')
+}
+
 const CORE_RESOURCE_ENDPOINT_PATTERN = /\/api\/(?:mcp\/)?(?:clusters|nodes|pods|deployments|namespaces)(?:[/?]|$)|\/api\/namespaces(?:[/?]|$)/i
 const OPTIONAL_LIVE_ENDPOINT_PATTERN = /\/api\/(?:agent\/token|agent\/auto-update\/|gitops\/|public\/nightly-e2e\/|stellar\/stream|stellar\/(?:notifications|actions|tasks|activity|watches|solves)|github\/repos\/|rewards\/|medium\/blog|youtube\/playlist|active-users|token-usage\/|feedback\/|kagenti-provider\/status)|\/api\/mcp\/(?:pod-issues|gpu-nodes)\/stream(?:[/?]|$)/i
 
@@ -541,6 +567,12 @@ function hasAuthBoundaryFailure(text) {
 
 function classifyFailure({ failures, evidenceItems, liveUiFailures, logText }) {
   const text = sanitizeText(JSON.stringify({ failures, evidenceItems, liveUiFailures }) + '\n' + logText).toLowerCase()
+  // Auth keywords appear in echoed workflow scripts and passing smoke-test titles on every run.
+  const authEvidenceText = sanitizeText(JSON.stringify({
+    failures: failures.map((failure) => ({ ...failure, error: failureEvidenceLogText(failure.error) })),
+    evidenceItems,
+    liveUiFailures,
+  }) + '\n' + failureEvidenceLogText(logText)).toLowerCase()
   const browserMatrixFailures = liveUiFailures.browserMatrixFailures || []
   const networkClassifications = liveUiFailures.networkClassifications || []
   const unexpectedNetworkResponses = liveUiFailures.unexpectedNetworkResponses || []
@@ -564,7 +596,7 @@ function classifyFailure({ failures, evidenceItems, liveUiFailures, logText }) {
     || /live-network-error|startup-error|infrastructure connection error|unexpected app-origin|4xx|5xx|bad request/.test(text)
   const rolloutFailure = rolloutFailureType(text)
   if (rolloutFailure) return rolloutFailure
-  if (hasAuthBoundaryFailure(text)) return 'auth-boundary'
+  if (hasAuthBoundaryFailure(authEvidenceText)) return 'auth-boundary'
   if ((hasCandidateImageFailure || hasCanaryInfraFailure) && !hasProductEvidence) return 'canary-setup'
   if (hasStructuredCoreRateLimit || networkClassifications.some(item =>
     item.classification === 'live-rate-limit-data-loss' && isCoreResourceEndpoint(item.url)
@@ -587,13 +619,13 @@ function classifyFailure({ failures, evidenceItems, liveUiFailures, logText }) {
   if (browserMatrixFailures.some(failure => failure.classification === 'browser-interaction-broken') || text.includes('browser-interaction-broken')) return 'browser-interaction-broken'
   if (browserMatrixFailures.some(failure => failure.classification === 'browser-layout-drift') || text.includes('browser-layout-drift')) return 'browser-layout-drift'
   if (browserMatrixFailures.some(failure => failure.classification === 'browser-visual-baseline') || text.includes('browser-visual-baseline')) return 'browser-visual-baseline'
-  if (browserMatrixFailures.some(failure => failure.classification === 'auth-boundary') || text.includes('auth-boundary')) return 'auth-boundary'
+  if (browserMatrixFailures.some(failure => failure.classification === 'auth-boundary') || authEvidenceText.includes('auth-boundary')) return 'auth-boundary'
   if (hasOptionalRateLimit || networkClassifications.some(item => item.classification === 'optional-live-integration-unreachable')) return 'optional-live-integration-unreachable'
   if (hasCoreRateLimit) return 'live-rate-limit-data-loss'
   if (rateLimitEvents.length || /too many requests|rate limited/.test(text)) return 'live-network-error'
   if (hasLiveNetworkFailure) return 'live-network-error'
   if (/cluster-dashboard-groundtruth-match|groundtruth/.test(text)) return 'groundtruth-mismatch'
-  if (/oauth|\/api\/me|auth boundary|unauthenticated/.test(text)) return 'auth-boundary'
+  if (/oauth|\/api\/me|auth boundary|unauthenticated/.test(authEvidenceText)) return 'auth-boundary'
   if (/weak-test-assertion|literal word [`'"]?ready|\/ready\/i/.test(text)) return 'weak-test-assertion'
   return 'canary-setup'
 }
