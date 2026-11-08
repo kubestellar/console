@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import {
   BarChart3,
   FileText,
@@ -47,6 +47,22 @@ const BLURB_LINE_HEIGHT = 1.4
 const CATEGORY_TEXT_SIZE_PX = 9
 const CATEGORY_MARGIN_TOP_PX = 4
 const CATEGORY_LETTER_SPACING_EM = 0.05
+
+const TITLE_STYLE: CSSProperties = { fontSize: TITLE_TEXT_SIZE_PX, fontWeight: TITLE_TEXT_WEIGHT, color: 'var(--s-text)', flex: DEFAULT_OPACITY }
+const SCHEDULED_STATUS_STYLE: CSSProperties = { fontSize: STATUS_TEXT_SIZE_PX, color: 'var(--s-success)', fontFamily: 'var(--s-mono)' }
+const BLURB_STYLE: CSSProperties = {
+  fontSize: BLURB_TEXT_SIZE_PX,
+  color: 'var(--s-text-muted)',
+  marginTop: BLURB_MARGIN_TOP_PX,
+  lineHeight: BLURB_LINE_HEIGHT,
+}
+const CATEGORY_STYLE: CSSProperties = {
+  marginTop: CATEGORY_MARGIN_TOP_PX,
+  fontSize: CATEGORY_TEXT_SIZE_PX,
+  fontFamily: 'var(--s-mono)',
+  textTransform: 'uppercase',
+  letterSpacing: `${CATEGORY_LETTER_SPACING_EM}em`,
+}
 const ACTION_BUTTON_PADDING_Y_PX = 2
 const ACTION_BUTTON_PADDING_X_PX = 8
 const ACTION_BUTTON_OPACITY = 0.5
@@ -294,29 +310,17 @@ export function RecommendedTasksPanel({ createTask }: Props) {
                       </span>
                       <div className="min-w-0 flex-1">
                         <div className="flex min-h-8 items-center justify-between gap-2">
-                          <span style={{ fontSize: TITLE_TEXT_SIZE_PX, fontWeight: TITLE_TEXT_WEIGHT, color: 'var(--s-text)', flex: DEFAULT_OPACITY }}>
+                          <span style={TITLE_STYLE}>
                             {t(rec.titleKey)}
                           </span>
                           {isScheduled && (
-                            <span style={{ fontSize: STATUS_TEXT_SIZE_PX, color: 'var(--s-success)', fontFamily: 'var(--s-mono)' }}>
+                            <span style={SCHEDULED_STATUS_STYLE}>
                               ✓ {t('stellar.recommendedTasks.scheduled')}
                             </span>
                           )}
                         </div>
-                        <div style={{
-                          fontSize: BLURB_TEXT_SIZE_PX,
-                          color: 'var(--s-text-muted)',
-                          marginTop: BLURB_MARGIN_TOP_PX,
-                          lineHeight: BLURB_LINE_HEIGHT,
-                        }}>{t(rec.blurbKey)}</div>
-                        <div style={{
-                          marginTop: CATEGORY_MARGIN_TOP_PX,
-                          fontSize: CATEGORY_TEXT_SIZE_PX,
-                          fontFamily: 'var(--s-mono)',
-                          color: cColor,
-                          textTransform: 'uppercase',
-                          letterSpacing: `${CATEGORY_LETTER_SPACING_EM}em`,
-                        }}>{t(CATEGORY_LABEL_KEYS[rec.category])}</div>
+                        <div style={BLURB_STYLE}>{t(rec.blurbKey)}</div>
+                        <div style={{ ...CATEGORY_STYLE, color: cColor }}>{t(CATEGORY_LABEL_KEYS[rec.category])}</div>
                       </div>
                     </div>
 
