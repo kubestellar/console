@@ -26,7 +26,7 @@ describe('ArgoResourcesTab', () => {
   it('renders resources and only shows health badge when health is set', () => {
     render(<ArgoResourcesTab resourcesLoading={false} appResources={resources} onResourceClick={vi.fn()} />)
     expect(screen.getByText('web')).toBeInTheDocument()
-    expect(screen.getByText('(prod)')).toBeInTheDocument()
+    expect(screen.getAllByText('(prod)')).toHaveLength(2)
     expect(screen.getByText('Healthy')).toBeInTheDocument()
     expect(screen.getByText('Service')).toBeInTheDocument()
     expect(screen.getAllByText(/^(Healthy|Degraded|Unknown)$/)).toHaveLength(1)
