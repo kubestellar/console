@@ -534,7 +534,7 @@ describe('NamespaceMonitorTable', () => {
       render(<NamespaceMonitorTable {...props} />)
 
       const podName = screen.getByText('crashloop-pod')
-      expect(podName.className).toContain('text-yellow-400')
+      expect(podName.className).toContain('text-status-warning')
       expect(screen.getByText('CrashLoopBackOff')).toBeInTheDocument()
     })
 

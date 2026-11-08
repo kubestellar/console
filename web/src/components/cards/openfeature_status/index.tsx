@@ -59,15 +59,15 @@ const ERROR_RATE_WARNING_PCT = 5
 // ---------------------------------------------------------------------------
 
 const PROVIDER_STATUS_CLASS: Record<OpenFeatureProviderStatus, string> = {
-  healthy: 'bg-green-500/20 text-green-400',
-  degraded: 'bg-yellow-500/20 text-yellow-400',
-  unhealthy: 'bg-red-500/20 text-red-400',
+  healthy: 'bg-green-500/20 text-status-success',
+  degraded: 'bg-yellow-500/20 text-status-warning',
+  unhealthy: 'bg-red-500/20 text-status-error',
 }
 
 const PROVIDER_DOT_CLASS: Record<OpenFeatureProviderStatus, string> = {
-  healthy: 'bg-green-400',
-  degraded: 'bg-yellow-400',
-  unhealthy: 'bg-red-400',
+  healthy: 'bg-status-success',
+  degraded: 'bg-status-warning',
+  unhealthy: 'bg-status-error',
 }
 
 const FLAG_TYPE_CLASS: Record<OpenFeatureFlagType, string> = {

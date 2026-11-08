@@ -158,7 +158,7 @@ export function EtcdStatus() {
           <div key={cluster} className="px-2 py-1.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
             <div className="flex flex-wrap items-center justify-between gap-y-2">
               <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${allHealthy ? 'bg-green-500' : 'bg-red-500'}`} />
+                <div className={`w-2 h-2 rounded-full ${allHealthy ? 'bg-status-success' : 'bg-status-error'}`} />
                 <span className="text-sm font-medium">{cluster}</span>
               </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -173,7 +173,7 @@ export function EtcdStatus() {
                   <span
                     key={pod.name}
                     className={`text-xs px-1.5 py-0.5 rounded ${
-                      pod.status === 'Running' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
+                      pod.status === 'Running' ? 'bg-green-500/10 text-status-success' : 'bg-red-500/10 text-status-error'
                     }`}
                     title={pod.name}
                   >

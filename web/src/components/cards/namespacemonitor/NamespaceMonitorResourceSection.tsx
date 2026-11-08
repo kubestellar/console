@@ -49,7 +49,7 @@ function ResourceItemRow({
         tabIndex={0}
         onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
         className={`flex-1 truncate cursor-pointer hover:text-purple-400 ${
-          item.healthy ? 'text-foreground' : 'text-yellow-400'
+          item.healthy ? 'text-foreground' : 'text-status-warning'
         }`}
         onClick={() => onItemClick(item.name)}
       >
@@ -57,7 +57,7 @@ function ResourceItemRow({
       </span>
       <span
         className={`text-2xs px-1.5 py-0.5 rounded ${
-          item.healthy ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
+          item.healthy ? 'bg-green-500/20 text-status-success' : 'bg-yellow-500/20 text-status-warning'
         }`}
       >
         {item.status}
