@@ -61,17 +61,12 @@
     }
   },
   "weekly_insights": {
-    "best_pr_size": "S",
+    "best_pr_size": "L",
     "size_acceptance": {},
     "type_acceptance": {},
-    "common_rejection_reasons": [
-      "- PR #24720: Closing: TS 7.0.2 bump is blocked — typescript-eslint caps TypeScript <6.1.0 (see revert ba50cd2 on scanner/fix-24662). Retry once typescript-eslint supports TS 7.",
-      "- PR #24626: OK, I won't notify you again about this release, but will get in touch when a new version is available. If you'd rather skip all updates until the next major or minor version, let me know by commenting `@dependabot ignore this major version` or `@dependabot ignore this minor version`. You can also ignore all major, minor, or patch releases for a dependency by adding an [`ignore` condition](https://docs.github.com/en/code-security/supply-chain-security/configuration-options-for-dependency-updates#ignore) with the desired `update_types` to your config file.",
-      "If you change your mind, just re-open this PR and I'll resolve any conflicts on it.",
-      "- PR #24621: OK, I won't notify you again about this release, but will get in touch when a new version is available. If you'd rather skip all updates until the next major or minor version, let me know by commenting `@dependabot ignore this major version` or `@dependabot ignore this minor version`. You can also ignore all major, minor, or patch releases for a dependency by adding an [`ignore` condition](https://docs.github.com/en/code-security/supply-chain-security/configuration-options-for-dependency-updates#ignore) with the desired `update_types` to your config file."
-    ],
+    "common_rejection_reasons": [],
     "best_change_type": "bug_fix",
-    "last_report_date": "2026-11-01"
+    "last_report_date": "2026-11-08"
   },
   "cncf_insights": {
     "last_scan_date": "2026-11-04",
