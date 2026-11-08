@@ -24,13 +24,27 @@ const authCookieName = "kc_auth"
 // bearerAuthPrefix is the Authorization header scheme prefix for JWTs.
 const bearerAuthPrefix = "Bearer "
 
-// hasAuthCredentials reports whether the request carries a bearer header or the
-// auth cookie. It only checks presence; jwtAuth validates the token downstream.
-func hasAuthCredentials(c *fiber.Ctx) bool {
-	if strings.HasPrefix(c.Get(fiber.HeaderAuthorization), bearerAuthPrefix) {
-		return true
+// hasValidAuthCredentials reports whether the request carries a bearer header
+// or auth cookie containing a JWT that actually verifies against secret.
+//
+// publicAPI routes (e.g. compliance/SBOM endpoints) never run jwtAuth or
+// apiLimiter themselves, so a presence-only check here would let anyone
+// bypass the per-IP publicLimiter entirely by sending an arbitrary
+// Authorization header or kc_auth cookie value — defeating the very rate
+// limit this exemption is meant to relax for genuinely authenticated
+// clients. Validating the signature closes that bypass. See #24887.
+func hasValidAuthCredentials(c *fiber.Ctx, secret string) bool {
+	tokenString := ""
+	if header := c.Get(fiber.HeaderAuthorization); strings.HasPrefix(header, bearerAuthPrefix) {
+		tokenString = strings.TrimPrefix(header, bearerAuthPrefix)
+	} else if cookie := c.Cookies(authCookieName); cookie != "" {
+		tokenString = cookie
 	}
-	return c.Cookies(authCookieName) != ""
+	if tokenString == "" {
+		return false
+	}
+	token, err := middleware.ParseJWT(tokenString, secret)
+	return err == nil && token != nil && token.Valid
 }
 
 type routeSetupContext struct {
@@ -223,9 +237,12 @@ func (s *Server) setupAuthRoutes(app *fiber.App) *routeSetupContext {
 		if strings.HasPrefix(path, "/api/auth/") {
 			return c.Next()
 		}
-		// Credential-bearing requests are capped by apiLimiter and validated by
-		// jwtAuth; the per-IP public limiter would starve shared-egress users.
-		if hasAuthCredentials(c) {
+		// Requests bearing a genuinely valid JWT skip the per-IP public
+		// limiter (shared-egress authenticated users would otherwise be
+		// starved); the token signature is verified, not merely its
+		// presence, so this cannot be spoofed with an arbitrary header
+		// or cookie value.
+		if hasValidAuthCredentials(c, s.config.JWTSecret) {
 			return c.Next()
 		}
 		return publicLimiter(c)
