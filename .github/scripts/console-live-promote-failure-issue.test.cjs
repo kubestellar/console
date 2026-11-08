@@ -1,6 +1,7 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
-const { _test } = require('./console-live-promote-failure-issue.cjs')
+const run = require('./console-live-promote-failure-issue.cjs')
+const { _test } = run
 
 function classify(liveUiFailures, logText = '') {
   return _test.classifyFailure({
@@ -392,4 +393,62 @@ test('selects a closed matching issue when no open issue exists', () => {
   assert.equal(selected.existing.number, 62)
   assert.equal(selected.existing.state, 'closed')
   assert.deepEqual(selected.openMatchingIssues, [])
+})
+
+function buildMockGithub(existingIssues) {
+  const calls = { updates: [], comments: [], created: [] }
+  const listJobsForWorkflowRun = async () => []
+  const listWorkflowRunArtifacts = async () => []
+  const listForRepo = async () => existingIssues
+  const github = {
+    request: async () => ({ data: '' }),
+    paginate: async (method) => {
+      if (method === listJobsForWorkflowRun) return []
+      if (method === listWorkflowRunArtifacts) return []
+      if (method === listForRepo) return existingIssues
+      return []
+    },
+    rest: {
+      repos: { get: async () => ({ data: { has_issues: true } }) },
+      actions: {
+        getWorkflowRun: async () => ({
+          data: { name: 'Console Live Promote', conclusion: 'failure', html_url: 'https://example.invalid/run', head_sha: 'a'.repeat(40) },
+        }),
+        listJobsForWorkflowRun,
+        listWorkflowRunArtifacts,
+      },
+      issues: {
+        getLabel: async () => ({}),
+        createLabel: async () => ({}),
+        listForRepo,
+        update: async (params) => { calls.updates.push(params) },
+        createComment: async (params) => { calls.comments.push(params) },
+        create: async (params) => { calls.created.push(params); return { data: { number: 999 } } },
+      },
+    },
+  }
+  return { github, calls }
+}
+
+test('reopens a closed matching issue instead of only commenting on recurrence', async () => {
+  process.env.SOURCE_RUN_ID = '123456'
+  process.env.ARTIFACT_ROOT = '/tmp/console-live-promote-test-artifacts-does-not-exist'
+  const closedIssue = {
+    number: 20594,
+    state: 'closed',
+    title: '[console-live][canary-blocked][canary-setup] private canary setup failed',
+    body: 'historical closed issue',
+  }
+  const { github, calls } = buildMockGithub([closedIssue])
+  const context = { repo: { owner: 'kubestellar', repo: 'console' }, serverUrl: 'https://github.com' }
+  const core = { warning: () => {}, info: () => {} }
+
+  await run({ github, context, core })
+
+  assert.equal(calls.created.length, 0, 'should reuse the existing issue instead of creating a new one')
+  const reopenUpdate = calls.updates.find((update) => update.issue_number === closedIssue.number)
+  assert.ok(reopenUpdate, 'expected an issues.update call for the closed matching issue')
+  assert.equal(reopenUpdate.state, 'open', 'a recurring failure must reopen the closed issue, not leave it closed')
+  const recurrenceComment = calls.comments.find((comment) => comment.issue_number === closedIssue.number)
+  assert.ok(recurrenceComment, 'expected a recurrence comment on the reopened issue')
 })
