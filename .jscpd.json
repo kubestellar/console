@@ -1,0 +1,10 @@
+{
+  "threshold": 5.5,
+  "reporters": ["console"],
+  "path": ["pkg", "cmd"],
+  "ignore": ["**/*_test.go", "**/testdata/**", "**/vendor/**"],
+  "format": ["go"],
+  "minLines": 10,
+  "minTokens": 50,
+  "gitignore": true
+}
