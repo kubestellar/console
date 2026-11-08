@@ -6,6 +6,7 @@ import { Input } from '../../../ui/Input'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../../../lib/cn'
 import type { ClusterResourceTreeProps, TreeLens } from './types'
+import { TREE_MAX_VISIBLE_NODES, TREE_MAX_VISIBLE_NAMESPACES } from './types'
 import { DeploymentIssuesBranch, PodIssuesBranch, StorageBranch, NetworkBranch } from './ClusterResourceTreeBranches'
 
 export type { ClusterResourceTreeProps } from './types'
@@ -128,7 +129,7 @@ export function ClusterResourceTree({
 
                   {expandedSections.has('nodes') && (
                     <div className="ml-6 border-l-2 border-blue-500/30 pl-4 mt-1 space-y-1">
-                      {filteredNodes.slice(0, 20).map((node) => (
+                      {filteredNodes.slice(0, TREE_MAX_VISIBLE_NODES).map((node) => (
                         <button
                           key={node.name}
                           onClick={() => drillToNode(effectiveClusterName, node.name, { status: node.status, roles: node.roles, unschedulable: node.unschedulable })}
@@ -148,9 +149,9 @@ export function ClusterResourceTree({
                           <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 ml-auto" />
                         </button>
                       ))}
-                      {filteredNodes.length > 20 && (
+                      {filteredNodes.length > TREE_MAX_VISIBLE_NODES && (
                         <div className="text-xs text-muted-foreground p-2">
-                          +{filteredNodes.length - 20} more nodes...
+                          +{filteredNodes.length - TREE_MAX_VISIBLE_NODES} more nodes...
                         </div>
                       )}
                     </div>
@@ -173,7 +174,7 @@ export function ClusterResourceTree({
 
                   {expandedSections.has('namespaces') && (
                     <div className="ml-6 border-l-2 border-purple-500/30 pl-4 mt-1 space-y-1">
-                      {filteredNamespaceStats.slice(0, 15).map((namespaceStat, i) => {
+                      {filteredNamespaceStats.slice(0, TREE_MAX_VISIBLE_NAMESPACES).map((namespaceStat, i) => {
                         const ns = namespaceStat.name
                         const nsKey = `ns-${ns}`
                         const nsPodIssues = namespaceResources.podIssueCounts[ns] || 0
@@ -219,9 +220,9 @@ export function ClusterResourceTree({
                           </div>
                         )
                       })}
-                      {filteredNamespaces.length > 15 && (
+                      {filteredNamespaces.length > TREE_MAX_VISIBLE_NAMESPACES && (
                         <div className="text-xs text-muted-foreground p-2">
-                          +{filteredNamespaces.length - 15} more namespaces...
+                          +{filteredNamespaces.length - TREE_MAX_VISIBLE_NAMESPACES} more namespaces...
                         </div>
                       )}
                     </div>
