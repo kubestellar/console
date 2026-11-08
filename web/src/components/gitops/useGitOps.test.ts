@@ -132,6 +132,27 @@ describe('useGitOps', () => {
     expect(stableRefetch).toHaveBeenCalled()
   })
 
+  it('requires a selected cluster for multi-cluster drift checks and keeps results scoped', async () => {
+    mockClusters = [{ name: 'a', context: 'a' }, { name: 'b', context: 'b' }]
+    const { result } = renderHook(() => useGitOps())
+
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith(HEALTH_CHECK_PATH, expect.anything()))
+    expect(result.current.apps.every(app => app.clusterAmbiguous && app.syncStatus === 'unknown')).toBe(true)
+    expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).includes(DETECT_DRIFT_PATH_SUFFIX))).toBe(false)
+    act(() => result.current.handleSync(result.current.apps[0]))
+    expect(result.current.syncDialogApp).toBeNull()
+
+    act(() => result.current.setSelectedCluster('b'))
+    await waitFor(() => expect(result.current.filteredApps.every(app => app.syncStatus === 'synced')).toBe(true))
+    expect(result.current.filteredApps.length).toBe(result.current.apps.length)
+    const driftCalls = vi.mocked(fetch).mock.calls.filter(([url]) => String(url).includes(DETECT_DRIFT_PATH_SUFFIX))
+    expect(driftCalls.length).toBe(result.current.apps.length)
+    expect(driftCalls.every(([, init]) => JSON.parse(String(init?.body)).cluster === 'b')).toBe(true)
+
+    act(() => result.current.setSelectedCluster(''))
+    expect(result.current.apps.every(app => app.clusterAmbiguous && app.syncStatus === 'unknown')).toBe(true)
+  })
+
   it('handleSync opens the sync dialog for the given app and handleSyncComplete marks it synced', () => {
     const { result } = renderHook(() => useGitOps())
     const app = result.current.apps[0]
