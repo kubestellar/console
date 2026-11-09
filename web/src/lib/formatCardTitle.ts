@@ -77,8 +77,8 @@ export function formatCardTitle(cardType: string | null | undefined): string {
     return ''
   }
 
-  // Check for custom title override first
-  if (CUSTOM_TITLES[cardType]) {
+  // Check for custom title override first (safely checking own property to avoid Object.prototype pollution)
+  if (Object.prototype.hasOwnProperty.call(CUSTOM_TITLES, cardType)) {
     return CUSTOM_TITLES[cardType]
   }
 

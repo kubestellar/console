@@ -36,6 +36,14 @@ describe('formatCardTitle', () => {
     expect(formatCardTitle('')).toBe('')
   })
 
+  it('does not treat Object.prototype properties as custom title overrides (regression for #24599)', () => {
+    expect(typeof formatCardTitle('constructor')).toBe('string')
+    expect(formatCardTitle('constructor')).toBe('Constructor')
+    expect(typeof formatCardTitle('toString')).toBe('string')
+    expect(formatCardTitle('toString')).toBe('Tostring')
+    expect(typeof formatCardTitle('__proto__')).toBe('string')
+  })
+
   // Regression test for issue #5902: defensive guard against undefined
   // card_type. Stale dashboard layouts could contain entries without a
   // card_type field, which used to crash with
