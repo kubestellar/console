@@ -7,6 +7,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { MapPin, Search as SearchIcon, Star, X, Loader2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { WEATHER_API } from '../../../config/externalApis'
+import { useDemoMode } from '../../../hooks/useDemoMode'
 import { useKeyboardNav } from '../../../hooks/useKeyboardNav'
 import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../../lib/constants'
 import { Input } from '../../ui/Input'
@@ -43,6 +44,7 @@ export function WeatherSearch({
 }: WeatherSearchProps) {
   const { t } = useTranslation('common')
   const { showToast } = useToast()
+  const { isDemoMode } = useDemoMode()
 
   // City search state
   const [citySearchInput, setCitySearchInput] = useState('')
@@ -54,7 +56,8 @@ export function WeatherSearch({
 
   // City search with Open-Meteo Geocoding API
   const searchCities = useCallback(async (query: string) => {
-    if (!query || query.length < 2) {
+    // Demo mode must not hit the live geocoding API
+    if (isDemoMode || !query || query.length < 2) {
       setCitySearchResults([])
       setShowCityDropdown(false)
       return
@@ -79,7 +82,7 @@ export function WeatherSearch({
     } finally {
       setIsSearching(false)
     }
-  }, [showToast, t])
+  }, [isDemoMode, showToast, t])
 
   useEffect(() => {
     if (searchTimeoutRef.current) {

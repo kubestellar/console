@@ -9,6 +9,7 @@
 import { useEffect, useState, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Copy, Search } from 'lucide-react'
+import { useDemoMode } from '../../../hooks/useDemoMode'
 import { fetchPipelineLog } from '../../../hooks/useGitHubPipelines'
 import { Skeleton } from '../../ui/Skeleton'
 
@@ -19,6 +20,7 @@ const COPIED_INDICATOR_MS = 1500
  * satisfy the ui-ux-standard ratchet and make a future i18n pass easy. */
 const LABEL_CLOSE = 'Close'
 const PLACEHOLDER_FILTER_LINES = 'Filter lines…'
+const DEMO_LOG_MESSAGE = 'Demo mode: job logs are not available.'
 
 interface LogsModalProps {
   repo: string
@@ -34,12 +36,18 @@ export function LogsModal({ repo, jobId, title, onClose }: LogsModalProps) {
   const [query, setQuery] = useState('')
   const [copied, setCopied] = useState(false)
   const preRef = useRef<HTMLPreElement>(null)
+  const { isDemoMode } = useDemoMode()
 
   useEffect(() => {
     let cancelled = false
     async function load() {
       setIsLoading(true)
       setError(null)
+      if (isDemoMode) {
+        setLog(DEMO_LOG_MESSAGE)
+        setIsLoading(false)
+        return
+      }
       const result = await fetchPipelineLog(repo, jobId)
       if (cancelled) return
       if ('error' in result) setError(result.error)
@@ -52,7 +60,7 @@ export function LogsModal({ repo, jobId, title, onClose }: LogsModalProps) {
     }
     void load()
     return () => { cancelled = true }
-  }, [repo, jobId])
+  }, [repo, jobId, isDemoMode])
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
