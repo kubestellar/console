@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_updated": "2026-11-08T03:05:05Z",
+  "last_updated": "2026-11-09T03:05:04Z",
   "rolling_window_days": 30,
   "categories": {
     "performance": {
@@ -25,18 +25,18 @@
       "last_evaluated": "2026-11-07T03:04:40Z"
     },
     "operator": {
-      "merged": 1176,
+      "merged": 1182,
       "closed": 280,
       "acceptance_rate": 0.81,
       "status": "boosted",
-      "last_evaluated": "2026-11-08T03:05:05Z"
+      "last_evaluated": "2026-11-09T03:05:04Z"
     },
     "sre": {
-      "merged": 692,
+      "merged": 693,
       "closed": 101,
       "acceptance_rate": 0.87,
       "status": "boosted",
-      "last_evaluated": "2026-11-08T03:05:05Z"
+      "last_evaluated": "2026-11-09T03:05:04Z"
     },
     "features": {
       "merged": 61,
@@ -46,11 +46,11 @@
       "last_evaluated": "2026-11-01T03:05:16Z"
     },
     "resilience": {
-      "merged": 162,
+      "merged": 164,
       "closed": 66,
       "acceptance_rate": 0.71,
       "status": "normal",
-      "last_evaluated": "2026-11-08T03:05:05Z"
+      "last_evaluated": "2026-11-09T03:05:04Z"
     },
     "consistency": {
       "merged": 41,
@@ -86,16 +86,6 @@
     ]
   },
   "history": [
-    {
-      "date": "2026-09-22",
-      "total_merged": 2131,
-      "total_closed": 585,
-      "categories_blocked": [],
-      "categories_boosted": [
-        "sre",
-        "features"
-      ]
-    },
     {
       "date": "2026-09-24",
       "total_merged": 2155,
@@ -391,6 +381,17 @@
         "sre",
         "features"
       ]
+    },
+    {
+      "date": "2026-11-09",
+      "total_merged": 2408,
+      "total_closed": 589,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "operator",
+        "sre",
+        "features"
+      ]
     }
   ],
   "rotation_weights": {
@@ -404,7 +405,7 @@
     "consistency": 0.99
   },
   "max_issues_override": 5,
-  "pr_guidance": "Keep changes under 50 lines (size S) for best acceptance rate. Split larger fixes into multiple PRs.",
+  "pr_guidance": "Keep PRs small and focused. Smaller PRs have higher acceptance rates.",
   "regression_insights": {
     "focus_overrides": [],
     "repeat_issue_patterns": [],
