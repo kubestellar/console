@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_updated": "2026-11-09T03:05:04Z",
+  "last_updated": "2026-11-10T03:04:42Z",
   "rolling_window_days": 30,
   "categories": {
     "performance": {
@@ -11,25 +11,25 @@
       "last_evaluated": "2026-11-02T03:05:09Z"
     },
     "security": {
-      "merged": 135,
+      "merged": 136,
       "closed": 71,
       "acceptance_rate": 0.66,
       "status": "normal",
-      "last_evaluated": "2026-10-28T03:05:28Z"
+      "last_evaluated": "2026-11-10T03:04:42Z"
     },
     "a11y": {
-      "merged": 112,
+      "merged": 113,
       "closed": 29,
-      "acceptance_rate": 0.79,
+      "acceptance_rate": 0.8,
       "status": "normal",
-      "last_evaluated": "2026-11-07T03:04:40Z"
+      "last_evaluated": "2026-11-10T03:04:42Z"
     },
     "operator": {
-      "merged": 1182,
-      "closed": 280,
+      "merged": 1202,
+      "closed": 282,
       "acceptance_rate": 0.81,
       "status": "boosted",
-      "last_evaluated": "2026-11-09T03:05:04Z"
+      "last_evaluated": "2026-11-10T03:04:42Z"
     },
     "sre": {
       "merged": 693,
@@ -46,18 +46,18 @@
       "last_evaluated": "2026-11-01T03:05:16Z"
     },
     "resilience": {
-      "merged": 164,
+      "merged": 165,
       "closed": 66,
       "acceptance_rate": 0.71,
       "status": "normal",
-      "last_evaluated": "2026-11-09T03:05:04Z"
+      "last_evaluated": "2026-11-10T03:04:42Z"
     },
     "consistency": {
-      "merged": 41,
+      "merged": 42,
       "closed": 21,
-      "acceptance_rate": 0.66,
+      "acceptance_rate": 0.67,
       "status": "normal",
-      "last_evaluated": "2026-10-19T03:08:08Z"
+      "last_evaluated": "2026-11-10T03:04:42Z"
     }
   },
   "weekly_insights": {
@@ -86,16 +86,6 @@
     ]
   },
   "history": [
-    {
-      "date": "2026-09-24",
-      "total_merged": 2155,
-      "total_closed": 585,
-      "categories_blocked": [],
-      "categories_boosted": [
-        "sre",
-        "features"
-      ]
-    },
     {
       "date": "2026-09-26",
       "total_merged": 2161,
@@ -392,17 +382,28 @@
         "sre",
         "features"
       ]
+    },
+    {
+      "date": "2026-11-10",
+      "total_merged": 2432,
+      "total_closed": 591,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "operator",
+        "sre",
+        "features"
+      ]
     }
   ],
   "rotation_weights": {
     "performance": 0.98,
     "security": 0.99,
-    "a11y": 1.19,
+    "a11y": 1.2,
     "operator": 2.0,
     "sre": 2.0,
     "features": 2.0,
     "resilience": 1.07,
-    "consistency": 0.99
+    "consistency": 1.01
   },
   "max_issues_override": 5,
   "pr_guidance": "Keep PRs small and focused. Smaller PRs have higher acceptance rates.",
