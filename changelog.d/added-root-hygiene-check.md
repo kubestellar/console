@@ -1,0 +1,1 @@
+- Added `scripts/check-root-files.sh` and the `make check-root-hygiene` target, which fail when a tracked top-level file is not on an explicit allowlist, so scratch files swept into the repo root by squash merges are caught before merge instead of by manual cleanup sweeps. Not yet wired into CI (#24753).

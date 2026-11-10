@@ -7,7 +7,7 @@
 #   make restart   Restart all processes via startup-oauth.sh
 #   make help      Show available targets
 
-.PHONY: help dev build restart update pull lint analytics-ping dashboard-lint
+.PHONY: help dev build restart update pull lint analytics-ping dashboard-lint check-root-hygiene
 
 SHELL := /bin/bash
 
@@ -72,6 +72,12 @@ dashboard-lint:
 ## locally before a refactor PR to confirm a dedup lowers the clone count.
 duplication-check:
 	npx --yes jscpd --config .jscpd.json
+
+## check-root-hygiene: Fail if a tracked top-level file is not on the root
+## allowlist in scripts/check-root-files.sh (stray scratch files, #24753). Not
+## yet run by CI.
+check-root-hygiene:
+	bash scripts/check-root-files.sh
 
 ## test: Run all Go tests with a hard 5-minute timeout per package
 ## Prevents zombie agent.test process leaks from ad-hoc test runs
