@@ -271,6 +271,35 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Install GoReleaser separately, before the tag is pushed, so a transient
+      # download failure (e.g. 504 from GitHub's release-asset CDN, #24894)
+      # neither fails the release outright nor leaves a pushed tag with no
+      # release behind it.
+      - name: Install GoReleaser
+        id: goreleaser_install
+        uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
+        continue-on-error: true
+        with:
+          distribution: goreleaser
+          version: v2.16.0
+          install-only: true
+
+      - name: Wait before GoReleaser install retry
+        if: steps.goreleaser_install.outcome == 'failure'
+        env:
+          RETRY_DELAY_SECONDS: 60
+        run: |
+          echo "::warning::GoReleaser download failed (likely a transient GitHub release CDN error), retrying in ${RETRY_DELAY_SECONDS}s..."
+          sleep "$RETRY_DELAY_SECONDS"
+
+      - name: Install GoReleaser (retry)
+        if: steps.goreleaser_install.outcome == 'failure'
+        uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
+        with:
+          distribution: goreleaser
+          version: v2.16.0
+          install-only: true
+
       - name: Create and push tag
         run: |
           VERSION="${{ needs.determine_version.outputs.version }}"
@@ -288,11 +317,7 @@ jobs:
           git push origin "$VERSION"
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
-        with:
-          distribution: goreleaser
-          version: v2.16.0
-          args: release --clean
+        run: goreleaser release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
