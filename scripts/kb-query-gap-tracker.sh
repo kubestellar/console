@@ -236,7 +236,8 @@ echo "|------------|-------------|----------------|" >> "$OUTPUT"
 
 # Auto-extract PreflightErrorCode values from the TypeScript source so new
 # codes are picked up automatically without a manual sync step.
-PREFLIGHT_TS="web/src/lib/missions/preflightCheck.ts"
+# PreflightErrorCode moved to checks/types.ts as part of #15790 refactoring.
+PREFLIGHT_TS="web/src/lib/missions/checks/types.ts"
 if [[ ! -f "$PREFLIGHT_TS" ]]; then
   echo "⚠️  Cannot find $PREFLIGHT_TS — skipping preflight coverage check" >> "$OUTPUT"
   echo ""
