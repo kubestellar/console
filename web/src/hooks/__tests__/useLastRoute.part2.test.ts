@@ -87,17 +87,33 @@ describe('useLastRoute hook', () => {
     expect(localStorage.getItem(LAST_ROUTE_KEY)).toBeNull()
   })
 
-  it('redirects from "/" to last saved route', () => {
-    // The path-change effect (declared before the redirect effect) overwrites
-    // LAST_ROUTE_KEY with '/' before redirect effect reads it. To test the
-    // redirect path, stub getItem so the redirect effect sees '/clusters'.
-    vi.spyOn(window.localStorage, 'getItem').mockImplementation((key: string) => {
-      if (key === LAST_ROUTE_KEY) return '/clusters'
-      return null
-    })
+  it('redirects from "/" to last saved route on a cold mount', () => {
+    localStorage.setItem(LAST_ROUTE_KEY, '/clusters')
     mockPathname = '/'
     mockSearch = ''
     renderHook(() => useLastRoute())
+    expect(mockNavigate).toHaveBeenCalledWith('/clusters', { replace: true })
+  })
+
+  it('redirects from "/" to first sidebar route when no last route is saved', () => {
+    localStorage.setItem('kubestellar-sidebar-config-v5', JSON.stringify({
+      primaryNav: [{ href: '/workloads' }],
+    }))
+    mockPathname = '/'
+    mockSearch = ''
+    renderHook(() => useLastRoute())
+    expect(mockNavigate).toHaveBeenCalledWith('/workloads', { replace: true })
+  })
+
+  it('prefers the saved last route over the first sidebar route', () => {
+    localStorage.setItem(LAST_ROUTE_KEY, '/clusters')
+    localStorage.setItem('kubestellar-sidebar-config-v5', JSON.stringify({
+      primaryNav: [{ href: '/workloads' }],
+    }))
+    mockPathname = '/'
+    mockSearch = ''
+    renderHook(() => useLastRoute())
+    expect(mockNavigate).toHaveBeenCalledTimes(1)
     expect(mockNavigate).toHaveBeenCalledWith('/clusters', { replace: true })
   })
 

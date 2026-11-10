@@ -124,6 +124,10 @@ async function waitForDashboardReady(page: Page) {
 }
 
 async function navigateToDashboard(page: Page) {
+  // useLastRoute redirects a cold mount at '/' to the last visited route
+  // (#24881); clear the saved route so '/' renders the dashboard. The
+  // evaluate fails on about:blank (no origin) — ignore, storage is empty then.
+  await page.evaluate(() => localStorage.removeItem('kubestellar-last-route')).catch(() => {})
   await page.goto('/', { waitUntil: 'domcontentloaded' })
   await page.waitForURL(/\/(?:[?#].*)?$/, { timeout: ROOT_VISIBLE_TIMEOUT_MS })
   await waitForDashboardReady(page)

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ROUTES } from '../config/routes'
 import { FOCUS_DELAY_MS } from '../lib/constants/network'
@@ -68,6 +68,10 @@ export function useLastRoute() {
   // Track scroll position per path in a ref — updated immediately on scroll
   // so the cleanup effect can read it even after KeepAlive hides the content.
   const scrollTopByPathRef = useRef<Record<string, number>>({})
+  // Snapshot the saved route on first render: the save effect below runs
+  // before the restore effect in the same commit and overwrites LAST_ROUTE_KEY
+  // with the current path, so the restore effect must not re-read storage.
+  const [initialLastRoute] = useState(getLastRoute)
 
   // Keep pathnameRef in sync for use in cleanup functions
   pathnameRef.current = location.pathname
@@ -290,7 +294,7 @@ export function useLastRoute() {
     if (params.has('card') || params.has('drilldown') || params.has('action') || params.has('mission')) return
 
     try {
-      const lastRoute = localStorage.getItem(LAST_ROUTE_KEY)
+      const lastRoute = initialLastRoute
       const firstSidebarRoute = getFirstDashboardRoute()
 
       // If lastRoute is '/' or same as current, no redirect needed

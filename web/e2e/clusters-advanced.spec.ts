@@ -251,6 +251,9 @@ test.describe('Clusters: Collapsible Cluster Info Cards section (#11777)', () =>
     
     // Navigate away and back
     // IMPORTANT: Wait for first navigation to stabilize before navigating again (#12095)
+    // Clear the saved last route so the cold mount at '/' shows the dashboard
+    // instead of redirecting back to /clusters (useLastRoute restore, #24881).
+    await page.evaluate(() => localStorage.removeItem('kubestellar-last-route'))
     await page.goto('/')
     await page.waitForLoadState('networkidle', { timeout: 15000 }).catch((error) => { console.error('Promise catch:', error) })
     await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
