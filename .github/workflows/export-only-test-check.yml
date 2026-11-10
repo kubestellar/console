@@ -1,0 +1,40 @@
+name: Export-only Test Stub Check
+
+# Phase 1 (advisory, issue #24890): reports trivial export-only test stubs
+# against a recorded baseline. continue-on-error keeps it non-blocking.
+# After one week of data, propose a dated flip to `--strict` (fail on increase).
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'web/src/**/*.test.ts'
+      - 'web/src/**/*.test.tsx'
+      - 'web/src/**/*.spec.ts'
+      - 'web/src/**/*.spec.tsx'
+      - 'web/scripts/check-export-only-tests.mjs'
+      - 'web/scripts/export-only-test-baseline.json'
+      - '.github/workflows/export-only-test-check.yml'
+  workflow_dispatch:
+
+permissions: read-all
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Export-only test stub report
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+
+      - name: Report export-only test stubs
+        working-directory: web
+        run: node scripts/check-export-only-tests.mjs

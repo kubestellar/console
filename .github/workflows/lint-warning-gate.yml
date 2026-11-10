@@ -43,7 +43,9 @@ jobs:
         run: |
           set +e
           RESULT=$(npx eslint . --format json 2>/dev/null)
-          WARNINGS=$(echo "$RESULT" | jq '[.[].messages[] | select(.severity == 1)] | length')
+          WARNINGS=$(echo "$RESULT" | jq '[.[].messages[] | select(.severity == 1 and ((.ruleId // "") | startswith("jsx-a11y/") | not))] | length')
+          A11Y=$(echo "$RESULT" | jq '[.[].messages[] | select((.ruleId // "") | startswith("jsx-a11y/"))] | length')
+          echo "ℹ️ Advisory jsx-a11y warning count (non-blocking, #24877): $A11Y"
           echo "warnings=$WARNINGS" >> "$GITHUB_OUTPUT"
           echo "ℹ️ Current lint warning count: $WARNINGS"
 
