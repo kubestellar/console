@@ -8,7 +8,7 @@ on:
       macos_runner:
         description: GitHub-hosted macOS runner label.
         required: false
-        default: macos-14
+        default: macos-15
         type: string
       litmusFailure:
         description: Force the synthetic popup z-index failure detector.
@@ -38,7 +38,10 @@ env:
 jobs:
   macos-popup-canary:
     name: macOS WebKit Popup Canary
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.macos_runner || 'macos-14' }}
+    # GitHub retired the macos-14 image: jobs requesting it are cancelled at
+    # queue time ("The configuration 'macos-14-arm64-us-default' is not
+    # supported") before any step runs (kubestellar/console#20593).
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.macos_runner || 'macos-15' }}
     timeout-minutes: 25
     if: github.repository == 'kubestellar/console'
     environment: console-live
