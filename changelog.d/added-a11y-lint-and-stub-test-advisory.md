@@ -1,0 +1,1 @@
+- Added advisory `eslint-plugin-jsx-a11y` warnings (click-events-have-key-events, no-static-element-interactions, no-noninteractive-element-interactions) and a warning-only export-only test stub report. Neither blocks CI.

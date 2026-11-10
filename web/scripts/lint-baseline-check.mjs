@@ -39,7 +39,12 @@ try {
 
 // Parse results
 const currentData = JSON.parse(fs.readFileSync(TEMP_FILE, 'utf8'));
-const currentViolations = extractViolations(currentData);
+const allViolations = extractViolations(currentData);
+// jsx-a11y rules are advisory (#24877): reported, never gated or baselined.
+const ADVISORY_RULE_PREFIX = 'jsx-a11y/';
+const advisoryViolations = allViolations.filter(v => v.rule.startsWith(ADVISORY_RULE_PREFIX));
+const currentViolations = allViolations.filter(v => !v.rule.startsWith(ADVISORY_RULE_PREFIX));
+console.log(`ℹ️  Advisory jsx-a11y warnings (non-blocking): ${advisoryViolations.length}`);
 
 // Update mode — write baseline and exit
 if (isUpdateMode) {

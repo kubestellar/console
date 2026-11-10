@@ -1,5 +1,6 @@
 import js from '@eslint/js'
 import globals from 'globals'
+import jsxA11y from 'eslint-plugin-jsx-a11y'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
@@ -15,11 +16,17 @@ export default tseslint.config(
     },
     plugins: {
       'react-hooks': reactHooks,
+      'jsx-a11y': jsxA11y,
       'react-refresh': reactRefresh,
     },
     rules: {
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
+      // Phase 1 advisory (#24877): warn only. Excluded from the lint baseline
+      // and warning-count gates; a dated PR will flip these to 'error'.
+      'jsx-a11y/click-events-have-key-events': 'warn',
+      'jsx-a11y/no-static-element-interactions': 'warn',
+      'jsx-a11y/no-noninteractive-element-interactions': 'warn',
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/ban-ts-comment': 'warn',
       '@typescript-eslint/no-empty-object-type': 'warn',
