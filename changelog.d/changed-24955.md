@@ -1,0 +1,1 @@
+- Triaged Auto-QA a11y findings (#24955): every flagged non-test button (`CardFilterChips`, `CardClusterFilter`, `CardStates`, `PodDrillDown`, `DrasiConnectionsModal`, `DrasiConfigModals`) already has an `aria-label` or visible text, and every flagged `<img>` already has a meaningful `alt`. No component changes needed.
