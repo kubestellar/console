@@ -185,7 +185,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: '1.26.10'
+          go-version: '1.26.11'
           cache: true
 
       - name: Set up Node.js
@@ -254,7 +254,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: '1.26.10'
+          go-version: '1.26.11'
           cache: true
 
       - name: Set up Node.js
@@ -522,7 +522,7 @@ jobs:
           build-args: |
             APP_VERSION=${{ needs.determine_version.outputs.version }}
             COMMIT_HASH=${{ github.sha }}
-            GOLANG_BASE=docker.io/library/golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d
+            GOLANG_BASE=docker.io/library/golang:1.27.4-alpine@sha256:0a5f7fe796599ff487605987432e7619ae45beeb2fba4c2ce0b907879932aebf
             ALPINE_BASE=docker.io/library/alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
             NODE_BASE=docker.io/library/node:26-alpine@sha256:0b36e8c136b94cd4fcf02188228e76c31ad5872eef3fec8cbd2eee500cfd9e80
           cache-from: type=gha,scope=docker-${{ steps.prep.outputs.pair }}
