@@ -34,6 +34,31 @@ vi.mock('../../ui/Toast', () => ({
   }),
 }))
 
+vi.mock('../../../lib/modals/ConfirmDialog', () => ({
+  ConfirmDialog: ({
+    isOpen,
+    onClose,
+    onConfirm,
+    title,
+    confirmLabel,
+    cancelLabel,
+  }: {
+    isOpen: boolean
+    onClose: () => void
+    onConfirm: () => void
+    title: string
+    confirmLabel?: string
+    cancelLabel?: string
+  }) =>
+    isOpen ? (
+      <div data-testid="confirm-dialog">
+        <span>{title}</span>
+        <button onClick={onConfirm}>{confirmLabel || 'Confirm'}</button>
+        <button onClick={onClose}>{cancelLabel || 'Cancel'}</button>
+      </div>
+    ) : null,
+}))
+
 vi.mock('react-i18next', () => {
   // Stable reference: a new arrow function on every useTranslation() call has a
   // different identity, which causes useCallback (depending on `t`) to recreate
@@ -254,7 +279,9 @@ describe('NamespaceAccessPanel', () => {
     const revokeButtons = screen.getAllByTitle(/Revoke access/i)
     await userEvent.click(revokeButtons[0])
 
-    expect(window.confirm).toHaveBeenCalledWith('Revoke access for alice?')
+    const confirmBtn = screen.getByRole('button', { name: /Revoke/i })
+    await userEvent.click(confirmBtn)
+
     expect(authFetch).toHaveBeenCalledWith(
       expect.stringContaining('/rolebindings'),
       expect.objectContaining({ method: 'DELETE' })
@@ -262,7 +289,6 @@ describe('NamespaceAccessPanel', () => {
   })
 
   it('does not revoke if user cancels confirmation', async () => {
-    vi.mocked(window, { partial: true }).confirm = vi.fn(() => false)
     vi.mocked(api.get).mockResolvedValue({ data: { bindings: mockAccessEntries } })
 
     render(
@@ -279,6 +305,9 @@ describe('NamespaceAccessPanel', () => {
 
     const revokeButtons = screen.getAllByTitle(/Revoke access/i)
     await userEvent.click(revokeButtons[0])
+
+    const cancelBtn = screen.getByRole('button', { name: /Cancel/i })
+    await userEvent.click(cancelBtn)
 
     expect(authFetch).not.toHaveBeenCalled()
   })
