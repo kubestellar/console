@@ -10,8 +10,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/api/middleware"
+	"github.com/kubestellar/console/pkg/api/transport"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/notifications"
 	"github.com/kubestellar/console/pkg/store"
@@ -51,7 +51,7 @@ func newRouteRegistrationServer(t *testing.T) (*Server, *teststore.MockStore) {
 				FrontendURL: "http://localhost:3000",
 			},
 		},
-		hub:                 handlers.NewHub(),
+		hub:                 transport.NewHub(),
 		notificationService: notifications.NewService(),
 		persistenceStore:    store.NewPersistenceStore("testdata/persistence-route-registration.json"),
 		lifecycle:           &serverLifecycle{},

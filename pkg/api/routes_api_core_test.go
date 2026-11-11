@@ -8,9 +8,9 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/api/handlers/auth"
 	"github.com/kubestellar/console/pkg/api/middleware"
+	"github.com/kubestellar/console/pkg/api/transport"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/notifications"
 	"github.com/kubestellar/console/pkg/store"
@@ -88,7 +88,7 @@ func newAgentTokenTestServer(t *testing.T, agentToken string) *Server {
 				FrontendURL: "http://localhost:3000",
 			},
 		},
-		hub:                 handlers.NewHub(),
+		hub:                 transport.NewHub(),
 		notificationService: notifications.NewService(),
 		persistenceStore:    store.NewPersistenceStore("testdata/persistence-agent-token.json"),
 		lifecycle:           &serverLifecycle{},
