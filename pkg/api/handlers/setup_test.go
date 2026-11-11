@@ -7,6 +7,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/api/transport"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/settings"
@@ -38,7 +39,7 @@ type TestEnv struct {
 	TempDir   string
 	Settings  *settings.SettingsManager
 	K8sClient *k8s.MultiClusterClient
-	Hub       *Hub
+	Hub       *transport.Hub
 	Store     store.Store
 }
 
@@ -98,7 +99,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 	k8sClient.SetRawConfig(rawConfig)
 
 	// Initialize Hub
-	hub := NewHub()
+	hub := transport.NewHub()
 	go hub.Run() // Start hub loop (in background)
 	t.Cleanup(func() {
 		hub.Close()
