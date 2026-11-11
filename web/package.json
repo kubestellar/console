@@ -162,7 +162,7 @@
     "@istanbuljs/load-nyc-config": {
       "js-yaml": "^5.2.1"
     },
-    "minimatch": "^10.2.3",
+    "minimatch": "^11.0.1",
     "follow-redirects": "^1.16.2",
     "joi": "^18.3.1",
     "uuid": "^14.0.0",
