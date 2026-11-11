@@ -5,6 +5,7 @@ import { api, authFetch } from '../../lib/api'
 import { useToast } from '../ui/Toast'
 import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { ConfirmDialog } from '../../lib/modals/ConfirmDialog'
 import type { NamespaceDetails, NamespaceAccessEntry } from './types'
 
 interface NamespaceAccessPanelProps {
@@ -23,6 +24,7 @@ export function NamespaceAccessPanel({
   const [accessEntries, setAccessEntries] = useState<NamespaceAccessEntry[]>([])
   const [accessLoading, setAccessLoading] = useState(false)
   const [revokingBindingName, setRevokingBindingName] = useState<string | null>(null)
+  const [pendingRevokeEntry, setPendingRevokeEntry] = useState<NamespaceAccessEntry | null>(null)
 
   const fetchAccess = useCallback(async (ns: NamespaceDetails, signal?: AbortSignal) => {
     setAccessLoading(true)
@@ -42,13 +44,13 @@ export function NamespaceAccessPanel({
     }
   }, [showToast, t])
 
-  const handleRevokeAccess = async (binding: NamespaceAccessEntry) => {
-    if (!isAdmin) return
-    if (!namespace) return
+  const handleRevokeAccess = (binding: NamespaceAccessEntry) => {
+    if (!isAdmin || !namespace) return
+    setPendingRevokeEntry(binding)
+  }
 
-    if (!window.confirm(t('namespaces.confirmRevokeAccess', { subject: binding.subjectName }))) {
-      return
-    }
+  const executeRevokeAccess = async (binding: NamespaceAccessEntry) => {
+    if (!namespace) return
 
     setRevokingBindingName(binding.bindingName)
     try {
@@ -149,6 +151,26 @@ export function NamespaceAccessPanel({
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={Boolean(pendingRevokeEntry)}
+        onClose={() => setPendingRevokeEntry(null)}
+        onConfirm={() => {
+          if (pendingRevokeEntry) {
+            executeRevokeAccess(pendingRevokeEntry)
+            setPendingRevokeEntry(null)
+          }
+        }}
+        title={t('namespaces.revokeAccess', 'Revoke access')}
+        message={
+          pendingRevokeEntry
+            ? t('namespaces.confirmRevokeAccess', { subject: pendingRevokeEntry.subjectName })
+            : ''
+        }
+        confirmLabel={t('common.revoke', 'Revoke')}
+        cancelLabel={t('common.cancel', 'Cancel')}
+        variant="danger"
+      />
     </div>
   )
 }
