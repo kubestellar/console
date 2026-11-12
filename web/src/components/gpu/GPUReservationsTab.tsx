@@ -231,7 +231,7 @@ export function GPUReservationsTab({
                       fill
                     />
                     <div className="flex items-center justify-between text-xs mt-1">
-                      <span style={{ color }}>
+                      <span className="text-foreground">
                         {t('gpuReservations.utilization.avgGpu', `Avg {{pct}}% GPU`, { pct: avg })}
                       </span>
                       <span className="text-muted-foreground">
