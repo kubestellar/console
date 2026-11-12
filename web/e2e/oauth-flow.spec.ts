@@ -135,6 +135,9 @@ test.describe('OAuth flow - frontend (mocked backend)', () => {
       timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
     })
     await page.getByTestId('github-login-button').click()
+    // Finish the login navigation before starting the simulated GitHub callback.
+    // Otherwise the pending /auth/github navigation can replace the callback.
+    await page.waitForURL(/\/auth\/github(?:$|\?)/, { waitUntil: 'load', timeout: NAV_INTERCEPT_TIMEOUT_MS })
 
     // Navigate to the GitHub callback — the mock responds with a redirect
     // to /auth/callback, exercising the real redirect chain (#11909).
