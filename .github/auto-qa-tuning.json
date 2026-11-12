@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_updated": "2026-11-11T03:04:35Z",
+  "last_updated": "2026-11-12T03:04:52Z",
   "rolling_window_days": 30,
   "categories": {
     "performance": {
@@ -19,24 +19,24 @@
     },
     "a11y": {
       "merged": 114,
-      "closed": 29,
-      "acceptance_rate": 0.8,
+      "closed": 30,
+      "acceptance_rate": 0.79,
       "status": "normal",
-      "last_evaluated": "2026-11-11T03:04:35Z"
+      "last_evaluated": "2026-11-12T03:04:52Z"
     },
     "operator": {
-      "merged": 1203,
+      "merged": 1208,
       "closed": 282,
       "acceptance_rate": 0.81,
       "status": "boosted",
-      "last_evaluated": "2026-11-11T03:04:35Z"
+      "last_evaluated": "2026-11-12T03:04:52Z"
     },
     "sre": {
-      "merged": 695,
+      "merged": 696,
       "closed": 101,
       "acceptance_rate": 0.87,
       "status": "boosted",
-      "last_evaluated": "2026-11-11T03:04:35Z"
+      "last_evaluated": "2026-11-12T03:04:52Z"
     },
     "features": {
       "merged": 61,
@@ -46,11 +46,11 @@
       "last_evaluated": "2026-11-01T03:05:16Z"
     },
     "resilience": {
-      "merged": 167,
+      "merged": 168,
       "closed": 66,
       "acceptance_rate": 0.72,
       "status": "normal",
-      "last_evaluated": "2026-11-11T03:04:35Z"
+      "last_evaluated": "2026-11-12T03:04:52Z"
     },
     "consistency": {
       "merged": 42,
@@ -98,16 +98,6 @@
     ]
   },
   "history": [
-    {
-      "date": "2026-09-28",
-      "total_merged": 2164,
-      "total_closed": 585,
-      "categories_blocked": [],
-      "categories_boosted": [
-        "sre",
-        "features"
-      ]
-    },
     {
       "date": "2026-10-14",
       "total_merged": 2170,
@@ -406,12 +396,23 @@
         "sre",
         "features"
       ]
+    },
+    {
+      "date": "2026-11-12",
+      "total_merged": 2445,
+      "total_closed": 592,
+      "categories_blocked": [],
+      "categories_boosted": [
+        "operator",
+        "sre",
+        "features"
+      ]
     }
   ],
   "rotation_weights": {
     "performance": 0.98,
     "security": 0.99,
-    "a11y": 1.2,
+    "a11y": 1.19,
     "operator": 2.0,
     "sre": 2.0,
     "features": 2.0,
