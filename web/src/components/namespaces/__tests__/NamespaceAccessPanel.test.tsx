@@ -279,7 +279,7 @@ describe('NamespaceAccessPanel', () => {
     const revokeButtons = screen.getAllByTitle(/Revoke access/i)
     await userEvent.click(revokeButtons[0])
 
-    const confirmBtn = screen.getByRole('button', { name: /Revoke/i })
+    const confirmBtn = screen.getByRole('button', { name: /^Revoke$/i })
     await userEvent.click(confirmBtn)
 
     expect(authFetch).toHaveBeenCalledWith(
