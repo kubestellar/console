@@ -9,9 +9,9 @@ import {
 import type { GPUReservationsModalsProps } from './GPUReservations.parts'
 
 vi.mock('../dashboard/AddCardModal', () => ({
-  AddCardModal: ({ isOpen, onAddCards, onClose }: { isOpen: boolean; onAddCards: (s: unknown[]) => void; onClose: () => void }) =>
+  AddCardModal: ({ isOpen, onAddCards }: { isOpen: boolean; onAddCards: (s: unknown[]) => void; onClose: () => void }) =>
     isOpen ? (
-      <button data-testid="add-card" onClick={() => { onAddCards([{ type: 'gpu_overview' }]); onClose() }}>add-card</button>
+      <button data-testid="add-card" onClick={() => onAddCards([{ type: 'gpu_overview' }])}>add-card</button>
     ) : null,
 }))
 
