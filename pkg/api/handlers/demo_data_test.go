@@ -72,28 +72,3 @@ func TestDemoDataHelpers(t *testing.T) {
 		assert.Equal(t, []interface{}{"a", "b"}, result["test-key"])
 	})
 }
-
-// TestGetDemoLimaCRDWebhookAliases exercises the remaining root-level demo
-// data aliases (GetDemoLimaInstances/GetDemoCRDs/GetDemoWebhooks) that
-// delegate to the k8s subpackage. The bulk of the demo data generator
-// functions moved to pkg/api/handlers/mcp (their only caller) in epic
-// #23685 phase 1; see mcp/demo_data_test.go for their coverage.
-func TestGetDemoLimaCRDWebhookAliases(t *testing.T) {
-	t.Run("GetDemoLimaInstances", func(t *testing.T) {
-		instances := GetDemoLimaInstances()
-		assert.NotEmpty(t, instances)
-		assert.Equal(t, "lima-k3s", instances[0].Name)
-	})
-
-	t.Run("GetDemoCRDs", func(t *testing.T) {
-		crds := GetDemoCRDs()
-		assert.NotEmpty(t, crds)
-		assert.Equal(t, "certificates", crds[0].Name)
-	})
-
-	t.Run("GetDemoWebhooks", func(t *testing.T) {
-		webhooks := GetDemoWebhooks()
-		assert.NotEmpty(t, webhooks)
-		assert.Equal(t, "cert-manager-webhook", webhooks[0].Name)
-	})
-}
