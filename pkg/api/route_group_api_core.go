@@ -11,13 +11,16 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/handlers"
-	"github.com/kubestellar/console/pkg/api/handlers/auth"
 	"github.com/kubestellar/console/pkg/api/handlers/admin"
+	"github.com/kubestellar/console/pkg/api/handlers/auth"
 	"github.com/kubestellar/console/pkg/api/handlers/compliance"
 	"github.com/kubestellar/console/pkg/api/handlers/dashboards"
 	"github.com/kubestellar/console/pkg/api/handlers/github"
+	k8shandlers "github.com/kubestellar/console/pkg/api/handlers/k8s"
 	"github.com/kubestellar/console/pkg/api/handlers/missions"
+	"github.com/kubestellar/console/pkg/api/handlers/ops"
 	"github.com/kubestellar/console/pkg/api/handlers/persistence"
+	"github.com/kubestellar/console/pkg/api/handlers/proxy"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/api/transport"
 	"github.com/kubestellar/console/pkg/k8s"
@@ -70,7 +73,7 @@ func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 
 	// Ping requires authentication to prevent abuse as an outbound request
 	// primitive (CWE-918, #16948).
-	api.Get("/ping", handlers.PingHandler)
+	api.Get("/ping", ops.PingHandler)
 
 	agentToken := g.config.AgentToken
 	api.Get("/agent/token", func(c *fiber.Ctx) error {
@@ -164,7 +167,7 @@ func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 	// from its subpackage; auth middleware stays on the /api group.
 	admin.NewRegistrar().Register(api, g.handlerDeps())
 
-	onboarding := handlers.NewOnboardingHandler(g.store)
+	onboarding := ops.NewOnboardingHandler(g.store)
 	api.Get("/onboarding/questions", onboarding.GetQuestions)
 	api.Post("/onboarding/responses", onboarding.SaveResponses)
 	api.Post("/onboarding/complete", onboarding.CompleteOnboarding)
@@ -173,22 +176,22 @@ func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 	// itself from its subpackage.
 	dashboards.NewRegistrar().Register(api, g.handlerDeps())
 
-	cardProxy := handlers.NewCardProxyHandler(g.store)
+	cardProxy := proxy.NewCardProxyHandler(g.store)
 	api.Get("/card-proxy", cardProxy.Proxy)
 
-	quantumProxy := handlers.NewQuantumProxyHandler(g.config.JWTSecret)
+	quantumProxy := proxy.NewQuantumProxyHandler(g.config.JWTSecret)
 	api.Get("/quantum/*", quantumProxy.ProxyRequest)
 	api.Post("/quantum/*", quantumProxy.ProxyPostRequest)
 	api.Delete("/quantum/*", quantumProxy.ProxyRequest)
 	api.Get("/result/histogram", quantumProxy.ProxyResultHistogram)
 
-	swaps := handlers.NewSwapHandler(g.store, g.hub)
+	swaps := k8shandlers.NewSwapHandler(g.store, g.hub)
 	api.Get("/swaps", swaps.ListPendingSwaps)
 	api.Post("/swaps/:id/snooze", swaps.SnoozeSwap)
 	api.Post("/swaps/:id/execute", swaps.ExecuteSwap)
 	api.Post("/swaps/:id/cancel", swaps.CancelSwap)
 
-	events := handlers.NewEventHandler(g.store)
+	events := k8shandlers.NewEventHandler(g.store)
 	api.Post("/events", events.RecordEvent)
 	api.Get("/events", events.GetEvents)
 
@@ -199,13 +202,13 @@ func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 	if orbitDataDir == "" || orbitDataDir == "." {
 		orbitDataDir = "./data"
 	}
-	orbit := handlers.NewOrbitHandler(orbitDataDir, nil, g.store)
+	orbit := k8shandlers.NewOrbitHandler(orbitDataDir, nil, g.store)
 	orbit.RegisterRoutes(api.Group("/orbit"))
 	if g.done != nil {
 		orbit.StartScheduler(g.done)
 	}
 
-	notificationHandler := handlers.NewNotificationHandler(g.store, g.notificationService)
+	notificationHandler := ops.NewNotificationHandler(g.store, g.notificationService)
 	api.Post("/notifications/test", notificationHandler.TestNotification)
 	api.Post("/notifications/send", notificationHandler.SendAlertNotification)
 	api.Get("/notifications/config", notificationHandler.GetNotificationConfig)
@@ -218,7 +221,7 @@ func (g *apiCoreRouteGroup) Register(routes *routeSetupContext) {
 	api.Get("/nightly-e2e/runs", nightlyE2E.GetRuns)
 	api.Get("/nightly-e2e/run-logs", nightlyE2E.GetRunLogs)
 
-	kubaraCatalog, err := handlers.NewKubaraCatalogHandler(g.config.GitHubToken, g.config.KubaraCatalogRepo, g.config.KubaraCatalogPath)
+	kubaraCatalog, err := proxy.NewKubaraCatalogHandler(g.config.GitHubToken, g.config.KubaraCatalogRepo, g.config.KubaraCatalogPath)
 	if err != nil {
 		slog.Error("Failed to initialize Kubara catalog handler; catalog routes will be unavailable", "error", err)
 		return

@@ -3,11 +3,13 @@ package api
 import (
 	"github.com/gofiber/fiber/v2"
 
-	"github.com/kubestellar/console/pkg/api/handlers"
-	"github.com/kubestellar/console/pkg/api/transport"
 	"github.com/kubestellar/console/pkg/api/handlers/compliance"
 	ghhandlers "github.com/kubestellar/console/pkg/api/handlers/github"
+	"github.com/kubestellar/console/pkg/api/handlers/k8s"
 	"github.com/kubestellar/console/pkg/api/handlers/missions"
+	"github.com/kubestellar/console/pkg/api/handlers/ops"
+	"github.com/kubestellar/console/pkg/api/handlers/proxy"
+	"github.com/kubestellar/console/pkg/api/transport"
 	"github.com/kubestellar/console/pkg/compliance/residency"
 	"github.com/kubestellar/console/pkg/store"
 )
@@ -70,15 +72,15 @@ func (g *publicRouteGroup) Register(publicLimiter, analyticsBodyGuard fiber.Hand
 	g.app.Get("/api/public/nightly-e2e/runs", publicLimiter, nightlyE2EPublic.GetRuns)
 	g.app.Get("/api/public/nightly-e2e/run-logs", publicLimiter, nightlyE2EPublic.GetRunLogs)
 
-	g.app.All("/api/m", publicLimiter, analyticsBodyGuard, handlers.GA4CollectProxy)
-	g.app.Get("/api/gtag", publicLimiter, handlers.GA4ScriptProxy)
-	g.app.Get("/api/ksc", publicLimiter, handlers.UmamiScriptProxy)
-	g.app.Post("/api/send", publicLimiter, analyticsBodyGuard, handlers.UmamiCollectProxy)
+	g.app.All("/api/m", publicLimiter, analyticsBodyGuard, proxy.GA4CollectProxy)
+	g.app.Get("/api/gtag", publicLimiter, proxy.GA4ScriptProxy)
+	g.app.Get("/api/ksc", publicLimiter, proxy.UmamiScriptProxy)
+	g.app.Post("/api/send", publicLimiter, analyticsBodyGuard, proxy.UmamiCollectProxy)
 
 	// /api/ping moved to authenticated group (CWE-918 / #16948)
-	g.app.Get("/api/youtube/playlist", publicLimiter, handlers.YouTubePlaylistHandler)
-	g.app.Get("/api/youtube/thumbnail/:id", publicLimiter, handlers.YouTubeThumbnailProxy)
-	g.app.Get("/api/medium/blog", publicLimiter, handlers.MediumBlogHandler)
+	g.app.Get("/api/youtube/playlist", publicLimiter, proxy.YouTubePlaylistHandler)
+	g.app.Get("/api/youtube/thumbnail/:id", publicLimiter, proxy.YouTubeThumbnailProxy)
+	g.app.Get("/api/medium/blog", publicLimiter, k8s.MediumBlogHandler)
 
 	missionsHandler := missions.NewMissionsHandler().WithStore(g.store)
 	missionsHandler.RegisterPublicRoutes(g.app.Group("/api/missions"))
@@ -111,7 +113,7 @@ func (g *publicRouteGroup) Register(publicLimiter, analyticsBodyGuard fiber.Hand
 	stigHandler := compliance.NewSTIGHandler()
 	stigHandler.RegisterPublicRoutes(publicAPI)
 
-	airgapHandler := handlers.NewAirGapHandler()
+	airgapHandler := ops.NewAirGapHandler()
 	airgapHandler.RegisterPublicRoutes(publicAPI)
 
 	fedrampHandler := compliance.NewFedRAMPHandler()

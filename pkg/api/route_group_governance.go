@@ -1,8 +1,8 @@
 package api
 
 import (
-	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/api/handlers/compliance"
+	k8shandlers "github.com/kubestellar/console/pkg/api/handlers/k8s"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/store"
 )
@@ -32,7 +32,7 @@ func (g *governanceRouteGroup) Register(routes *routeSetupContext) {
 	complianceReports := compliance.NewComplianceReportsHandler(nil)
 	complianceReports.RegisterRoutes(api.Group("/compliance/frameworks"))
 
-	routes.namespaces = handlers.NewNamespaceHandler(g.store, g.k8sClient)
+	routes.namespaces = k8shandlers.NewNamespaceHandler(g.store, g.k8sClient)
 	api.Get("/namespaces", routes.namespaces.ListNamespaces)
 	api.Get("/namespaces/:name/access", routes.namespaces.GetNamespaceAccess)
 

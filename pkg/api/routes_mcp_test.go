@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/kubestellar/console/pkg/api/handlers"
+	k8shandlers "github.com/kubestellar/console/pkg/api/handlers/k8s"
 	"github.com/kubestellar/console/pkg/k8s"
 	teststore "github.com/kubestellar/console/pkg/test"
 	"github.com/stretchr/testify/require"
@@ -14,7 +14,7 @@ func TestSetupMCPRoutes_RegistersExpectedRoutes(t *testing.T) {
 	app := fiber.New()
 	mockStore := &teststore.MockStore{}
 	k8sClient := &k8s.MultiClusterClient{}
-	
+
 	server := &Server{
 		app:       app,
 		store:     mockStore,
@@ -22,7 +22,7 @@ func TestSetupMCPRoutes_RegistersExpectedRoutes(t *testing.T) {
 	}
 
 	api := app.Group("/api")
-	namespaces := handlers.NewNamespaceHandler(mockStore, k8sClient)
+	namespaces := k8shandlers.NewNamespaceHandler(mockStore, k8sClient)
 	server.setupMCPRoutes(api, namespaces)
 
 	routes := routeTable(app)
@@ -88,7 +88,7 @@ func TestSetupMCPRoutes_RegistersDrasiProxy(t *testing.T) {
 	app := fiber.New()
 	mockStore := &teststore.MockStore{}
 	k8sClient := &k8s.MultiClusterClient{}
-	
+
 	server := &Server{
 		app:       app,
 		store:     mockStore,
@@ -96,7 +96,7 @@ func TestSetupMCPRoutes_RegistersDrasiProxy(t *testing.T) {
 	}
 
 	api := app.Group("/api")
-	namespaces := handlers.NewNamespaceHandler(mockStore, k8sClient)
+	namespaces := k8shandlers.NewNamespaceHandler(mockStore, k8sClient)
 	server.setupMCPRoutes(api, namespaces)
 
 	routes := routeTable(app)
@@ -127,7 +127,7 @@ func TestSetupMCPRoutes_RegistersWidgetAliases(t *testing.T) {
 	app := fiber.New()
 	mockStore := &teststore.MockStore{}
 	k8sClient := &k8s.MultiClusterClient{}
-	
+
 	server := &Server{
 		app:       app,
 		store:     mockStore,
@@ -135,7 +135,7 @@ func TestSetupMCPRoutes_RegistersWidgetAliases(t *testing.T) {
 	}
 
 	api := app.Group("/api")
-	namespaces := handlers.NewNamespaceHandler(mockStore, k8sClient)
+	namespaces := k8shandlers.NewNamespaceHandler(mockStore, k8sClient)
 	server.setupMCPRoutes(api, namespaces)
 
 	routes := routeTable(app)
@@ -166,7 +166,7 @@ func TestSetupMCPRoutes_RegistersSSEStreamingVariants(t *testing.T) {
 	app := fiber.New()
 	mockStore := &teststore.MockStore{}
 	k8sClient := &k8s.MultiClusterClient{}
-	
+
 	server := &Server{
 		app:       app,
 		store:     mockStore,
@@ -174,7 +174,7 @@ func TestSetupMCPRoutes_RegistersSSEStreamingVariants(t *testing.T) {
 	}
 
 	api := app.Group("/api")
-	namespaces := handlers.NewNamespaceHandler(mockStore, k8sClient)
+	namespaces := k8shandlers.NewNamespaceHandler(mockStore, k8sClient)
 	server.setupMCPRoutes(api, namespaces)
 
 	routes := routeTable(app)

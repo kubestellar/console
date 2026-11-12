@@ -6,9 +6,11 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/api/handlers/benchmarks"
+	"github.com/kubestellar/console/pkg/api/handlers/k8s"
 	"github.com/kubestellar/console/pkg/api/handlers/mcp"
+	"github.com/kubestellar/console/pkg/api/handlers/ops"
+	"github.com/kubestellar/console/pkg/api/handlers/proxy"
 	"github.com/kubestellar/console/pkg/kagent"
 	"github.com/kubestellar/console/pkg/kagentiprovider"
 )
@@ -17,7 +19,7 @@ import (
 func (s *Server) setupIntegrationsRoutes(routes *routeSetupContext) {
 	api := routes.api
 
-	timeline := handlers.NewTimelineHandler(s.store, s.k8sClient)
+	timeline := ops.NewTimelineHandler(s.store, s.k8sClient)
 	api.Get("/timeline", timeline.GetTimeline)
 	timeline.StartEventCollector(s.lifecycle.done)
 
@@ -31,7 +33,7 @@ func (s *Server) setupIntegrationsRoutes(routes *routeSetupContext) {
 
 	namespaces := routes.namespaces
 	if namespaces == nil {
-		namespaces = handlers.NewNamespaceHandler(s.store, s.k8sClient)
+		namespaces = k8s.NewNamespaceHandler(s.store, s.k8sClient)
 		routes.namespaces = namespaces
 	}
 	s.setupMCPRoutes(api, namespaces)
@@ -42,7 +44,7 @@ func (s *Server) setupIntegrationsRoutes(routes *routeSetupContext) {
 	api.Get("/benchmarks/reports", benchmarkHandlers.GetReports)
 	api.Get("/benchmarks/reports/stream", benchmarkHandlers.StreamReports)
 
-	gpuCapacity := handlers.ClusterCapacityProvider(func(ctx context.Context, cluster string) int {
+	gpuCapacity := k8s.ClusterCapacityProvider(func(ctx context.Context, cluster string) int {
 		if s.k8sClient == nil {
 			return 0
 		}
@@ -56,7 +58,7 @@ func (s *Server) setupIntegrationsRoutes(routes *routeSetupContext) {
 		}
 		return total
 	})
-	gpuHandler := handlers.NewGPUHandler(s.store, gpuCapacity, s.k8sClient)
+	gpuHandler := k8s.NewGPUHandler(s.store, gpuCapacity, s.k8sClient)
 	api.Post("/gpu/reservations", gpuHandler.CreateReservation)
 	api.Get("/gpu/reservations", gpuHandler.ListReservations)
 	api.Get("/gpu/reservations/:id", gpuHandler.GetReservation)
@@ -65,13 +67,13 @@ func (s *Server) setupIntegrationsRoutes(routes *routeSetupContext) {
 	api.Get("/gpu/reservations/:id/utilization", gpuHandler.GetReservationUtilization)
 	api.Get("/gpu/utilizations", gpuHandler.GetBulkUtilizations)
 
-	gadgetHandler := handlers.NewGadgetHandler(s.bridge, s.store)
+	gadgetHandler := k8s.NewGadgetHandler(s.bridge, s.store)
 	api.Get("/gadget/status", gadgetHandler.GetStatus)
 	api.Get("/gadget/tools", gadgetHandler.GetTools)
 	api.Post("/gadget/trace", gadgetHandler.RunTrace)
 
 	kagentClient := kagent.NewKagentClientFromEnv()
-	kagentHandler := handlers.NewKagentProxyHandler(kagentClient, s.store)
+	kagentHandler := proxy.NewKagentProxyHandler(kagentClient, s.store)
 	api.Get("/kagent/status", kagentHandler.GetStatus)
 	api.Get("/kagent/agents", kagentHandler.ListAgents)
 	api.Post("/kagent/chat", kagentHandler.Chat)
@@ -84,7 +86,7 @@ func (s *Server) setupIntegrationsRoutes(routes *routeSetupContext) {
 	} else {
 		kagentiConfigManager = manager
 	}
-	kagentiProviderHandler := handlers.NewKagentiProviderProxyHandler(kagentiProviderClient, kagentiConfigManager, s.k8sClient, s.store)
+	kagentiProviderHandler := proxy.NewKagentiProviderProxyHandler(kagentiProviderClient, kagentiConfigManager, s.k8sClient, s.store)
 	api.Get("/kagenti-provider/status", kagentiProviderHandler.GetStatus)
 	api.Get("/kagenti-provider/agents", kagentiProviderHandler.ListAgents)
 	api.Get("/kagenti-provider/tools", kagentiProviderHandler.GetTools)
