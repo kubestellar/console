@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useId, type KeyboardEvent } from 'react'
 import { Shield, ExternalLink, Plus, FileCode, LayoutTemplate, Sparkles, Copy } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '../../ui/Button'
@@ -46,6 +46,34 @@ export function ClusterOPAModal({
   const [togglingPolicyId, setTogglingPolicyId] = useState<string | null>(null)
   const [isDeletingPolicy, setIsDeletingPolicy] = useState(false)
   const createMenuRef = useRef<HTMLDivElement>(null)
+  const createButtonRef = useRef<HTMLButtonElement>(null)
+  const menuFocusLastRef = useRef(false)
+  const createButtonId = useId()
+
+  useEffect(() => {
+    if (!showCreateMenu) return
+    const items = createMenuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')
+    if (items?.length) items[menuFocusLastRef.current ? items.length - 1 : 0].focus()
+    menuFocusLastRef.current = false
+  }, [showCreateMenu])
+
+  const handleCreateMenuKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      event.stopPropagation()
+      setShowCreateMenu(false)
+      createButtonRef.current?.focus()
+      return
+    }
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
+    event.preventDefault()
+    const items = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'))
+    if (!items.length) return
+    const current = items.indexOf(document.activeElement as HTMLButtonElement)
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1
+      : (current + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length
+    items[next].focus()
+  }
 
   // Close create menu when clicking outside
   useEffect(() => {
@@ -177,7 +205,7 @@ Please proceed with applying this policy.`,
   }
 
   // Disable parent modal's Escape handler when a child modal is open
-  const hasChildModalOpen = showTemplateModal || showYamlEditor || !!deleteConfirm
+  const hasChildModalOpen = showCreateMenu || showTemplateModal || showYamlEditor || !!deleteConfirm
 
   return (
     <>
@@ -217,8 +245,21 @@ Please proceed with applying this policy.`,
             </div>
 
             {/* Create Policy Button */}
-            <div ref={createMenuRef} className="relative">
+            <div ref={createMenuRef} className="relative" onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setShowCreateMenu(false)
+            }}>
               <Button
+                ref={createButtonRef}
+                id={createButtonId}
+                aria-haspopup="menu"
+                aria-expanded={showCreateMenu}
+                onKeyDown={(event) => {
+                  if (!showCreateMenu && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+                    event.preventDefault()
+                    menuFocusLastRef.current = event.key === 'ArrowUp'
+                    setShowCreateMenu(true)
+                  }
+                }}
                 variant="accent"
                 size="md"
                 icon={<Plus className="w-4 h-4" />}
@@ -227,10 +268,13 @@ Please proceed with applying this policy.`,
                 Create Policy
               </Button>
               {showCreateMenu && (
-                <div className="absolute right-0 top-full mt-1 w-56 bg-card border border-border rounded-lg shadow-lg z-50 py-1">
+                <div role="menu" aria-labelledby={createButtonId} onKeyDown={handleCreateMenuKeyDown}
+                  className="absolute right-0 top-full mt-1 w-56 bg-card border border-border rounded-lg shadow-lg z-50 py-1">
                   <button
+                    role="menuitem"
+                    tabIndex={-1}
                     onClick={handleCreateWithAI}
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-secondary transition-colors flex items-center gap-2"
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent transition-colors flex items-center gap-2"
                   >
                     <Sparkles className="w-4 h-4 text-purple-400" />
                     <div>
@@ -239,8 +283,10 @@ Please proceed with applying this policy.`,
                     </div>
                   </button>
                   <button
+                    role="menuitem"
+                    tabIndex={-1}
                     onClick={() => { setShowCreateMenu(false); openTemplateModal() }}
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-secondary transition-colors flex items-center gap-2"
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent transition-colors flex items-center gap-2"
                   >
                     <LayoutTemplate className="w-4 h-4 text-blue-400" />
                     <div>
@@ -249,8 +295,10 @@ Please proceed with applying this policy.`,
                     </div>
                   </button>
                   <button
+                    role="menuitem"
+                    tabIndex={-1}
                     onClick={() => { setShowCreateMenu(false); setYamlContent(''); setEditingPolicy(null); setShowYamlEditor(true) }}
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-secondary transition-colors flex items-center gap-2"
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent transition-colors flex items-center gap-2"
                   >
                     <FileCode className="w-4 h-4 text-green-400" />
                     <div>
