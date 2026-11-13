@@ -1,0 +1,1 @@
+- Improved GPU reservation utilization label readability in light and dark themes (#24990).

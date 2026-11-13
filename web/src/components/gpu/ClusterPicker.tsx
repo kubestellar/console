@@ -71,11 +71,12 @@ export function ClusterPicker({
           <select
             value={namespace}
             onChange={e => {
-              if (e.target.value === '__new__' || e.target.value === '__new_bottom__') {
+              const value = e.target.value
+              if (value === '__new__' || value === '__new_bottom__') {
                 setNsField({ value: '', isNew: true })
                 queueMicrotask(() => document.getElementById('new-ns-input')?.focus())
               } else {
-                setNsField(prev => ({ ...prev, value: e.target.value }))
+                setNsField(prev => ({ ...prev, value }))
               }
             }}
             disabled={!!editingReservation || !cluster || (namespacesLoading && clusterNamespaces.length === 0)}
@@ -96,7 +97,10 @@ export function ClusterPicker({
               id="new-ns-input"
               type="text"
               value={namespace}
-              onChange={e => setNsField(prev => ({ ...prev, value: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))}
+              onChange={e => {
+                const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
+                setNsField(prev => ({ ...prev, value }))
+              }}
               placeholder={t('gpuReservations.form.fields.enterNamespace')}
               disabled={!!editingReservation}
               className="flex-1 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground disabled:opacity-50"

@@ -35,6 +35,9 @@ The Mission Control target-cluster picker focuses the selected option when opene
 Use Up/Down to move between options, Home/End to jump to the first/last,
 Space or Enter to select, and Escape to close and return to the trigger.
 
+Resource tree navigation labels have a minimum 44 × 44 CSS pixel hit area,
+including short resource names; expand/collapse controls retain their own target.
+
 ### Dropdown scanner follow-up (#24848)
 
 The agent selector now focuses the selected available agent (or the first available

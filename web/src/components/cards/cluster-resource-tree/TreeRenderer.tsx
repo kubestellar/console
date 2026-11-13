@@ -70,7 +70,7 @@ export function TreeNode({
             tabIndex: 0,
             onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } },
           } : {})}
-          className={cn('inline-flex items-center truncate text-sm text-foreground', onClick ? ['cursor-pointer hover:text-purple-400', TOUCH_TARGET_HEIGHT_CLASS] : TOUCH_TARGET_HEIGHT_CLASS)}
+          className={cn('inline-flex items-center truncate text-sm text-foreground', onClick ? ['cursor-pointer hover:text-purple-400', TOUCH_TARGET_SIZE_CLASS] : TOUCH_TARGET_HEIGHT_CLASS)}
         >
           {label}
         </span>

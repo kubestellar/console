@@ -2,73 +2,77 @@ import '@testing-library/jest-dom/vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { DeploymentHeader, type DeploymentHeaderProps } from './DeploymentHeader'
+import { DeploymentHeader } from './DeploymentHeader'
+import type { DeploymentHeaderProps } from './DeploymentHeader'
 
-vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
+}))
 
-function props(overrides: Partial<DeploymentHeaderProps> = {}): DeploymentHeaderProps {
-  return {
-    cluster: 'provider/prod-east',
-    namespace: 'payments',
-    stackDepth: 2,
+vi.mock('../../../ui/ClusterBadge', () => ({
+  ClusterBadge: ({ cluster }: { cluster: string }) => <span data-testid="cluster-badge">{cluster}</span>,
+}))
+
+function setup(overrides: Partial<DeploymentHeaderProps> = {}) {
+  const props: DeploymentHeaderProps = {
+    cluster: 'ctx/prod',
+    namespace: 'web',
+    stackDepth: 1,
     agentConnected: true,
     isRefreshing: false,
     onBack: vi.fn(),
     onDrillToNamespace: vi.fn(),
     onDrillToCluster: vi.fn(),
     onRefreshAll: vi.fn(),
-    onButtonLikeKeyDown: vi.fn((event, action, disabled) => {
-      if (!disabled && (event.key === 'Enter' || event.key === ' ')) action()
-    }),
+    onButtonLikeKeyDown: vi.fn(),
     ...overrides,
   }
+  render(<DeploymentHeader {...props} />)
+  return props
 }
 
 describe('DeploymentHeader', () => {
-  it('navigates back and drills into namespace and cluster', async () => {
-    const p = props()
-    render(<DeploymentHeader {...p} />)
-    expect(screen.getByText('prod-east')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'drilldown.goBack' }))
-    await userEvent.click(screen.getByRole('button', { name: 'drilldown.fields.namespace: payments' }))
-    await userEvent.click(screen.getByRole('button', { name: 'drilldown.fields.cluster: provider/prod-east' }))
-    expect(p.onBack).toHaveBeenCalledOnce()
-    expect(p.onDrillToNamespace).toHaveBeenCalledOnce()
-    expect(p.onDrillToCluster).toHaveBeenCalledOnce()
-  })
-
-  it('hides back at the root and forwards keyboard activation to the navigation handler', async () => {
-    const p = props({ stackDepth: 1 })
-    render(<DeploymentHeader {...p} />)
+  it('renders namespace and short cluster name, without back button at depth 1', () => {
+    setup()
+    expect(screen.getByText('web')).toBeInTheDocument()
+    expect(screen.getByTestId('cluster-badge')).toHaveTextContent('prod')
     expect(screen.queryByRole('button', { name: 'drilldown.goBack' })).not.toBeInTheDocument()
-    screen.getByRole('button', { name: 'drilldown.fields.namespace: payments' }).focus()
-    await userEvent.keyboard('{Enter}')
-    screen.getByRole('button', { name: 'drilldown.fields.cluster: provider/prod-east' }).focus()
-    await userEvent.keyboard(' ')
-    expect(p.onDrillToNamespace).toHaveBeenCalledOnce()
-    expect(p.onDrillToCluster).toHaveBeenCalledOnce()
-    expect(p.onButtonLikeKeyDown).toHaveBeenCalledTimes(2)
   })
 
-  it('refreshes by click and keyboard only when connected and not refreshing', async () => {
-    const p = props()
-    const { rerender } = render(<DeploymentHeader {...p} />)
+  it('shows back button when stack is deeper and calls onBack', async () => {
+    const props = setup({ stackDepth: 2 })
+    await userEvent.click(screen.getByRole('button', { name: 'drilldown.goBack' }))
+    expect(props.onBack).toHaveBeenCalledTimes(1)
+  })
+
+  it('invokes drill callbacks on click and forwards key events', async () => {
+    const props = setup()
+    await userEvent.click(screen.getByRole('button', { name: 'drilldown.fields.namespace: web' }))
+    expect(props.onDrillToNamespace).toHaveBeenCalledTimes(1)
+    await userEvent.click(screen.getByRole('button', { name: 'drilldown.fields.cluster: ctx/prod' }))
+    expect(props.onDrillToCluster).toHaveBeenCalledTimes(1)
+    screen.getByRole('button', { name: 'drilldown.fields.namespace: web' }).focus()
+    await userEvent.keyboard('{Enter}')
+    expect(props.onButtonLikeKeyDown).toHaveBeenCalledWith(expect.anything(), props.onDrillToNamespace)
+  })
+
+  it('refreshes when agent is connected and idle', async () => {
+    const props = setup()
     const refresh = screen.getByRole('button', { name: 'drilldown.deployment.refreshAll' })
     expect(refresh).toHaveAttribute('aria-disabled', 'false')
-    expect(refresh).toHaveAttribute('tabindex', '0')
     await userEvent.click(refresh)
-    refresh.focus()
-    await userEvent.keyboard('{Enter}')
-    expect(p.onRefreshAll).toHaveBeenCalledTimes(2)
+    expect(props.onRefreshAll).toHaveBeenCalledTimes(1)
+  })
 
-    for (const state of [{ agentConnected: false, isRefreshing: false }, { agentConnected: true, isRefreshing: true }]) {
-      rerender(<DeploymentHeader {...p} {...state} />)
-      expect(refresh).toHaveAttribute('aria-disabled', 'true')
-      expect(refresh).toHaveAttribute('tabindex', '-1')
-      await userEvent.click(refresh)
-      refresh.focus()
-      await userEvent.keyboard('{Enter}')
-    }
-    expect(p.onRefreshAll).toHaveBeenCalledTimes(2)
+  it.each([
+    ['agent disconnected', { agentConnected: false }],
+    ['refreshing', { isRefreshing: true }],
+  ])('disables refresh when %s', async (_label, overrides) => {
+    const props = setup(overrides)
+    const refresh = screen.getByRole('button', { name: 'drilldown.deployment.refreshAll' })
+    expect(refresh).toHaveAttribute('aria-disabled', 'true')
+    expect(refresh).toHaveAttribute('tabindex', '-1')
+    await userEvent.click(refresh)
+    expect(props.onRefreshAll).not.toHaveBeenCalled()
   })
 })

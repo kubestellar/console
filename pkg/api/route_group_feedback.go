@@ -3,8 +3,8 @@ package api
 import (
 	"github.com/gofiber/fiber/v2"
 
-	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/api/handlers/feedback"
+	"github.com/kubestellar/console/pkg/api/handlers/ops"
 	"github.com/kubestellar/console/pkg/api/handlers/rewards"
 	"github.com/kubestellar/console/pkg/store"
 )
@@ -68,7 +68,7 @@ func (g *feedbackRouteGroup) Register(routes *routeSetupContext) {
 	api.Post("/rewards/coins", rewardsPersistence.IncrementCoins)
 	api.Post("/rewards/daily-bonus", rewardsPersistence.ClaimDailyBonus)
 
-	tokenUsage := handlers.NewTokenUsageHandler(g.store)
+	tokenUsage := ops.NewTokenUsageHandler(g.store)
 	api.Get("/token-usage/me", tokenUsage.GetUserTokenUsage)
 	api.Post("/token-usage/me", tokenUsage.UpdateUserTokenUsage)
 	api.Post("/token-usage/delta", tokenUsage.AddTokenDelta)
