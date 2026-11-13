@@ -2727,23 +2727,9 @@ jobs:
           echo "Checking for DOM nesting and structure violations..."
           ISSUES=""
 
-          # Check for button inside button (most common violation)
-          BUTTON_NESTING=$(grep -rn "<button" src/ --include="*.tsx" 2>/dev/null | while read line; do
-            FILE=$(echo "$line" | cut -d: -f1)
-            LINE_NO=$(echo "$line" | cut -d: -f2)
-            # Get context: 20 lines after this button opening
-            CONTEXT=$(sed -n "${LINE_NO},$((LINE_NO + 20))p" "$FILE" 2>/dev/null)
-            # Check if there's another button before the closing tag
-            NESTED=$(echo "$CONTEXT" | grep -n "<button" | tail -n +2 | head -1 || true)
-            if [ -n "$NESTED" ]; then
-              RELATIVE=$(echo "$FILE" | sed 's|^src/||')
-              echo "  - \`${RELATIVE}:${LINE_NO}\` — potential nested button"
-            fi
-          done | head -10 || true)
-
-          if [ -n "$BUTTON_NESTING" ]; then
-            ISSUES="${ISSUES}### Button inside button violations\nThese cause React DOM nesting warnings:\n${BUTTON_NESTING}\n\n"
-          fi
+          # Parse JSX ancestry rather than inferring nesting from nearby lines.
+          node --test scripts/check-dom-structure.test.mjs
+          ISSUES=$(node scripts/check-dom-structure.mjs src)
 
           # Check for interactive elements inside anchor tags
           ANCHOR_NESTING=$(grep -rn "<a " src/ --include="*.tsx" 2>/dev/null | while read line; do
@@ -2760,22 +2746,6 @@ jobs:
 
           if [ -n "$ANCHOR_NESTING" ]; then
             ISSUES="${ISSUES}### Interactive elements inside anchor tags\nButtons/inputs cannot be inside <a> tags:\n${ANCHOR_NESTING}\n\n"
-          fi
-
-          # Check for div inside p (block in inline)
-          DIV_IN_P=$(grep -rn "<p[^>]*>" src/ --include="*.tsx" 2>/dev/null | while read line; do
-            FILE=$(echo "$line" | cut -d: -f1)
-            LINE_NO=$(echo "$line" | cut -d: -f2)
-            CONTEXT=$(sed -n "${LINE_NO},$((LINE_NO + 10))p" "$FILE" 2>/dev/null)
-            NESTED=$(echo "$CONTEXT" | grep -E "<div|<section|<article|<header|<footer" | head -1 || true)
-            if [ -n "$NESTED" ]; then
-              RELATIVE=$(echo "$FILE" | sed 's|^src/||')
-              echo "  - \`${RELATIVE}:${LINE_NO}\` — block element inside <p>"
-            fi
-          done | head -10 || true)
-
-          if [ -n "$DIV_IN_P" ]; then
-            ISSUES="${ISSUES}### Block elements inside paragraph tags\nDiv/section/article cannot be inside <p>:\n${DIV_IN_P}\n\n"
           fi
 
           # Check for forms inside forms
@@ -2811,38 +2781,6 @@ jobs:
             ISSUES="${ISSUES}### Table structure violations\nTable must have proper thead/tbody/tr structure:\n${TABLE_ISSUES}\n\n"
           fi
 
-          # Check for li outside ul/ol
-          LI_OUTSIDE=$(grep -rn "<li" src/ --include="*.tsx" 2>/dev/null | while read line; do
-            FILE=$(echo "$line" | cut -d: -f1)
-            LINE_NO=$(echo "$line" | cut -d: -f2)
-            # Check 10 lines before for ul/ol
-            CONTEXT=$(sed -n "$((LINE_NO > 10 ? LINE_NO - 10 : 1)),${LINE_NO}p" "$FILE" 2>/dev/null)
-            HAS_LIST=$(echo "$CONTEXT" | grep -E "<ul|<ol" || true)
-            if [ -z "$HAS_LIST" ]; then
-              RELATIVE=$(echo "$FILE" | sed 's|^src/||')
-              echo "  - \`${RELATIVE}:${LINE_NO}\` — <li> may be outside <ul>/<ol>"
-            fi
-          done | head -5 || true)
-
-          if [ -n "$LI_OUTSIDE" ]; then
-            ISSUES="${ISSUES}### List item outside list container\n<li> elements must be inside <ul> or <ol>:\n${LI_OUTSIDE}\n\n"
-          fi
-
-          # Check for heading nesting violations (h1 inside h2, etc.)
-          HEADING_NESTING=$(grep -rn "<h[1-6]" src/ --include="*.tsx" 2>/dev/null | while read line; do
-            FILE=$(echo "$line" | cut -d: -f1)
-            LINE_NO=$(echo "$line" | cut -d: -f2)
-            CONTEXT=$(sed -n "${LINE_NO},$((LINE_NO + 5))p" "$FILE" 2>/dev/null)
-            NESTED=$(echo "$CONTEXT" | grep -oE "<h[1-6]" | wc -l | tr -d ' ')
-            if [ "$NESTED" -gt 1 ]; then
-              RELATIVE=$(echo "$FILE" | sed 's|^src/||')
-              echo "  - \`${RELATIVE}:${LINE_NO}\` — nested heading elements"
-            fi
-          done | head -5 || true)
-
-          if [ -n "$HEADING_NESTING" ]; then
-            ISSUES="${ISSUES}### Nested heading elements\nHeadings (h1-h6) cannot contain other headings:\n${HEADING_NESTING}\n\n"
-          fi
 
           # Check for common onClick on non-interactive elements without role
           CLICK_NO_ROLE=$(grep -rn "onClick=" src/ --include="*.tsx" 2>/dev/null | \
