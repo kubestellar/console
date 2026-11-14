@@ -2,6 +2,7 @@ import { AlertTriangle, CheckCircle, FolderGit, GitBranch, GitCommit, ExternalLi
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../../../lib/cn'
 import { validateExternalUrl } from '../../../../lib/validateExternalUrl'
+import { Button } from '../../../ui/Button'
 import { getHealthStatusStyle } from './helpers'
 import type { ArgoOverviewTabProps } from './types'
 
@@ -91,11 +92,13 @@ export function ArgoOverviewTab({
             {appResources.slice(0, 8).map((resource, i) => {
               const resHealthStyle = getHealthStatusStyle(resource.health || 'Unknown')
               return (
-                <button
+                <Button
                   key={`${resource.kind}-${resource.name}-${i}`}
+                  type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => onResourceClick(resource)}
                   className={cn(
-                    'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors border',
                     resHealthStyle.bg,
                     resHealthStyle.text,
                     resHealthStyle.border,
@@ -104,16 +107,19 @@ export function ArgoOverviewTab({
                 >
                   <span>{resource.kind}:</span>
                   <span className="font-mono">{resource.name}</span>
-                </button>
+                </Button>
               )
             })}
             {appResources.length > 8 && (
-              <button
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
                 onClick={onShowMoreResources}
-                className="text-xs text-primary hover:underline"
+                className="px-0 py-0 text-xs text-primary hover:underline"
               >
                 +{appResources.length - 8} more
-              </button>
+              </Button>
             )}
           </div>
         </div>

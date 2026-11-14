@@ -1,7 +1,7 @@
 import { type ButtonHTMLAttributes, type ReactNode, type Ref } from 'react'
 import { cn } from '../../lib/cn'
 
-type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'accent'
+type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'accent' | 'outline'
 type ButtonSize = 'sm' | 'md' | 'lg'
 
 const VARIANT_MAP: Record<ButtonVariant, string> = {
@@ -10,6 +10,7 @@ const VARIANT_MAP: Record<ButtonVariant, string> = {
   danger: 'bg-destructive hover:bg-destructive/90 text-destructive-foreground',
   ghost: 'hover:bg-secondary/50 text-muted-foreground hover:text-foreground',
   accent: 'bg-accent/20 hover:bg-accent/30 text-accent',
+  outline: 'border border-border bg-transparent text-foreground hover:bg-secondary/50',
 }
 
 const SIZE_MAP: Record<ButtonSize, string> = {

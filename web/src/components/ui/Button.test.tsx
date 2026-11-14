@@ -40,6 +40,12 @@ describe('Button Component', () => {
     expect(btn.className).toContain('bg-destructive')
   })
 
+  it('applies the outline variant', () => {
+    render(<Button variant="outline">{TEST_STRINGS.clickMe}</Button>)
+    const btn = screen.getByRole('button')
+    expect(btn.className).toContain('border-border')
+  })
+
   it('applies the small size', () => {
     render(<Button size="sm">{TEST_STRINGS.small}</Button>)
     const btn = screen.getByRole('button')
