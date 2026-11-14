@@ -21,11 +21,14 @@ on:
         type: choice
         options: ['true', 'false']
   schedule:
-    - cron: '17 */12 * * *'
+    # Daily (was every 12h): the live MCP backend gate is advisory (#24937),
+    # so a second run per day only doubles the noise when it is degraded.
+    - cron: '17 12 * * *'
 
 permissions:
   contents: read
   packages: read
+  issues: write
 
 concurrency:
   group: console-live-promote
@@ -826,6 +829,11 @@ jobs:
       - name: Run live semantic tests against selected target
         id: live_semantic
         if: ${{ !cancelled() && steps.canary_smoke.outcome == 'success' && steps.session_smoke.outcome == 'success' }}
+        # Advisory (#24937): this step depends on the live MCP backend reaching
+        # the external CI clusters. A backend-side 503 must not turn the whole
+        # promote run red; the outcome is still used to roll back and is
+        # surfaced via the job summary and a deduplicated tracking issue below.
+        continue-on-error: true
         timeout-minutes: 25
         working-directory: web
         env:
@@ -850,7 +858,9 @@ jobs:
         run: npx playwright test --config e2e/visual-login/intensive.config.ts --project=semantic-groundtruth --grep @live-site --grep-invert "production live" --workers=1 --max-failures=1
 
       - name: Roll back live on semantic-test failure
-        if: ${{ failure() && env.PROMOTE_PRODUCTION == 'true' && steps.live-state.outputs.skip != 'true' && steps.live-revision.outputs.revision != '' && steps.live_semantic.outcome == 'failure' }}
+        # live_semantic is continue-on-error, so failure() is not set; key off
+        # the step outcome instead.
+        if: ${{ !cancelled() && env.PROMOTE_PRODUCTION == 'true' && steps.live-state.outputs.skip != 'true' && steps.live-revision.outputs.revision != '' && steps.live_semantic.outcome == 'failure' }}
         shell: bash
         run: |
           set +e
@@ -858,6 +868,57 @@ jobs:
           helm rollback "$LIVE_RELEASE" "${{ steps.live-revision.outputs.revision }}" -n "$LIVE_NAMESPACE" --wait --timeout 5m \
             > "$RUNNER_TEMP/console-live/live-rollback.log" 2>&1
           cat "$RUNNER_TEMP/console-live/live-rollback.log"
+
+      - name: Report advisory live semantic failure
+        if: ${{ !cancelled() && steps.live_semantic.outcome == 'failure' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ROLLED_BACK: ${{ env.PROMOTE_PRODUCTION == 'true' && steps.live-state.outputs.skip != 'true' && steps.live-revision.outputs.revision != '' }}
+          PREVIOUS_REVISION: ${{ steps.live-revision.outputs.revision }}
+          TRACKING_TITLE: 'Console Live Promote: live semantic gate failing against the live MCP backend'
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          echo "::warning title=Live semantic gate failed (advisory)::Live semantic tests failed against ${LIVE_URL}; the run stays green per #24937. See the job summary and the tracking issue."
+          {
+            echo "## ⚠️ Live semantic gate failed (advisory)"
+            echo
+            echo "The live semantic tests failed against \`${LIVE_URL}\`. This gate depends on the live MCP backend"
+            echo "reaching the external CI clusters, so it no longer fails the run (kubestellar/console#24937)."
+            if [ "$ROLLED_BACK" = "true" ]; then
+              echo
+              echo "**Production was rolled back to Helm revision ${PREVIOUS_REVISION}.** The candidate was not promoted."
+            fi
+            echo
+            echo "Known backend-side cause: the groundtruth reader on the CI clusters lacks list on"
+            echo "\`replicasets.apps\` / \`horizontalpodautoscalers.autoscaling\` (apply"
+            echo "\`deploy/testing/visual-login-groundtruth-reader.yaml\` to each CI cluster)."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          body="$(printf '%s\n' \
+            'The advisory live semantic gate in **Console Live Promote** failed on its latest run.' \
+            '' \
+            "- Latest failing run: ${run_url}" \
+            "- Target: ${LIVE_URL}" \
+            "- Production rolled back: ${ROLLED_BACK}${PREVIOUS_REVISION:+ (to Helm revision ${PREVIOUS_REVISION})}" \
+            '' \
+            'This issue is refreshed in place by the workflow; it is not re-filed per run. The gate is advisory' \
+            'per kubestellar/console#24937: a live MCP backend 503 is an infra signal, not an application regression.' \
+            '' \
+            'Operator check: `deploy/testing/visual-login-groundtruth-reader.yaml` must be applied on every CI cluster' \
+            'the live console reads from (`kubectl --context <ctx> auth can-i list replicasets.apps --as=system:serviceaccount:default:visual-login-groundtruth-reader`).' \
+            '' \
+            '<!-- console-live-promote:advisory-semantic-gate -->')"
+          existing="$(gh issue list -R "$GITHUB_REPOSITORY" --state open --search "\"$TRACKING_TITLE\" in:title" --json number --jq '.[0].number // empty' || true)"
+          if [ -n "$existing" ]; then
+            gh issue edit "$existing" -R "$GITHUB_REPOSITORY" --body "$body" \
+              || echo "::warning::Could not refresh tracking issue #$existing"
+            echo "Refreshed tracking issue #$existing" >> "$GITHUB_STEP_SUMMARY"
+          else
+            gh issue create -R "$GITHUB_REPOSITORY" --title "$TRACKING_TITLE" --label ci --body "$body" \
+              || echo "::warning::Could not create tracking issue"
+          fi
 
       - name: Cool down before browser matrix
         if: ${{ !cancelled() && steps.canary_smoke.outcome == 'success' && steps.session_smoke.outcome == 'success' && steps.live_semantic.outcome == 'success' }}
