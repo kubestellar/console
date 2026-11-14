@@ -209,6 +209,7 @@ export function LogsDrillDown({ data }: Props) {
           )}
           {pod && (
             <button
+              type="button"
               onClick={() => drillToPod(cluster, namespace, pod)}
               className="flex items-center gap-2 hover:bg-cyan-500/10 border border-transparent hover:border-cyan-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
             >
@@ -219,6 +220,7 @@ export function LogsDrillDown({ data }: Props) {
           )}
           {namespace && (
             <button
+              type="button"
               onClick={() => drillToNamespace(cluster, namespace)}
               className="flex items-center gap-2 hover:bg-purple-500/10 border border-transparent hover:border-purple-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
             >
@@ -228,6 +230,7 @@ export function LogsDrillDown({ data }: Props) {
             </button>
           )}
           <button
+            type="button"
             onClick={() => drillToCluster(cluster)}
             className="flex items-center gap-2 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
           >

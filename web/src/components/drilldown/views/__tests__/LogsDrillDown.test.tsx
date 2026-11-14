@@ -64,6 +64,9 @@ describe('LogsDrillDown', () => {
     const LogsDrillDown = await loadLogsDrillDown()
     const { container } = render(<LogsDrillDown data={{ cluster: 'c1', namespace: 'ns1', pod: 'pod1' }} />)
     expect(container).toBeTruthy()
+    expect(screen.getByText('pod1').closest('button')).toHaveAttribute('type', 'button')
+    expect(screen.getByText('ns1').closest('button')).toHaveAttribute('type', 'button')
+    expect(screen.getByText('c1').closest('button')).toHaveAttribute('type', 'button')
   })
 
   it('shows an empty state when no visible log lines remain', async () => {
