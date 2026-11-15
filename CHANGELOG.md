@@ -8,6 +8,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 ## [Unreleased]
 
 ### Fixed
+- Keep namespace deletion confirmation open and prevent repeat submissions while a deletion is pending.
 - Keep cluster-group creation open with a pending state until saving completes, and allow retry after a failed CR creation.
 - Routed unguarded `localStorage` reads/writes through the existing safe-storage helpers so quota/private-browsing errors cannot crash components.
 

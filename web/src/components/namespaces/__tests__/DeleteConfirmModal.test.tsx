@@ -127,7 +127,15 @@ describe('DeleteConfirmModal', () => {
     await user.click(deleteBtn)
 
     expect(deleteBtn).toBeDisabled()
+    expect(deleteBtn).toHaveTextContent('Deleting...')
+    expect(screen.getByRole('button', { name: /cancel/i })).toBeDisabled()
+    await user.keyboard('{Escape}')
+    expect(mockOnClose).not.toHaveBeenCalled()
+    await user.click(deleteBtn)
+    expect(mockOnConfirm).toHaveBeenCalledTimes(1)
     resolveDelete!()
+    await waitFor(() => expect(deleteBtn).toBeEnabled())
+    expect(screen.getByRole('button', { name: /cancel/i })).toBeEnabled()
   })
 
   it('calls onClose when cancel button is clicked', async () => {
