@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import type { RefObject } from 'react'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useClusters } from '../../hooks/mcp/clusters'
@@ -237,7 +237,7 @@ export function useCardFilters<T>(
   }, [showClusterFilter])
 
   // Wrapper to persist to localStorage
-  const setLocalClusterFilter = (clusters: string[]) => {
+  const setLocalClusterFilter = useCallback((clusters: string[]) => {
     setLocalClusterFilterState(clusters)
     if (storageKey) {
       if (clusters.length === 0) {
@@ -246,7 +246,7 @@ export function useCardFilters<T>(
         safeSet(`${LOCAL_FILTER_STORAGE_PREFIX}${storageKey}`, JSON.stringify(clusters))
       }
     }
-  }
+  }, [storageKey])
 
   // Close dropdown when clicking outside (check both container and portaled dropdown)
   useEffect(() => {
@@ -264,22 +264,22 @@ export function useCardFilters<T>(
   }, [])
 
   // Available clusters for local filter dropdown (includes unreachable for display)
-  const availableClusters = (() => {
+  const availableClusters = useMemo(() => {
     if (isAllClustersSelected) return deduplicatedClusters
     return deduplicatedClusters.filter(c => selectedClusters.includes(c.name))
-  })()
+  }, [isAllClustersSelected, deduplicatedClusters, selectedClusters])
 
-  const toggleClusterFilter = (clusterName: string) => {
+  const toggleClusterFilter = useCallback((clusterName: string) => {
     if (localClusterFilter.includes(clusterName)) {
       setLocalClusterFilter(localClusterFilter.filter(c => c !== clusterName))
     } else {
       setLocalClusterFilter([...localClusterFilter, clusterName])
     }
-  }
+  }, [localClusterFilter, setLocalClusterFilter])
 
-  const clearClusterFilter = () => {
+  const clearClusterFilter = useCallback(() => {
     setLocalClusterFilter([])
-  }
+  }, [setLocalClusterFilter])
 
   // Apply all filters
   const filtered = useMemo(() => {
