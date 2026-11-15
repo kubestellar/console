@@ -32,7 +32,7 @@ export function EmbedButton({ cardType, cardTitle, currentRepo }: EmbedButtonPro
         <Code2 size={12} />
       </button>
       <EmbedCodeDialog
-        open={open}
+        isOpen={open}
         cardType={cardType}
         cardTitle={cardTitle}
         currentRepo={currentRepo}
