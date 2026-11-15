@@ -10,17 +10,9 @@ import './lib/i18n'
 // Register demo data generators for unified demo system
 import { registerAllDemoGenerators } from './lib/unified/demo'
 registerAllDemoGenerators()
-// Import cache utilities
-import {
-  initCacheWorker,
-  initPreloadedMeta,
-  migrateIDBToSQLite,
-  migrateFromLocalStorage,
-} from './lib/cache'
-import { logOpfsFallback } from './lib/cache/opfsFallback'
+import { initializeCache } from './lib/cache/initializeCache'
 // Import dynamic card/stats persistence loaders
 import { loadDynamicCards, getAllDynamicCards, loadDynamicStats } from './lib/dynamic-cards'
-import { STORAGE_KEY_SQLITE_MIGRATED } from './lib/constants'
 import { initAnalytics } from './lib/analytics'
 import { prefetchTopDashboards } from './lib/dashboardPrefetch'
 
@@ -164,28 +156,7 @@ enableMocking()
 
     // ── Async setup (runs in background after render) ─────────────────
     // Cache worker init (SQLite or IndexedDB fallback)
-    ;(async () => {
-      try {
-        const rpc = await initCacheWorker()
-
-        if (!localStorage.getItem(STORAGE_KEY_SQLITE_MIGRATED)) {
-          await migrateFromLocalStorage()
-          await migrateIDBToSQLite()
-          localStorage.setItem(STORAGE_KEY_SQLITE_MIGRATED, '2')
-        }
-
-        const seed = (window as Window & { __CACHE_SEED__?: Array<{ key: string; entry: { data: unknown; timestamp: number; version: number } }> }).__CACHE_SEED__
-        if (seed) {
-          await rpc.seedCache(seed)
-        }
-
-        const { meta } = await rpc.preloadAll()
-        initPreloadedMeta(meta)
-      } catch (e: unknown) {
-        logOpfsFallback('[Cache] SQLite worker init: using IndexedDB fallback:', e)
-        try { await migrateFromLocalStorage() } catch (migrateErr: unknown) { console.error('[Cache] failed to migrate from localStorage:', migrateErr) }
-      }
-    })()
+    void initializeCache()
 
     // Register dynamic card types (needs async import for cardRegistry)
     if (dynamicCards.length > 0) {

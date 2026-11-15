@@ -260,3 +260,5 @@ This will:
 2. Move data to IndexedDB
 3. Remove old localStorage entries
 4. Clean up kubectl-history (major quota offender)
+
+If browser storage prevents migration, initialization still seeds and preloads the cache worker. The migration marker is not written on failure, so a later startup can retry.
