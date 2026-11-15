@@ -55,9 +55,10 @@ export function WeatherSearch({
   const cityDropdownNav = useKeyboardNav({ selector: '[role="option"]:not([disabled])', orientation: 'vertical', onEscape: () => setShowCityDropdown(false) })
 
   // City search with Open-Meteo Geocoding API
-  const searchCities = useCallback(async (query: string) => {
+  const searchCities = useCallback(async (query: string, signal: AbortSignal) => {
     // Demo mode must not hit the live geocoding API
     if (isDemoMode || !query || query.length < 2) {
+      setIsSearching(false)
       setCitySearchResults([])
       setShowCityDropdown(false)
       return
@@ -67,20 +68,22 @@ export function WeatherSearch({
     try {
       const response = await fetch(
         `${WEATHER_API.geocodingUrl}?name=${encodeURIComponent(query)}&count=5&language=en&format=json`,
-        { signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) }
+        { signal: AbortSignal.any([signal, AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS)]) }
       )
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
       const data = await response.json()
+      if (signal.aborted) return
       setCitySearchResults(data.results || [])
       setShowCityDropdown(true)
     } catch (error: unknown) {
+      if (signal.aborted) return
       console.error('City search error:', error)
       showToast(t('errors.citySearchFailed', 'City search failed. Please try again.'), 'error')
       setCitySearchResults([])
       setShowCityDropdown(false)
     } finally {
-      setIsSearching(false)
+      if (!signal.aborted) setIsSearching(false)
     }
   }, [isDemoMode, showToast, t])
 
@@ -89,11 +92,13 @@ export function WeatherSearch({
       clearTimeout(searchTimeoutRef.current)
     }
 
+    const controller = new AbortController()
     searchTimeoutRef.current = setTimeout(() => {
-      searchCities(citySearchInput)
+      searchCities(citySearchInput, controller.signal)
     }, 300)
 
     return () => {
+      controller.abort()
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current)
       }

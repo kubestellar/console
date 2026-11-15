@@ -27,3 +27,18 @@ it('does not call the geocoding API in demo mode', async () => {
   await new Promise(resolve => setTimeout(resolve, 400))
   expect(fetchMock).not.toHaveBeenCalled()
 })
+
+it('aborts an in-flight search on unmount without reporting an error', async () => {
+  let rejectFetch: (error: Error) => void = () => {}
+  const fetchMock = vi.fn().mockImplementation(() => new Promise((_resolve, reject) => { rejectFetch = reject }))
+  vi.stubGlobal('fetch', fetchMock)
+  const { unmount } = render(<WeatherSearch currentLocation={{ id: '1', cityName: 'Paris', latitude: 0, longitude: 0 }} savedLocations={[]} isCurrentLocationSaved={false} onSelectCity={vi.fn()} onSaveCurrentLocation={vi.fn()} onRemoveSavedLocation={vi.fn()} onLoadSavedLocation={vi.fn()} units="C" onUnitsChange={vi.fn()} forecastLength={7} onForecastLengthChange={vi.fn()} />)
+  fireEvent.change(screen.getByPlaceholderText('Type city name...'), { target: { value: 'Paris' } })
+  await waitFor(() => expect(fetchMock).toHaveBeenCalled())
+  const signal = fetchMock.mock.calls[0][1].signal as AbortSignal
+  unmount()
+  expect(signal.aborted).toBe(true)
+  rejectFetch(new Error('aborted'))
+  await Promise.resolve()
+  expect(showToast).not.toHaveBeenCalled()
+})
