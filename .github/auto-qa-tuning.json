@@ -61,12 +61,16 @@
     }
   },
   "weekly_insights": {
-    "best_pr_size": "L",
+    "best_pr_size": "S",
     "size_acceptance": {},
     "type_acceptance": {},
-    "common_rejection_reasons": [],
+    "common_rejection_reasons": [
+      "- PR #24960: Closing: triage found every flagged non-test finding already compliant on main (buttons have aria-label or visible text on later lines of multi-line tags; all 10 images already have meaningful alt). A changelog-only PR with no user-visible change is noise — the evidence is recorded on #24955 instead.",
+      "- PR #24901: Looks like k8s.io/apimachinery is up-to-date now, so this is no longer needed.",
+      "- PR #24899: Looks like k8s.io/api is up-to-date now, so this is no longer needed."
+    ],
     "best_change_type": "bug_fix",
-    "last_report_date": "2026-11-08"
+    "last_report_date": "2026-11-15"
   },
   "cncf_insights": {
     "last_scan_date": "2026-11-11",
