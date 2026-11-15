@@ -151,8 +151,16 @@ export function GPUNodeDrillDown({ data }: Props) {
               return (
                 <div
                   key={`${pod.namespace}:${pod.name}`}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => drillToPod(pod.cluster!, pod.namespace!, pod.name, { status })}
-                  className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      drillToPod(pod.cluster!, pod.namespace!, pod.name, { status })
+                    }
+                  }}
+                  className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group focus-visible:outline focus-visible:outline-2 focus-visible:outline-purple-400"
                 >
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2 min-w-0">
