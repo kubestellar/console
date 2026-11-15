@@ -143,9 +143,6 @@ function OfflineNodeRow({
 
   return (
     <div
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
       className="p-2 rounded bg-red-500/10 text-xs cursor-pointer hover:bg-red-500/20 transition-colors group flex flex-wrap items-center justify-between gap-y-2"
       onClick={() => node.cluster && drillToNode(node.cluster, node.name, {
         status: node.unschedulable ? 'Cordoned' : node.status,
@@ -155,7 +152,12 @@ function OfflineNodeRow({
         rootCause: rootCause?.cause })}
       title={rootCause ? `${rootCause.cause}: ${rootCause.details}` : `Click to diagnose ${node.name}`}
     >
-      <div className="min-w-0 flex-1">
+      <div
+        role={node.cluster ? 'button' : undefined}
+        tabIndex={node.cluster ? 0 : undefined}
+        onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
+        className="min-w-0 flex-1"
+      >
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="font-medium text-foreground truncate">{node.name}</span>
           <StatusBadge color="red" size="xs" className="shrink-0">
@@ -195,9 +197,6 @@ function ClusterHealthIssueRow({
 
   return (
     <div
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
       className={cn(
         'p-2 rounded text-xs cursor-pointer transition-colors group flex flex-wrap items-center justify-between gap-y-2',
         isCritical ? 'bg-red-500/10 hover:bg-red-500/20' : 'bg-yellow-500/10 hover:bg-yellow-500/20'
@@ -205,7 +204,12 @@ function ClusterHealthIssueRow({
       onClick={() => drillToCluster(issue.cluster)}
       title={issue.reasonDetailed}
     >
-      <div className="min-w-0 flex-1">
+      <div
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
+        className="min-w-0 flex-1"
+      >
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="font-medium text-foreground truncate">{issue.cluster}</span>
           <StatusBadge color={isCritical ? 'red' : 'yellow'} size="xs" className="shrink-0">
@@ -240,14 +244,16 @@ function GpuIssueRow({
 
   return (
     <div
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
       className="p-2 rounded bg-yellow-500/10 text-xs cursor-pointer hover:bg-yellow-500/20 transition-colors group flex flex-wrap items-center justify-between gap-y-2"
       onClick={() => drillToCluster(issue.cluster)}
       title={`Click to view cluster ${issue.cluster}`}
     >
-      <div className="min-w-0 flex-1">
+      <div
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
+        className="min-w-0 flex-1"
+      >
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="font-medium text-foreground truncate">{issue.nodeName}</span>
           <StatusBadge color="yellow" size="xs" className="shrink-0">
@@ -293,10 +299,10 @@ function PredictionRow({
     >
       <div className="flex flex-wrap items-center justify-between gap-y-2">
         <div
-          role="button"
-          tabIndex={0}
+          role={risk.cluster ? 'button' : undefined}
+          tabIndex={risk.cluster ? 0 : undefined}
           onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
-          className="min-w-0 flex items-center gap-2 flex-1 cursor-pointer"
+          className={cn("min-w-0 flex items-center gap-2 flex-1", risk.cluster && "cursor-pointer")}
           onClick={() => risk.cluster && drillToCluster(risk.cluster)}
         >
           <PredictionTypeIcon type={risk.type} />

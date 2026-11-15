@@ -107,6 +107,17 @@ describe('ConsoleHealthCheckCard', () => {
     expect(mockDrillToCluster).not.toHaveBeenCalled()
   })
 
+  it('exposes only actionable cluster stats as keyboard buttons', async () => {
+    const user = userEvent.setup()
+    render(<ConsoleHealthCheckCard />)
+
+    const healthy = screen.getByRole('button', { name: /common\.healthy/ })
+    healthy.focus()
+    await user.keyboard('{Enter}')
+    expect(mockDrillToAllClusters).toHaveBeenCalledWith('healthy')
+    expect(screen.queryByRole('button', { name: /common\.unreachable/ })).toBeNull()
+  })
+
   it('computes the horseshoe score from healthy clusters only', () => {
     render(<ConsoleHealthCheckCard />)
 
