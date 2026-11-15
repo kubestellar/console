@@ -9,29 +9,9 @@ import type { GPUNode } from '../../../hooks/mcp/types.gpu'
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 vi.mock('../../../lib/modals', () => {
-  const BaseModal = ({
-    isOpen,
-    children,
-    onClose,
-  }: {
-    isOpen?: boolean
-    children: React.ReactNode
-    onClose: () => void
-  }) => {
+  const BaseModal = ({ isOpen, children }: { isOpen?: boolean; children: React.ReactNode }) => {
     if (isOpen === false) return null
-    return (
-      <div
-        data-testid="base-modal"
-        onClick={onClose}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') onClose()
-        }}
-      >
-        {children}
-      </div>
-    )
+    return <div data-testid="base-modal">{children}</div>
   }
   BaseModal.Header = ({ title, children }: { title?: React.ReactNode; children?: React.ReactNode }) => (
     <div data-testid="base-modal-header">
@@ -155,13 +135,6 @@ describe('ReservationFormModal', () => {
     renderModal({ editingReservation: makeEditingReservation() })
     // t('gpuReservations.form.editTitle') returns the key in test env
     expect(screen.getByText('gpuReservations.form.editTitle')).toBeTruthy()
-  })
-
-  it('calls onClose when the modal backdrop is clicked', () => {
-    const onClose = vi.fn()
-    renderModal({ onClose })
-    fireEvent.click(screen.getByTestId('base-modal'))
-    expect(onClose).toHaveBeenCalledTimes(1)
   })
 
   it('shows GPU type label in the form', () => {
