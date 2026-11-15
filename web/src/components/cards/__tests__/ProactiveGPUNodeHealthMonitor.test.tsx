@@ -1,6 +1,6 @@
 import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 
 // Standard mocks
 vi.mock('../../../lib/demoMode', () => ({
@@ -51,9 +51,10 @@ vi.mock('../CardDataContext', () => ({
 }))
 
 const mockGPUNodeHealth = vi.fn()
+const mockCronJob = vi.fn(() => ({ status: null, isLoading: false, error: false, actionInProgress: false, install: vi.fn(), uninstall: vi.fn(), refetch: vi.fn() }))
 vi.mock('../../../hooks/useCachedData', () => ({
   useCachedGPUNodeHealth: () => mockGPUNodeHealth(),
-  useGPUHealthCronJob: () => ({ status: null, isLoading: false, error: false, actionInProgress: false, install: vi.fn(), uninstall: vi.fn(), refetch: vi.fn() }),
+  useGPUHealthCronJob: () => mockCronJob(),
 }))
 
 const mockDrillDown = vi.fn()
@@ -62,6 +63,7 @@ vi.mock('../../../hooks/useDrillDown', () => ({
 }))
 
 import { ProactiveGPUNodeHealthMonitor } from '../ProactiveGPUNodeHealthMonitor'
+import { CronJobClusterPanel } from '../ProactiveGPUNodeHealthMonitor.CronJobPanel'
 
 describe('ProactiveGPUNodeHealthMonitor', () => {
   beforeEach(() => {
@@ -113,4 +115,14 @@ describe('ProactiveGPUNodeHealthMonitor', () => {
     expect(mockUseCardLoadingState).toHaveBeenCalled()
   })
 
+  it('shows an accessible skeleton until the CronJob status loads', () => {
+    mockCronJob.mockReturnValueOnce({ status: null, isLoading: true, error: false, actionInProgress: false, install: vi.fn(), uninstall: vi.fn(), refetch: vi.fn() })
+    const { container, rerender } = render(<CronJobClusterPanel cluster="test-cluster" />)
+
+    expect(screen.getByRole('status')).toHaveTextContent('cards:gpuNodeHealth.checking')
+    expect(container.querySelector('.animate-pulse')).toBeTruthy()
+    rerender(<CronJobClusterPanel cluster="test-cluster" />)
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(screen.getByText('cards:gpuNodeHealth.notInstalled')).toBeTruthy()
+  })
 })
