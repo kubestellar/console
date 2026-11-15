@@ -206,7 +206,7 @@ function ClusterComparisonInternal({ config }: ClusterComparisonProps) {
                   >
                     <Server className="w-3 h-3 text-muted-foreground shrink-0" />
                     <span className="text-foreground font-medium group-hover:text-purple-400 truncate">{c.name}</span>
-                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${c.healthy ? 'bg-green-400' : 'bg-red-400'}`} />
+                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${c.healthy ? 'bg-status-success' : 'bg-status-error'}`} />
                     <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                   </Button>
                 </th>
