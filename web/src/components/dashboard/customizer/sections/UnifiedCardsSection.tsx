@@ -42,8 +42,8 @@ export function UnifiedCardsSection({
   dashboardName,
 }: UnifiedCardsSectionProps) {
   const { t } = useTranslation()
-  const tCard = t as CardTranslation
-  const tDashboard = t as DashboardTranslation
+  const tCard = t as unknown as CardTranslation
+  const tDashboard = t as unknown as DashboardTranslation
   const { showToast } = useToast()
   // Card/Stat factories are now separate nav items in Console Studio
   const [browseSearch, setBrowseSearch] = useState(initialSearch || '')

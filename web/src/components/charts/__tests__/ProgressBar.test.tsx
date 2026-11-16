@@ -70,7 +70,7 @@ describe('ProgressBar', () => {
       <ProgressBar value={10} max={100} thresholds={{ warning: 60, critical: 80 }} />,
     )
     const bar = container.querySelector('[style*="background"]')
-    expect(bar?.getAttribute('style')).toContain('#22c55e')
+    expect(bar).toHaveStyle({ backgroundColor: '#22c55e' })
   })
 
   it('uses thresholds: yellow at warning', () => {
@@ -78,7 +78,7 @@ describe('ProgressBar', () => {
       <ProgressBar value={70} max={100} thresholds={{ warning: 60, critical: 80 }} />,
     )
     const bar = container.querySelector('[style*="background"]')
-    expect(bar?.getAttribute('style')).toContain('#eab308')
+    expect(bar).toHaveStyle({ backgroundColor: '#eab308' })
   })
 
   it('uses thresholds: red at critical', () => {
@@ -86,7 +86,7 @@ describe('ProgressBar', () => {
       <ProgressBar value={90} max={100} thresholds={{ warning: 60, critical: 80 }} />,
     )
     const bar = container.querySelector('[style*="background"]')
-    expect(bar?.getAttribute('style')).toContain('#ef4444')
+    expect(bar).toHaveStyle({ backgroundColor: '#ef4444' })
   })
 
   it('uses explicit color over thresholds', () => {
@@ -94,7 +94,7 @@ describe('ProgressBar', () => {
       <ProgressBar value={90} max={100} color="#abcdef" thresholds={{ warning: 60, critical: 80 }} />,
     )
     const bar = container.querySelector('[style*="background"]')
-    expect(bar?.getAttribute('style')).toContain('#abcdef')
+    expect(bar).toHaveStyle({ backgroundColor: '#abcdef' })
   })
 
   it('clamps to 100% when value > max', () => {

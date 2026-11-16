@@ -46,8 +46,8 @@ export function CardCatalogSection({
   isActive,
 }: CardCatalogSectionProps) {
   const { t } = useTranslation()
-  const tCard = t as CardTranslation
-  const tDashboard = t as DashboardTranslation
+  const tCard = t as unknown as CardTranslation
+  const tDashboard = t as unknown as DashboardTranslation
   const { showToast } = useToast()
   const { isOpen: isCardFactoryOpen, open: openCardFactory, close: closeCardFactory } = useModalState()
   const { isOpen: isStatFactoryOpen, open: openStatFactory, close: closeStatFactory } = useModalState()

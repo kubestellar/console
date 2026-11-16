@@ -18,7 +18,7 @@ interface PreviewPanelProps {
 
 export function PreviewPanel({ hoveredCard }: PreviewPanelProps) {
   const { t } = useTranslation()
-  const tCard = t as (key: string, defaultValue?: string) => string
+  const tCard = t as unknown as (key: string, defaultValue?: string) => string
 
   return (
     <div className="w-64 border-l border-border px-4 shrink-0 hidden lg:block">

@@ -279,7 +279,7 @@ export function RBACExplorer() {
                           call-site only. The keys DO exist in common.json and the value is always
                           a string, so the cast is sound. */}
                       {finding.descriptionKey
-                        ? (t as (key: string, params?: Record<string, unknown>) => string)(
+                        ? (t as unknown as (key: string, params?: Record<string, unknown>) => string)(
                             `rbac.findingDescription.${finding.descriptionKey}`,
                             finding.descriptionParams ?? {},
                           )

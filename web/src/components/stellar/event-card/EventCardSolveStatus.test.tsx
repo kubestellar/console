@@ -38,7 +38,7 @@ describe('EventCardSolveStatus', () => {
       phase: 'resolved',
     }
     const { container } = render(<EventCardSolveStatus solveStatus={solveStatus} />)
-    const bar = container.querySelector('[style*="ease"]') as HTMLElement
+    const bar = container.querySelector('[style*="transition"]') as HTMLElement
     expect(bar.style.width).toBe('100%')
   })
 
