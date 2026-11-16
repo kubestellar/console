@@ -13,7 +13,7 @@ export function RainScene({ type, isDaytime, windSpeed }: WeatherSceneProps & { 
   const rainAngle = windSpeed > 20 ? 25 : windSpeed > 10 ? 15 : 8
 
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    <div className="absolute inset-0 overflow-hidden pointer-events-none weather-rain-palette">
       {/* Rain sheet/curtain effect */}
       {isHeavy && (
         <>
@@ -34,10 +34,8 @@ export function RainScene({ type, isDaytime, windSpeed }: WeatherSceneProps & { 
           top: '2%',
           width: '100px',
           height: '35px',
-          background: isDaytime
-            ? 'radial-gradient(ellipse at 30% 40%, rgba(140,150,170,0.95) 0%, rgba(110,120,145,0.85) 50%, rgba(90,100,125,0.7) 100%)'
-            : 'radial-gradient(ellipse at 30% 40%, rgba(45,55,75,0.95) 0%, rgba(35,45,65,0.85) 100%)',
-          boxShadow: 'inset 0 -8px 15px rgba(80,90,110,0.4)',
+          background: isDaytime ? 'var(--weather-rain-cloud-one-day)' : 'var(--weather-rain-cloud-one-night)',
+          boxShadow: 'var(--weather-rain-cloud-one-shadow)',
         }}
       />
       <div
@@ -46,10 +44,8 @@ export function RainScene({ type, isDaytime, windSpeed }: WeatherSceneProps & { 
           top: '15%',
           width: '120px',
           height: '40px',
-          background: isDaytime
-            ? 'radial-gradient(ellipse at 40% 35%, rgba(130,140,165,0.92) 0%, rgba(100,110,135,0.8) 60%, rgba(80,90,115,0.6) 100%)'
-            : 'radial-gradient(ellipse at 40% 35%, rgba(40,50,70,0.92) 0%, rgba(30,40,60,0.75) 100%)',
-          boxShadow: 'inset 0 -10px 20px rgba(70,80,100,0.45)',
+          background: isDaytime ? 'var(--weather-rain-cloud-two-day)' : 'var(--weather-rain-cloud-two-night)',
+          boxShadow: 'var(--weather-rain-cloud-two-shadow)',
         }}
       />
       {/* Angled rain drops */}
@@ -66,8 +62,8 @@ export function RainScene({ type, isDaytime, windSpeed }: WeatherSceneProps & { 
               width: `${dropWidth}px`,
               height: `${dropHeight}px`,
               background: isDaytime
-                ? `linear-gradient(${180 + rainAngle}deg, rgba(170,195,230,0.95) 0%, rgba(130,165,210,0.7) 50%, rgba(100,140,200,0.4) 100%)`
-                : `linear-gradient(${180 + rainAngle}deg, rgba(120,150,200,0.9) 0%, rgba(90,120,175,0.65) 50%, rgba(70,100,160,0.35) 100%)`,
+                ? `linear-gradient(${180 + rainAngle}deg, var(--weather-rain-day-start) 0%, var(--weather-rain-day-middle) 50%, var(--weather-rain-day-end) 100%)`
+                : `linear-gradient(${180 + rainAngle}deg, var(--weather-rain-night-start) 0%, var(--weather-rain-night-middle) 50%, var(--weather-rain-night-end) 100%)`,
               borderRadius: '0 0 50% 50%',
               animationDelay: `${(i * 0.07) % 0.8}s`,
               transform: `rotate(${rainAngle + variation}deg)`,
@@ -94,7 +90,7 @@ export function RainScene({ type, isDaytime, windSpeed }: WeatherSceneProps & { 
 // Thunderstorm with multiple lightning strikes and ambient flash
 export function ThunderstormScene({ isDaytime, windSpeed }: WeatherSceneProps) {
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    <div className="absolute inset-0 overflow-hidden pointer-events-none weather-rain-palette">
       {/* Ambient lightning flash overlay */}
       <div className="absolute inset-0 weather-lightning-ambient" />
       {/* Heavy storm clouds */}
@@ -104,10 +100,8 @@ export function ThunderstormScene({ isDaytime, windSpeed }: WeatherSceneProps) {
           top: '0%',
           width: '110px',
           height: '38px',
-          background: isDaytime
-            ? 'radial-gradient(ellipse at 30% 40%, rgba(100,105,125,0.98) 0%, rgba(75,80,100,0.9) 50%, rgba(60,65,85,0.75) 100%)'
-            : 'radial-gradient(ellipse at 30% 40%, rgba(35,40,55,0.98) 0%, rgba(25,30,45,0.9) 100%)',
-          boxShadow: 'inset 0 -10px 20px rgba(50,55,75,0.5)',
+          background: isDaytime ? 'var(--weather-storm-cloud-one-day)' : 'var(--weather-storm-cloud-one-night)',
+          boxShadow: 'var(--weather-storm-cloud-one-shadow)',
         }}
       />
       <div
@@ -116,10 +110,8 @@ export function ThunderstormScene({ isDaytime, windSpeed }: WeatherSceneProps) {
           top: '12%',
           width: '130px',
           height: '45px',
-          background: isDaytime
-            ? 'radial-gradient(ellipse at 40% 35%, rgba(90,95,115,0.95) 0%, rgba(65,70,90,0.85) 60%, rgba(50,55,75,0.65) 100%)'
-            : 'radial-gradient(ellipse at 40% 35%, rgba(30,35,50,0.95) 0%, rgba(20,25,40,0.85) 100%)',
-          boxShadow: 'inset 0 -12px 25px rgba(40,45,65,0.5)',
+          background: isDaytime ? 'var(--weather-storm-cloud-two-day)' : 'var(--weather-storm-cloud-two-night)',
+          boxShadow: 'var(--weather-storm-cloud-two-shadow)',
         }}
       />
       {/* Multiple lightning bolts */}
