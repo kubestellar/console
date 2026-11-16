@@ -7,7 +7,7 @@ import type { NamespaceDetails } from './types'
 interface DeleteConfirmModalProps {
   namespace: NamespaceDetails
   onClose: () => void
-  onConfirm: () => void
+  onConfirm: () => void | Promise<void>
 }
 
 export function DeleteConfirmModal({ namespace, onClose, onConfirm }: DeleteConfirmModalProps) {
@@ -19,19 +19,27 @@ export function DeleteConfirmModal({ namespace, onClose, onConfirm }: DeleteConf
   const handleDelete = async () => {
     if (!canDelete) return
     setDeleting(true)
-    await onConfirm()
+    try {
+      await onConfirm()
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const handleClose = () => {
+    if (!deleting) onClose()
   }
 
   return (
     // closeOnBackdrop is disabled because this modal contains a destructive
     // confirmation form (typed namespace name) that shouldn't be discarded
     // by an accidental backdrop click — see Auto-QA #21564.
-    <BaseModal isOpen={true} onClose={onClose} size="md" closeOnBackdrop={false} closeOnEscape={true}>
+    <BaseModal isOpen={true} onClose={handleClose} size="md" closeOnBackdrop={false} closeOnEscape={!deleting}>
       <BaseModal.Header
         title="Delete Namespace"
         description="This action cannot be undone"
         icon={Trash2}
-        onClose={onClose}
+        onClose={handleClose}
         showBack={false}
       />
 
@@ -63,7 +71,8 @@ export function DeleteConfirmModal({ namespace, onClose, onConfirm }: DeleteConf
           <Button
             variant="ghost"
             size="lg"
-            onClick={onClose}
+            onClick={handleClose}
+            disabled={deleting}
           >
             Cancel
           </Button>
