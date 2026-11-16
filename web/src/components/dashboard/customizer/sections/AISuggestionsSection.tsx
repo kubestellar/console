@@ -31,7 +31,7 @@ export function AISuggestionsSection({
   onHoverCard,
 }: AISuggestionsSectionProps) {
   const { t } = useTranslation()
-  const tCard = t as (key: string, defaultValue?: string) => string
+  const tCard = t as unknown as (key: string, defaultValue?: string) => string
   const [query, setQuery] = useState('')
   const [suggestions, setSuggestions] = useState<CardSuggestion[]>([])
   const [selectedCards, setSelectedCards] = useState<Set<number>>(new Set())

@@ -46,7 +46,7 @@ describe('WidgetExportModal', () => {
     const scaledPreview = container.querySelector('[style*="transform: scale"]') as HTMLDivElement | null
 
     expect(scaledPreview).toBeTruthy()
-    expect(scaledPreview?.style.transformOrigin).toBe('top center')
+    expect(scaledPreview).toHaveStyle({ transformOrigin: 'top center' })
 
     const scaleMatch = scaledPreview?.style.transform.match(/scale\(([^)]+)\)/)
     expect(scaleMatch).toBeTruthy()

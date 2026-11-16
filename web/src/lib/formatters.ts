@@ -246,7 +246,7 @@ export function createCardSyncFormatter(
 ): (isoString: string) => string {
   const k = typeof keys === 'string' ? cardSyncKeys(keys) : keys
   // Cast to loose signature — sync keys are computed at runtime from card prefixes
-  const tDynamic = t as (key: string, options?: Record<string, unknown>) => string
+  const tDynamic = t as unknown as (key: string, options?: Record<string, unknown>) => string
 
   return (isoString: string): string => {
     const parsed = new Date(isoString).getTime()
