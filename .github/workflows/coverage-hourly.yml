@@ -14,6 +14,8 @@ on:
       - 'web/package.json'
       - 'web/package-lock.json'
       - 'web/vite.config.ts'
+      - 'web/scripts/check-merged-coverage.mjs'
+      - '.github/workflows/coverage-hourly.yml'
   workflow_dispatch:
 
 concurrency:
@@ -284,6 +286,12 @@ jobs:
           echo "| Branches | ${BRANCHES}% |"
           echo "| Functions | ${FUNCS}% |"
 
+      - name: Check merged per-directory coverage floors
+        id: coverage-floors
+        working-directory: web
+        continue-on-error: true
+        run: node scripts/check-merged-coverage.mjs
+
       - name: Upload merged coverage
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -293,7 +301,7 @@ jobs:
           retention-days: 30
 
       - name: Update coverage badge gist (with regression guard)
-        if: steps.failures.outputs.count == '0' && needs.test-shard.result != 'failure'
+        if: steps.coverage-floors.outcome == 'success' && steps.failures.outputs.count == '0' && needs.test-shard.result != 'failure'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           GIST_ID: ${{ env.GIST_ID }}
@@ -518,4 +526,10 @@ jobs:
         if: needs.test-shard.result == 'failure'
         run: |
           echo "::error::One or more test shards failed. Coverage was merged; badge update was skipped."
+          exit 1
+
+      - name: Fail if merged coverage is below a floor
+        if: steps.coverage-floors.outcome == 'failure'
+        run: |
+          echo "::error::Merged per-directory coverage is below its floor or could not be checked."
           exit 1
