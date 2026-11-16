@@ -1,0 +1,1 @@
+- Keep the Weather card's city-search loading state aligned with the latest query, and ignore outdated search results and errors.

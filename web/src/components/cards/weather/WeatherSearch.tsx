@@ -55,7 +55,7 @@ export function WeatherSearch({
   const cityDropdownNav = useKeyboardNav({ selector: '[role="option"]:not([disabled])', orientation: 'vertical', onEscape: () => setShowCityDropdown(false) })
 
   // City search with Open-Meteo Geocoding API
-  const searchCities = useCallback(async (query: string) => {
+  const searchCities = useCallback(async (query: string, isCurrent: () => boolean) => {
     // Demo mode must not hit the live geocoding API
     if (isDemoMode || !query || query.length < 2) {
       setCitySearchResults([])
@@ -72,28 +72,35 @@ export function WeatherSearch({
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
       const data = await response.json()
+      if (!isCurrent()) return
       setCitySearchResults(data.results || [])
       setShowCityDropdown(true)
     } catch (error: unknown) {
+      if (!isCurrent()) return
       console.error('City search error:', error)
       showToast(t('errors.citySearchFailed', 'City search failed. Please try again.'), 'error')
       setCitySearchResults([])
       setShowCityDropdown(false)
     } finally {
-      setIsSearching(false)
+      if (isCurrent()) setIsSearching(false)
     }
   }, [isDemoMode, showToast, t])
 
   useEffect(() => {
+    let current = true
+    setIsSearching(false)
+    setCitySearchResults([])
+    setShowCityDropdown(false)
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current)
     }
 
     searchTimeoutRef.current = setTimeout(() => {
-      searchCities(citySearchInput)
+      searchCities(citySearchInput, () => current)
     }, 300)
 
     return () => {
+      current = false
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current)
       }
@@ -133,6 +140,7 @@ export function WeatherSearch({
             trailingIcon={isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : undefined}
             className="bg-secondary/50"
             placeholder="Type city name..."
+            aria-busy={isSearching}
             aria-expanded={showCityDropdown}
             aria-controls="weather-city-results"
             aria-autocomplete="list"
