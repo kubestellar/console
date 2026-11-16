@@ -176,8 +176,8 @@ Please provide:
       {/* Quick Stats */}
       <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-2 text-center">
         <div
-          role="button"
-          tabIndex={0}
+          role={healthyClusters > 0 ? 'button' : undefined}
+          tabIndex={healthyClusters > 0 ? 0 : undefined}
           onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
           className={cn(
             "p-2 rounded bg-green-500/10",
@@ -190,8 +190,8 @@ Please provide:
           <div className="text-2xs text-muted-foreground">{t('common.healthy')}</div>
         </div>
         <div
-          role="button"
-          tabIndex={0}
+          role={unhealthyClusters > 0 ? 'button' : undefined}
+          tabIndex={unhealthyClusters > 0 ? 0 : undefined}
           onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
           className={cn(
             "p-2 rounded bg-red-500/10",
@@ -204,8 +204,8 @@ Please provide:
           <div className="text-2xs text-muted-foreground">{t('common.unhealthy')}</div>
         </div>
         <div
-          role="button"
-          tabIndex={0}
+          role={unreachableClusters > 0 ? 'button' : undefined}
+          tabIndex={unreachableClusters > 0 ? 0 : undefined}
           onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
           className={cn(
             "p-2 rounded bg-yellow-500/10",
@@ -225,10 +225,10 @@ Please provide:
       {/* Issues Summary */}
       {totalIssues > 0 && (
         <div
-          role="button"
-          tabIndex={0}
+          role={podIssues[0]?.cluster ? 'button' : undefined}
+          tabIndex={podIssues[0]?.cluster ? 0 : undefined}
           onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
-          className="mb-2 p-2 rounded bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
+          className={cn("mb-2 p-2 rounded bg-red-500/10 border border-red-500/20", podIssues[0]?.cluster && "cursor-pointer hover:bg-red-500/20 transition-colors")}
           onClick={() => {
             if (podIssues.length > 0 && podIssues[0]?.cluster) {
               drillToPod(podIssues[0].cluster, podIssues[0].namespace, podIssues[0].name)
