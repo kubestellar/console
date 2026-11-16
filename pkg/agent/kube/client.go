@@ -27,10 +27,10 @@ const (
 	// kubectlReloadMinInterval is the minimum time between kubeconfig file
 	// re-reads driven by ReloadIfStale. handleClustersHTTP is polled by the
 	// frontend and previously called Reload() on every request, which does a
-	// full disk read + YAML parse. Two seconds is short enough to feel
-	// responsive after the user adds a context, long enough to absorb bursty
-	// polling. (#8075)
-	KubectlReloadMinInterval = 2 * time.Second
+	// full disk read + YAML parse. Thirty seconds keeps idle polling from
+	// triggering repeated reloads (and downstream React re-renders) while
+	// still refreshing after a context change. (#8075)
+	KubectlReloadMinInterval = 30 * time.Second
 )
 
 // execCommand allows mocking exec.Command for testing
