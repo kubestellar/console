@@ -146,8 +146,16 @@ export function GPUNamespaceDrillDown({ data }: Props) {
               return (
                 <div
                   key={`${pod.cluster}:${pod.namespace}:${pod.name}`}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => drillToPod(pod.cluster!, pod.namespace!, pod.name, { status })}
-                  className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      drillToPod(pod.cluster!, pod.namespace!, pod.name, { status })
+                    }
+                  }}
+                  className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group focus-visible:outline focus-visible:outline-2 focus-visible:outline-purple-400"
                 >
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2 min-w-0">
@@ -209,6 +217,7 @@ export function GPUNamespaceDrillDown({ data }: Props) {
               return (
                 <div
                   key={nodeName}
+                  {...(gpuNodeData && nodeCluster ? { role: 'button' as const, tabIndex: 0 } : {})}
                   onClick={() => {
                     if (gpuNodeData && nodeCluster) {
                       drillToGPUNode(nodeCluster, nodeName, {
@@ -217,8 +226,17 @@ export function GPUNamespaceDrillDown({ data }: Props) {
                         gpuAllocated: gpuNodeData.gpuAllocated })
                     }
                   }}
+                  onKeyDown={(e) => {
+                    if ((e.key === 'Enter' || e.key === ' ') && gpuNodeData && nodeCluster) {
+                      e.preventDefault()
+                      drillToGPUNode(nodeCluster, nodeName, {
+                        gpuType: gpuNodeData.gpuType,
+                        gpuCount: gpuNodeData.gpuCount,
+                        gpuAllocated: gpuNodeData.gpuAllocated })
+                    }
+                  }}
                   className={`p-3 rounded-lg bg-secondary/30 transition-colors ${
-                    gpuNodeData ? 'hover:bg-secondary/50 cursor-pointer group' : ''
+                    gpuNodeData && nodeCluster ? 'hover:bg-secondary/50 cursor-pointer group focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-400' : ''
                   }`}
                 >
                   <div className="flex items-center justify-between">

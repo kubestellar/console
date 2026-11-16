@@ -1,6 +1,8 @@
 import React from 'react'
 import { describe, it, expect, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
+
+const { drillToPod } = vi.hoisted(() => ({ drillToPod: vi.fn() }))
 
 vi.mock('../../../../lib/demoMode', () => ({
   isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
@@ -39,11 +41,14 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('../../../../hooks/useDrillDown', () => ({
   useDrillDown: () => ({ state: { isOpen: true, stack: [], currentView: null }, pop: vi.fn(), close: vi.fn() }),
-  useDrillDownActions: () => ({ drillToEvents: [], drillToPod: vi.fn(), drillToCluster: vi.fn() }),
+  useDrillDownActions: () => ({ drillToEvents: vi.fn(), drillToPod, drillToCluster: vi.fn() }),
 }))
 
 vi.mock('../../../../hooks/useMCP', () => ({
-  useAllPods: () => ({ pods: [] }),
+  useAllPods: () => ({ pods: [{
+    cluster: 'c1', namespace: 'ns1', name: 'gpu-pod', node: 'n1', status: 'Running',
+    containers: [{ name: 'worker', gpuRequested: 1 }],
+  }] }),
 }))
 
 import { GPUNodeDrillDown } from '../GPUNodeDrillDown'
@@ -52,5 +57,15 @@ describe('GPUNodeDrillDown', () => {
   it('renders without crashing', () => {
     const { container } = render(<GPUNodeDrillDown data={{ cluster: 'c1', node: 'n1', gpuType: 'A100', gpuCount: 1, gpuAllocated: 0 }} />)
     expect(container).toBeTruthy()
+  })
+
+  it('opens a pod with Enter and Space', () => {
+    render(<GPUNodeDrillDown data={{ cluster: 'c1', node: 'n1' }} />)
+    const pod = screen.getByRole('button', { name: /gpu-pod/ })
+    expect(pod.tabIndex).toBe(0)
+    fireEvent.keyDown(pod, { key: 'Enter' })
+    fireEvent.keyDown(pod, { key: ' ' })
+    expect(drillToPod).toHaveBeenCalledTimes(2)
+    expect(drillToPod).toHaveBeenCalledWith('c1', 'ns1', 'gpu-pod', { status: 'Running' })
   })
 })
