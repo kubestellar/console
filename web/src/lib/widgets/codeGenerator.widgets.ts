@@ -2,7 +2,10 @@
  * Übersicht widget code generators.
  */
 
+// Card and template widgets default to a 30-second refresh; stat widgets use
+// a slower one-minute default. Callers can override either interval.
 const WIDGET_DEFAULT_REFRESH_INTERVAL_MS = 30_000
+const STAT_WIDGET_DEFAULT_REFRESH_INTERVAL_MS = 60_000
 
 import { WIDGET_CARDS, WIDGET_STATS, WIDGET_TEMPLATES } from './widgetRegistry'
 import { generateWidgetStyles, generateWidgetShell } from './styleConverter'
@@ -53,7 +56,7 @@ ${generateCardRenderFunction(cardType, card.displayName)}
 export function generateStatWidget(
   statIds: string[],
   apiEndpoint: string,
-  refreshInterval: number = 60000,
+  refreshInterval: number = STAT_WIDGET_DEFAULT_REFRESH_INTERVAL_MS,
   layout: 'row' | 'grid' = 'row'
 ): string {
   const stats = statIds.map((id) => WIDGET_STATS[id]).filter(Boolean)
