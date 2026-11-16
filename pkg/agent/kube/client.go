@@ -30,7 +30,7 @@ const (
 	// full disk read + YAML parse. Two seconds is short enough to feel
 	// responsive after the user adds a context, long enough to absorb bursty
 	// polling. (#8075)
-	KubectlReloadMinInterval = 2 * time.Second
+	KubectlReloadMinInterval = 5 * time.Second
 )
 
 // execCommand allows mocking exec.Command for testing
