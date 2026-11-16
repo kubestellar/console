@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import { useModalState } from '../../lib/modals'
 import { ClusterBadge } from '../ui/ClusterBadge'
+import { Skeleton } from '../ui/Skeleton'
 import { useGPUHealthCronJob } from '../../hooks/useCachedData'
 import { StatusBadge, CheckRow } from './ProactiveGPUNodeHealthMonitor.StatusPanels'
 import {
@@ -55,9 +56,10 @@ export function CronJobClusterPanel({ cluster }: { cluster: string }) {
 
   if (isLoading && !status) {
     return (
-      <div className="flex items-center gap-2 px-3 py-2 text-xs text-white/40">
-        <Loader2 className="w-3 h-3 animate-spin" />
-        {t('cards:gpuNodeHealth.checking', { cluster })}
+      <div className="flex items-center gap-2 px-3 py-2" role="status">
+        <span className="sr-only">{t('cards:gpuNodeHealth.checking', { cluster })}</span>
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-4 w-32" />
       </div>
     )
   }
