@@ -112,7 +112,7 @@
     "@storybook/addon-a11y": "^10.6.5",
     "@storybook/react": "^10.5.10",
     "@storybook/react-vite": "^10.6.1",
-    "@tailwindcss/postcss": "^4.3.3",
+    "@tailwindcss/postcss": "^4.3.5",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
