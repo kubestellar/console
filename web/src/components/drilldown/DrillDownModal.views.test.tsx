@@ -25,12 +25,16 @@ describe('renderDrillDownView', () => {
     ['cluster', 'ClusterDrillDown'],
     ['pod', 'PodDrillDown'],
     ['secret', 'SecretDrillDown'],
-    ['service', 'ServiceDrillDown'],
     ['resources', 'ResourcesDrillDown'],
     ['quantum-credentials', 'QuantumCredentialsDrillDown'],
   ])('routes %s to %s', (type, name) => {
     renderView({ type })
     expect(screen.getByTestId(`view-${name}`)).toBeInTheDocument()
+  })
+
+  it('routes service to the default-exported ServiceDrillDown', () => {
+    renderView({ type: 'service' })
+    expect(screen.getByTestId('view-default')).toBeInTheDocument()
   })
 
   it('routes multi-cluster summary types with viewType', () => {
