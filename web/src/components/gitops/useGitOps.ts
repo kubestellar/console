@@ -74,10 +74,11 @@ export function useGitOps() {
       return { cluster: selectedCluster, ambiguous: false }
     }
     // Only auto-select when there is exactly one cluster to avoid silently
-    // ignoring all others in a multi-cluster deployment.
+    // ignoring all others in a multi-cluster deployment. With several
+    // clusters the user must pick one via selectedCluster (handled above).
     if (deduplicatedClusters.length === EXACTLY_ONE_CLUSTER) {
-      const only = deduplicatedClusters[0]
-      if (only) return { cluster: clusterDisplayName(only), ambiguous: false }
+      const [onlyCluster] = deduplicatedClusters
+      if (onlyCluster) return { cluster: clusterDisplayName(onlyCluster), ambiguous: false }
     }
     return { cluster: '', ambiguous: deduplicatedClusters.length > EXACTLY_ONE_CLUSTER }
   }
