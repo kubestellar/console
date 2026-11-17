@@ -107,8 +107,8 @@ const VERDICT_CONFIG: Record<Verdict, { color: 'red' | 'green' | 'yellow' | 'gra
 
 export function RightSizeAdvisor() {
   const { t } = useTranslation()
-  const { deduplicatedClusters, isLoading, isRefreshing, isFailed, consecutiveFailures, error } = useClusters()
-  const { nodes: gpuNodes, isRefreshing: gpuRefreshing, isDemoFallback } = useCachedGPUNodes()
+  const { deduplicatedClusters, isLoading, isRefreshing, isFailed, consecutiveFailures, error, lastRefresh: clustersLastRefreshDate } = useClusters()
+  const { nodes: gpuNodes, isRefreshing: gpuRefreshing, isDemoFallback, lastRefresh: gpuLastRefresh } = useCachedGPUNodes()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { showDemoBadge } = useCardDemoState({ requires: 'backend' })
   const [headroom, setHeadroom] = useState(DEFAULT_HEADROOM_PCT)
@@ -214,6 +214,8 @@ export function RightSizeAdvisor() {
     consecutiveFailures,
     errorMessage: error ?? undefined,
     isDemoData: showDemoBadge || isDemoFallback,
+    // useClusters reports a Date, useCache epoch ms; show the newer of the two.
+    lastRefresh: Math.max(clustersLastRefreshDate instanceof Date ? clustersLastRefreshDate.getTime() : 0, gpuLastRefresh ?? 0) || null,
   })
 
   if (showSkeleton) {

@@ -156,10 +156,17 @@ function ComponentRow({
 
 export function CortexStatus() {
   const { t } = useTranslation('cards')
-  const { data, isRefreshing, isDemoData, isFailed, consecutiveFailures, error, showSkeleton, showEmptyState } =
+  const { data, isRefreshing, isDemoData, isFailed, consecutiveFailures, error, showSkeleton, showEmptyState, lastRefresh } =
     useCachedCortex()
 
-  useReportCardDataState({ isFailed, consecutiveFailures, isDemoData, isRefreshing, hasData: data.health !== 'unknown' })
+  useReportCardDataState({
+    isFailed,
+    consecutiveFailures,
+    isDemoData,
+    isRefreshing,
+    hasData: data.health !== 'unknown',
+    lastUpdated: lastRefresh ? new Date(lastRefresh) : null,
+  })
 
   const isHealthy = data.health === 'healthy'
   const components = data.components ?? []

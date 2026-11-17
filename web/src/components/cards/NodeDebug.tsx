@@ -96,7 +96,7 @@ export function NodeDebug() {
   // card (#23182). The remaining hooks below are debug-console UI state (selectors, exec mode,
   // running/output state) — there is no list to search/sort/paginate here, so useCardData /
   // useCardDemoState do not apply. See #23588.
-  const { nodes, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures } = useCachedNodes()
+  const { nodes, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, lastRefresh } = useCachedNodes()
   const { execute } = useKubectl()
   const { showToast } = useToast()
   const hasData = nodes.length > 0
@@ -106,7 +106,8 @@ export function NodeDebug() {
     hasAnyData: hasData,
     isDemoData: isDemoFallback,
     isFailed,
-    consecutiveFailures })
+    consecutiveFailures,
+    lastRefresh })
   const [selectedCluster, setSelectedCluster] = useState<string>('')
   const [selectedNode, setSelectedNode] = useState<string>('')
   const [output, setOutput] = useState<string>('')

@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import React from 'react'
 import type { ReactNode } from 'react'
 import { ClusterCosts } from './ClusterCosts'
+import { useCardLoadingState } from './CardDataContext'
 
 const mockUseClusters = vi.fn()
 const mockUseCachedGPUNodes = vi.fn()
@@ -209,5 +210,40 @@ describe('ClusterCosts', () => {
     render(<ClusterCosts />)
     
     expect(screen.queryByText('$')).toBeNull()
+  })
+
+  // useClusters reports lastRefresh as a Date and useCachedGPUNodes as epoch
+  // ms; the header must get one epoch-ms value, the newer of the two (#25066).
+  it('passes the newer of the cluster and GPU refresh times to useCardLoadingState', () => {
+    const clustersRefreshedAt = 1_700_000_000_000
+    const gpuRefreshedAt = clustersRefreshedAt + 60_000
+    mockUseClusters.mockReturnValue({
+      deduplicatedClusters: [],
+      isLoading: false,
+      isRefreshing: false,
+      isFailed: false,
+      consecutiveFailures: 0,
+      lastRefresh: new Date(clustersRefreshedAt),
+    })
+    mockUseCachedGPUNodes.mockReturnValue({
+      nodes: [],
+      isRefreshing: false,
+      isDemoFallback: false,
+      lastRefresh: gpuRefreshedAt,
+    })
+
+    render(<ClusterCosts />)
+
+    expect(useCardLoadingState).toHaveBeenCalledWith(
+      expect.objectContaining({ lastRefresh: gpuRefreshedAt })
+    )
+  })
+
+  it('reports no refresh time when neither source has refreshed yet', () => {
+    render(<ClusterCosts />)
+
+    expect(useCardLoadingState).toHaveBeenCalledWith(
+      expect.objectContaining({ lastRefresh: null })
+    )
   })
 })

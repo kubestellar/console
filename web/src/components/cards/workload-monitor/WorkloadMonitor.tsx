@@ -49,6 +49,7 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
     isLoading: nsLoading,
     isRefreshing: nsRefreshing,
     isDemoFallback: nsDemoFallback,
+    lastRefresh: nsLastRefresh,
   } = useCachedNamespaces(selectedCluster || undefined)
 
   const isPreConfigured = !!(monitorConfig?.cluster && monitorConfig?.namespace && monitorConfig?.workload)
@@ -71,7 +72,8 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
     isLoading: monitorLoading,
     isRefreshing: monitorRefreshing,
     error,
-    refetch } = useWorkloadMonitor(activeCluster, activeNamespace, activeWorkload, {
+    refetch,
+    lastRefresh: monitorLastRefresh } = useWorkloadMonitor(activeCluster, activeNamespace, activeWorkload, {
     autoRefreshMs: monitorConfig?.autoRefreshMs })
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
@@ -82,7 +84,9 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
     hasAnyData: hasData,
     isDemoData: isDemoMode || nsDemoFallback,
     isFailed,
-    consecutiveFailures })
+    consecutiveFailures,
+    // useWorkloadMonitor reports a Date, useCache epoch ms; show the newer of the two.
+    lastRefresh: Math.max(monitorLastRefresh instanceof Date ? monitorLastRefresh.getTime() : 0, nsLastRefresh ?? 0) || null })
 
   // View mode and filters
   const [viewMode, setViewMode] = useState<MonitorViewMode>('tree')

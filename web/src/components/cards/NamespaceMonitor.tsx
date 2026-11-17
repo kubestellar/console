@@ -68,14 +68,14 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
     [clusters, isAllClustersSelected, searchFilter, selectedClusters],
   )
 
-  const { namespaces, isDemoFallback: namespacesDemoFallback, isRefreshing: namespacesRefreshing } = useCachedNamespaces(selectedCluster || undefined)
-  const { deployments, isDemoFallback: deploymentsDemoFallback, isRefreshing: deploymentsRefreshing } = useCachedDeployments(selectedCluster || undefined)
-  const { services, isDemoFallback: servicesDemoFallback, isRefreshing: servicesRefreshing } = useCachedServices(selectedCluster || undefined)
-  const { pvcs, isDemoFallback: pvcsDemoFallback, isRefreshing: pvcsRefreshing } = useCachedPVCs(selectedCluster || undefined)
-  const { pods, isDemoFallback: podsDemoFallback, isRefreshing: podsRefreshing } = useCachedPods(selectedCluster || undefined, undefined, { limit: 500 })
-  const { configmaps, isDemoFallback: configmapsDemoFallback, isRefreshing: configmapsRefreshing } = useCachedConfigMaps(selectedCluster || undefined)
-  const { secrets, isDemoFallback: secretsDemoFallback, isRefreshing: secretsRefreshing } = useCachedSecrets(selectedCluster || undefined)
-  const { jobs, isDemoFallback: jobsDemoFallback, isRefreshing: jobsRefreshing } = useCachedJobs(selectedCluster || undefined)
+  const { namespaces, isDemoFallback: namespacesDemoFallback, isRefreshing: namespacesRefreshing, lastRefresh: namespacesLastRefresh } = useCachedNamespaces(selectedCluster || undefined)
+  const { deployments, isDemoFallback: deploymentsDemoFallback, isRefreshing: deploymentsRefreshing, lastRefresh: deploymentsLastRefresh } = useCachedDeployments(selectedCluster || undefined)
+  const { services, isDemoFallback: servicesDemoFallback, isRefreshing: servicesRefreshing, lastRefresh: servicesLastRefresh } = useCachedServices(selectedCluster || undefined)
+  const { pvcs, isDemoFallback: pvcsDemoFallback, isRefreshing: pvcsRefreshing, lastRefresh: pvcsLastRefresh } = useCachedPVCs(selectedCluster || undefined)
+  const { pods, isDemoFallback: podsDemoFallback, isRefreshing: podsRefreshing, lastRefresh: podsLastRefresh } = useCachedPods(selectedCluster || undefined, undefined, { limit: 500 })
+  const { configmaps, isDemoFallback: configmapsDemoFallback, isRefreshing: configmapsRefreshing, lastRefresh: configmapsLastRefresh } = useCachedConfigMaps(selectedCluster || undefined)
+  const { secrets, isDemoFallback: secretsDemoFallback, isRefreshing: secretsRefreshing, lastRefresh: secretsLastRefresh } = useCachedSecrets(selectedCluster || undefined)
+  const { jobs, isDemoFallback: jobsDemoFallback, isRefreshing: jobsRefreshing, lastRefresh: jobsLastRefresh } = useCachedJobs(selectedCluster || undefined)
 
   const isDemoData = namespacesDemoFallback || deploymentsDemoFallback || servicesDemoFallback ||
     pvcsDemoFallback || podsDemoFallback || configmapsDemoFallback || secretsDemoFallback || jobsDemoFallback
@@ -88,6 +88,16 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
     isDemoData: isDemoMode || isDemoData,
     isFailed,
     consecutiveFailures,
+    lastRefresh: Math.max(
+      namespacesLastRefresh || 0,
+      deploymentsLastRefresh || 0,
+      servicesLastRefresh || 0,
+      pvcsLastRefresh || 0,
+      podsLastRefresh || 0,
+      configmapsLastRefresh || 0,
+      secretsLastRefresh || 0,
+      jobsLastRefresh || 0,
+    ) || null,
   })
 
   useEffect(() => {

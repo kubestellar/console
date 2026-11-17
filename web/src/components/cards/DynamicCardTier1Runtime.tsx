@@ -83,6 +83,7 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
     isDemoFallback,
     error: apiError,
     consecutiveFailures,
+    lastRefresh,
   } = useCache<Record<string, unknown>[]>({
     key: `dynamic-card-api-${apiEndpoint}`,
     initialData: [],
@@ -116,6 +117,8 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
     isRefreshing: isApiSource ? apiRefreshing : false,
     hasData: isApiSource ? apiData.length > 0 : true,
     isDemoData: isDemoFallback && !apiLoading,
+    // Static data has no fetch time, so only API-sourced cards show "Updated Xm ago".
+    lastUpdated: isApiSource && lastRefresh ? new Date(lastRefresh) : null,
   })
 
   // useCardData for search/pagination — guard against undefined cardDefinition

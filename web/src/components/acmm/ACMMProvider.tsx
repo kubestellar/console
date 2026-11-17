@@ -107,6 +107,8 @@ export function ACMMProvider({ children }: { children: ReactNode }) {
    *  stop following the scan so their exploration sticks. */
   const userOverrodeLevel = useRef(false)
 
+  // Freshness is shown by the consumers, not here: the ACMM cards pass
+  // scan.lastRefresh to useCardLoadingState and RepoPicker renders it.
   const scan = useCachedACMMScan(repo)
   
   // Log scan errors for debugging (non-fatal — cards render demo/fallback data)

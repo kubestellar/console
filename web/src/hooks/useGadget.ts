@@ -142,6 +142,7 @@ interface GadgetTraceHookResult<T> {
   isDemoData: boolean
   isFailed: boolean
   consecutiveFailures: number
+  lastRefresh: number | null
 }
 
 /**
@@ -175,6 +176,7 @@ function createGadgetTraceHook<T>(config: {
       isDemoData: result.isDemoFallback && !result.isLoading,
       isFailed: result.isFailed,
       consecutiveFailures: result.consecutiveFailures,
+      lastRefresh: result.lastRefresh,
     }
   }
 }
@@ -241,5 +243,6 @@ export function useCachedSecurityAudit(cluster?: string, namespace?: string) {
     isDemoData: result.isDemoFallback && !result.isLoading,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
   }
 }

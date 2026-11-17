@@ -67,7 +67,7 @@ export function HelmHistory({ config }: HelmHistoryProps) {
   }, [globalSelectedClusters, isAllClustersSelected])
 
   // Fetch ALL Helm releases from all clusters once (not per-cluster)
-  const { releases: allHelmReleases, isLoading: releasesLoading, isRefreshing: releasesRefreshing, isDemoFallback: isDemoData } = useCachedHelmReleases()
+  const { releases: allHelmReleases, isLoading: releasesLoading, isRefreshing: releasesRefreshing, isDemoFallback: isDemoData, lastRefresh: releasesLastRefresh } = useCachedHelmReleases()
 
   // Auto-select cluster and release in demo mode so card shows data immediately
   useEffect(() => {
@@ -100,7 +100,8 @@ export function HelmHistory({ config }: HelmHistoryProps) {
     isLoading: historyLoading,
     isRefreshing: historyRefreshing,
     isFailed,
-    consecutiveFailures } = useCachedHelmHistory(
+    consecutiveFailures,
+    lastRefresh: historyLastRefresh } = useCachedHelmHistory(
     selectedCluster || undefined,
     selectedRelease || undefined,
     selectedReleaseNamespace
@@ -115,7 +116,9 @@ export function HelmHistory({ config }: HelmHistoryProps) {
     hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
-    isDemoData })
+    isDemoData,
+    // No release selected yet: the card shows the release list, so its age applies.
+    lastRefresh: selectedRelease ? historyLastRefresh : releasesLastRefresh })
 
   // Apply global filters to clusters
   const clusters = useMemo(() => {

@@ -67,6 +67,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
     consecutiveFailures,
     isDemoFallback,
     refetch: refetchWorkloads,
+    lastRefresh,
   } = useCachedWorkloads()
 
   const handleScaled = useCallback(() => {
@@ -88,6 +89,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
     consecutiveFailures,
     isDemoData: isDemoFallback || isDemo,
     errorMessage: isFailed ? t('common.failedToLoadWorkloads') : undefined,
+    lastRefresh,
   })
 
   const {
