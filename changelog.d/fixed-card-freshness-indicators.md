@@ -1,0 +1,1 @@
+- Cached-data cards (namespace, operator, Helm history, GPU, gadget trace, insights, workload monitor, llm-d benchmark and add-on status cards, among others) now show "Updated Xm ago" in the card header (#25066).

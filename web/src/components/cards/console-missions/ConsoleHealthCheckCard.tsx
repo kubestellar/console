@@ -23,6 +23,7 @@ export function ConsoleHealthCheckCard(_props: ConsoleMissionCardProps) {
     isDemoFallback: podsDemoFallback,
     isFailed: podsFailed,
     consecutiveFailures: podsFailures,
+    lastRefresh: podsLastRefresh,
   } = useCachedPodIssues()
   const {
     issues: allDeploymentIssues,
@@ -30,6 +31,7 @@ export function ConsoleHealthCheckCard(_props: ConsoleMissionCardProps) {
     isDemoFallback: deploysDemoFallback,
     isFailed: deploysFailed,
     consecutiveFailures: deploysFailures,
+    lastRefresh: deploysLastRefresh,
   } = useCachedDeploymentIssues()
   const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
   const { drillToAllClusters, drillToCluster, drillToPod } = useDrillDownActions()
@@ -43,7 +45,8 @@ export function ConsoleHealthCheckCard(_props: ConsoleMissionCardProps) {
     hasAnyData: allClusters.length > 0,
     isDemoData: podsDemoFallback || deploysDemoFallback,
     isFailed: podsFailed || deploysFailed,
-    consecutiveFailures: Math.max(podsFailures, deploysFailures) })
+    consecutiveFailures: Math.max(podsFailures, deploysFailures),
+    lastRefresh: Math.max(podsLastRefresh || 0, deploysLastRefresh || 0) || null })
 
   // Filter clusters by global filter
   const clusters = (() => {

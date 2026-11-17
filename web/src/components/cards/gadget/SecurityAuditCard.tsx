@@ -12,7 +12,7 @@ export function SecurityAuditCard({ config }: SecurityAuditCardProps) {
   const namespace = config?.namespace as string | undefined
   const { shouldUseDemoData: isDemoMode } = useCardDemoState({ requires: 'agent' })
 
-  const { data, isLoading, isRefreshing, isDemoData, isFailed, consecutiveFailures } = useCachedSecurityAudit(cluster, namespace)
+  const { data, isLoading, isRefreshing, isDemoData, isFailed, consecutiveFailures, lastRefresh } = useCachedSecurityAudit(cluster, namespace)
 
   const safeData = Array.isArray(data) ? data : []
   const hasData = safeData.length > 0
@@ -22,7 +22,8 @@ export function SecurityAuditCard({ config }: SecurityAuditCardProps) {
     isDemoData: isDemoMode || isDemoData,
     hasAnyData: hasData,
     isFailed,
-    consecutiveFailures })
+    consecutiveFailures,
+    lastRefresh })
 
   const audits = safeData.slice(0, 20)
 

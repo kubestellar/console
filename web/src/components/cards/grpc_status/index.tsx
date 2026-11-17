@@ -106,9 +106,16 @@ function ServiceRow({ service }: { service: GrpcService }) {
 
 export function GrpcStatus() {
   const { t } = useTranslation('cards')
-  const { data, isRefreshing, isDemoData, isFailed, consecutiveFailures, error, showSkeleton, showEmptyState } = useCachedGrpc()
+  const { data, isRefreshing, isDemoData, isFailed, consecutiveFailures, error, showSkeleton, showEmptyState, lastRefresh } = useCachedGrpc()
 
-  useReportCardDataState({ isFailed, consecutiveFailures, isDemoData, isRefreshing, hasData: data.health !== 'unknown' })
+  useReportCardDataState({
+    isFailed,
+    consecutiveFailures,
+    isDemoData,
+    isRefreshing,
+    hasData: data.health !== 'unknown',
+    lastUpdated: lastRefresh ? new Date(lastRefresh) : null,
+  })
 
   const isHealthy = data.health === 'healthy'
 

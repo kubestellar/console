@@ -94,7 +94,7 @@ export function PodLogs({ config }: PodLogsProps) {
     return visibleClusters[0]?.name || ''
   }, [pickedCluster, visibleClusters])
 
-  const { namespaces, isLoading: nsLoading, isRefreshing: nsRefreshing } = useCachedNamespaces(
+  const { namespaces, isLoading: nsLoading, isRefreshing: nsRefreshing, lastRefresh: nsLastRefresh } = useCachedNamespaces(
     effectiveCluster || undefined
   )
   const namespaceNames = useMemo(() => [...namespaces].sort(), [namespaces])
@@ -106,7 +106,7 @@ export function PodLogs({ config }: PodLogsProps) {
     return namespaceNames[0] || ''
   }, [pickedNamespace, namespaceNames])
 
-  const { pods, isLoading: podsLoading, isRefreshing: podsRefreshing } = useCachedPods(
+  const { pods, isLoading: podsLoading, isRefreshing: podsRefreshing, lastRefresh: podsLastRefresh } = useCachedPods(
     effectiveCluster || undefined,
     effectiveNamespace || undefined,
     { limit: POD_FETCH_LIMIT }
@@ -158,6 +158,7 @@ export function PodLogs({ config }: PodLogsProps) {
     isDemoData: isDemoMode,
     isFailed: clustersFailed,
     consecutiveFailures: clustersConsecutiveFailures,
+    lastRefresh: Math.max(nsLastRefresh || 0, podsLastRefresh || 0) || null,
   })
 
   const handleTailChange = (value: string) => {

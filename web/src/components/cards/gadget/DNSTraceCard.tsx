@@ -12,7 +12,7 @@ export function DNSTraceCard({ config }: DNSTraceCardProps) {
   const namespace = config?.namespace as string | undefined
   const { shouldUseDemoData: isDemoMode } = useCardDemoState({ requires: 'agent' })
 
-  const { data, isLoading, isRefreshing, isDemoData, isFailed, consecutiveFailures } = useCachedDNSTraces(cluster, namespace)
+  const { data, isLoading, isRefreshing, isDemoData, isFailed, consecutiveFailures, lastRefresh } = useCachedDNSTraces(cluster, namespace)
 
   const safeData = Array.isArray(data) ? data : []
   const hasData = safeData.length > 0
@@ -22,7 +22,8 @@ export function DNSTraceCard({ config }: DNSTraceCardProps) {
     isDemoData: isDemoMode || isDemoData,
     hasAnyData: hasData,
     isFailed,
-    consecutiveFailures })
+    consecutiveFailures,
+    lastRefresh })
 
   const queries = safeData.slice(0, 20)
   const failures = safeData.filter(d => d.responseCode !== 'NOERROR')

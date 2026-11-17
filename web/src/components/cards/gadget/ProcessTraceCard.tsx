@@ -12,7 +12,7 @@ export function ProcessTraceCard({ config }: ProcessTraceCardProps) {
   const namespace = config?.namespace as string | undefined
   const { shouldUseDemoData: isDemoMode } = useCardDemoState({ requires: 'agent' })
 
-  const { data, isLoading, isRefreshing, isDemoData, isFailed, consecutiveFailures } = useCachedProcessTraces(cluster, namespace)
+  const { data, isLoading, isRefreshing, isDemoData, isFailed, consecutiveFailures, lastRefresh } = useCachedProcessTraces(cluster, namespace)
 
   const safeData = Array.isArray(data) ? data : []
   const hasData = safeData.length > 0
@@ -22,7 +22,8 @@ export function ProcessTraceCard({ config }: ProcessTraceCardProps) {
     isDemoData: isDemoMode || isDemoData,
     hasAnyData: hasData,
     isFailed,
-    consecutiveFailures })
+    consecutiveFailures,
+    lastRefresh })
 
   const processes = safeData.slice(0, 20)
 

@@ -59,7 +59,7 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
   const gpuClusterNames = new Set(gpuNodes.map(n => n.cluster))
   const discoveredClusters = useLLMdClusters(deduplicatedClusters, gpuClusterNames)
 
-  const { servers, isLoading: serversLoading, isRefreshing: serversRefreshing, isDemoFallback: serversDemoFallback, isFailed: serversFailed, consecutiveFailures: serversFailures, refetch: refetchServers } = useCachedLLMdServers(discoveredClusters)
+  const { servers, isLoading: serversLoading, isRefreshing: serversRefreshing, isDemoFallback: serversDemoFallback, isFailed: serversFailed, consecutiveFailures: serversFailures, refetch: refetchServers, lastRefresh } = useCachedLLMdServers(discoveredClusters)
   const [activeTab, setActiveTab] = useState<LLMdStackMonitorTab>('components')
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['Model Serving', 'EPP', 'Gateway', 'Autoscaler']))
   const [search, setSearch] = useState('')
@@ -120,7 +120,8 @@ export function LLMdStackMonitor({ config: _config }: LLMdStackMonitorProps) {
     hasAnyData: hasData,
     isDemoData: serversDemoFallback,
     isFailed: serversFailed,
-    consecutiveFailures: serversFailures })
+    consecutiveFailures: serversFailures,
+    lastRefresh })
 
   // Build flat list of all items, then filter/sort/paginate
   const allItems = buildComponentItems(filteredServers)

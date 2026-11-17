@@ -35,8 +35,8 @@ export const ClusterCosts = memo(function ClusterCosts({ config }: ClusterCostsP
 
   // Build sort options with translated labels
   const sortOptions = useMemo(() => SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) })), [t])
-  const { deduplicatedClusters: allClusters, isLoading, isRefreshing: clustersRefreshing, isFailed, consecutiveFailures } = useClusters()
-  const { nodes: gpuNodes, isRefreshing: gpuRefreshing, isDemoFallback } = useCachedGPUNodes()
+  const { deduplicatedClusters: allClusters, isLoading, isRefreshing: clustersRefreshing, isFailed, consecutiveFailures, lastRefresh: clustersLastRefreshDate } = useClusters()
+  const { nodes: gpuNodes, isRefreshing: gpuRefreshing, isDemoFallback, lastRefresh: gpuLastRefresh } = useCachedGPUNodes()
   const { drillToCost } = useDrillDownActions()
   const { isDemoMode } = useDemoMode()
 
@@ -48,7 +48,9 @@ export const ClusterCosts = memo(function ClusterCosts({ config }: ClusterCostsP
     hasAnyData: hasData,
     isDemoData: isDemoMode || isDemoFallback,
     isFailed,
-    consecutiveFailures })
+    consecutiveFailures,
+    // useClusters reports a Date, useCache epoch ms; show the newer of the two.
+    lastRefresh: Math.max(clustersLastRefreshDate instanceof Date ? clustersLastRefreshDate.getTime() : 0, gpuLastRefresh ?? 0) || null })
 
   // Cloud provider selection
   const [selectedProvider, setSelectedProvider] = useState<CloudProvider>(config?.provider || 'estimate')

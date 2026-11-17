@@ -51,7 +51,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
   const [deleteConfirm, setDeleteConfirm] = useState<{ cluster: string; namespace: string; name: string } | null>(null)
 
   // Fetch namespaces for the selected cluster (only when specific cluster selected)
-  const { namespaces, isDemoFallback, isRefreshing: namespacesRefreshing } = useCachedNamespaces(selectedCluster !== 'all' ? selectedCluster : undefined)
+  const { namespaces, isDemoFallback, isRefreshing: namespacesRefreshing, lastRefresh: namespacesLastRefresh } = useCachedNamespaces(selectedCluster !== 'all' ? selectedCluster : undefined)
 
   // Filter clusters based on global filter (useCardData handles global filtering internally)
   const clusters = allClusters
@@ -82,6 +82,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
     isFailed: clustersFailed || !!quotasError || !!limitsError,
     consecutiveFailures: clustersFailures,
     errorMessage: quotasError || limitsError || undefined,
+    lastRefresh: namespacesLastRefresh,
   })
 
   // Handle save quota

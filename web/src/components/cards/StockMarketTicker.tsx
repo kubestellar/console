@@ -48,7 +48,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- symbolsKey is the stable string derived from activeSymbols
   const demoStockData = useMemo(() => generateMockStockData(activeSymbols), [symbolsKey])
 
-  const { data: stockData, isLoading: isLoadingData, isRefreshing: stockRefreshing } = useCache<StockData[]>({
+  const { data: stockData, isLoading: isLoadingData, isRefreshing: stockRefreshing, lastRefresh } = useCache<StockData[]>({
     key: `stocks:${symbolsKey}:${useLiveData ? 'live' : 'demo'}`,
     category: 'default',
     initialData: [],
@@ -61,7 +61,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
     } })
 
   const hasStockData = stockData.length > 0
-  useCardLoadingState({ isLoading: isLoadingData && !hasStockData, isRefreshing: stockRefreshing, hasAnyData: hasStockData, isDemoData: false })
+  useCardLoadingState({ isLoading: isLoadingData && !hasStockData, isRefreshing: stockRefreshing, hasAnyData: hasStockData, isDemoData: false, lastRefresh })
 
   // Update saved stocks when data changes
   useEffect(() => {

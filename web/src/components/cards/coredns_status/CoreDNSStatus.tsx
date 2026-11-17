@@ -26,6 +26,7 @@ export function CoreDNSStatus({ config }: CoreDNSStatusProps) {
     isDemoFallback,
     isFailed,
     consecutiveFailures,
+    lastRefresh,
   } = useCachedCoreDNSStatus(config?.cluster)
 
   const isDemoData = isDemoFallback
@@ -38,6 +39,7 @@ export function CoreDNSStatus({ config }: CoreDNSStatusProps) {
     hasAnyData: clusters.length > 0,
     isFailed,
     consecutiveFailures,
+    lastRefresh,
   })
 
   // summary stats derived only from pod metadata
