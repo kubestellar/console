@@ -100,13 +100,12 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
     podsDemoFallback,
     podsFailed,
     podsFailures,
+    gpuLastRefresh,
+    podsLastRefresh,
   })
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
-  useCardLoadingState({
-    ...cardLoadState,
-    lastRefresh: Math.max(gpuLastRefresh || 0, podsLastRefresh || 0) || null,
-  })
+  useCardLoadingState(cardLoadState)
 
   const { globalFilteredClusters } = useClusterFiltering({
     clusters,
