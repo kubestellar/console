@@ -1,0 +1,1 @@
+- Keep the login globe separate from shared UI code so it can load on demand.
