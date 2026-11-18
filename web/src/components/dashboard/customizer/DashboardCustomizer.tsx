@@ -74,7 +74,7 @@ export function DashboardCustomizer({
   canRedo = false,
 }: DashboardCustomizerProps) {
   const { t: _t } = useTranslation()
-  const t = _t as (key: string, defaultValue?: string) => string
+  const t = _t as unknown as (key: string, defaultValue?: string) => string
   const { showToast } = useToast()
   // User-driven section selection (null = use initialSection prop)
   const [userSelectedSection, setUserSelectedSection] = useState<CustomizerSection | null>(null)

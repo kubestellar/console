@@ -273,7 +273,7 @@ export function AgentConfigForm({
                 agentToProviderKey={agentToProviderKey}
                 onRetry={() => retry(() => closeDropdown())}
                 onDismiss={dismissConnection}
-                t={t as (key: string, options?: Record<string, unknown>) => string}
+                t={t as unknown as (key: string, options?: Record<string, unknown>) => string}
               />
 
               {sortedAgents.length === 0 && (

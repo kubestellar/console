@@ -65,7 +65,7 @@ exports[`OpenCostOverview > matches snapshot 1`] = `
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-circle-alert lucide-alert-circle w-4 h-4 text-blue-400 shrink-0 mt-0.5"
+        class="lucide lucide-circle-exclamation-point lucide-alert-circle lucide-circle-alert w-4 h-4 text-blue-400 shrink-0 mt-0.5"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -162,7 +162,7 @@ exports[`OpenCostOverview > matches snapshot 1`] = `
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-circle-alert lucide-alert-circle w-3.5 h-3.5"
+          class="lucide lucide-circle-exclamation-point lucide-alert-circle lucide-circle-alert w-3.5 h-3.5"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -281,7 +281,7 @@ exports[`OpenCostOverview > matches snapshot 1`] = `
           >
             <div
               class="h-full bg-linear-to-r from-blue-500 to-cyan-500 rounded-full"
-              style="width: 93.16455696202532%;"
+              style="width: 93.1646%;"
             />
           </div>
           <div
