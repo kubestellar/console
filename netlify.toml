@@ -34,7 +34,7 @@
 [build.environment]
   # Enable demo mode with mock data for Netlify previews
   VITE_DEMO_MODE = "true"
-  NODE_VERSION = "20"
+  NODE_VERSION = "22"
   # Raise the V8 heap ceiling so esbuild function bundling (33 functions,
   # including the 30 MB googleapis tree) does not OOM.
   NODE_OPTIONS = "--max_old_space_size=4096"

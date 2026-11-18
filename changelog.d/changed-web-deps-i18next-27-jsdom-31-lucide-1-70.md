@@ -1,1 +1,1 @@
-- Bump i18next to 27.0.1, lucide-react to 1.70.0 and jsdom to 31.0.0 together, casting loose `t()` signatures through `unknown` for i18next 27's narrower `TFunction` overloads and updating tests for jsdom 31's normalized CSS serialization and lucide's renamed icon classes (#25062).
+- Bump i18next to 27.1.5, react-i18next to 18.0.2, jsdom to 31.0.1, and lucide-react to 1.70.0. Adapt translation types and DOM tests to the upgrades, and use Node.js 22 for Netlify builds (#25062, #25088).
