@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react'
+import { useModalState } from '../../lib/modals'
 import type { RequestType } from '../../hooks/useFeatureRequests'
 import type { TabType, SuccessState } from './FeatureRequestTypes'
 
@@ -40,7 +41,12 @@ export function useFeatureRequestClose({
   handleSaveDraft,
   resetForm,
 }: UseFeatureRequestCloseProps): FeatureRequestCloseHandlers {
-  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
+  const {
+    isOpen: showDiscardConfirm,
+    setIsOpen: setShowDiscardConfirm,
+    open: openDiscardConfirm,
+    close: closeDiscardConfirm,
+  } = useModalState()
   const [pendingTabSwitch, setPendingTabSwitch] = useState<TabType | null>(null)
 
   // Stable refs so callbacks don't depend on every prop change, avoiding
@@ -60,12 +66,12 @@ export function useFeatureRequestClose({
 
   const forceClose = useCallback(() => {
     // Reset dialog flags first so a stale ref can't re-open them.
-    setShowDiscardConfirm(false)
+    closeDiscardConfirm()
     setPendingTabSwitch(null)
     resetForm({ initialRequestType })
     setActiveTab(initialTab || 'submit')
     onCloseRef.current()
-  }, [initialRequestType, initialTab, resetForm, setActiveTab])
+  }, [closeDiscardConfirm, initialRequestType, initialTab, resetForm, setActiveTab])
 
   const handleSaveAndClose = useCallback(() => {
     if (handleSaveDraft()) {
@@ -92,11 +98,11 @@ export function useFeatureRequestClose({
       return
     }
     if (hasUnsavedSubmitContentRef.current) {
-      setShowDiscardConfirm(true)
+      openDiscardConfirm()
       return
     }
     forceClose()
-  }, [forceClose])
+  }, [forceClose, openDiscardConfirm])
 
   const handleTabChange = useCallback((nextTab: TabType) => {
     if (nextTab === activeTab) return
