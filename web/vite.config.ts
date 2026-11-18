@@ -230,6 +230,8 @@ export default defineConfig(({ mode }) => ({
             ['feature-agent', ['/src/components/agent/', '/src/components/widgets/', '/src/components/modals/', '/src/lib/widgets/', '/src/lib/modals/']],
             ['feature-feedback', ['/src/components/feedback/', '/src/components/rewards/', '/src/components/updates/', '/src/components/teams/']],
             ['feature-onboarding', ['/src/components/setup/', '/src/components/landing/', '/src/components/onboarding/', '/src/components/enterprise/', '/src/components/acmm/', '/src/components/rbac/', '/src/components/widget/']],
+            // Keep the lazy login globe out of the eagerly shared UI chunk.
+            ['animation-globe', ['/src/components/animations/globe/']],
             ['ui-primitives', ['/src/components/ui/', '/src/components/animations/', '/src/components/charts/']],
             ['lib-cards', ['/src/lib/cards/', '/src/lib/dynamic-cards/']],
             ['lib-demo', ['/src/lib/demo/']],
