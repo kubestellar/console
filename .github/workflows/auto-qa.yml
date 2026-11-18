@@ -310,15 +310,16 @@ jobs:
               continue
             fi
 
-            # Search for import/require in src/ AND netlify/functions/
-            COUNT=$(grep -rl "from ['\"]${dep}" src/ netlify/functions/ 2>/dev/null | wc -l || echo "0")
-            COUNT2=$(grep -rl "require(['\"]${dep}" src/ netlify/functions/ 2>/dev/null | wc -l || echo "0")
+            # Build and Storybook configuration can import plugins directly.
+            SEARCH_PATHS=(src/ netlify/functions/ .storybook/ *.config.*)
+            COUNT=$({ grep -rl "from ['\"]${dep}" "${SEARCH_PATHS[@]}" 2>/dev/null || true; } | wc -l)
+            COUNT2=$({ grep -rl "require(['\"]${dep}" "${SEARCH_PATHS[@]}" 2>/dev/null || true; } | wc -l)
             # Also check for dynamic import() calls
-            COUNT3=$(grep -rl "import(['\"]${dep}" src/ netlify/functions/ 2>/dev/null | wc -l || echo "0")
+            COUNT3=$({ grep -rl "import(['\"]${dep}" "${SEARCH_PATHS[@]}" 2>/dev/null || true; } | wc -l)
             TOTAL=$((COUNT + COUNT2 + COUNT3))
 
             if [ "$TOTAL" -eq 0 ]; then
-              ISSUES="${ISSUES}  - \`${dep}\` — no direct imports found in src/ or netlify/functions/\n"
+              ISSUES="${ISSUES}  - \`${dep}\` — no direct imports found in source or configuration files\n"
             fi
           done
 
