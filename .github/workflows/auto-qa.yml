@@ -571,29 +571,13 @@ jobs:
         continue-on-error: true
         run: |
           echo "Checking for interactive elements missing ARIA labels..."
-          ISSUES=""
 
-          # Find buttons without aria-label or children text
-          BUTTONS=$(grep -rn "<button" src/ --include="*.tsx" 2>/dev/null | grep -v "aria-label" | grep -v "aria-labelledby" | grep -v node_modules | head -20 || true)
-          if [ -n "$BUTTONS" ]; then
-            ISSUES="${ISSUES}### Buttons possibly missing ARIA labels\n\`\`\`\n${BUTTONS}\n\`\`\`\n\n"
-          fi
-
-          # Find icon-only buttons (button with only an icon child)
-          ICON_BUTTONS=$(grep -rn "<button.*>" src/ --include="*.tsx" 2>/dev/null | grep -i "icon\|svg" | grep -v "aria-label" | grep -v node_modules | head -10 || true)
-          if [ -n "$ICON_BUTTONS" ]; then
-            ISSUES="${ISSUES}### Icon-only buttons without ARIA labels\n\`\`\`\n${ICON_BUTTONS}\n\`\`\`\n\n"
-          fi
-
-          # Find images without alt text
-          IMAGES=$(grep -rn "<img" src/ --include="*.tsx" 2>/dev/null | grep -v 'alt=' | grep -v node_modules | head -10 || true)
-          if [ -n "$IMAGES" ]; then
-            ISSUES="${ISSUES}### Images without alt text\n\`\`\`\n${IMAGES}\n\`\`\`\n\n"
-          fi
-
+          # Tag-aware scan: JSX attributes commonly span several lines, so a
+          # line-oriented grep reports labels and alt text that are present.
+          ISSUES=$(node ../scripts/aria-a11y-scan.mjs src --max 15 2>/dev/null || true)
           if [ -n "$ISSUES" ]; then
             echo "found=true" >> "$GITHUB_OUTPUT"
-            printf "%b" "$ISSUES" > /tmp/focus-aria.txt
+            printf "%s\n" "$ISSUES" > /tmp/focus-aria.txt
             echo "Accessibility issues found"
           else
             echo "found=false" >> "$GITHUB_OUTPUT"
