@@ -96,7 +96,7 @@ export function UpdateSettingsForm({ state }: UpdateSettingsFormProps) {
             size="md"
             icon={
               <RefreshCw
-                className={`w-4 h-4 ${isVisuallySpinning ? 'animate-spin-min text-blue-400' : ''}`}
+                className={`w-4 h-4 ${isVisuallySpinning ? 'animate-spin text-blue-400' : ''}`}
               />
             }
             onClick={handleCheckNow}

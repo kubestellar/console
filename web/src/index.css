@@ -797,15 +797,6 @@ html[data-mission-resizing] [data-transition-margin] {
   animation: content-fade-in 0.2s ease-out;
 }
 
-/* Minimum spin animation - same speed as Tailwind's animate-spin (1s)
-   The "min" refers to minimum duration tracking in RefreshButton JS, not animation speed */
-@keyframes spin-min {
-  to { transform: rotate(360deg); }
-}
-
-.animate-spin-min {
-  animation: spin-min 1s linear infinite;
-}
 
 /* Rocket launch / blast-off animation */
 @keyframes rocket-launch {

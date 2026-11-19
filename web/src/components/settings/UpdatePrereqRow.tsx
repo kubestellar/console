@@ -30,7 +30,7 @@ export function UpdatePrereqRow({
       </div>
       <div className="flex items-center gap-1.5">
         {loading ? (
-          <Loader2 className="w-3.5 h-3.5 text-muted-foreground animate-spin-min" />
+          <Loader2 className="w-3.5 h-3.5 text-muted-foreground animate-spin" />
         ) : ok ? (
           <>
             <Check className="w-3.5 h-3.5 text-green-400" />
