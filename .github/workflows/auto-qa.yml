@@ -1547,23 +1547,34 @@ jobs:
             ISSUES="${ISSUES}### Hardcoded route paths\nConsider using route constants for maintainability:\n\`\`\`\n${HARDCODED_ROUTES}\n\`\`\`\n\n"
           fi
 
-          # Find links without proper handling
-          BARE_LINKS=$(grep -rn "<a href=" src/ --include="*.tsx" 2>/dev/null | \
+          # Find links without proper handling. Test files are excluded: their
+          # <a href> elements are mocks of router components, not rendered UI.
+          BARE_LINKS=$(grep -rn "<a href=" src/ --include="*.tsx" \
+            --exclude="*.test.tsx" --exclude-dir="__tests__" 2>/dev/null | \
             grep -v "node_modules\|target=\|rel=\|Link" | head -10 || true)
 
           if [ -n "$BARE_LINKS" ]; then
             ISSUES="${ISSUES}### External links without target/rel attributes\n\`\`\`\n${BARE_LINKS}\n\`\`\`\n\n"
           fi
 
-          # Find missing breadcrumb or back navigation in drill-down views
-          DRILLDOWNS=$(find src -path "*drilldown*" -name "*.tsx" -o -path "*detail*" -name "*.tsx" 2>/dev/null | head -20)
-          MISSING_NAV=""
-          for f in $DRILLDOWNS; do
-            HAS_BACK=$(grep -l "navigate\|history\|breadcrumb\|Breadcrumb\|goBack\|Back" "$f" 2>/dev/null || true)
-            if [ -z "$HAS_BACK" ]; then
-              MISSING_NAV="${MISSING_NAV}  - \`${f}\`\n"
-            fi
-          done
+          # Find missing breadcrumb or back navigation in drill-down views.
+          # Every view under src/components/drilldown/ renders inside
+          # DrillDownModal, which supplies breadcrumbs and back (pop)
+          # navigation for the whole stack, so those files are skipped while
+          # the modal still renders DrillDownBreadcrumbs. Test files are not
+          # views and are always skipped. Every candidate is checked; only the
+          # report is capped.
+          DRILLDOWN_MODAL="src/components/drilldown/DrillDownModal.tsx"
+          MODAL_PATH_FILTER="^$"
+          if grep -q "DrillDownBreadcrumbs" "$DRILLDOWN_MODAL" 2>/dev/null; then
+            MODAL_PATH_FILTER="^src/components/drilldown/"
+          fi
+          MAX_MISSING_NAV=20
+          MISSING_NAV=$(find src \( -path "*drilldown*" -o -path "*detail*" \) -name "*.tsx" \
+            ! -name "*.test.tsx" ! -path "*/__tests__/*" 2>/dev/null | \
+            grep -v "$MODAL_PATH_FILTER" | \
+            xargs -r grep -L "navigate\|history\|breadcrumb\|Breadcrumb\|goBack\|Back" 2>/dev/null | \
+            sort | head -"$MAX_MISSING_NAV" | sed 's/.*/  - `&`/' || true)
 
           if [ -n "$MISSING_NAV" ]; then
             ISSUES="${ISSUES}### Drill-down views possibly missing back navigation\n${MISSING_NAV}\n"

@@ -1,0 +1,1 @@
+- Fixed the Auto-QA Navigation focus check reporting false positives: test files are no longer scanned for bare links or missing back navigation, views under `src/components/drilldown/` are skipped while `DrillDownModal` supplies breadcrumbs and back navigation for them, and every drill-down candidate is now checked instead of only the first 20 files found (#25099).
