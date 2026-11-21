@@ -33,6 +33,15 @@ describe('renderDrillDownView', () => {
     expect(screen.getByTestId(`view-${name}`)).toBeInTheDocument()
   })
 
+  // Regression for #24983: ServiceDrillDown must be lazy-loaded by its named
+  // export, not 'default' — otherwise the mocked safeLazy marker renders
+  // view-default and this routing assertion fails in the nightly suite.
+  it('routes service to ServiceDrillDown via its named export (not "default")', () => {
+    renderView({ type: 'service' })
+    expect(screen.getByTestId('view-ServiceDrillDown')).toBeInTheDocument()
+    expect(screen.queryByTestId('view-default')).not.toBeInTheDocument()
+  })
+
   it('routes multi-cluster summary types with viewType', () => {
     renderView({ type: 'all-pods' })
     expect(screen.getByTestId('view-MultiClusterSummaryDrillDown')).toHaveTextContent('all-pods')

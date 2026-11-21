@@ -21,7 +21,10 @@ const ArgoAppDrillDown = safeLazy(() => import('./views/ArgoAppDrillDown'), 'Arg
 const HelmReleaseDrillDown = safeLazy(() => import('./views/HelmReleaseDrillDown'), 'HelmReleaseDrillDown')
 const ConfigMapDrillDown = safeLazy(() => import('./views/ConfigMapDrillDown'), 'ConfigMapDrillDown')
 const BuildpackDrillDown = safeLazy(() => import('./views/BuildpackDrillDown'), 'BuildpackDrillDown')
-const ServiceDrillDown = safeLazy(() => import('./views/ServiceDrillDown'), 'default')
+// ServiceDrillDown exposes a named export (plus a default alias), so it is
+// lazy-loaded by component name like every other view — using 'default' here
+// broke the routing marker in DrillDownModal.views.test.tsx (#24983).
+const ServiceDrillDown = safeLazy(() => import('./views/ServiceDrillDown'), 'ServiceDrillDown')
 const RBACDrillDown = safeLazy(() => import('./views/RBACDrillDown'), 'RBACDrillDown')
 const CostDrillDown = safeLazy(() => import('./views/CostDrillDown'), 'CostDrillDown')
 const ComplianceDrillDown = safeLazy(() => import('./views/ComplianceDrillDown'), 'ComplianceDrillDown')

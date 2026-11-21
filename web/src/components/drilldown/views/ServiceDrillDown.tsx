@@ -10,7 +10,10 @@ interface Props {
   data: Record<string, unknown>
 }
 
-export default function ServiceDrillDown({ data }: Props) {
+// Named export so the lazy registry in DrillDownModal.views.tsx can reference
+// this view by component name like every other drill-down view. The default
+// export is kept as an alias for existing default imports (#24983).
+export function ServiceDrillDown({ data }: Props) {
   const { t } = useTranslation()
   const cluster = data.cluster as string
   const namespace = data.namespace as string
@@ -99,3 +102,5 @@ export default function ServiceDrillDown({ data }: Props) {
     </div>
   )
 }
+
+export default ServiceDrillDown
