@@ -115,6 +115,37 @@ describe('usePrometheusMetrics', () => {
     expect(firstCallUrl).toContain('namespace=my-ns')
   })
 
+  it('queries metric names that current vLLM exports', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(makePromResponse('pod-1', 1)),
+    })
+
+    renderHook(() => usePrometheusMetrics('my-cluster', 'my-ns', 60000))
+
+    await vi.waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(6)
+    })
+
+    const queries = fetchMock.mock.calls.map(
+      ([url]) => new URL(url as string).searchParams.get('query') ?? '',
+    )
+    expect(queries).toContain('vllm:kv_cache_usage_perc')
+    expect(queries).toContain('rate(vllm:generation_tokens_total[1m])')
+    expect(queries).toContain(
+      'histogram_quantile(0.5, rate(vllm:inter_token_latency_seconds_bucket[5m]))',
+    )
+    // Removed from vLLM: avg_generation_throughput_toks_per_s after 0.6, gpu_cache_usage_perc
+    // after 0.11, time_per_output_token_seconds after 0.14.
+    for (const removed of [
+      'vllm:gpu_cache_usage_perc',
+      'vllm:time_per_output_token_seconds',
+      'vllm:avg_generation_throughput_toks_per_s',
+    ]) {
+      expect(queries.some((q) => q.includes(removed))).toBe(false)
+    }
+  })
+
   it('populates per-pod metrics from responses', async () => {
     fetchMock.mockResolvedValue({
       ok: true,

@@ -359,12 +359,12 @@ export function createHandlers() {
     const query = url.searchParams.get('query') || ''
     // Return a plausible scalar value based on the metric
     let value = 0.5
-    if (query.includes('gpu_cache_usage')) value = 0.42
+    if (query.includes('kv_cache_usage')) value = 0.42
     else if (query.includes('num_requests_running')) value = 3
     else if (query.includes('num_requests_waiting')) value = 1
-    else if (query.includes('throughput')) value = 145.7
+    else if (query.includes('generation_tokens')) value = 145.7
     else if (query.includes('time_to_first_token')) value = 0.028
-    else if (query.includes('time_per_output_token')) value = 0.006
+    else if (query.includes('inter_token_latency')) value = 0.006
     return HttpResponse.json({
       status: 'success',
       data: { resultType: 'vector', result: [{ metric: {}, value: [Date.now() / 1000, String(value)] }] },

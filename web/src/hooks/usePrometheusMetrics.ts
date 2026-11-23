@@ -11,12 +11,12 @@ const DEFAULT_POLL_INTERVAL_MS = 5_000
 
 /** Per-pod vLLM metrics */
 export interface PodMetrics {
-  kvCacheUsage: number       // 0-1 (vllm:gpu_cache_usage_perc)
+  kvCacheUsage: number       // 0-1 (vllm:kv_cache_usage_perc)
   requestsRunning: number    // integer (vllm:num_requests_running)
   requestsWaiting: number    // integer (vllm:num_requests_waiting)
-  throughputTps: number      // tokens/sec (vllm:avg_generation_throughput_toks_per_s)
+  throughputTps: number      // tokens/sec (rate of vllm:generation_tokens_total)
   ttftP50: number            // seconds (histogram p50)
-  tpotP50: number            // seconds (histogram p50)
+  tpotP50: number            // seconds (vllm:inter_token_latency_seconds p50)
 }
 
 export interface PrometheusMetricsResult {
@@ -28,14 +28,15 @@ export interface PrometheusMetricsResult {
   lastRefresh: Date | null
 }
 
-// The 6 vLLM metric queries we need
+// The 6 vLLM metric queries we need. vLLM no longer exports vllm:avg_generation_throughput_toks_per_s
+// (last in 0.6), vllm:gpu_cache_usage_perc (last in 0.11) or vllm:time_per_output_token_seconds (last in 0.14).
 const METRIC_QUERIES = {
-  kvCacheUsage: 'vllm:gpu_cache_usage_perc',
+  kvCacheUsage: 'vllm:kv_cache_usage_perc',
   requestsRunning: 'vllm:num_requests_running',
   requestsWaiting: 'vllm:num_requests_waiting',
-  throughputTps: 'vllm:avg_generation_throughput_toks_per_s',
+  throughputTps: 'rate(vllm:generation_tokens_total[1m])',
   ttftP50: 'histogram_quantile(0.5, rate(vllm:time_to_first_token_seconds_bucket[5m]))',
-  tpotP50: 'histogram_quantile(0.5, rate(vllm:time_per_output_token_seconds_bucket[5m]))',
+  tpotP50: 'histogram_quantile(0.5, rate(vllm:inter_token_latency_seconds_bucket[5m]))',
 } as const
 
 type MetricKey = keyof typeof METRIC_QUERIES
