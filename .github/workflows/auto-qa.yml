@@ -2994,8 +2994,12 @@ jobs:
           echo "Checking for missing loading states..."
           ISSUES=""
 
+          # Only shipped UI: test, mock, and story fixtures are not user-facing.
+          SOURCE_FILTER=(--include="*.tsx" --exclude="*.test.tsx" --exclude="*.spec.tsx"
+            --exclude="*.stories.tsx" --exclude-dir=__tests__ --exclude-dir=__mocks__ --exclude-dir=node_modules)
+
           # Find async onClick without loading state
-          ASYNC_NO_LOADING=$(grep -rn "onClick.*async" src/ --include="*.tsx" 2>/dev/null | while read line; do
+          ASYNC_NO_LOADING=$(grep -rn "onClick.*async" src/ "${SOURCE_FILTER[@]}" 2>/dev/null | while read line; do
             FILE=$(echo "$line" | cut -d: -f1)
             LINE_NO=$(echo "$line" | cut -d: -f2)
             # Check component for loading state
@@ -3010,12 +3014,12 @@ jobs:
             ISSUES="${ISSUES}### Async handlers without loading state\nThese components have async onClick but no loading indicator:\n${ASYNC_NO_LOADING}\n\n"
           fi
 
-          # Find buttons that should have loading state
-          BUTTONS_NO_LOADING=$(grep -rn "<button.*onClick" src/ --include="*.tsx" 2>/dev/null | \
-            grep -iE "submit|save|deploy|create|delete|update|send" | \
-            while read line; do
-              FILE=$(echo "$line" | cut -d: -f1)
-              LINE_NO=$(echo "$line" | cut -d: -f2)
+          # Find buttons that should have loading state. Match action keywords
+          # against the line's code only, never its file path (a "deploy/" dir
+          # or "SavedKeys" file name does not make a Close button an action).
+          BUTTONS_NO_LOADING=$(grep -rn "<button.*onClick" src/ "${SOURCE_FILTER[@]}" 2>/dev/null | \
+            while IFS=: read -r FILE LINE_NO CODE; do
+              echo "$CODE" | grep -qiE "submit|save|deploy|create|delete|update|send" || continue
               CONTEXT=$(sed -n "$((LINE_NO > 3 ? LINE_NO - 3 : 1)),$((LINE_NO + 3))p" "$FILE" 2>/dev/null)
               HAS_DISABLED=$(echo "$CONTEXT" | grep "disabled=" || true)
               if [ -z "$HAS_DISABLED" ]; then
