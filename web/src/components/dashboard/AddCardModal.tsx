@@ -27,8 +27,8 @@ export function AddCardModal({
   initialSearch = '',
 }: AddCardModalProps) {
   const { t } = useTranslation()
-  const tDashboard = t as DashboardTranslation
-  const tCard = t as CardTranslation
+  const tDashboard = t as unknown as DashboardTranslation
+  const tCard = t as unknown as CardTranslation
   const { showToast } = useToast()
   const [activeTab, setActiveTab] = useState<AddCardTab>('browse')
   const { isOpen: isCardFactoryOpen, open: openCardFactory, close: closeCardFactory } = useModalState()

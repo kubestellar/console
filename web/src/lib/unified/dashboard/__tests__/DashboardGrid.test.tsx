@@ -247,10 +247,11 @@ describe('DashboardGrid', () => {
     const cards = [makePlacement('c1', 'test-card', 1, 2)]
     const { container } = render(<DashboardGrid cards={cards} />)
 
-    // Check inline style for gridColumn - should be span 3
-    // (on wide viewport, isNarrow is false, so rawW=3 stays 3)
-    const cardEl = container.querySelector('[style*="grid-column"]')
-    expect(cardEl).not.toBeNull()
+    // Read gridColumn through the CSSOM: jsdom 31 serializes grid-column +
+    // grid-row into a grid-area shorthand, so the style attribute never
+    // contains "grid-column". On wide viewport isNarrow is false, so rawW=3.
+    const cardEl = container.querySelector('[style*="min-height"]') as HTMLElement | null
+    expect(cardEl?.style.gridColumn).toBe('span 3 / span 3')
   })
 
   it('calculates min-height from position.h', () => {
@@ -322,8 +323,8 @@ describe('DashboardGrid', () => {
       <DashboardGrid cards={[makePlacement('c1', 'test-card', 4, 2)]} />,
     )
     // w=4 on narrow viewport clamps to span 6
-    const el = container.querySelector('[style*="span 6 / span 6"]')
-    expect(el).not.toBeNull()
+    const el = container.querySelector('[style*="min-height"]') as HTMLElement | null
+    expect(el?.style.gridColumn).toBe('span 6 / span 6')
 
     Object.defineProperty(window, 'innerWidth', { value: 1280, configurable: true, writable: true })
     vi.restoreAllMocks()
@@ -346,8 +347,8 @@ describe('DashboardGrid', () => {
       <DashboardGrid cards={[makePlacement('c1', 'test-card', 8, 2)]} />,
     )
     // w=8 >= 6, stays as span 8 even on narrow viewport
-    const el = container.querySelector('[style*="span 8 / span 8"]')
-    expect(el).not.toBeNull()
+    const el = container.querySelector('[style*="min-height"]') as HTMLElement | null
+    expect(el?.style.gridColumn).toBe('span 8 / span 8')
 
     Object.defineProperty(window, 'innerWidth', { value: 1280, configurable: true, writable: true })
     vi.restoreAllMocks()

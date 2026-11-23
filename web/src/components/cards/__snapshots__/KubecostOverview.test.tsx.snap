@@ -45,7 +45,7 @@ exports[`KubecostOverview > matches snapshot 1`] = `
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-triangle-alert lucide-alert-triangle w-4 h-4 text-yellow-400 shrink-0"
+        class="lucide lucide-triangle-exclamation-point lucide-alert-triangle lucide-triangle-alert w-4 h-4 text-yellow-400 shrink-0"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -91,7 +91,7 @@ exports[`KubecostOverview > matches snapshot 1`] = `
     >
       <svg
         aria-hidden="true"
-        class="lucide lucide-circle-alert lucide-alert-circle w-4 h-4 text-green-400 shrink-0 mt-0.5"
+        class="lucide lucide-circle-exclamation-point lucide-alert-circle lucide-circle-alert w-4 h-4 text-green-400 shrink-0 mt-0.5"
         fill="none"
         height="24"
         stroke="currentColor"
@@ -352,7 +352,7 @@ exports[`KubecostOverview > matches snapshot 1`] = `
             >
               <svg
                 aria-hidden="true"
-                class="lucide lucide-triangle-alert lucide-alert-triangle w-3.5 h-3.5 text-yellow-400"
+                class="lucide lucide-triangle-exclamation-point lucide-alert-triangle lucide-triangle-alert w-3.5 h-3.5 text-yellow-400"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -420,7 +420,7 @@ exports[`KubecostOverview > matches snapshot 1`] = `
             >
               <svg
                 aria-hidden="true"
-                class="lucide lucide-triangle-alert lucide-alert-triangle w-3.5 h-3.5 text-yellow-400"
+                class="lucide lucide-triangle-exclamation-point lucide-alert-triangle lucide-triangle-alert w-3.5 h-3.5 text-yellow-400"
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -488,7 +488,7 @@ exports[`KubecostOverview > matches snapshot 1`] = `
             >
               <svg
                 aria-hidden="true"
-                class="lucide lucide-triangle-alert lucide-alert-triangle w-3.5 h-3.5 text-yellow-400"
+                class="lucide lucide-triangle-exclamation-point lucide-alert-triangle lucide-triangle-alert w-3.5 h-3.5 text-yellow-400"
                 fill="none"
                 height="24"
                 stroke="currentColor"

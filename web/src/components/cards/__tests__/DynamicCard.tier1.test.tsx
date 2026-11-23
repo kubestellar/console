@@ -172,7 +172,7 @@ describe('Tier1CardRuntime', () => {
       render(<Tier1CardRuntime definition={definition} cardDefinition={def} />)
 
       const listGrid = screen.getByTestId('dynamic-card-list-grid')
-      expect(listGrid).toHaveStyle({ gridTemplateColumns: 'minmax(0, 1fr) fit-content(8rem)' })
+      expect(listGrid.style.gridTemplateColumns).toBe('minmax(0px, 1fr) fit-content(8rem)')
       expect(screen.getAllByTestId('dynamic-card-data-row')).toHaveLength(2)
       expect(screen.getByText('Healthy').className).not.toContain('shrink-0')
     })

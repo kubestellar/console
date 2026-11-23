@@ -40,7 +40,8 @@ cd web && npx playwright test --grep "your-test"
 
 ## Getting Started Locally
 
-Prerequisites: Go 1.26.4+, Node.js 20+
+Prerequisites: Go 1.26.4+ and Node.js 22.22.2+ (22.x), 24.15.0+ (24.x), or 26+.
+CI and Netlify use Node.js 22.
 
 **macOS / Linux:**
 
