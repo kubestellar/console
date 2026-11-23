@@ -47,8 +47,11 @@ export function CardSearch({
 
   // Sync local value with external value
   useEffect(() => {
+    clearTimeout(debounceTimerRef.current)
     setLocalValue(value)
   }, [value])
+
+  useEffect(() => () => clearTimeout(debounceTimerRef.current), [])
 
   // Focus input when expanded
   useEffect(() => {
@@ -72,6 +75,7 @@ export function CardSearch({
   }
 
   const handleClear = () => {
+    clearTimeout(debounceTimerRef.current)
     setLocalValue('')
     onChange('')
     inputRef.current?.focus()
