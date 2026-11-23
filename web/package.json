@@ -90,7 +90,7 @@
     "isomorphic-dompurify": "^4.7.0",
     "jose": "^6.2.16",
     "js-yaml": "^5.5.0",
-    "lucide-react": "^1.61.0",
+    "lucide-react": "^1.73.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-i18next": "^17.1.11",
