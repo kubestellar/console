@@ -162,6 +162,22 @@ describe('useCardFilters deep branches', () => {
     expect(localStorage.getItem(`${LOCAL_FILTER_STORAGE_PREFIX}test-filter`)).toBeNull()
   })
 
+  it('uses the current storage key and selection after rerendering', () => {
+    const { result, rerender } = renderHook(
+      ({ storageKey }) => useCardFilters(items, { ...filterConfig, storageKey }),
+      { initialProps: { storageKey: 'first' } },
+    )
+    act(() => { result.current.toggleClusterFilter('prod-east') })
+    rerender({ storageKey: 'second' })
+    act(() => { result.current.toggleClusterFilter('staging') })
+    expect(result.current.filtered.map(item => item.name)).toEqual(['pod-a', 'pod-b', 'pod-c'])
+    expect(localStorage.getItem(`${LOCAL_FILTER_STORAGE_PREFIX}second`))
+      .toBe(JSON.stringify(['prod-east', 'staging']))
+    act(() => { result.current.clearClusterFilter() })
+    expect(localStorage.getItem(`${LOCAL_FILTER_STORAGE_PREFIX}second`)).toBeNull()
+    expect(result.current.filtered).toEqual(items)
+  })
+
   it('filters and clears in memory when storage writes fail', () => {
     const { result } = renderHook(() => useCardFilters(items, filterConfig))
     const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('denied') })
