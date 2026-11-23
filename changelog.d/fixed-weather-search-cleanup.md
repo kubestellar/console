@@ -1,0 +1,1 @@
+- Cancel in-flight weather city searches when the search changes or closes, avoiding stale results and error notifications after cleanup (#25015).
