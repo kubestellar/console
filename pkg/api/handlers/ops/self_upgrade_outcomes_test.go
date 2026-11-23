@@ -20,6 +20,7 @@ import (
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
 
+	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/test"
 )
 
@@ -270,9 +271,13 @@ func TestSelfUpgradeHandler_TriggerUpgrade_PatchFailed(t *testing.T) {
 	assert.NotEmpty(t, out.Error)
 }
 
-func TestRegisterSelfUpgrade_WiresRoutes(t *testing.T) {
+func TestRegistrar_WiresSelfUpgradeRoutes(t *testing.T) {
 	env := setupTestEnv(t)
-	RegisterSelfUpgrade(env.App, env.K8sClient, env.Hub, env.Store)
+	NewRegistrar().Register(env.App, handlers.Deps{
+		K8sClient: env.K8sClient,
+		Hub:       env.Hub,
+		Store:     env.Store,
+	})
 
 	req := httptest.NewRequest(http.MethodGet, "/self-upgrade/status", nil)
 	req.Host = "localhost"
