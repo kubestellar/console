@@ -126,7 +126,7 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
       <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4 gap-2 min-w-0">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <span className="text-sm font-medium text-foreground truncate">{selectedCluster}</span>
-          <div className={`w-2 h-2 rounded-full ${cluster?.healthy ? 'bg-green-500' : 'bg-red-500'}`} />
+          <div className={`w-2 h-2 rounded-full ${cluster?.healthy ? 'bg-status-success' : 'bg-status-error'}`} />
         </div>
         <div className="flex items-center gap-2">
           {!config?.cluster && (
@@ -172,10 +172,10 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
         <div className="p-3 rounded-lg bg-secondary/30">
           <div className="flex flex-wrap items-center justify-between gap-y-2">
             <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${cluster?.healthy ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+              <div className={`w-2 h-2 rounded-full ${cluster?.healthy ? 'bg-status-success animate-pulse' : 'bg-status-error'}`} />
               <span className="text-sm text-muted-foreground">{t('cards:clusterNetwork.connectionStatus')}</span>
             </div>
-            <span className={`text-sm font-medium ${cluster?.healthy ? 'text-green-400' : 'text-red-400'}`}>
+            <span className={`text-sm font-medium ${cluster?.healthy ? 'text-status-success' : 'text-status-error'}`}>
               {cluster?.healthy ? t('cards:clusterNetwork.connected') : t('cards:clusterNetwork.disconnected')}
             </span>
           </div>
@@ -187,7 +187,7 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
               <Shield className="w-4 h-4 text-purple-400" />
               <span className="text-sm text-muted-foreground">TLS</span>
             </div>
-            <span className={`text-sm font-medium ${serverInfo?.protocol === 'https' ? 'text-green-400' : 'text-red-400'}`}>
+            <span className={`text-sm font-medium ${serverInfo?.protocol === 'https' ? 'text-status-success' : 'text-status-error'}`}>
               {serverInfo?.protocol === 'https' ? t('common:common.enabled') : t('common:common.disabled')}
             </span>
           </div>

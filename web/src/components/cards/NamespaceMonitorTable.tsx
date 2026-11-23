@@ -79,7 +79,7 @@ function NamespaceMonitorTableComponent({
                 ) : (
                   <ChevronRight className="w-4 h-4 text-muted-foreground" />
                 )}
-                <Server className={`w-4 h-4 ${cluster.healthy ? 'text-green-400' : 'text-red-400'}`} />
+                <Server className={`w-4 h-4 ${cluster.healthy ? 'text-status-success' : 'text-status-error'}`} />
                 <span className="text-sm text-foreground flex-1">{cluster.context || cluster.name}</span>
                 <span className="text-xs text-muted-foreground">{cluster.nodeCount} nodes</span>
               </div>
