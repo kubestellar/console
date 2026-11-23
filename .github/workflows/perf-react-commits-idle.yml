@@ -39,6 +39,8 @@ jobs:
     name: React commits per second (idle)
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    outputs:
+      perf-artifact-id: ${{ steps.upload-perf-result.outputs.artifact-id }}
     defaults:
       run:
         working-directory: web
@@ -89,6 +91,7 @@ jobs:
         run: npx playwright test --config e2e/perf/perf.config.ts e2e/perf/react-commits-idle.spec.ts
 
       - name: Upload perf result artifact
+        id: upload-perf-result
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -100,7 +103,8 @@ jobs:
   notify:
     name: Notify on regression
     needs: react-commits-idle
-    if: failure()
+    # Setup failures still fail the workflow but have no perf result to report.
+    if: failure() && needs.react-commits-idle.outputs.perf-artifact-id != ''
     # Job-level permissions so the reusable workflow has issues:write even
     # if workflow defaults are later tightened. See #6170.
     permissions:
@@ -109,5 +113,6 @@ jobs:
       actions: read
     uses: ./.github/workflows/_perf-regression-issue.yml
     with:
-      result-path: web/perf-result.json
+      # A single-file artifact extracts its file directly at the download path.
+      result-path: perf-result.json
       signal: react-commits-idle
