@@ -94,6 +94,10 @@ describe('useGitOps', () => {
       { timeout: ASYNC_WAIT_TIMEOUT_MS }
     )
     expect(result.current.stats.drifted).toBe(0)
+    expect(result.current.apps.every(a => a.cluster === 'only' && !a.clusterAmbiguous)).toBe(true)
+    const driftCalls = vi.mocked(fetch).mock.calls.filter(([input]) => String(input).includes(DETECT_DRIFT_PATH_SUFFIX))
+    expect(driftCalls.length).toBeGreaterThan(0)
+    expect(driftCalls.every(([, init]) => JSON.parse(String(init?.body)).cluster === 'only')).toBe(true)
   })
 
   it('error path: surfaces drift-check failure without marking apps synced', async () => {
