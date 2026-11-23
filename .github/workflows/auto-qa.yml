@@ -2104,14 +2104,27 @@ jobs:
           # Skip src/components/cards/ — all dynamic cards are wrapped by
           # DynamicCardErrorBoundary in DynamicCard.tsx, so the per-file grep
           # for "ErrorBoundary" produces false positives for registered cards.
-          COMPLEX_NO_BOUNDARY=$(for f in $(find src/components -name "*.tsx" -not -path "*/cards/*" 2>/dev/null | head -30); do
+          # Skip test files — they render components under test, not the app.
+          # A component also counts as wrapped when the parent that renders it
+          # (`<Name`) uses an ErrorBoundary, or, for `X.parts.tsx`, when the
+          # sibling `X.tsx` that composes the parts uses one (#25065).
+          BOUNDARY_PATTERN='ErrorBoundary\|error.*boundary\|componentDidCatch'
+          COMPLEX_NO_BOUNDARY=$(for f in $(find src/components -name "*.tsx" -not -path "*/cards/*" \
+              -not -path "*/__tests__/*" -not -name "*.test.tsx" -not -name "*.spec.tsx" 2>/dev/null | head -30); do
             LINES=$(wc -l < "$f" 2>/dev/null || echo "0")
-            if [ "$LINES" -gt 100 ]; then
-              HAS_BOUNDARY=$(grep -l "ErrorBoundary\|error.*boundary\|componentDidCatch" "$f" 2>/dev/null || true)
-              if [ -z "$HAS_BOUNDARY" ]; then
-                echo "  - \`$(basename "$f")\` (${LINES} lines)"
-              fi
+            [ "$LINES" -gt 100 ] || continue
+            grep -q "$BOUNDARY_PATTERN" "$f" 2>/dev/null && continue
+            case "$f" in
+              *.parts.tsx)
+                grep -q "$BOUNDARY_PATTERN" "${f%.parts.tsx}.tsx" 2>/dev/null && continue ;;
+            esac
+            name=$(basename "$f" .tsx)
+            if grep -rlE "<${name}([[:space:]/>]|$)" src/ --include="*.tsx" \
+                --exclude="*.test.tsx" --exclude="*.spec.tsx" 2>/dev/null | \
+                xargs -r grep -l "$BOUNDARY_PATTERN" 2>/dev/null | grep -q .; then
+              continue
             fi
+            echo "  - \`$(basename "$f")\` (${LINES} lines)"
           done | head -10)
 
           if [ -n "$COMPLEX_NO_BOUNDARY" ]; then
@@ -2125,8 +2138,10 @@ jobs:
           # misses them. Patterns excluded: showToast, setError, set<Name>Error,
           # setYamlContent, generateMock* fallbacks, fallback/Fallback.
           HANDLER_PATTERN='showToast|set([A-Z][a-zA-Z_]*)?Error|setYamlContent|generateMock|[Ff]allback'
+          # src/lib/logger.ts is the logging wrapper itself, not a call site.
           CONSOLE_ERROR_CANDIDATES=$(grep -rn "console\.error" src/ --include="*.tsx" --include="*.ts" 2>/dev/null | \
             grep -v "node_modules\|test\|spec" | \
+            grep -v "^src/lib/logger\.ts:" | \
             grep -v "setError\|onError\|ErrorBoundary\|throw" || true)
           CONSOLE_ERROR_ONLY=""
           while IFS= read -r entry; do
@@ -2149,8 +2164,11 @@ jobs:
           fi
 
           # Require identifiers between dots: spread/rest syntax is not property access.
+          # Collection methods on `.current` (refs initialised with useRef(new Map()),
+          # useRef([]), ...) are never undefined, so skip them (#25065).
           UNSAFE_ACCESS=$(grep -rnE '\b[[:alpha:]_$][[:alnum:]_$]*(\.[[:alpha:]_$][[:alnum:]_$]*){3,}' src/ --include="*.tsx" --exclude="*.test.tsx" --exclude="*.spec.tsx" 2>/dev/null | \
-            grep -v "node_modules\|\?\.\|&&\|import\|from\|console\|window\." | head -15 || true)
+            grep -v "node_modules\|\?\.\|&&\|import\|from\|console\|window\." | \
+            grep -vE '\.current\.(entries|values|keys|clear|delete|has|get|set|add|forEach|size|length|push|shift|splice)\b' | head -15 || true)
 
           if [ -n "$UNSAFE_ACCESS" ]; then
             COUNT=$(echo "$UNSAFE_ACCESS" | wc -l | tr -d ' ')
