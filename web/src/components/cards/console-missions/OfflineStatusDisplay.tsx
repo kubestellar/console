@@ -46,14 +46,15 @@ export function OfflineStatusDisplay({
   return (
     <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-4" data-demo={isDemoData || undefined}>
       <div
-        role="button"
-        tabIndex={0}
+        role={firstCurrentIssueCluster ? 'button' : undefined}
+        tabIndex={firstCurrentIssueCluster ? 0 : undefined}
         onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
         className={cn(
           'p-2 rounded-lg border',
           currentClusterIssueCount > 0
-            ? 'bg-red-500/10 border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors'
-            : 'bg-green-500/10 border-green-500/20 cursor-default'
+            ? 'bg-red-500/10 border-red-500/20'
+            : 'bg-green-500/10 border-green-500/20',
+          firstCurrentIssueCluster && 'cursor-pointer hover:bg-red-500/20 transition-colors'
         )}
         onClick={() => {
           if (firstCurrentIssueCluster) {
@@ -70,14 +71,15 @@ export function OfflineStatusDisplay({
         </div>
       </div>
       <div
-        role="button"
-        tabIndex={0}
+        role={firstGpuIssueCluster ? 'button' : undefined}
+        tabIndex={firstGpuIssueCluster ? 0 : undefined}
         onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
         className={cn(
           'p-2 rounded-lg border',
           gpuIssueCount > 0
-            ? 'bg-yellow-500/10 border-yellow-500/20 cursor-pointer hover:bg-yellow-500/20 transition-colors'
-            : 'bg-green-500/10 border-green-500/20 cursor-default'
+            ? 'bg-yellow-500/10 border-yellow-500/20'
+            : 'bg-green-500/10 border-green-500/20',
+          firstGpuIssueCluster && 'cursor-pointer hover:bg-yellow-500/20 transition-colors'
         )}
         onClick={() => {
           if (firstGpuIssueCluster) {
@@ -92,16 +94,13 @@ export function OfflineStatusDisplay({
         </div>
       </div>
       <div
-        role="button"
-        tabIndex={0}
+        role={aiEnabled && !isAnalyzing ? 'button' : undefined}
+        tabIndex={aiEnabled && !isAnalyzing ? 0 : undefined}
         onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.currentTarget.click() } }}
         className={cn(
           'p-2 rounded-lg border',
-          totalPredicted > 0 && aiEnabled && !isAnalyzing
-            ? 'bg-blue-500/10 border-blue-500/20 cursor-pointer hover:bg-blue-500/20 transition-colors'
-            : totalPredicted > 0
-              ? 'bg-blue-500/10 border-blue-500/20 cursor-default'
-              : 'bg-green-500/10 border-green-500/20 cursor-default'
+          totalPredicted > 0 ? 'bg-blue-500/10 border-blue-500/20' : 'bg-green-500/10 border-green-500/20',
+          aiEnabled && !isAnalyzing && 'cursor-pointer hover:bg-blue-500/20 transition-colors'
         )}
         onClick={aiEnabled && !isAnalyzing ? () => onTriggerAnalysis() : undefined}
         title={`Predictive Failure Detection:
