@@ -75,6 +75,41 @@ describe('NamespaceQuotasModal (QuotaModal)', () => {
     expect(screen.getByDisplayValue('default-quota')).toBeDisabled()
   })
 
+  it('ignores backdrop clicks and closes a pristine form on Escape', async () => {
+    const user = userEvent.setup()
+    const { props } = renderModal()
+    const backdrop = screen.getByRole('dialog').parentElement!.parentElement!
+
+    await user.click(backdrop)
+    expect(props.onClose).not.toHaveBeenCalled()
+
+    await user.keyboard('{Escape}')
+    expect(props.onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('confirms before discarding edits through Escape or Cancel', async () => {
+    const user = userEvent.setup()
+    const { props } = renderModal()
+    const name = screen.getByPlaceholderText('namespaceQuotas.quotaNamePlaceholder')
+    await user.type(name, 'my-quota')
+    await user.click(screen.getByRole('dialog').parentElement!.parentElement!)
+    expect(props.onClose).not.toHaveBeenCalled()
+    expect(screen.queryByText('Discard unsaved changes?')).not.toBeInTheDocument()
+
+    await user.keyboard('{Escape}')
+    expect(props.onClose).not.toHaveBeenCalled()
+    expect(screen.getByText('Discard unsaved changes?')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Keep editing' }))
+    expect(name).toHaveValue('my-quota')
+    expect(screen.queryByText('Discard unsaved changes?')).not.toBeInTheDocument()
+    expect(props.onClose).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: 'common:common.cancel' }))
+    await user.click(screen.getByRole('button', { name: 'Discard' }))
+    expect(props.onClose).toHaveBeenCalledTimes(1)
+  })
+
   it('shows a validation error when saving without cluster/namespace/name', async () => {
     const user = userEvent.setup()
     const onSave = vi.fn()
