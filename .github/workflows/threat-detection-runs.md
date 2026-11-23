@@ -17,6 +17,8 @@ on:
       - "ai-attribution"
     types:
       - completed
+    branches:
+      - main
 
 safe-outputs:
   report-failure-as-issue: false
