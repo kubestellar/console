@@ -110,7 +110,7 @@
     "@netlify/functions": "^6.0.3",
     "@playwright/test": "1.61.1",
     "@storybook/addon-a11y": "^10.6.5",
-    "@storybook/react": "^10.6.6",
+    "@storybook/react": "^10.6.7",
     "@storybook/react-vite": "^10.6.1",
     "@tailwindcss/postcss": "^4.3.5",
     "@testing-library/dom": "^10.4.2",
