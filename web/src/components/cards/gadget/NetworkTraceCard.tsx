@@ -13,7 +13,7 @@ export function NetworkTraceCard({ config }: NetworkTraceCardProps) {
   const namespace = config?.namespace as string | undefined
   const { shouldUseDemoData: isDemoMode } = useCardDemoState({ requires: 'agent' })
 
-  const { data, isLoading, isRefreshing, isDemoData, isFailed, consecutiveFailures } = useCachedNetworkTraces(cluster, namespace)
+  const { data, isLoading, isRefreshing, isDemoData, isFailed, consecutiveFailures, lastRefresh } = useCachedNetworkTraces(cluster, namespace)
 
   const safeData = Array.isArray(data) ? data : []
   const hasData = safeData.length > 0
@@ -23,7 +23,8 @@ export function NetworkTraceCard({ config }: NetworkTraceCardProps) {
     isDemoData: isDemoMode || isDemoData,
     hasAnyData: hasData,
     isFailed,
-    consecutiveFailures })
+    consecutiveFailures,
+    lastRefresh })
 
   const connections = safeData.slice(0, 20)
 

@@ -33,19 +33,19 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
   const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || '')
 
   // Fetch namespaces for the selected cluster (requires a cluster to be selected)
-  const { namespaces, isDemoFallback: namespacesDemoFallback, isRefreshing: namespacesRefreshing } = useCachedNamespaces(selectedCluster || undefined)
+  const { namespaces, isDemoFallback: namespacesDemoFallback, isRefreshing: namespacesRefreshing, lastRefresh: namespacesLastRefresh } = useCachedNamespaces(selectedCluster || undefined)
   const safeNamespaces = namespaces || []
 
   // Fetch RBAC data using cached hooks (requires a cluster to be selected)
-  const { roles: k8sRoles, isLoading: rolesLoading, isRefreshing: rolesRefreshing, isDemoFallback: rolesDemoFallback } = useCachedK8sRoles(
+  const { roles: k8sRoles, isLoading: rolesLoading, isRefreshing: rolesRefreshing, isDemoFallback: rolesDemoFallback, lastRefresh: rolesLastRefresh } = useCachedK8sRoles(
     selectedCluster || undefined,
     selectedNamespace || undefined
   )
-  const { bindings: k8sBindings, isLoading: bindingsLoading, isRefreshing: bindingsRefreshing, isDemoFallback: bindingsDemoFallback } = useCachedK8sRoleBindings(
+  const { bindings: k8sBindings, isLoading: bindingsLoading, isRefreshing: bindingsRefreshing, isDemoFallback: bindingsDemoFallback, lastRefresh: bindingsLastRefresh } = useCachedK8sRoleBindings(
     selectedCluster || undefined,
     selectedNamespace || undefined
   )
-  const { serviceAccounts: k8sServiceAccounts, isLoading: sasLoading, isRefreshing: sasRefreshing, isDemoFallback: sasDemoFallback } = useCachedK8sServiceAccounts(
+  const { serviceAccounts: k8sServiceAccounts, isLoading: sasLoading, isRefreshing: sasRefreshing, isDemoFallback: sasDemoFallback, lastRefresh: sasLastRefresh } = useCachedK8sServiceAccounts(
     selectedCluster || undefined,
     selectedNamespace || undefined
   )
@@ -87,7 +87,13 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
     hasAnyData: safeClusters.length > 0 || (k8sRoles || []).length > 0 || (k8sBindings || []).length > 0 || (k8sServiceAccounts || []).length > 0,
     isDemoData,
     isFailed,
-    consecutiveFailures })
+    consecutiveFailures,
+    lastRefresh: Math.max(
+      namespacesLastRefresh || 0,
+      rolesLastRefresh || 0,
+      bindingsLastRefresh || 0,
+      sasLastRefresh || 0,
+    ) || null })
 
   // Transform raw RBAC data into RBACItem arrays (no filtering/sorting — that's handled by useCardData)
   const rbacRoles: RBACItem[] = (() => {

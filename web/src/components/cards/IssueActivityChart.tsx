@@ -69,6 +69,7 @@ const IssueActivityChart = memo(function IssueActivityChart(props: { config?: Is
     isRefreshing,
     isDemoFallback,
     error,
+    lastRefresh,
     refetch,
   } = useCache<DailyStats[]>({
     key: `issue-activity-chart-${repo}-${days}`,
@@ -86,7 +87,7 @@ const IssueActivityChart = memo(function IssueActivityChart(props: { config?: Is
   })
 
   const hasData = (stats || []).length > 0
-  useCardLoadingState({ isLoading: isLoading && !hasData, isRefreshing, hasAnyData: hasData, isDemoData: isDemoMode || (isDemoFallback && !isLoading) })
+  useCardLoadingState({ isLoading: isLoading && !hasData, isRefreshing, hasAnyData: hasData, isDemoData: isDemoMode || (isDemoFallback && !isLoading), lastRefresh })
 
   // Compute summary stats from the visible zoom window
   const visibleStats = useMemo(() => {

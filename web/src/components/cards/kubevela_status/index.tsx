@@ -175,10 +175,17 @@ function ApplicationRow({
 
 export function KubeVelaStatus() {
   const { t } = useTranslation('cards')
-  const { data, isRefreshing, isDemoData, isFailed, consecutiveFailures, error, showSkeleton, showEmptyState } =
+  const { data, isRefreshing, isDemoData, isFailed, consecutiveFailures, error, showSkeleton, showEmptyState, lastRefresh } =
     useCachedKubevela()
 
-  useReportCardDataState({ isFailed, consecutiveFailures, isDemoData, isRefreshing, hasData: data.health !== 'unknown' })
+  useReportCardDataState({
+    isFailed,
+    consecutiveFailures,
+    isDemoData,
+    isRefreshing,
+    hasData: data.health !== 'unknown',
+    lastUpdated: lastRefresh ? new Date(lastRefresh) : null,
+  })
 
   const applications = data.applications ?? []
   const displayedApps = applications.slice(0, MAX_APPS_DISPLAYED)

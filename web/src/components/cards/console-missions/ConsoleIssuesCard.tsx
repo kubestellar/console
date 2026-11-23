@@ -11,8 +11,8 @@ import { useCardLoadingState } from '../CardDataContext'
 // Card 1: AI Issues Overview - Shows issues AI can help fix
 export function ConsoleIssuesCard(_props: ConsoleMissionCardProps) {
   const { startMission, missions } = useMissions()
-  const { issues: allPodIssues, isLoading: podIssuesLoading, isRefreshing: podsRefreshing, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedPodIssues()
-  const { issues: allDeploymentIssues, isLoading: deployIssuesLoading, isRefreshing: deploysRefreshing, isDemoFallback: deploysDemoFallback, isFailed: deploysFailed, consecutiveFailures: deploysFailures } = useCachedDeploymentIssues()
+  const { issues: allPodIssues, isLoading: podIssuesLoading, isRefreshing: podsRefreshing, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures, lastRefresh: podsLastRefresh } = useCachedPodIssues()
+  const { issues: allDeploymentIssues, isLoading: deployIssuesLoading, isRefreshing: deploysRefreshing, isDemoFallback: deploysDemoFallback, isFailed: deploysFailed, consecutiveFailures: deploysFailures, lastRefresh: deploysLastRefresh } = useCachedDeploymentIssues()
   const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
 
@@ -30,7 +30,8 @@ export function ConsoleIssuesCard(_props: ConsoleMissionCardProps) {
     hasAnyData: allPodIssues.length > 0 || allDeploymentIssues.length > 0 || missions.length > 0,
     isDemoData: podsDemoFallback || deploysDemoFallback,
     isFailed: podsFailed || deploysFailed,
-    consecutiveFailures: Math.max(podsFailures, deploysFailures) })
+    consecutiveFailures: Math.max(podsFailures, deploysFailures),
+    lastRefresh: Math.max(podsLastRefresh || 0, deploysLastRefresh || 0) || null })
 
   // Filter issues by global cluster filter
   const podIssues = (() => {

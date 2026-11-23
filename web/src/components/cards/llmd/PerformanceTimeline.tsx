@@ -59,14 +59,15 @@ function getColor(value: number, min: number, max: number, higherBetter: boolean
 
 export function PerformanceTimeline() {
   const { t } = useTranslation()
-  const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing } = useCachedBenchmarkReports()
+  const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing, lastRefresh } = useCachedBenchmarkReports()
   const effectiveReports = useMemo(
     () => isDemoFallback ? generateBenchmarkReports() : (liveReports ?? []),
     [isDemoFallback, liveReports]
   )
   useReportCardDataState({
     isDemoData: isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing,
-    hasData: effectiveReports.length > 0 })
+    hasData: effectiveReports.length > 0,
+    lastUpdated: lastRefresh ? new Date(lastRefresh) : null })
 
   const filterOpts = getFilterOptions(effectiveReports)
   const [mode, setMode] = useState<MetricMode>('throughput')

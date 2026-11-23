@@ -26,6 +26,13 @@ interface UseOfflineCardLoadStateArgs {
   podsDemoFallback: boolean
   podsFailed: boolean
   podsFailures: number
+  gpuLastRefresh: number | null | undefined
+  podsLastRefresh: number | null | undefined
+}
+
+export type OfflineCardLoadState = OfflineDetectionCardLoadState & {
+  /** Most recent successful refresh across the cached sources (ms epoch), or null. */
+  lastRefresh: number | null
 }
 
 export function useOfflineCardLoadState({
@@ -47,38 +54,44 @@ export function useOfflineCardLoadState({
   podsDemoFallback,
   podsFailed,
   podsFailures,
-}: UseOfflineCardLoadStateArgs): OfflineDetectionCardLoadState {
+  gpuLastRefresh,
+  podsLastRefresh,
+}: UseOfflineCardLoadStateArgs): OfflineCardLoadState {
   return useMemo(
-    () => buildOfflineDetectionCardLoadState([
-      {
-        hasData: allNodesCount > 0,
-        isLoading: !shouldUseDemoData && nodesLoading,
-        isRefreshing: !shouldUseDemoData && nodesRefreshing,
-        consecutiveFailures: shouldUseDemoData ? 0 : nodesFailures,
-        isFailed: !shouldUseDemoData && nodesFailures >= OFFLINE_DETECTION_FAILURE_THRESHOLD,
-      },
-      {
-        hasData: gpuNodesCount > 0,
-        isLoading: gpuLoading,
-        isRefreshing: gpuRefreshing,
-        isDemoData: gpuDemoFallback,
-        isFailed: gpuFailed,
-        consecutiveFailures: gpuFailures,
-      },
-      {
-        hasData: podIssuesCount > 0,
-        isLoading: podsLoading,
-        isRefreshing: podsRefreshing,
-        isDemoData: podsDemoFallback,
-        isFailed: podsFailed,
-        consecutiveFailures: podsFailures,
-      },
-    ], shouldUseDemoData || isDemoMode),
+    () => ({
+      ...buildOfflineDetectionCardLoadState([
+        {
+          hasData: allNodesCount > 0,
+          isLoading: !shouldUseDemoData && nodesLoading,
+          isRefreshing: !shouldUseDemoData && nodesRefreshing,
+          consecutiveFailures: shouldUseDemoData ? 0 : nodesFailures,
+          isFailed: !shouldUseDemoData && nodesFailures >= OFFLINE_DETECTION_FAILURE_THRESHOLD,
+        },
+        {
+          hasData: gpuNodesCount > 0,
+          isLoading: gpuLoading,
+          isRefreshing: gpuRefreshing,
+          isDemoData: gpuDemoFallback,
+          isFailed: gpuFailed,
+          consecutiveFailures: gpuFailures,
+        },
+        {
+          hasData: podIssuesCount > 0,
+          isLoading: podsLoading,
+          isRefreshing: podsRefreshing,
+          isDemoData: podsDemoFallback,
+          isFailed: podsFailed,
+          consecutiveFailures: podsFailures,
+        },
+      ], shouldUseDemoData || isDemoMode),
+      lastRefresh: Math.max(gpuLastRefresh || 0, podsLastRefresh || 0) || null,
+    }),
     [
       allNodesCount,
       gpuDemoFallback,
       gpuFailed,
       gpuFailures,
+      gpuLastRefresh,
       gpuLoading,
       gpuNodesCount,
       gpuRefreshing,
@@ -90,6 +103,7 @@ export function useOfflineCardLoadState({
       podsDemoFallback,
       podsFailed,
       podsFailures,
+      podsLastRefresh,
       podsLoading,
       podsRefreshing,
       shouldUseDemoData,

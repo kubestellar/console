@@ -90,10 +90,10 @@ function HeroMetric({
 
 export function BenchmarkHero() {
   const { t } = useTranslation()
-  const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing, currentSince } = useCachedBenchmarkReports()
+  const { data: liveReports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing, currentSince, lastRefresh } = useCachedBenchmarkReports()
   const effectiveReports = isDemoFallback ? generateBenchmarkReports() : (liveReports ?? [])
   const hasData = effectiveReports.length > 0
-  useCardLoadingState({ isLoading: isLoading && !hasData, hasAnyData: hasData, isDemoData: isDemoFallback, isFailed, consecutiveFailures, isRefreshing })
+  useCardLoadingState({ isLoading: isLoading && !hasData, hasAnyData: hasData, isDemoData: isDemoFallback, isFailed, consecutiveFailures, isRefreshing, lastRefresh })
 
   const [customDays, setCustomDays] = useState('')
   const [showCustom, setShowCustom] = useState(false)

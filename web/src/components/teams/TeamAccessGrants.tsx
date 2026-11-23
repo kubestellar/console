@@ -45,6 +45,8 @@ export function TeamAccessGrants({ teamName, grants, onGrantChanged }: TeamAcces
   const [role, setRole] = useState('admin')
   const [applyToAll, setApplyToAll] = useState(false)
 
+  // Namespaces only fill the grant-target selector; nothing here displays
+  // cached data, so there is no lastRefresh indicator to show.
   const { namespaces } = useCachedNamespaces(selectedCluster || undefined)
   const safeNamespaces = namespaces || []
 

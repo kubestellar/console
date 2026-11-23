@@ -31,6 +31,7 @@ const QualityDashboard: React.FC = () => {
     isFailed,
     consecutiveFailures,
     error,
+    lastRefresh,
     refetch,
   } = useCachedQuality();
 
@@ -45,6 +46,7 @@ const QualityDashboard: React.FC = () => {
     isFailed,
     consecutiveFailures,
     errorMessage: error ?? undefined,
+    lastRefresh,
   });
 
   if (loadingState.showSkeleton) {

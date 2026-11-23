@@ -54,8 +54,8 @@ function confidenceFromUsage(usagePct: number): number {
 
 export function PredictiveHealth() {
   const { t } = useTranslation('cards')
-  const { nodes: allNodes, isLoading: nodesLoading, isRefreshing: nodesRefreshing, isDemoFallback: nodesDemoFallback, isFailed: nodesFailed, consecutiveFailures: nodesFailures } = useCachedNodes()
-  const { pods: allPods, isLoading: podsLoading, isRefreshing: podsRefreshing, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedPods()
+  const { nodes: allNodes, isLoading: nodesLoading, isRefreshing: nodesRefreshing, isDemoFallback: nodesDemoFallback, isFailed: nodesFailed, consecutiveFailures: nodesFailures, lastRefresh: nodesLastRefresh } = useCachedNodes()
+  const { pods: allPods, isLoading: podsLoading, isRefreshing: podsRefreshing, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures, lastRefresh: podsLastRefresh } = useCachedPods()
   const { filterByCluster } = useGlobalFilters()
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
@@ -70,7 +70,8 @@ export function PredictiveHealth() {
     hasAnyData: hasData,
     isDemoData: nodesDemoFallback || podsDemoFallback,
     isFailed: nodesFailed || podsFailed,
-    consecutiveFailures: Math.max(nodesFailures, podsFailures) })
+    consecutiveFailures: Math.max(nodesFailures, podsFailures),
+    lastRefresh: Math.max(nodesLastRefresh || 0, podsLastRefresh || 0) || null })
 
   const predictions = useMemo((): Prediction[] => {
     if (nodes.length === 0 && pods.length === 0) return []

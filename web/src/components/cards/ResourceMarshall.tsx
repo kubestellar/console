@@ -63,6 +63,7 @@ export function ResourceMarshall() {
     isDemoFallback,
     isFailed: namespacesFailed,
     error: namespacesError,
+    lastRefresh: namespacesLastRefresh,
   } = useCachedNamespaces(namespaceCluster)
   const availableNamespaces = namespaces || []
 
@@ -74,7 +75,8 @@ export function ResourceMarshall() {
     hasAnyData: hasData,
     isDemoData: demoMode || isDemoFallback,
     isFailed: clustersFailed,
-    consecutiveFailures: clustersFailures })
+    consecutiveFailures: clustersFailures,
+    lastRefresh: namespacesLastRefresh })
 
   // Fetch workloads only when both cluster and namespace are selected.
   // Passing enabled=false prevents fetching all workloads across clusters.

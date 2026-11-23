@@ -51,8 +51,9 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
     isRefreshing: gpuRefreshing,
     isDemoFallback: gpuNodesDemoFallback,
     isFailed: gpuFailed,
-    consecutiveFailures: gpuFailures } = useCachedGPUNodes()
-  const { pods: allPods, isLoading: podsLoading, isRefreshing: podsRefreshing, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedAllPods()
+    consecutiveFailures: gpuFailures,
+    lastRefresh: gpuLastRefresh } = useCachedGPUNodes()
+  const { pods: allPods, isLoading: podsLoading, isRefreshing: podsRefreshing, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures, lastRefresh: podsLastRefresh } = useCachedAllPods()
   useClusters() // Keep hook for cache warming
   const { drillToPod } = useDrillDownActions()
 
@@ -70,7 +71,8 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
     hasAnyData: hasData,
     isDemoData,
     isFailed: gpuFailed || podsFailed,
-    consecutiveFailures: Math.max(gpuFailures, podsFailures) })
+    consecutiveFailures: Math.max(gpuFailures, podsFailures),
+    lastRefresh: Math.max(gpuLastRefresh || 0, podsLastRefresh || 0) || null })
 
   // Pre-filter pods to only GPU workloads (domain-specific logic before hook)
   // Show pods that: 1) request GPU resources, 2) are assigned to GPU nodes, or 3) have GPU workload labels

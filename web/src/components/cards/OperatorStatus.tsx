@@ -52,7 +52,7 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
   const { drillToOperator } = useDrillDownActions()
 
   // Fetch operators - pass undefined to get all clusters
-  const { operators: rawOperators, isLoading: operatorsLoading, isRefreshing, consecutiveFailures, isFailed, isDemoFallback: isDemoData, retryFetch } = useCachedOperators(undefined)
+  const { operators: rawOperators, isLoading: operatorsLoading, isRefreshing, consecutiveFailures, isFailed, isDemoFallback: isDemoData, retryFetch, lastRefresh } = useCachedOperators(undefined)
 
   const rawOperatorsArray = rawOperators || []
 
@@ -64,7 +64,8 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
     hasAnyData: hasData,
     isFailed: isFailed && !hasData,
     consecutiveFailures,
-    isDemoData })
+    isDemoData,
+    lastRefresh })
 
   // Use useCardFilters for status counts (globally filtered, before local search/pagination)
   const { filtered: globalFilteredOperators } = useCardFilters(rawOperatorsArray, FILTER_CONFIG)

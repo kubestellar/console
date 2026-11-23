@@ -45,6 +45,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
     isDemoFallback: gpuDemoFallback,
     isFailed: gpuFailed,
     consecutiveFailures: gpuFailures,
+    lastRefresh: gpuLastRefresh,
   } = useCachedGPUNodes()
   const {
     issues: podIssues,
@@ -53,6 +54,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
     isDemoFallback: podsDemoFallback,
     isFailed: podsFailed,
     consecutiveFailures: podsFailures,
+    lastRefresh: podsLastRefresh,
   } = useCachedPodIssues()
   const { deduplicatedClusters: clusters } = useClusters()
   const {
@@ -98,6 +100,8 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
     podsDemoFallback,
     podsFailed,
     podsFailures,
+    gpuLastRefresh,
+    podsLastRefresh,
   })
 
   // Report loading state to CardWrapper for skeleton/refresh behavior

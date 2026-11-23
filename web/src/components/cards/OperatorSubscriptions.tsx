@@ -48,7 +48,7 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
   const { drillToOperator } = useDrillDownActions()
 
   // Fetch subscriptions - pass undefined to get all clusters
-  const { subscriptions: rawSubscriptions, isLoading: subscriptionsLoading, isRefreshing, consecutiveFailures, isFailed, isDemoFallback: isDemoData, retryFetch } = useCachedOperatorSubscriptions(undefined)
+  const { subscriptions: rawSubscriptions, isLoading: subscriptionsLoading, isRefreshing, consecutiveFailures, isFailed, isDemoFallback: isDemoData, retryFetch, lastRefresh } = useCachedOperatorSubscriptions(undefined)
 
   const rawSubscriptionsArray = rawSubscriptions || []
 
@@ -60,7 +60,8 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
     hasAnyData: hasData,
     isFailed: isFailed && !hasData,
     consecutiveFailures,
-    isDemoData })
+    isDemoData,
+    lastRefresh })
 
   // Use useCardFilters for summary counts (globally filtered, before local search/pagination)
   const { filtered: globalFilteredSubscriptions } = useCardFilters(rawSubscriptionsArray, FILTER_CONFIG)
