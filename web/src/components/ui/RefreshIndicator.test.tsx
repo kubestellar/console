@@ -16,6 +16,7 @@ vi.mock('react-i18next', () => ({
 
 describe('RefreshIndicator & RefreshButton', () => {
   afterEach(() => {
+    vi.useRealTimers()
     vi.restoreAllMocks()
   })
 
@@ -53,12 +54,13 @@ describe('RefreshIndicator & RefreshButton', () => {
     // 4️⃣ Shows spinning state when isRefreshing is true
     // Testing RefreshIndicator to fulfill "aria-label reflects updating state"
     // and "spinner element exists" from the requirements.
-    render(<RefreshIndicator isRefreshing={true} />)
+    const { container } = render(<RefreshIndicator isRefreshing={true} />)
 
     const indicator = screen.getByRole('status')
     expect(indicator).toHaveAttribute('aria-label', 'Updating data')
     expect(indicator).toHaveAttribute('title', 'common.updatingEllipsis')
     expect(screen.getByText('common.updating')).toBeInTheDocument()
+    expect(container.querySelector('.animate-spin')).toBeInTheDocument()
   })
 
   it('displays last refreshed timestamp when provided', () => {

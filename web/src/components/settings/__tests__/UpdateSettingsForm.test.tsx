@@ -15,7 +15,7 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('lucide-react', () => ({
   Download: () => <svg data-testid="icon-download" />,
-  RefreshCw: () => <svg data-testid="icon-refresh" />,
+  RefreshCw: (props: React.SVGProps<SVGSVGElement>) => <svg data-testid="icon-refresh" {...props} />,
   AlertTriangle: () => <svg data-testid="icon-alert" />,
 }))
 
@@ -47,8 +47,21 @@ vi.mock('../UpdateSettingsForm.fields', () => ({
 }))
 
 vi.mock('../../ui/Button', () => ({
-  Button: ({ children, onClick, disabled }: { children: React.ReactNode; onClick?: () => void; disabled?: boolean }) => (
-    <button onClick={onClick} disabled={disabled}>{children}</button>
+  Button: ({
+    children,
+    icon,
+    onClick,
+    disabled,
+  }: {
+    children: React.ReactNode
+    icon?: React.ReactNode
+    onClick?: () => void
+    disabled?: boolean
+  }) => (
+    <button onClick={onClick} disabled={disabled}>
+      {icon}
+      {children}
+    </button>
   ),
 }))
 
@@ -147,6 +160,12 @@ describe('UpdateSettingsForm', () => {
   it('disables Check Now button when isVisuallySpinning is true', () => {
     render(<UpdateSettingsForm state={makeState({ isVisuallySpinning: true })} />)
     expect(screen.getByText('settings.updates.checkNow').closest('button')).toBeDisabled()
+  })
+
+  it('uses the standard spin animation while checking for updates', () => {
+    render(<UpdateSettingsForm state={makeState({ isVisuallySpinning: true })} />)
+    expect(screen.getByTestId('icon-refresh')).toHaveClass('animate-spin')
+    expect(screen.getByTestId('icon-refresh')).not.toHaveClass('animate-spin-min')
   })
 
   it('shows Update Now button when hasUpdate, agentConnected, not helm, not updating', () => {
