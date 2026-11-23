@@ -1,0 +1,1 @@
+- Fixed the Auto-QA loading-state check flagging mock buttons in test files: it now scans only shipped UI (no `*.test.tsx`, `__tests__/`, `__mocks__/`, stories) and matches action keywords against the button code rather than the file path (#25110).
