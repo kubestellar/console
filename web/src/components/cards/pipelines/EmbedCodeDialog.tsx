@@ -34,7 +34,7 @@ export type EmbeddableCardType =
 
 interface EmbedCodeDialogProps {
   /** Whether the dialog is open */
-  open: boolean
+  isOpen: boolean
   /** Which card type to generate the embed for */
   cardType: EmbeddableCardType
   /** Human-readable card title */
@@ -45,7 +45,7 @@ interface EmbedCodeDialogProps {
   onClose: () => void
 }
 
-export function EmbedCodeDialog({ open, cardType, cardTitle, currentRepo, onClose }: EmbedCodeDialogProps) {
+export function EmbedCodeDialog({ isOpen, cardType, cardTitle, currentRepo, onClose }: EmbedCodeDialogProps) {
   const { t } = useTranslation()
   const [repo, setRepo] = useState(currentRepo ?? '')
   const [copiedField, setCopiedField] = useState<string | null>(null)
@@ -100,7 +100,7 @@ export function EmbedCodeDialog({ open, cardType, cardTitle, currentRepo, onClos
   // closeOnBackdropClick={false} — the repo input holds user-entered text the
   // user may not want to lose to a stray click. Close is reachable via the
   // explicit X button in the header.
-  if (!open) return null
+  if (!isOpen) return null
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
