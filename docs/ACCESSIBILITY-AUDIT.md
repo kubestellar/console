@@ -38,6 +38,9 @@ Space or Enter to select, and Escape to close and return to the trigger.
 Resource tree navigation labels have a minimum 44 × 44 CSS pixel hit area,
 including short resource names; expand/collapse controls retain their own target.
 
+GPU namespace and node drill-down pod rows, and namespace node rows with
+available node data, are reachable by Tab and open with Enter or Space.
+
 ### Dropdown scanner follow-up (#24848)
 
 The agent selector now focuses the selected available agent (or the first available
