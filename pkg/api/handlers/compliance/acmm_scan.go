@@ -149,7 +149,7 @@ var acmmCriteria = []acmmCriterion{
 	{ID: "acmm:prereq-pr-template", Patterns: []string{".github/pull_request_template.md", ".github/PULL_REQUEST_TEMPLATE.md"}},
 	{ID: "acmm:prereq-issue-template", Patterns: []string{".github/ISSUE_TEMPLATE/", ".github/issue_template.md"}},
 	{ID: "acmm:prereq-contrib-guide", Patterns: []string{"CONTRIBUTING.md", "docs/contributing.md", ".github/CONTRIBUTING.md"}},
-	{ID: "acmm:prereq-code-style", Patterns: []string{".eslintrc", ".eslintrc.json", ".eslintrc.js", "eslint.config.js", "eslint.config.mjs", ".prettierrc", ".prettierrc.json", "prettier.config.js", "ruff.toml", ".golangci.yml", "biome.json"}},
+	{ID: "acmm:prereq-code-style", Patterns: []string{".eslintrc", ".eslintrc.json", ".eslintrc.js", "eslint.config.js", "eslint.config.mjs", ".prettierrc", ".prettierrc.json", "prettier.config.js", "ruff.toml", ".golangci.yml", "biome.json", ".prettierrc.yml", ".prettierrc.yaml", ".prettierrc.json5", ".prettierrc.toml", ".prettierrc.js", ".prettierrc.cjs", ".prettierrc.mjs", ".prettierrc.ts", ".prettierrc.cts", ".prettierrc.mts", "prettier.config.mjs", "prettier.config.cjs", "prettier.config.ts", "prettier.config.mts", "prettier.config.cts", "eslint.config.cjs", "eslint.config.ts", "eslint.config.mts", "eslint.config.cts", "biome.jsonc", ".ruff.toml", ".golangci.yaml", ".golangci.toml", ".golangci.json"}},
 	{ID: "acmm:prereq-coverage-gate", Patterns: []string{"codecov.yml", ".codecov.yml", ".github/workflows/coverage-gate.yml", "coverage.yml", ".coverage-thresholds.json"}},
 	// ACMM L2 — Instructed
 	{ID: "acmm:claude-md", Patterns: []string{"CLAUDE.md", ".claude/CLAUDE.md"}},
