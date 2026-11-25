@@ -31,7 +31,7 @@ export interface Criterion {
 export const CRITERIA: Criterion[] = [
   // ACMM L0 — Prerequisites (soft indicator, not gating)
   { id: "acmm:prereq-test-suite", source: "acmm", level: 0, category: "prerequisite", name: "Test suite", detection: { type: "any-of", pattern: ["vitest.config.ts", "vitest.config.js", "jest.config.js", "jest.config.ts", "go.mod", "pytest.ini", "pyproject.toml", "test/", "tests/", "__tests__/", "spec/"] } },
-  { id: "acmm:prereq-e2e", source: "acmm", level: 0, category: "prerequisite", name: "E2E tests", detection: { type: "any-of", pattern: ["playwright.config.ts", "playwright.config.js", "cypress.config.ts", "e2e/"] } },
+  { id: "acmm:prereq-e2e", source: "acmm", level: 0, category: "prerequisite", name: "E2E tests", detection: { type: "any-of", pattern: ["playwright.config.ts", "playwright.config.js", "cypress.config.ts", "cypress.config.js", "e2e/"] } },
   { id: "acmm:prereq-cicd", source: "acmm", level: 0, category: "prerequisite", name: "CI/CD pipeline", detection: { type: "any-of", pattern: [".github/workflows/", ".gitlab-ci.yml", "Jenkinsfile", ".circleci/"] } },
   { id: "acmm:prereq-pr-template", source: "acmm", level: 0, category: "prerequisite", name: "PR template", detection: { type: "any-of", pattern: [".github/pull_request_template.md", ".github/PULL_REQUEST_TEMPLATE.md"] } },
   { id: "acmm:prereq-issue-template", source: "acmm", level: 0, category: "prerequisite", name: "Issue templates", detection: { type: "any-of", pattern: [".github/ISSUE_TEMPLATE/", ".github/issue_template.md"] } },

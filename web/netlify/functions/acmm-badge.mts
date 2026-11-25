@@ -195,8 +195,9 @@ async function fetchFromScanEndpoint(origin: string, repo: string, force = false
   return body.detectedIds || [];
 }
 
-// ACMM_DETECTION_PATHS is derived from acmmSource.criteria in scannableIdsByLevel.ts —
-// the single source of truth shared with acmm-scan.mts. No hand-maintained copy here.
+// ACMM_DETECTION_PATHS is derived from acmmSource.criteria in scannableIdsByLevel.ts.
+// acmm-scan.mts uses its own catalog (./acmm-scan/criteria); the two are kept in
+// sync by __tests__/acmm-criteria-parity.test.ts. No hand-maintained copy here.
 
 function pathMatches(paths: Set<string>, pattern: string): boolean {
   if (pattern.endsWith("/")) {
