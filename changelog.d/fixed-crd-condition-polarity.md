@@ -1,0 +1,1 @@
+- Fixed the CRD drill-down Conditions list coloring every `True` condition green: abnormal-true conditions (`NonStructuralSchema`, `Terminating`) now render red when `True` and green when `False` (#25134).
