@@ -213,7 +213,7 @@ export function CRDOverviewTab({
           <h4 className="text-sm font-medium text-foreground mb-3">{t('common.conditions')}</h4>
           <div className="space-y-2">
             {conditions.map((condition, i) => {
-              const condStyle = getConditionStyle(condition.status)
+              const condStyle = getConditionStyle(condition.status, condition.type)
               return (
                 <div key={i} className="flex items-center justify-between p-2 rounded bg-secondary/50">
                   <span className="text-sm text-foreground">{condition.type}</span>
