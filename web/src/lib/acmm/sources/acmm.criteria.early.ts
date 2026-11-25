@@ -83,7 +83,7 @@ export const EARLY_CRITERIA: Criterion[] = [
     description: 'Committed formatter and linter configuration that enforces style mechanically rather than through instructions.',
     rationale: 'Style rules expressed as config — mechanized judgment.',
     details: 'A code style config file (like .eslintrc, .prettierrc, or .golangci.yml) enforces formatting and linting rules automatically. An AI mission will detect your language stack and create the appropriate linter/formatter config.',
-    detection: { type: 'any-of', pattern: ['.eslintrc', '.eslintrc.json', '.eslintrc.js', 'eslint.config.js', '.prettierrc', 'ruff.toml', '.golangci.yml'] },
+    detection: { type: 'any-of', pattern: ['.eslintrc', '.eslintrc.json', '.eslintrc.js', 'eslint.config.js', '.prettierrc', 'ruff.toml', '.golangci.yml', 'eslint.config.mjs', '.prettierrc.json', 'prettier.config.js', 'biome.json', '.prettierrc.yml', '.prettierrc.yaml', '.prettierrc.json5', '.prettierrc.toml', '.prettierrc.js', '.prettierrc.cjs', '.prettierrc.mjs', '.prettierrc.ts', '.prettierrc.cts', '.prettierrc.mts', 'prettier.config.mjs', 'prettier.config.cjs', 'prettier.config.ts', 'prettier.config.mts', 'prettier.config.cts', 'eslint.config.cjs', 'eslint.config.ts', 'eslint.config.mts', 'eslint.config.cts', 'biome.jsonc', '.ruff.toml', '.golangci.yaml', '.golangci.toml', '.golangci.json'] },
   },
   {
     id: 'acmm:prereq-coverage-gate',
