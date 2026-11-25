@@ -144,7 +144,7 @@ func acmmForceRefreshRetryAfterSeconds(retryAfter time.Duration) int {
 var acmmCriteria = []acmmCriterion{
 	// ACMM L0 — Prerequisites (soft indicator)
 	{ID: "acmm:prereq-test-suite", Patterns: []string{"vitest.config.ts", "vitest.config.js", "jest.config.js", "jest.config.ts", "go.mod", "pytest.ini", "pyproject.toml", "test/", "tests/", "__tests__/", "spec/"}},
-	{ID: "acmm:prereq-e2e", Patterns: []string{"playwright.config.ts", "playwright.config.js", "cypress.config.ts", "e2e/"}},
+	{ID: "acmm:prereq-e2e", Patterns: []string{"playwright.config.ts", "playwright.config.js", "cypress.config.ts", "cypress.config.js", "e2e/"}},
 	{ID: "acmm:prereq-cicd", Patterns: []string{".github/workflows/", ".gitlab-ci.yml", "Jenkinsfile", ".circleci/"}},
 	{ID: "acmm:prereq-pr-template", Patterns: []string{".github/pull_request_template.md", ".github/PULL_REQUEST_TEMPLATE.md"}},
 	{ID: "acmm:prereq-issue-template", Patterns: []string{".github/ISSUE_TEMPLATE/", ".github/issue_template.md"}},

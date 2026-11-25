@@ -13,10 +13,10 @@ export const EARLY_CRITERIA: Criterion[] = [
     level: 0,
     category: 'prerequisite',
     name: 'Automated test suite',
-    description: 'A test runner config and at least one test directory.',
+    description: 'A test runner config or a test directory.',
     rationale: 'Without tests, TDD workflows, coverage gates, and verify-before-reporting have nothing to run.',
     details: 'An automated test suite is a test framework (Vitest, Jest, pytest, go test, etc.) with a configuration file and at least one test directory. It is the foundation for all measurement — you cannot gate on coverage, track regressions, or validate AI changes without runnable tests. An AI mission will detect your language/framework, add the appropriate test runner config, and create an example test file.',
-    detection: { type: 'any-of', pattern: ['vitest.config.ts', 'vitest.config.js', 'jest.config.js', 'jest.config.ts', 'go.mod', 'pytest.ini', 'pyproject.toml'] },
+    detection: { type: 'any-of', pattern: ['vitest.config.ts', 'vitest.config.js', 'jest.config.js', 'jest.config.ts', 'go.mod', 'pytest.ini', 'pyproject.toml', 'test/', 'tests/', '__tests__/', 'spec/'] },
   },
   {
     id: 'acmm:prereq-e2e',
@@ -27,7 +27,7 @@ export const EARLY_CRITERIA: Criterion[] = [
     description: 'Playwright, Cypress, or equivalent E2E test suite that verifies the system works as a whole.',
     rationale: 'Unit tests catch code-level bugs but miss integration failures that only appear when components connect.',
     details: 'End-to-end tests use tools like Playwright or Cypress to simulate real user interactions and verify the entire stack works together. An AI mission will add a Playwright or Cypress config and create smoke tests for your application\'s critical user paths.',
-    detection: { type: 'any-of', pattern: ['playwright.config.ts', 'playwright.config.js', 'cypress.config.ts', 'cypress.config.js', 'e2e/', 'tests/e2e/'] },
+    detection: { type: 'any-of', pattern: ['playwright.config.ts', 'playwright.config.js', 'cypress.config.ts', 'cypress.config.js', 'e2e/'] },
   },
   {
     id: 'acmm:prereq-cicd',
