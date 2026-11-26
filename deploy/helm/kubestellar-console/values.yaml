@@ -28,9 +28,11 @@ fullnameOverride: ""
 # POSIX-sh compatible (see command in pre-upgrade-pvc-migration.yaml), and
 # Alpine has no fixed non-root user baked in, so it still honors the Job's
 # runAsNonRoot/allowPrivilegeEscalation=false securityContext.
+# Qualify Docker Hub explicitly so runtimes enforcing short-name resolution
+# can pull the hook image without an interactive registry choice.
 migration:
   image:
-    repository: alpine/k8s
+    repository: docker.io/alpine/k8s
     tag: "1.32.4"
   # Numeric non-root UID/GID for the migrate-pvcs hook container.
   # alpine/k8s has no USER directive baked in (runs as root), and the
