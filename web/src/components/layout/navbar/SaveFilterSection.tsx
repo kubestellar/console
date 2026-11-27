@@ -57,10 +57,10 @@ export function SaveFilterSection({
                 aria-label={t('common:filters.colorOption', { defaultValue: `Select color ${c}`, color: c })}
                 aria-pressed={newColor === c}
                 className={cn(
-                  'w-5 h-5 rounded-full border-2 transition-all',
-                  newColor === c ? 'border-foreground scale-110' : 'border-transparent',
+                  'w-5 h-5 rounded-full border-2 bg-current bg-clip-padding transition-all',
+                  newColor === c ? 'border-foreground scale-110' : 'border-foreground/50',
                 )}
-                style={{ backgroundColor: c }}
+                style={{ color: c }}
               />
             ))}
           </div>

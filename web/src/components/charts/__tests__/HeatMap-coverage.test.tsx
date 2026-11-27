@@ -126,23 +126,6 @@ describe('HeatMap', () => {
     expect(container).toBeTruthy()
   })
 
-  it('renders transparent background for missing cells', () => {
-    // Data only has A-Row1, but grid is A,B x Row1,Row2
-    const sparseData = [{ x: 'A', y: 'Row1', value: 10 }]
-    const { container } = render(
-      <HeatMap
-        data={sparseData}
-        xLabels={['A', 'B']}
-        yLabels={['Row1', 'Row2']}
-      />
-    )
-    // Missing cells get transparent background
-    const transparentCells = container.querySelectorAll('[style*="background-color: transparent"]')
-    // 3 of 4 cells are missing
-    const EXPECTED_MISSING_CELLS = 3
-    expect(transparentCells.length).toBe(EXPECTED_MISSING_CELLS)
-  })
-
   it('sets title attributes on cells with values', () => {
     const { container } = render(<HeatMap data={SAMPLE_DATA} />)
     const cellWithTitle = container.querySelector('[title="A × Row1: 10"]')

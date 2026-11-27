@@ -45,8 +45,8 @@ export function SavedFilterChips({
                 )}
               >
                 <span
-                  className="w-2 h-2 rounded-full shrink-0"
-                  style={{ backgroundColor: fs.color }}
+                  className="w-2 h-2 rounded-full shrink-0 border border-foreground/50 bg-current bg-clip-padding"
+                  style={{ color: fs.color }}
                 />
                 <span className="max-w-[100px] truncate">{fs.name}</span>
                 {isActive && <Check className="w-3 h-3" />}
