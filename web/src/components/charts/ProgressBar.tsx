@@ -126,10 +126,10 @@ export function SegmentedProgressBar({
         {segments.map((segment, index) => (
           <div
             key={index}
-            className="h-full transition-all duration-500"
+            className="h-full bg-current inset-ring-1 inset-ring-foreground/50 transition-all duration-500"
             style={{
               width: `${(segment.value / total) * 100}%`,
-              backgroundColor: segment.color,
+              color: segment.color,
             }}
           />
         ))}
@@ -139,8 +139,8 @@ export function SegmentedProgressBar({
           {segments.map((segment, index) => (
             <div key={index} className="flex items-center gap-1.5">
               <div
-                className="w-2.5 h-2.5 rounded-full"
-                style={{ backgroundColor: segment.color }}
+                className="w-2.5 h-2.5 shrink-0 rounded-full border border-foreground/50 bg-current bg-clip-padding"
+                style={{ color: segment.color }}
               />
               <span className="text-xs text-muted-foreground">
                 {segment.label || `Segment ${index + 1}`}

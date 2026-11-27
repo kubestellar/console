@@ -6,7 +6,7 @@
  * a "Load Console example" button.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { RefreshCw, X, ExternalLink, AlertCircle, Award, Copy, Check, Share2, Info } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
@@ -35,10 +35,8 @@ const REPO_FORM_MAX_WIDTH_PX = 560
  *  don't collapse below usability on narrow viewports. */
 const REPO_FORM_MIN_WIDTH_PX = 300
 
-/** Hex equivalents of the shields.io named colors used in acmm-badge.mts
- *  LEVEL_COLORS (lightgrey, yellow, yellowgreen, brightgreen, blueviolet).
- *  Hex values are needed here because the inline badge SVG preview renders
- *  via CSS backgroundColor, not the shields.io color resolver. */
+/** Hex equivalents of the shields.io named colors used in acmm-badge.mts.
+ *  Preserve these in the preview so it represents the exported badge. */
 const BADGE_COLORS: Record<number, string> = {
   1: '#9e9e9e',   // lightgrey  // ai-quality-ignore
   2: '#dfb317',   // yellow     // ai-quality-ignore
@@ -57,11 +55,11 @@ function BadgePreview({ level, levelName, detected, total }: {
 }) {
   const rightColor = BADGE_COLORS[level] ?? BADGE_COLORS[1]
   return (
-    <span className="inline-flex items-stretch text-xs font-medium leading-none rounded overflow-hidden shadow-xs h-5">
+    <span className="inline-flex items-stretch text-xs font-medium leading-none rounded overflow-hidden ring-1 ring-foreground/50 h-5">
       <span className="px-1.5 flex items-center bg-neutral-600 text-white">ACMM</span>
       <span
-        className="px-1.5 flex items-center text-white"
-        style={{ backgroundColor: rightColor }}
+        className="px-1.5 flex items-center bg-(--acmm-badge-color) text-neutral-950"
+        style={{ '--acmm-badge-color': rightColor } as CSSProperties}
       >
         L{level} · {levelName} · {detected}/{total}
       </span>

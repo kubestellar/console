@@ -186,8 +186,8 @@ export function ClusterFilterPanel({ showLabel = false }: ClusterFilterPanelProp
             )}
             {isFiltered && (
               <span
-                className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-card"
-                style={{ backgroundColor: activeSet?.color || '#a78bfa' }}
+                className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-foreground/50 bg-current bg-clip-padding text-primary"
+                style={{ color: activeSet?.color }}
               />
             )}
           </button>
